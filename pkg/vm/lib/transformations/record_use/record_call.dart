@@ -80,7 +80,7 @@ class CallRecorder {
   void recordConstantExpression(ast.ConstantExpression node) {
     final constant = node.constant;
     if (constant is ast.StaticTearOffConstant) {
-      if (isConstructorTearOffLowering(constant.target)) return;
+      if (isTearOffLowering(constant.target)) return;
       if (isBeingRecorded(constant.target)) {
         _addToUsage(
           constant.target,
@@ -237,8 +237,7 @@ class CallRecorder {
     final parent = target.parent;
 
     return Definition(importUri, [
-      if (parent is ast.Class)
-        Name(parent.name, kind: DefinitionKind.classKind),
+      if (parent is ast.Class) className(parent),
       Name(
         target.name.text,
         kind: memberKind,

@@ -247,6 +247,7 @@ class VmTarget extends Target {
       coreTypes,
       hierarchy,
       productMode: productMode,
+      isClosureContextLoweringEnabled: flags.isClosureContextLoweringEnabled,
     );
     logger?.call("Lowering transformations performed");
 
@@ -273,6 +274,7 @@ class VmTarget extends Target {
       coreTypes,
       hierarchy,
       productMode: productMode,
+      isClosureContextLoweringEnabled: flags.isClosureContextLoweringEnabled,
     );
     logger?.call("Lowering transformations performed");
   }
@@ -440,7 +442,9 @@ class VmTarget extends Target {
       importer.path.contains('runtime/tests/vm/dart') ||
       importer.path.contains('tests/standalone/io') ||
       importer.path.contains('test-lib') ||
-      importer.path.contains('tests/ffi');
+      importer.path.contains('tests/ffi') ||
+      (importer.path == 'dart_runtime_service_vm/src/native_bindings.dart' &&
+          imported.path == '_vmservice');
 
   @override
   Component configureComponent(Component component) {

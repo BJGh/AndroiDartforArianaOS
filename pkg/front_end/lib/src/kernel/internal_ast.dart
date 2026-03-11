@@ -1512,7 +1512,7 @@ mixin DelegatingVariableMixin on InternalExpressionVariableMixin
 
   @override
   void set type(DartType value) {
-    astVariable.type = type;
+    astVariable.type = value;
   }
 
   @override
@@ -4773,11 +4773,11 @@ Expression clonePureExpression(Expression node) {
     return new ThisExpression()..fileOffset = node.fileOffset;
   } else if (node is VariableGet) {
     assert(
-      node.variable.isFinal && !node.variable.isLate,
+      node.expressionVariable.isFinal && !node.variable.isLate,
       "Trying to clone VariableGet of non-final variable"
-      " ${node.variable}.",
+      " ${node.expressionVariable}.",
     );
-    return new VariableGet(node.variable, node.promotedType)
+    return new VariableGet(node.expressionVariable, node.promotedType)
       ..fileOffset = node.fileOffset;
   }
   // Coverage-ignore-block(suite): Not run.
@@ -5184,6 +5184,9 @@ class ExtensionTypeRedirectingInitializer extends InternalInitializer {
     arguments.parent = this;
   }
 
+  @override
+  bool get isRedirectingInitializer => true;
+
   Procedure get target => targetReference.asProcedure;
 
   // Coverage-ignore(suite): Not run.
@@ -5501,6 +5504,10 @@ class InternalRedirectingInitializer extends InternalInitializer {
   }
 
   @override
+  // Coverage-ignore(suite): Not run.
+  bool get isRedirectingInitializer => true;
+
+  @override
   InitializerInferenceResult acceptInference(InferenceVisitorImpl visitor) {
     return visitor.visitInternalRedirectingInitializer(this);
   }
@@ -5536,6 +5543,10 @@ class InternalSuperInitializer extends InternalInitializer {
   }) {
     arguments.parent = this;
   }
+
+  @override
+  // Coverage-ignore(suite): Not run.
+  bool get isSuperInitializer => true;
 
   @override
   InitializerInferenceResult acceptInference(InferenceVisitorImpl visitor) {

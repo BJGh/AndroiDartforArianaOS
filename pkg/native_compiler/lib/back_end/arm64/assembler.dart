@@ -7,6 +7,7 @@ import 'package:native_compiler/back_end/assembler.dart';
 import 'package:native_compiler/back_end/code.dart';
 import 'package:native_compiler/back_end/locations.dart';
 import 'package:native_compiler/back_end/object_pool.dart';
+import 'package:native_compiler/runtime/object_layout.dart';
 import 'package:native_compiler/runtime/vm_defs.dart';
 import 'package:cfg/ir/constant_value.dart';
 
@@ -123,6 +124,18 @@ const Set<Register> reservedRegisters = {
 
 final allocatableRegisters = allRegisters
     .where((r) => !reservedRegisters.contains(r))
+    .toList();
+
+final argumentRegisters = allocatableRegisters
+    .where((r) => r != argumentsDescriptorReg)
+    .take(16)
+    .toList();
+
+final prologueScratchRegisters = allocatableRegisters
+    .where(
+      (r) =>
+          r != argumentsDescriptorReg && r.index > argumentRegisters.last.index,
+    )
     .toList();
 
 /// Floating-point registers.
@@ -310,7 +323,9 @@ const int B31 = (1 << 31);
 /// TODO: support long branches, large offsets and floating-point instructions.
 /// TODO: measure performance overhead of always checking encoding constraints.
 final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
-  Arm64Assembler(super.vmOffsets);
+  final ObjectLayout objectLayout;
+
+  Arm64Assembler(super.vmOffsets, this.objectLayout);
 
   /// Create a [base + offset] address for arbitrary offset,
   /// generating extra code if necessary.
@@ -491,7 +506,13 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     assert(reg != SP);
 
     if (value.isInt) {
-      loadImmediate(reg, value.intValue);
+      if (value.isUnboxed) {
+        loadImmediate(reg, value.intValue);
+      } else if (objectLayout.isSmi(value.intValue)) {
+        loadImmediate(reg, value.intValue << smiShift);
+      } else {
+        loadFromPool(reg, value as Object);
+      }
     } else {
       loadFromPool(reg, value as Object);
     }
@@ -685,8 +706,9 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register scratch1Reg,
     Register scratch2Reg,
     int instanceSize,
-    Label slowPath,
-  ) {
+    Label slowPath, {
+    required bool initializeFields,
+  }) {
     final endReg = scratch1Reg;
     final newTopReg = scratch2Reg;
     // Load Thread.top_ and Thread.end_.
@@ -700,34 +722,44 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     str(tagsReg, address(resultReg, vmOffsets.Object_tags_offset));
     // TODO: figure out if we need store-store barrier here.
 
-    // TODO: support compressed pointers.
-    const maxUnrolledSize = 16 * wordSize;
-    if (instanceSize <= maxUnrolledSize) {
-      int offset = vmOffsets.Instance_first_field_offset;
-      for (; offset + 2 * wordSize <= instanceSize; offset += 2 * wordSize) {
-        stp(nullReg, nullReg, pairAddress(resultReg, offset));
-      }
-      if (offset < instanceSize) {
-        str(nullReg, address(resultReg, offset));
-        offset += wordSize;
-      }
-      assert(offset == instanceSize);
-    } else {
-      final fieldReg = scratch1Reg;
-      addImmediate(fieldReg, resultReg, vmOffsets.Instance_first_field_offset);
+    if (initializeFields) {
+      // TODO: support compressed pointers.
+      const maxUnrolledSize = 16 * wordSize;
+      if (instanceSize <= maxUnrolledSize) {
+        int offset = vmOffsets.Instance_first_field_offset;
+        for (; offset + 2 * wordSize <= instanceSize; offset += 2 * wordSize) {
+          stp(nullReg, nullReg, pairAddress(resultReg, offset));
+        }
+        if (offset < instanceSize) {
+          str(nullReg, address(resultReg, offset));
+          offset += wordSize;
+        }
+        assert(offset == instanceSize);
+      } else {
+        final fieldReg = scratch1Reg;
+        addImmediate(
+          fieldReg,
+          resultReg,
+          vmOffsets.Instance_first_field_offset,
+        );
 
-      final loop = Label();
-      bind(loop);
-      stp(
-        nullReg,
-        nullReg,
-        WritebackRegOffsetAddress(fieldReg, 2 * wordSize, isPostIndexed: true),
-      );
-      // There is at least two word (kAllocationRedZoneSize) gap at the end of page
-      // which makes it possible to initialize objects by two words at once and
-      // write slightly beyond the end.
-      cmp(fieldReg, newTopReg);
-      b(loop, Condition.unsignedLess);
+        final loop = Label();
+        bind(loop);
+        stp(
+          nullReg,
+          nullReg,
+          WritebackRegOffsetAddress(
+            fieldReg,
+            2 * wordSize,
+            isPostIndexed: true,
+          ),
+        );
+        // There is at least two word (kAllocationRedZoneSize) gap at the end of page
+        // which makes it possible to initialize objects by two words at once and
+        // write slightly beyond the end.
+        cmp(fieldReg, newTopReg);
+        b(loop, Condition.unsignedLess);
+      }
     }
 
     addImmediate(resultReg, resultReg, heapObjectTag);
@@ -920,6 +952,44 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     );
   }
 
+  void madd(
+    Register rd,
+    Register rn,
+    Register rm,
+    Register ra, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitMul(B24 | B25 | B27 | B28, rd, rn, rm, ra, sz);
+  }
+
+  void mul(
+    Register rd,
+    Register rn,
+    Register rm, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    madd(rd, rn, rm, ZR, sz);
+  }
+
+  void _emitMul(
+    int opcode,
+    Register rd,
+    Register rn,
+    Register rm,
+    Register ra,
+    OperandSize sz,
+  ) {
+    assert(sz.is32or64);
+    emit(
+      opcode |
+          rd.encodingRd() |
+          rn.encodingRn() |
+          rm.encodingRm() |
+          ra.encodingRa() |
+          (sz.is64 ? B31 : 0),
+    );
+  }
+
   void bfm(
     Register rd,
     Register rn,
@@ -1041,6 +1111,19 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
 
   void uxth(Register rd, Register rn, [OperandSize sz = OperandSize.s64]) {
     ubfm(rd, rn, 0, 15, sz);
+  }
+
+  void asr(
+    Register rd,
+    Register rn,
+    int shift, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    if (shift == 0) {
+      mov(rd, rn, sz);
+    } else {
+      sbfm(rd, rn, shift, sz.bitWidth - 1, sz);
+    }
   }
 
   void _emitBitfieldMove(
@@ -1288,6 +1371,7 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
   }
 
   void _emitLoadStore(int opcode, Register rt, Address a, OperandSize sz) {
+    assert(!sz.is128);
     switch (a) {
       case RegOffsetAddress():
         emit(
@@ -1305,6 +1389,37 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
               rt.encodingRt() |
               a.encoding(sz) |
               (sz.log2sizeInBytes << 30),
+        );
+      default:
+        throw 'Unexpect address ${a.runtimeType}';
+    }
+  }
+
+  void fldr(FPRegister rt, Address a, [OperandSize sz = OperandSize.s64]) {
+    _emitFPLoadStore(B22 | B26 | B27 | B28 | B29, rt, a, sz);
+  }
+
+  void fstr(FPRegister rt, Address a, [OperandSize sz = OperandSize.s64]) {
+    _emitFPLoadStore(B26 | B27 | B28 | B29, rt, a, sz);
+  }
+
+  void _emitFPLoadStore(int opcode, FPRegister rt, Address a, OperandSize sz) {
+    switch (a) {
+      case RegOffsetAddress():
+        emit(
+          opcode |
+              rt.encodingRt |
+              a.encoding(sz) |
+              (sz.is128 ? B23 : 0) |
+              ((sz.log2sizeInBytes & 3) << 30),
+        );
+      case WritebackRegOffsetAddress():
+        emit(
+          opcode |
+              rt.encodingRt |
+              a.encoding(sz) |
+              (sz.is128 ? B23 : 0) |
+              ((sz.log2sizeInBytes & 3) << 30),
         );
       default:
         throw 'Unexpect address ${a.runtimeType}';
@@ -1513,9 +1628,14 @@ extension on Register {
 
   int encodingRd({bool allowSP = false}) => encoding(allowSP: allowSP);
   int encodingRn({bool allowSP = false}) => encoding(allowSP: allowSP) << 5;
+  int encodingRa({bool allowSP = false}) => encoding(allowSP: allowSP) << 10;
   int encodingRm({bool allowSP = false}) => encoding(allowSP: allowSP) << 16;
   int encodingRt({bool allowSP = false}) => encoding(allowSP: allowSP);
   int encodingRt2({bool allowSP = false}) => encoding(allowSP: allowSP) << 10;
+}
+
+extension on FPRegister {
+  int get encodingRt => index;
 }
 
 extension on Immediate {

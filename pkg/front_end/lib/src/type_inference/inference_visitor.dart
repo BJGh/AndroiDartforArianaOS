@@ -1399,7 +1399,7 @@ class InferenceVisitorImpl extends InferenceVisitorBase
   PropertyTarget<Expression> computePropertyTarget(Expression target) {
     if (_enclosingCascade case Cascade(
       :var variable,
-    ) when target is VariableGet && target.variable == variable) {
+    ) when target is VariableGet && target.expressionVariable == variable) {
       // `target` is an implicit reference to the target of a cascade
       // expression; flow analysis uses `CascadePropertyTarget` to represent
       // this situation.
@@ -12671,6 +12671,7 @@ class InferenceVisitorImpl extends InferenceVisitorBase
           compilerContext: compilerContext,
           message: message,
         ),
+        isRedirectingInitializer: true,
       );
     }
     return new InitializerInferenceResult.fromInvocationInferenceResult(
@@ -12739,6 +12740,7 @@ class InferenceVisitorImpl extends InferenceVisitorBase
           compilerContext: compilerContext,
           message: message,
         ),
+        isRedirectingInitializer: true,
       );
     }
     return new InitializerInferenceResult.fromInvocationInferenceResult(
@@ -13148,6 +13150,7 @@ class InferenceVisitorImpl extends InferenceVisitorBase
           compilerContext: compilerContext,
           message: message,
         ),
+        isSuperInitializer: true,
       );
     }
     return new InitializerInferenceResult.fromInvocationInferenceResult(

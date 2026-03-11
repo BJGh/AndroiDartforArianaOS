@@ -79,7 +79,9 @@ class _RecordUseVisitor extends ast.RecursiveVisitor {
     // Extension member tear-offs call the implementation. We skip them here
     // to avoid recording the implementation call as a usage, as the usage is
     // already recorded by the call to the extension member tear-off itself.
-    if (isExtensionMemberTearOff(node) || isTearOffLowering(node)) {
+    if (isExtensionMemberTearOff(node) ||
+        isTearOffLowering(node) ||
+        node.isRedirectingFactory) {
       return;
     }
     super.visitProcedure(node);
@@ -118,7 +120,7 @@ class _RecordUseVisitor extends ast.RecursiveVisitor {
   void visitStaticTearOff(ast.StaticTearOff node) {
     if (_isAnnotation(node)) return;
 
-    if (isConstructorTearOffLowering(node.target)) {
+    if (isTearOffLowering(node.target)) {
       instanceUseRecorder.recordLoweredConstructorTearOff(node);
     } else {
       staticCallRecorder.recordStaticTearOff(node);
@@ -152,6 +154,23 @@ class _RecordUseVisitor extends ast.RecursiveVisitor {
     instanceUseRecorder.recordConstructorTearOff(node);
 
     super.visitConstructorTearOff(node);
+  }
+
+  @override
+  void visitTypedefTearOff(ast.TypedefTearOff node) {
+    if (_isAnnotation(node)) return;
+
+    final expression = node.expression;
+    if (expression is ast.ConstructorTearOff) {
+      instanceUseRecorder.recordConstructorTearOff(expression);
+    } else if (expression is ast.RedirectingFactoryTearOff) {
+      instanceUseRecorder.recordRedirectingFactoryTearOff(expression);
+    } else if (expression is ast.StaticTearOff &&
+        isConstructorTearOffLowering(expression.target)) {
+      instanceUseRecorder.recordLoweredConstructorTearOff(expression);
+    }
+
+    super.visitTypedefTearOff(node);
   }
 
   @override
@@ -221,7 +240,10 @@ Constant evaluateConstant(ast.Constant constant) => switch (constant) {
     'Double literals are not supported for recording.',
   ),
   ast.StringConstant() => StringConstant(constant.value),
-  ast.SymbolConstant() => StringConstant(constant.name),
+  ast.SymbolConstant() => SymbolConstant(
+    constant.name,
+    libraryUri: constant.libraryReference?.asLibrary.importUri.toString(),
+  ),
   ast.MapConstant() => MapConstant(
     constant.entries
         .map(
@@ -249,15 +271,11 @@ Constant evaluateConstant(ast.Constant constant) => switch (constant) {
   ast.SetConstant() => UnsupportedConstant(
     'Set literals are not supported for recording.',
   ),
-  ast.InstantiationConstant() => UnsupportedConstant(
-    'Generic instantiations are not supported for recording.',
-  ),
+  ast.InstantiationConstant() => evaluateConstant(constant.tearOffConstant),
   ast.TearOffConstant() => UnsupportedConstant(
     'Function/Method tear-offs are not supported for recording.',
   ),
-  ast.TypedefTearOffConstant() => UnsupportedConstant(
-    'Typedef tear-offs are not supported for recording.',
-  ),
+  ast.TypedefTearOffConstant() => evaluateConstant(constant.tearOffConstant),
   ast.TypeLiteralConstant() => UnsupportedConstant(
     'Type literals are not supported for recording.',
   ),
@@ -334,16 +352,21 @@ RecordConstant evaluateRecordConstant(ast.RecordConstant constant) {
 UnsupportedConstant _unsupported(String constantType) =>
     UnsupportedConstant('$constantType is not supported for recording.');
 
+Name className(ast.Class cls) => Name(
+  cls.name,
+  kind:
+      cls.isEnum
+          ? DefinitionKind.enumKind
+          : cls.isMixinDeclaration
+          ? DefinitionKind.mixinKind
+          : DefinitionKind.classKind,
+);
+
 Definition _definitionFromClass(ast.Class cls) {
   final enclosingLibrary = cls.enclosingLibrary;
   final importUri = enclosingLibrary.importUri.toString();
 
-  return Definition(importUri, [
-    Name(
-      cls.name,
-      kind: cls.isEnum ? DefinitionKind.enumKind : DefinitionKind.classKind,
-    ),
-  ]);
+  return Definition(importUri, [className(cls)]);
 }
 
 ast.Library? enclosingLibrary(ast.TreeNode node) {

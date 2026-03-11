@@ -65,16 +65,35 @@ final class Arm64Constraints extends Constraints {
   // TODO: pass arguments on registers
   Constraint parameterConstraint(Parameter instr) {
     final paramIndex = instr.variable.index;
-    final numParams = instr.graph.function.numberOfParameters;
+    final function = instr.graph.function;
+    final numParams = function.numberOfParameters;
     assert(0 <= paramIndex && paramIndex < numParams);
+    Constraint? paramConstraint = _parameters?[paramIndex];
+    if (paramConstraint != null) {
+      return paramConstraint;
+    }
+    if (function.hasOptionalPositionalParameters ||
+        function.hasNamedParameters) {
+      if (paramIndex < argumentRegisters.length) {
+        paramConstraint = argumentRegisters[paramIndex];
+      } else {
+        paramConstraint = ParameterStackLocation(
+          paramIndex - argumentRegisters.length,
+          registerClass(instr),
+        );
+      }
+    } else {
+      paramConstraint = ParameterStackLocation(
+        paramIndex,
+        registerClass(instr),
+      );
+    }
     final parameters = (_parameters ??= List<Constraint?>.filled(
       numParams,
       null,
     ));
-    return parameters[paramIndex] ??= ParameterStackLocation(
-      paramIndex,
-      registerClass(instr),
-    );
+    parameters[paramIndex] = paramConstraint;
+    return paramConstraint;
   }
 
   @override
@@ -250,6 +269,30 @@ final class Arm64Constraints extends Constraints {
         anyCpuRegister,
         anyCpuRegister,
       ]);
+
+  @override
+  InstructionConstraints? visitBoxInt(BoxInt instr) =>
+      const InstructionConstraints(
+        anyCpuRegister,
+        [anyCpuRegister],
+        [anyCpuRegister, anyCpuRegister, anyCpuRegister],
+      );
+
+  @override
+  InstructionConstraints? visitBoxDouble(BoxDouble instr) =>
+      const InstructionConstraints(
+        anyCpuRegister,
+        [anyFpuRegister],
+        [anyCpuRegister, anyCpuRegister, anyCpuRegister],
+      );
+
+  @override
+  InstructionConstraints? visitUnboxInt(UnboxInt instr) =>
+      const InstructionConstraints(anyCpuRegister, [anyCpuRegister]);
+
+  @override
+  InstructionConstraints? visitUnboxDouble(UnboxDouble instr) =>
+      const InstructionConstraints(anyFpuRegister, [anyCpuRegister]);
 
   @override
   InstructionConstraints? visitBinaryIntOp(BinaryIntOp instr) =>

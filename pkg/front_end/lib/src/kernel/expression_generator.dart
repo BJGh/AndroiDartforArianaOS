@@ -6664,12 +6664,13 @@ class ThisAccessGenerator extends Generator {
           return createInvalidInitializer(
             LookupResult.createDuplicateExpression(
               result,
-              context: _helper.libraryBuilder.loader.target.context,
+              context: _helper.compilerContext,
               name: name.text,
               fileUri: _helper.uri,
               fileOffset: offset,
               length: noLength,
             ),
+            isSuperInitializer: true,
           );
         }
         MemberBuilder? memberBuilder = result.getable;
@@ -6696,6 +6697,7 @@ class ThisAccessGenerator extends Generator {
             fileOffset: fileOffset,
             length: lengthForToken(token),
           ),
+          isSuperInitializer: true,
         );
       } else {
         _helper.readInternalThisVariable();

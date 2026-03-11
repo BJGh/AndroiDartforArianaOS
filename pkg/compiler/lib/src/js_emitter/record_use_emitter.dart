@@ -55,7 +55,7 @@ class RecordUseCollector {
   JElementEnvironment get _elementEnvironment =>
       _closedWorld.elementEnvironment;
   late final RecordUseValueConverter _converter = RecordUseValueConverter(
-    _elementEnvironment,
+    _elementMap,
     _closedWorld.annotationsData,
   );
 
@@ -129,13 +129,23 @@ class RecordUseCollector {
   /// complex definition paths is needed, it should be added here.
   Definition _definitionFromClass(ClassEntity cls) {
     return Definition(cls.library.canonicalUri.toString(), [
-      Name(
-        cls.name,
-        kind: _elementEnvironment.isEnumClass(cls)
-            ? DefinitionKind.enumKind
-            : DefinitionKind.classKind,
-      ),
+      _nameForClass(cls),
     ]);
+  }
+
+  Name _nameForClass(ClassEntity cls) {
+    final definition = _elementMap.getClassDefinition(cls);
+    final node = definition.node;
+    return Name(
+      cls.name,
+      kind:
+          ((node is ir.Class && node.isEnum) ||
+              _elementEnvironment.isEnumClass(cls))
+          ? DefinitionKind.enumKind
+          : (node is ir.Class && node.isMixinDeclaration)
+          ? DefinitionKind.mixinKind
+          : DefinitionKind.classKind,
+    );
   }
 
   /// Returns a [Definition] for [member].
@@ -146,12 +156,7 @@ class RecordUseCollector {
   Definition _definitionFromMember(MemberEntity member) {
     final cls = member.enclosingClass!;
     return Definition(cls.library.canonicalUri.toString(), [
-      Name(
-        cls.name,
-        kind: _elementEnvironment.isEnumClass(cls)
-            ? DefinitionKind.enumKind
-            : DefinitionKind.classKind,
-      ),
+      _nameForClass(cls),
       Name(member.name!, kind: DefinitionKind.constructorKind),
     ]);
   }
@@ -174,10 +179,15 @@ class RecordUseCollector {
   }
 
   Definition _getDefinitionForFunction(FunctionEntity function) {
+    final node = _elementMap.getMemberDefinition(function).node;
+    if (node is ir.Procedure && isTearOffLowering(node)) {
+      final target = getConstructorEffectiveTarget(node);
+      return _definitionFromMember(_elementMap.getMember(target));
+    }
+
     final libraryUri = function.library.canonicalUri.toString();
     final String name = function.name!;
 
-    final node = _elementMap.getMemberDefinition(function).node;
     DefinitionKind kind = DefinitionKind.methodKind;
     if (node is ir.Procedure) {
       if (node.isExtensionMember || node.isExtensionTypeMember) {
@@ -240,7 +250,7 @@ class RecordUseCollector {
 
     return Definition(libraryUri, [
       if (function.enclosingClass != null)
-        Name(function.enclosingClass!.name, kind: DefinitionKind.classKind),
+        _nameForClass(function.enclosingClass!),
       Name(
         name,
         kind: kind,

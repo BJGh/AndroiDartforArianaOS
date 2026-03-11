@@ -18,6 +18,7 @@ import 'package:kernel/type_environment.dart'
 import 'package:native_compiler/back_end/code.dart';
 import 'package:native_compiler/back_end/object_pool.dart';
 import 'package:native_compiler/configuration.dart';
+import 'package:native_compiler/runtime/names.dart';
 import 'package:native_compiler/runtime/object_layout.dart';
 import 'package:native_compiler/runtime/type_utils.dart';
 
@@ -104,6 +105,9 @@ enum ObjectPoolEntryKind {
   newObjectTags,
   staticFieldOffset,
   interfaceCall,
+  dynamicCall,
+  unboxedInt,
+  unboxedDouble,
 }
 
 abstract base class SerializationCluster {
@@ -705,30 +709,10 @@ final class TwoByteStringSerializationCluster extends SerializationCluster {
     for (final string in _objects) {
       serializer.assignRef(string);
       serializer.writeUint(string.length);
-      serializer.out.writeUint16List(string.codeUnits);
+      serializer.out.align(2);
+      serializer.out.writeUtf16String(string);
     }
   }
-}
-
-extension type Name._(Object raw) implements Object {
-  factory Name(String text, ast.Library? library) =>
-      Name._((library != null) ? PrivateName(text, library) : text);
-}
-
-/// Private name in a [library].
-/// VM mangles such names with a library key (`@nnnn`).
-final class PrivateName {
-  final String text;
-  final ast.Library library;
-  PrivateName(this.text, this.library);
-
-  @override
-  bool operator ==(Object other) =>
-      other is PrivateName && text == other.text && library == other.library;
-
-  @override
-  int get hashCode =>
-      finalizeHash(combineHash(text.hashCode, library.hashCode));
 }
 
 final class PrivateNameSerializationCluster extends SerializationCluster {
@@ -1288,7 +1272,7 @@ final class ICDataSerializationCluster extends SerializationCluster {
 
 final class ObjectPoolSerializationCluster extends SerializationCluster {
   final List<ObjectPool> _objects = [];
-  final Map<InterfaceCallEntry, ICData> icDatas = {};
+  final Map<ICDataCallEntry, ICData> icDatas = {};
 
   @override
   void trace(SnapshotSerializer serializer, Object object) {
@@ -1301,21 +1285,17 @@ final class ObjectPoolSerializationCluster extends SerializationCluster {
             serializer.push(entry.cls);
           case StaticFieldOffset():
             serializer.push(entry.field);
-          case InterfaceCallEntry():
-            // TODO: call through monomorphic/table dispatcher.
+          case ICDataCallEntry():
             final icData = icDatas[entry] = ICData(
               entry.owner,
               entry.argumentsShape,
-              Name(
-                entry.selectorName,
-                entry.interfaceTarget.member.name.library,
-              ),
+              entry.selector,
             );
             serializer.push(icData);
           case ReservedEntry():
             break;
         }
-      } else {
+      } else if (entry is! UnboxedConstant) {
         serializer.push(entry);
       }
     }
@@ -1351,8 +1331,17 @@ final class ObjectPoolSerializationCluster extends SerializationCluster {
             case InterfaceCallEntry():
               serializer.writeUint(ObjectPoolEntryKind.interfaceCall.index);
               serializer.writeRefId(icDatas[entry]);
+            case DynamicCallEntry():
+              serializer.writeUint(ObjectPoolEntryKind.dynamicCall.index);
+              serializer.writeRefId(icDatas[entry]);
             case ReservedEntry():
           }
+        } else if (entry is UnboxedIntConstant) {
+          serializer.writeUint(ObjectPoolEntryKind.unboxedInt.index);
+          serializer.out.writeInt(entry.value);
+        } else if (entry is UnboxedDoubleConstant) {
+          serializer.writeUint(ObjectPoolEntryKind.unboxedDouble.index);
+          serializer.out.writeDouble(entry.value);
         } else {
           serializer.writeUint(ObjectPoolEntryKind.objectRef.index);
           serializer.writeRefId(entry);
@@ -1454,12 +1443,13 @@ class SnapshotStreamWriter {
   }
 
   @pragma('vm:prefer-inline')
-  void writeUint16List(List<int> src) {
-    _ensureCapacity(src.length << 1);
-    _currentBuffer.buffer
-        .asUint16List(_currentLength)
-        .setRange(0, src.length, src);
-    _currentLength += src.length << 1;
+  void writeUtf16String(String string) {
+    _ensureCapacity(string.length << 1);
+    for (var i = 0; i < string.length; ++i) {
+      int utf16codeUnit = string.codeUnitAt(i);
+      _currentBuffer[_currentLength++] = utf16codeUnit & 0xff;
+      _currentBuffer[_currentLength++] = utf16codeUnit >> 8;
+    }
   }
 
   @pragma('vm:prefer-inline')

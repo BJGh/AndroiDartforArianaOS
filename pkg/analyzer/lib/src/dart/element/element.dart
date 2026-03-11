@@ -65,20 +65,6 @@ import 'package:pub_semver/pub_semver.dart';
 
 part 'element.g.dart';
 
-/// Create MetadataImpl from fragments, but return [MetadataImpl.empty] if
-/// there are none instead of creating a new one.
-MetadataImpl _metadataHelper(List<FragmentImpl> fragments) {
-  List<ElementAnnotationImpl>? annotations;
-  for (var fragment in fragments) {
-    var fragmentAnnotations = fragment.metadata.annotations;
-    if (fragmentAnnotations.isNotEmpty) {
-      (annotations ??= []).addAll(fragmentAnnotations);
-    }
-  }
-  if (annotations == null) return MetadataImpl.empty;
-  return MetadataImpl(annotations);
-}
-
 class BindPatternVariableElementImpl extends PatternVariableElementImpl
     implements BindPatternVariableElement {
   BindPatternVariableElementImpl(super.firstFragment);
@@ -2234,7 +2220,7 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
   @override
   @trackedIncludedInId
   MetadataImpl get metadata {
-    return _metadataHelper(_fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -2356,7 +2342,13 @@ abstract class ExecutableFragmentImpl extends FunctionTypedFragmentImpl
   }
 
   @override
+  ExecutableFragmentImpl? get nextFragment;
+
+  @override
   int get offset => nameOffset ?? firstTokenOffset!;
+
+  @override
+  ExecutableFragmentImpl? get previousFragment;
 
   @override
   List<TypeParameterFragmentImpl> get typeParameters {
@@ -2942,7 +2934,7 @@ class FieldElementImpl extends PropertyInducingElementImpl
       }
     }
 
-    return _metadataHelper(_fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -3275,7 +3267,7 @@ class FormalParameterElementImpl extends PromotableElementImpl
 
   @override
   MetadataImpl get metadata {
-    return _metadataHelper(fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -3628,6 +3620,44 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
   @override
   ElementImpl get element;
 
+  /// Returns the metadata for the element represented by this fragment chain.
+  ///
+  /// If the element has multiple fragments, annotations from this fragment and
+  /// all subsequent fragments are combined in fragment order.
+  MetadataImpl get elementMetadata {
+    if (nextFragment == null) {
+      return metadata;
+    }
+
+    List<ElementAnnotationImpl>? annotations;
+    MetadataImpl? firstMetadata;
+    for (
+      FragmentImpl? fragment = this;
+      fragment != null;
+      fragment = fragment.nextFragment
+    ) {
+      var fragmentMetadata = fragment.metadata;
+      if (fragmentMetadata.annotations.isNotEmpty) {
+        if (firstMetadata == null) {
+          firstMetadata = fragmentMetadata;
+        } else {
+          annotations ??= firstMetadata.annotations.toList();
+          annotations.addAll(fragmentMetadata.annotations);
+        }
+      }
+    }
+
+    if (annotations != null) {
+      return MetadataImpl(annotations);
+    }
+
+    if (firstMetadata != null) {
+      return firstMetadata;
+    }
+
+    return MetadataImpl.empty;
+  }
+
   /// Return the enclosing unit element (which might be the same as `this`), or
   /// `null` if this element is not contained in any compilation unit.
   LibraryFragmentImpl get enclosingUnit {
@@ -3669,6 +3699,9 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
     }
     return null;
   }
+
+  @override
+  FragmentImpl? get nextFragment;
 
   /// The version where this SDK API was added.
   ///
@@ -3748,6 +3781,12 @@ sealed class FunctionFragmentImpl extends ExecutableFragmentImpl
   /// Initialize a newly created function element to have the given [name] and
   /// [offset].
   FunctionFragmentImpl({required this.name, super.firstTokenOffset});
+
+  @override
+  FunctionFragmentImpl? get nextFragment;
+
+  @override
+  FunctionFragmentImpl? get previousFragment;
 }
 
 @elementClass
@@ -3776,6 +3815,12 @@ abstract class FunctionTypedFragmentImpl extends FragmentImpl
 
   @override
   List<FormalParameterFragmentImpl> get formalParameters;
+
+  @override
+  FunctionTypedFragmentImpl? get nextFragment;
+
+  @override
+  FunctionTypedFragmentImpl? get previousFragment;
 
   @override
   List<TypeParameterFragmentImpl> get typeParameters;
@@ -6805,7 +6850,7 @@ class LibraryFragmentImpl extends FragmentImpl
   int? get nameOffset => null;
 
   @override
-  LibraryFragment? get nextFragment {
+  LibraryFragmentImpl? get nextFragment {
     var fragments = library.fragments;
     var index = fragments.indexOf(this);
     return fragments.elementAtOrNull(index + 1);
@@ -8570,6 +8615,12 @@ abstract class NonParameterVariableFragmentImpl extends VariableFragmentImpl
   FragmentImpl get enclosingFragment {
     return super.enclosingFragment as FragmentImpl;
   }
+
+  @override
+  NonParameterVariableFragmentImpl? get nextFragment;
+
+  @override
+  NonParameterVariableFragmentImpl? get previousFragment;
 }
 
 class PartIncludeImpl extends ElementDirectiveImpl implements PartInclude {
@@ -8903,6 +8954,9 @@ sealed class PropertyAccessorFragmentImpl extends ExecutableFragmentImpl
   }
 
   @override
+  PropertyAccessorFragmentImpl? get nextFragment;
+
+  @override
   int get offset {
     if (nameOffset case var nameOffset?) {
       return nameOffset;
@@ -8913,6 +8967,9 @@ sealed class PropertyAccessorFragmentImpl extends ExecutableFragmentImpl
     }
     return firstTokenOffset!;
   }
+
+  @override
+  PropertyAccessorFragmentImpl? get previousFragment;
 }
 
 @elementClass
@@ -9733,7 +9790,7 @@ class TopLevelVariableElementImpl extends PropertyInducingElementImpl
   @override
   @trackedIncludedInId
   MetadataImpl get metadata {
-    return _metadataHelper(_fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -9939,7 +9996,7 @@ class TypeAliasElementImpl extends ElementImpl
   @override
   @trackedIncludedInId
   MetadataImpl get metadata {
-    return _metadataHelper(_fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -10023,6 +10080,7 @@ class TypeAliasElementImpl extends ElementImpl
         alias: InstantiatedTypeAliasElementImpl(
           element: this,
           typeArguments: typeArguments,
+          nullabilitySuffix: nullabilitySuffix,
         ),
       );
     } else if (type is InterfaceTypeImpl) {
@@ -10033,6 +10091,7 @@ class TypeAliasElementImpl extends ElementImpl
         alias: InstantiatedTypeAliasElementImpl(
           element: this,
           typeArguments: typeArguments,
+          nullabilitySuffix: nullabilitySuffix,
         ),
       );
     } else if (type is RecordTypeImpl) {
@@ -10043,6 +10102,7 @@ class TypeAliasElementImpl extends ElementImpl
         alias: InstantiatedTypeAliasElementImpl(
           element: this,
           typeArguments: typeArguments,
+          nullabilitySuffix: nullabilitySuffix,
         ),
       );
     } else if (type is TypeParameterTypeImpl) {
@@ -10052,6 +10112,7 @@ class TypeAliasElementImpl extends ElementImpl
         alias: InstantiatedTypeAliasElementImpl(
           element: this,
           typeArguments: typeArguments,
+          nullabilitySuffix: nullabilitySuffix,
         ),
       );
     } else {
@@ -10202,7 +10263,7 @@ class TypeParameterElementImpl extends ElementImpl
 
   @override
   MetadataImpl get metadata {
-    return _metadataHelper(fragments);
+    return _firstFragment.elementMetadata;
   }
 
   @override
@@ -10507,6 +10568,9 @@ abstract class VariableFragmentImpl extends FragmentImpl
   }
 
   @override
+  VariableFragmentImpl? get nextFragment;
+
+  @override
   int get offset {
     if (nameOffset ?? firstTokenOffset case var result?) {
       return result;
@@ -10521,6 +10585,9 @@ abstract class VariableFragmentImpl extends FragmentImpl
     }
     throw StateError('($runtimeType) $this');
   }
+
+  @override
+  VariableFragmentImpl? get previousFragment;
 }
 
 enum _ClassFragmentImplModifiers {

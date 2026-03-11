@@ -99,6 +99,9 @@ class ModuleSnapshot : public AllStatic {
     kNewObjectTags,
     kStaticFieldOffset,
     kInterfaceCall,
+    kDynamicCall,
+    kUnboxedInt,
+    kUnboxedDouble,
   };
 };
 
@@ -176,6 +179,7 @@ class Deserializer : public ThreadStackResource {
     return stream_.AddressOfCurrentPosition();
   }
   void Advance(intptr_t value) { stream_.Advance(value); }
+  void Align(intptr_t alignment) { stream_.Align(alignment); }
 
   void AddBaseObject(const Object& object) { AssignRefPreLoad(object); }
 
@@ -333,6 +337,7 @@ class TwoByteStringDeserializationCluster : public DeserializationCluster {
     const intptr_t count = d->ReadUnsigned();
     for (intptr_t i = 0; i < count; i++) {
       const intptr_t len = d->ReadUnsigned();
+      d->Align(TwoByteString::kBytesPerElement);
       string_ = Symbols::FromUTF16(
           d->thread(),
           reinterpret_cast<const uint16_t*>(d->AddressOfCurrentPosition()),
@@ -1183,7 +1188,8 @@ class ObjectPoolDeserializationCluster : public DeserializationCluster {
                 Smi::Value(field->untag()->host_offset_or_field_id()));
             break;
           }
-          case ModuleSnapshot::kInterfaceCall: {
+          case ModuleSnapshot::kInterfaceCall:
+          case ModuleSnapshot::kDynamicCall: {
             pool->untag()->entry_bits()[j] = tagged_entry_bits;
             UntaggedObjectPool::Entry& entry = pool->untag()->data()[j];
             entry.raw_obj_ = d.ReadRef();
@@ -1192,6 +1198,18 @@ class ObjectPoolDeserializationCluster : public DeserializationCluster {
             pool->untag()->entry_bits()[j] = tagged_entry_bits;
             UntaggedObjectPool::Entry& entry2 = pool->untag()->data()[j];
             entry2.raw_obj_ = StubCode::OneArgOptimizedCheckInlineCache().ptr();
+            break;
+          }
+          case ModuleSnapshot::kUnboxedInt: {
+            pool->untag()->entry_bits()[j] = immediate_entry_bits;
+            UntaggedObjectPool::Entry& entry = pool->untag()->data()[j];
+            entry.raw_value_ = d.Read<int64_t>();
+            break;
+          }
+          case ModuleSnapshot::kUnboxedDouble: {
+            pool->untag()->entry_bits()[j] = immediate_entry_bits;
+            UntaggedObjectPool::Entry& entry = pool->untag()->data()[j];
+            entry.raw_value_ = bit_cast<int64_t>(d.Read<double>());
             break;
           }
         }

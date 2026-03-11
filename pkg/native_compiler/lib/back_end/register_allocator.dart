@@ -78,7 +78,9 @@ final class LinearScanRegisterAllocator extends RegisterAllocator {
   LinearScanRegisterAllocator(super.backEndState, this.constraints);
 
   RegisterClass registerClass(Definition instr) =>
-      instr.type is DoubleType ? RegisterClass.fpu : RegisterClass.cpu;
+      instr.type is DoubleType && backEndState.unboxing.hasUnboxedResult(instr)
+      ? RegisterClass.fpu
+      : RegisterClass.cpu;
 
   int instructionPos(Instruction instr) => _instructionPos[instr.id];
   int blockStartPos(Block block) => instructionPos(block);
@@ -146,8 +148,8 @@ final class LinearScanRegisterAllocator extends RegisterAllocator {
       _instructionByPos[pos ~/ step] = block.id;
       pos += step;
       for (final instr in block) {
-        if (instr is Phi) {
-          // All Phis have the same position as their Block.
+        if (instr is Phi || instr is Parameter) {
+          // All Phis and Parameters have the same position as their Block.
           _instructionPos[instr.id] = blockStartPos(block);
         } else {
           _instructionPos[instr.id] = pos;
@@ -328,7 +330,7 @@ final class LinearScanRegisterAllocator extends RegisterAllocator {
     } else {
       final liveRange = LiveRange(constr.registerClass);
       _liveRanges.add(liveRange);
-      liveRange.addInterval(pos, pos + 1);
+      liveRange.addInterval(pos - 1, pos + 1);
       final loc = liveRange.addUse(pos, constr);
       _operandLocations[operandId] = loc;
     }
