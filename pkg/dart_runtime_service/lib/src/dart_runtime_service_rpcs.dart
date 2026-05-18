@@ -11,13 +11,19 @@ import 'package:vm_service/vm_service.dart';
 
 import 'clients.dart';
 import 'dart_runtime_service.dart';
+import 'dart_runtime_service_backend.dart';
 import 'event_streams.dart';
+import 'expression_evaluator.dart';
 import 'rpc_exceptions.dart';
 import 'utils.dart';
 
 typedef RpcHandlerWithNoParameters = FutureOr<RpcResponse> Function();
 typedef RpcHandlerWithParameters =
     FutureOr<RpcResponse> Function(json_rpc.Parameters);
+typedef RpcHandlerWithParametersAndClient =
+    FutureOr<RpcResponse> Function(json_rpc.Parameters, Client);
+
+typedef ServiceRpcHandler = (String, Function?);
 
 /// Manages requests made to platform-agnostic RPCs provided by
 /// [DartRuntimeService] by a single [Client].
@@ -26,13 +32,17 @@ final class DartRuntimeServiceRpcs {
     required this.clients,
     required this.eventStreamMethods,
     required this.client,
+    this.expressionEvaluator,
   });
 
   /// The current set of clients connected to the service.
-  final UnmodifiableNamedLookup<Client> clients;
+  final UnmodifiableClientNamedLookup clients;
 
   /// Wrapper for methods used to interact with event stream state.
   final EventStreamMethods eventStreamMethods;
+
+  /// Wrapper for methods used to perform expression evaluation, if supported.
+  final ExpressionEvaluator? expressionEvaluator;
 
   /// The client sending and receiving RPCs.
   final Client client;
@@ -44,22 +54,35 @@ final class DartRuntimeServiceRpcs {
   // Parameters for streamListen
   static const _kStreamId = 'streamId';
 
-  late final _commonRpcs = <(String, Function)>[
+  late final _commonRpcs = <ServiceRpcHandler>[
     ('getClientName', getClientName),
     ('registerService', registerService),
     ('setClientName', setClientName),
     ('streamCancel', streamCancel),
     ('streamListen', streamListen),
+    ('evaluate', expressionEvaluator?.evaluate),
+    ('evaluateInFrame', expressionEvaluator?.evaluateInFrame),
   ];
 
-  /// Registers the set of platform-agnostic RPCs for use by [client].
+  final _backendRpcs = <ServiceRpcHandler>[];
+  final _backendFallbacks = <RpcHandlerWithParameters>[];
+
+  void addBackendRpcs({required DartRuntimeServiceBackend backend}) {
+    _backendRpcs.addAll(backend.rpcs);
+    _backendFallbacks.addAll(backend.fallbacks);
+  }
+
+  /// Registers the set of platform-agnostic and backend RPCs for use by
+  /// [client].
   void registerRpcsWithPeer(json_rpc.Peer clientPeer) {
-    for (final (method, callback) in _commonRpcs) {
+    for (final (method, callback) in [..._commonRpcs, ..._backendRpcs]) {
+      if (callback == null) continue;
       if (callback is! RpcHandlerWithNoParameters &&
-          callback is! RpcHandlerWithParameters) {
+          callback is! RpcHandlerWithParameters &&
+          callback is! RpcHandlerWithParametersAndClient) {
         throw StateError("Callback for '$method' is not valid. ($callback).");
       }
-
+      client.logger.info('Registering $method');
       clientPeer.registerMethod(method, (json_rpc.Parameters parameters) async {
         try {
           late RpcResponse response;
@@ -71,10 +94,14 @@ final class DartRuntimeServiceRpcs {
             client.logger.info('Invoked $method (${parameters.value})');
             response = await callback(parameters);
             client.logger.info('Response: $response');
+          } else if (callback is RpcHandlerWithParametersAndClient) {
+            client.logger.info('Invoked $method (${parameters.value})');
+            response = await callback(parameters, client);
+            client.logger.info('Response: $response');
           }
           return response;
-        } catch (e) {
-          client.logger.info('Exception thrown when invoking $method: $e');
+        } catch (e, st) {
+          client.logger.info('Exception thrown when invoking $method: $e\n$st');
           rethrow;
         }
       });
@@ -83,6 +110,12 @@ final class DartRuntimeServiceRpcs {
 
   void registerServiceExtensionForwarder(json_rpc.Peer clientPeer) {
     clientPeer.registerFallback(serviceExtensionForwarderFallback);
+  }
+
+  void registerBackendFallbacks(json_rpc.Peer clientPeer) {
+    for (final fallback in _backendFallbacks) {
+      clientPeer.registerFallback(fallback);
+    }
   }
 
   /// Attempts to [parse] [parameters] into an instance of [T].
@@ -201,9 +234,13 @@ final class DartRuntimeServiceRpcs {
   ///
   /// If the stream ID does not correspond with a known stream, an error
   /// response may be returned.
-  RpcResponse streamListen(json_rpc.Parameters parameters) {
+  Future<RpcResponse> streamListen(json_rpc.Parameters parameters) async {
     final stream = parameters[_kStreamId].asString;
-    eventStreamMethods.streamListen(client: client, streamId: stream);
+    eventStreamMethods.streamListen(
+      client: client,
+      streamId: stream,
+      params: parameters.asMap.cast<String, Object?>(),
+    );
     return Success().toJson();
   }
 
@@ -214,7 +251,7 @@ final class DartRuntimeServiceRpcs {
   ///
   /// If the stream ID does not correspond with a known stream, an error
   /// response may be returned.
-  RpcResponse streamCancel(json_rpc.Parameters parameters) {
+  Future<RpcResponse> streamCancel(json_rpc.Parameters parameters) async {
     final streamId = parameters[_kStreamId].asString;
     eventStreamMethods.streamCancel(client: client, streamId: streamId);
     return Success().toJson();

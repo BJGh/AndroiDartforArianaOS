@@ -8,8 +8,6 @@ import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/error/error.dart';
-// ignore: implementation_imports
-import 'package:analyzer/src/dart/ast/extensions.dart';
 
 import '../analyzer.dart';
 import '../diagnostic.dart' as diag;
@@ -61,9 +59,7 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    if (node.body case BlockClassBody body) {
-      check(body.members);
-    }
+    check(node.body.members);
   }
 
   @override
@@ -73,8 +69,6 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    if (node.body case BlockClassBody body) {
-      check(body.members);
-    }
+    check(node.body.members);
   }
 }

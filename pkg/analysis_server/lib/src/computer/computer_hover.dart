@@ -47,12 +47,15 @@ class DartUnitHoverComputer {
 
     if (node is CompilationUnitMember ||
         node is CatchClauseParameter ||
+        node is EnumConstantDeclaration ||
         node is Expression ||
         node is FormalParameter ||
         node is MethodDeclaration ||
+        node is NamedArgument ||
         node is NamedType ||
         node is ConstructorDeclaration ||
         node is DeclaredIdentifier ||
+        node is RecordLiteralNamedField ||
         node is VariableDeclaration ||
         node is VariablePattern ||
         node is PatternFieldName ||
@@ -178,17 +181,25 @@ class DartUnitHoverComputer {
     var analysisSession = _unit.declaredFragment?.element.session;
 
     String? libraryName, libraryPath;
+    // for 'file:' URIs, use the path after the package root
     if (uri.isScheme('file') && analysisSession != null) {
-      // for 'file:' URIs, use the path after the project root
-      var context = analysisSession.resourceProvider.pathContext;
-      var projectRootDir =
-          analysisSession.analysisContext.contextRoot.root.path;
-      var relativePath = context.relative(
-        context.fromUri(uri),
-        from: projectRootDir,
+      var pathContext = analysisSession.resourceProvider.pathContext;
+      var libraryFilePath = pathContext.fromUri(uri);
+      var contextRoot = analysisSession.analysisContext.contextRoot;
+      var workspace = contextRoot.workspace;
+
+      // Prefer using the root of the package that contains this library, since
+      // the context root could now be a Pub Workspace. If we don't find one,
+      // fall back to the context root.
+      var package = workspace.packages.packageForPath(libraryFilePath);
+      var packageRootDir = package?.rootFolder.path ?? contextRoot.root.path;
+
+      var relativePath = pathContext.relative(
+        libraryFilePath,
+        from: packageRootDir,
       );
-      if (context.style == path.Style.windows) {
-        var pathList = context.split(relativePath);
+      if (pathContext.style == path.Style.windows) {
+        var pathList = pathContext.split(relativePath);
         libraryName = pathList.join('/');
       } else {
         libraryName = relativePath;
@@ -222,6 +233,7 @@ class DartUnitHoverComputer {
       ConstructorDeclaration() =>
         node.name ?? node.typeName ?? node.newKeyword ?? node.factoryKeyword,
       DeclaredIdentifier() => node.name,
+      EnumConstantDeclaration() => node.name,
       EnumDeclaration() => node.namePart.typeName,
       Expression() => node,
       ExtensionDeclaration() => node.name,
@@ -231,6 +243,7 @@ class DartUnitHoverComputer {
       ImportPrefixReference() => node.name,
       LibraryDirective() => node.libraryKeyword,
       MethodDeclaration() => node.name,
+      NamedArgument() => node.name,
       MixinDeclaration() => node.name,
       NameWithTypeParameters() => node.typeName,
       NamedType() => node.name,
@@ -239,6 +252,7 @@ class DartUnitHoverComputer {
         node.declaration?.constructorName ?? node.declaration?.typeName,
       PrimaryConstructorDeclaration() => node.constructorName ?? node.typeName,
       PrimaryConstructorName() => node.name,
+      RecordLiteralNamedField() => node.name,
       TypeAlias() => node.name,
       VariableDeclaration() => node.name,
       VariablePattern() => node.name,
@@ -249,12 +263,12 @@ class DartUnitHoverComputer {
 
   /// Gets the display string for the type of the parameter.
   ///
-  /// Returns `null` if the parameter is not an expression.
+  /// Returns `null` if the node doesn't correspond to a parameter.
   String? _parameterDisplayString(AstNode node) {
-    if (node is! Expression) {
-      return null;
+    FormalParameterElement? parameter;
+    if (node is Argument) {
+      parameter = node.correspondingParameter;
     }
-    var parameter = node.correspondingParameter;
     return switch (parameter?.enclosingElement) {
       // Expressions passed as arguments to setters and binary expressions
       // will have parameters here but we don't want them to show as such in
@@ -294,7 +308,9 @@ class DartUnitHoverComputer {
   String? _typeDisplayString(AstNode node, Element? element) {
     var parent = node.parent;
     DartType? staticType;
-    if (node is Expression &&
+    if (node is NamedArgument) {
+      staticType = node.correspondingParameter?.type;
+    } else if (node is Expression &&
         (element == null ||
             element is VariableElement ||
             element is GetterElement ||
@@ -330,10 +346,6 @@ class DartUnitHoverComputer {
       var element = node.element;
       if (element is VariableElement) {
         if (node.inDeclarationContext()) {
-          return element.type;
-        }
-        var parent2 = node.parent?.parent;
-        if (parent2 is NamedExpression && parent2.name.label == node) {
           return element.type;
         }
       }

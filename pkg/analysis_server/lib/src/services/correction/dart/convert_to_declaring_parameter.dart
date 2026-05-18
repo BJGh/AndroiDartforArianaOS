@@ -3,14 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analysis_server/src/services/correction/assist.dart';
+import 'package:analysis_server/src/services/correction/fix.dart';
 import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source_range.dart';
-import 'package:analyzer/src/utilities/extensions/ast.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
+import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 typedef _RefactorData = ({
@@ -24,11 +25,16 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
 
   @override
   CorrectionApplicability get applicability =>
-      // Not a fix.
-      CorrectionApplicability.singleLocation;
+      CorrectionApplicability.automatically;
 
   @override
   AssistKind? get assistKind => DartAssistKind.convertToDeclaringParameter;
+
+  @override
+  FixKind? get fixKind => DartFixKind.convertToDeclaringParameter;
+
+  @override
+  FixKind? get multiFixKind => DartFixKind.convertToDeclaringParameterMulti;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -73,8 +79,7 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
     // If either the parameter or the field has comments or metadata, then
     // don't apply the assist. This is a temporary restriction until the assist
     // supports moving the comments and metadata to the parameter.
-    if (parameter is AnnotatedNode &&
-        _hasCommentOrMetadata(parameter as AnnotatedNode)) {
+    if (_hasCommentOrMetadata(parameter)) {
       return;
     }
     var fieldDeclarationList = fieldDeclaration.parent?.parent;
@@ -101,7 +106,8 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
         }
       }
 
-      // Insert the keyword (and renaming if needed).
+      // Insert the keyword, and a type if the parameter didn't already have a
+      // type.
       var insertedVariable = false;
       if (parameter is FieldFormalParameter) {
         if (parameter.offset == parameter.thisKeyword.offset) {
@@ -133,15 +139,14 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
           );
         }
       }
+      // Rename the parameter if it's different than the name of the field.
       if (fieldName != parameterName.lexeme) {
         builder.addSimpleReplacement(range.token(parameterName), fieldName);
       }
       if (!insertedVariable) {
         var offset = parameter.offset;
-        if (parameter is NormalFormalParameter) {
-          if (parameter.requiredKeyword case var requiredKeyword?) {
-            offset = requiredKeyword.end;
-          }
+        if (parameter.requiredKeyword case var requiredKeyword?) {
+          offset = requiredKeyword.end;
         }
         var keyword = fieldElement.isFinal ? 'final' : 'var';
         if (offset == parameter.offset) {
@@ -150,12 +155,7 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
           builder.addSimpleInsertion(offset, ' $keyword');
         }
 
-        TypeAnnotation? type;
-        if (parameter is SimpleFormalParameter) {
-          type = parameter.type;
-        } else if (parameter is FieldFormalParameter) {
-          type = parameter.type;
-        }
+        var type = parameter.type;
 
         if (type == null) {
           var variableList = fieldDeclaration.parent as VariableDeclarationList;
@@ -268,7 +268,7 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
       (node) => node is ClassDeclaration || node is EnumDeclaration,
     );
     return switch (declaration) {
-      ClassDeclaration() => declaration.body.classMembers,
+      ClassDeclaration() => declaration.body.members,
       EnumDeclaration() => declaration.body.members,
       _ => null,
     };
@@ -339,6 +339,10 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
   }
 
   _RefactorData? _getRefactorData(FormalParameter parameter) {
+    if (parameter.functionTypedSuffix != null) {
+      return null;
+    }
+
     var parameterElement = parameter.declaredFragment?.element;
     if (parameterElement == null) {
       // If the parameter hasn't been resolved, we woun't be able to find either
@@ -364,11 +368,14 @@ class ConvertToDeclaringParameter extends ResolvedCorrectionProducer {
         // necessary.
         return null;
       }
-      fieldElement = parameter.declaredFragment?.element.field;
+      var element = parameter.declaredFragment?.element;
+      if (element is FieldFormalParameterElement) {
+        fieldElement = element.field;
+      }
       if (fieldElement == null || fieldElement.name != parameter.name.lexeme) {
         return null;
       }
-    } else if (parameter is SimpleFormalParameter) {
+    } else if (parameter is RegularFormalParameter) {
       var body = primaryConstructor.body;
       if (body != null) {
         for (var init in body.initializers) {

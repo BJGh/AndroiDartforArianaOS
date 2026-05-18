@@ -173,13 +173,6 @@ void StubCodeCompiler::GenerateExitSafepointStub() {
   __ ret();
 }
 
-void StubCodeCompiler::GenerateLoadBSSEntry(BSS::Relocation relocation,
-                                            Register dst,
-                                            Register tmp) {
-  // Only used in AOT.
-  __ Breakpoint();
-}
-
 // Calls a native function inside a safepoint.
 //
 // On entry:
@@ -245,6 +238,7 @@ void StubCodeCompiler::GenerateFfiCallbackTrampolineStub() {
   // Save THR and EBX which are callee-saved.
   __ pushl(THR);
   __ pushl(EBX);
+  __ pushl(ECX);
 
   // THR & return address
   COMPILE_ASSERT(FfiCallbackMetadata::kNativeCallbackTrampolineStackDelta == 4);
@@ -255,20 +249,16 @@ void StubCodeCompiler::GenerateFfiCallbackTrampolineStub() {
   // code size on this shared stub.
   {
     __ EnterFrame(0);
-    // entry_point, trampoline_type, &trampoline_type, &entry_point, trampoline
-    //                              ^------ GetFfiCallbackMetadata args ------^
     __ ReserveAlignedFrameSpace(5 * target::kWordSize);
+    // SP[4] CallbackMetadata.epilogue
+    // SP[3] CallbackMetadata.is_tail
+    // SP[2] CallbackMetadata.entry_point
+    // SP[1] out -> SP[2]
+    // SP[0] trampoline
 
-    // Trampoline arg.
     __ movl(Address(SPREG, 0 * target::kWordSize), EAX);
-
-    // Pointer to trampoline type stack slot.
     __ movl(EAX, SPREG);
-    __ addl(EAX, Immediate(3 * target::kWordSize));
-    __ movl(Address(SPREG, 2 * target::kWordSize), EAX);
-
-    // Pointer to entry point stack slot.
-    __ addl(EAX, Immediate(target::kWordSize));
+    __ addl(EAX, Immediate(2 * target::kWordSize));
     __ movl(Address(SPREG, 1 * target::kWordSize), EAX);
 
     __ movl(EAX,
@@ -276,178 +266,83 @@ void StubCodeCompiler::GenerateFfiCallbackTrampolineStub() {
     __ call(EAX);
     __ movl(THR, EAX);
 
-    // Save the trampoline type in EBX, and the entry point in ECX.
-    __ movl(EBX, Address(SPREG, 3 * target::kWordSize));
-    __ movl(ECX, Address(SPREG, 4 * target::kWordSize));
+    __ movl(EAX, Address(SPREG, 2 * target::kWordSize));  // entry_point
+    __ movl(ECX, Address(SPREG, 3 * target::kWordSize));  // is_tail
+    __ movl(EBX, Address(SPREG, 4 * target::kWordSize));  // epilogue
 
     __ LeaveFrame();
-
-    // Save the trampoline type to the stack, because we'll need it after the
-    // call to decide whether to ret() or ret(4).
-    __ pushl(EBX);
   }
 
-  COMPILE_ASSERT(!IsCalleeSavedRegister(ECX) && !IsArgumentRegister(ECX));
-  COMPILE_ASSERT(ECX != THR);
+  Label call, call_ret4, tail;
+  __ cmpl(ECX, Immediate(0));
+  __ j(EQUAL, &call);
+  __ cmpl(ECX, Immediate(1));
+  __ j(EQUAL, &tail);
+  __ cmpl(ECX, Immediate(2));
+  __ j(EQUAL, &call_ret4);
+  __ int3();
 
-  Label async_callback;
-  Label sync_isolate_group_bound_callback;
-  Label sync_callback_isolate_ownership;
-  Label done;
-
-  // Check the trampoline type to see how the callback should be invoked.
-  __ cmpl(EBX, Immediate(static_cast<uword>(
-                   FfiCallbackMetadata::TrampolineType::kAsync)));
-  __ j(EQUAL, &async_callback);
-
-  __ cmpl(EBX,
-          Immediate(static_cast<uword>(
-              FfiCallbackMetadata::TrampolineType::kSyncIsolateGroupBound)));
-  __ j(EQUAL, &sync_isolate_group_bound_callback, Assembler::kNearJump);
-
-  __ testl(EBX,
-           Immediate(FfiCallbackMetadata::kSyncCallbackIsolateOwnershipFlag));
-  __ j(NOT_ZERO, &sync_callback_isolate_ownership, Assembler::kNearJump);
-
-  // Sync callback. The entry point contains the target function, so just call
-  // it. DLRT_GetThreadForNativeCallbackTrampoline exited the safepoint, so
-  // re-enter it afterwards.
-
-  // On entry to the function, there will be two extra slots on the stack:
-  // the saved THR and the return address. The target will know to skip them.
-  __ call(ECX);
-
-  // Takes care to not clobber *any* registers (besides scratch).
-  __ EnterFullSafepoint(/*scratch=*/ECX);
-
-  // Pop the trampoline type into ECX.
-  __ popl(ECX);
-
-  // Restore callee-saved registers.
-  __ popl(EBX);
-  __ popl(THR);
-
-  __ cmpl(ECX, Immediate(static_cast<uword>(
-                   FfiCallbackMetadata::TrampolineType::kSync)));
-  __ j(NOT_EQUAL, &ret_4, Assembler::kNearJump);
-  __ ret();
-
-  __ Bind(&ret_4);
-  __ ret(Immediate(4));
-
-  __ Bind(&sync_callback_isolate_ownership);
-
-  __ call(ECX);
-
-  // Exit the target isolate.
   {
+    __ Bind(&call);
+    __ call(EAX);  // entry_point
+
     __ pushl(CallingConventions::kReturnReg);
     __ pushl(CallingConventions::kSecondReturnReg);
-    __ subl(ESP, Immediate(kFpuRegisterSize));
-    __ movups(Address(ESP, 0), CallingConventions::kReturnFpuReg);
+    __ subl(ESP, Immediate(8));
+    __ movsd(Address(ESP, 0), CallingConventions::kReturnFpuReg);
+    // 4 + 4 + 8 = 16 (stack alignment)
 
-    __ EnterFrame(0);
-    __ ReserveAlignedFrameSpace(0);
+    __ pushl(THR);
+    __ call(EBX);  // DLRT_ExitSyncCallback, etc
+    __ popl(EAX);
 
-    __ movl(EAX, Immediate(reinterpret_cast<int64_t>(
-                     DLRT_ExitSyncCallbackTargetIsolate)));
-    __ CallCFunction(EAX);
-
-    __ LeaveFrame();
-
-    __ movups(Address(ESP, 0), CallingConventions::kReturnFpuReg);
-    __ addl(ESP, Immediate(kFpuRegisterSize));
+    __ movsd(CallingConventions::kReturnFpuReg, Address(ESP, 0));
+    __ addl(ESP, Immediate(8));
     __ popl(CallingConventions::kSecondReturnReg);
     __ popl(CallingConventions::kReturnReg);
 
-    // Pop the trampoline type into ECX.
     __ popl(ECX);
-
-    // Restore callee-saved registers.
     __ popl(EBX);
     __ popl(THR);
-
-    Label ownership_ret_4;
-    __ cmpl(ECX,
-            Immediate(
-                static_cast<uword>(FfiCallbackMetadata::TrampolineType::kSync) |
-                FfiCallbackMetadata::kSyncCallbackIsolateOwnershipFlag));
-    __ j(NOT_EQUAL, &ownership_ret_4, Assembler::kNearJump);
     __ ret();
+  }
+  {
+    __ Bind(&call_ret4);
+    __ call(EAX);  // entry_point
 
-    __ Bind(&ownership_ret_4);
+    __ pushl(CallingConventions::kReturnReg);
+    __ pushl(CallingConventions::kSecondReturnReg);
+    __ subl(ESP, Immediate(8));
+    __ movsd(Address(ESP, 0), CallingConventions::kReturnFpuReg);
+    // 4 + 4 + 8 = 16 (stack alignment)
+
+    __ pushl(THR);
+    __ call(EBX);  // DLRT_ExitSyncCallback, etc
+    __ popl(EAX);
+
+    __ movsd(CallingConventions::kReturnFpuReg, Address(ESP, 0));
+    __ addl(ESP, Immediate(8));
+    __ popl(CallingConventions::kSecondReturnReg);
+    __ popl(CallingConventions::kReturnReg);
+
+    __ popl(ECX);
+    __ popl(EBX);
+    __ popl(THR);
     __ ret(Immediate(4));
   }
-
-  __ jmp(&done, Assembler::kNearJump);
-
-  __ Bind(&sync_isolate_group_bound_callback);
-
-  __ call(ECX);
-
-  // Exit isolate group bound isolate.
   {
-    __ pushl(CallingConventions::kReturnReg);
-    __ pushl(CallingConventions::kSecondReturnReg);
-    __ subl(ESP, Immediate(kFpuRegisterSize));
-    __ movups(Address(ESP, 0), CallingConventions::kReturnFpuReg);
-
-    __ EnterFrame(0);
-    __ ReserveAlignedFrameSpace(0);
-
-    __ movl(EAX, Immediate(reinterpret_cast<int64_t>(
-                     DLRT_ExitIsolateGroupBoundIsolate)));
-    __ CallCFunction(EAX);
-
-    __ LeaveFrame();
-
-    __ movups(Address(ESP, 0), CallingConventions::kReturnFpuReg);
-    __ addl(ESP, Immediate(kFpuRegisterSize));
-    __ popl(CallingConventions::kSecondReturnReg);
-    __ popl(CallingConventions::kReturnReg);
-  }
-
-  __ jmp(&done, Assembler::kNearJump);
-
-  __ Bind(&async_callback);
-
-  // Async callback. The entrypoint marshals the arguments into a message and
-  // sends it over the send port. DLRT_GetThreadForNativeCallbackTrampoline
-  // entered a temporary isolate, so exit it afterwards.
-
-  // On entry to the function, there will be two extra slots on the stack:
-  // the saved THR and the return address. The target will know to skip them.
-  __ call(ECX);
-
-  // Exit the temporary isolate.
-  {
-    // Pop the trampoline type into ECX.
+    __ Bind(&tail);
+    __ call(EAX);  // entry_point
+    __ movl(EAX, EBX);
     __ popl(ECX);
-
-    // Restore callee-saved registers.
     __ popl(EBX);
     __ popl(THR);
-
     // Tail-call DLRT_ExitTemporaryIsolate. It is not safe to return to this
     // stub, since it might be deleted once DLRT_ExitTemporaryIsolate proceeds
     // enough for VM shutdown.
-    __ movl(EAX,
-            Immediate(reinterpret_cast<int64_t>(DLRT_ExitTemporaryIsolate)));
-    __ jmp(EAX);
+    __ jmp(EAX);  // DLRT_ExitTemporaryIsolate
     __ int3();
   }
-
-  __ Bind(&done);
-
-  // Pop the trampoline type into ECX.
-  __ popl(ECX);
-
-  // Restore callee-saved registers.
-  __ popl(EBX);
-  __ popl(THR);
-
-  // Stack delta is always 0 for async callbacks.
-  __ ret();
 
   // 'kNativeCallbackSharedStubSize' is an upper bound because the exact
   // instruction size can vary slightly based on OS calling conventions.
@@ -1021,7 +916,7 @@ void StubCodeCompiler::GenerateAllocateArrayStub() {
       __ movl(EDI, EBX);
       __ cmpl(EDI, Immediate(target::UntaggedObject::kSizeTagMaxSizeTag));
       __ j(ABOVE, &size_tag_overflow, Assembler::kNearJump);
-      __ shll(EDI, Immediate(target::UntaggedObject::kTagBitsSizeTagPos -
+      __ shll(EDI, Immediate(target::UntaggedObject::kSizeTagPos -
                              target::ObjectAlignment::kObjectAlignmentLog2));
       __ jmp(&done, Assembler::kNearJump);
 
@@ -1419,7 +1314,7 @@ static void GenerateAllocateContextSpaceStub(Assembler* assembler,
     __ andl(EBX, Immediate(-target::ObjectAlignment::kObjectAlignment));
     __ cmpl(EBX, Immediate(target::UntaggedObject::kSizeTagMaxSizeTag));
     __ j(ABOVE, &size_tag_overflow, Assembler::kNearJump);
-    __ shll(EBX, Immediate(target::UntaggedObject::kTagBitsSizeTagPos -
+    __ shll(EBX, Immediate(target::UntaggedObject::kSizeTagPos -
                            target::ObjectAlignment::kObjectAlignmentLog2));
     __ jmp(&done);
 
@@ -2505,9 +2400,9 @@ void StubCodeCompiler::GenerateZeroArgsUnoptimizedStaticCallStub() {
 // ECX: ICData
 // ESP[0]: return address
 void StubCodeCompiler::GenerateOneArgUnoptimizedStaticCallStub() {
-  GenerateNArgsCheckInlineCacheStub(
-      2, kStaticCallMissHandlerTwoArgsRuntimeEntry, Token::kILLEGAL,
-      kUnoptimized, kStaticCall, kIgnoreExactness);
+  GenerateNArgsCheckInlineCacheStub(1, kStaticCallMissHandlerOneArgRuntimeEntry,
+                                    Token::kILLEGAL, kUnoptimized, kStaticCall,
+                                    kIgnoreExactness);
 }
 
 // ECX: ICData
@@ -2885,20 +2780,72 @@ void StubCodeCompiler::GenerateSubtypeNTestCacheStub(Assembler* assembler,
     __ movl(STCInternal::kInstanceCidOrSignatureReg,
             FieldAddress(STCInternal::kInstanceCidOrSignatureReg,
                          target::Function::signature_offset()));
+
     if (n >= 2) {
-      __ movl(
+      __ movl(STCInternal::kScratchReg,
+              FieldAddress(TypeTestABI::kInstanceReg,
+                           target::Closure::length_and_flags_offset()));
+
+      Label load_function_type_arguments, load_delayed_type_arguments;
+      __ movl(STCInternal::kInstanceInstantiatorTypeArgumentsReg, raw_null);
+      __ BranchIfBit(
+          STCInternal::kScratchReg,
+          UntaggedClosure::kHasInstantiatorTypeArgumentsBit + kSmiTagShift,
+          ZERO, (n >= 5) ? &load_function_type_arguments : &loop);
+      __ ExtractBitField(
+          STCInternal::kInstanceInstantiatorTypeArgumentsReg,
+          STCInternal::kScratchReg,
+          UntaggedClosure::InstantiatorTypeArgumentsIndexBits::shift() +
+              kSmiTagShift,
+          UntaggedClosure::InstantiatorTypeArgumentsIndexBits::bitsize());
+      __ Load(
           STCInternal::kInstanceInstantiatorTypeArgumentsReg,
           FieldAddress(TypeTestABI::kInstanceReg,
-                       target::Closure::instantiator_type_arguments_offset()));
+                       STCInternal::kInstanceInstantiatorTypeArgumentsReg,
+                       TIMES_WORD_SIZE, target::Closure::element_offset(0)));
+      if (n >= 5) {
+        Label no_function_type_arguments;
+        __ Bind(&load_function_type_arguments);
+
+        __ BranchIfBit(
+            STCInternal::kScratchReg,
+            UntaggedClosure::kHasFunctionTypeArgumentsBit + kSmiTagShift, ZERO,
+            &no_function_type_arguments);
+        __ ExtractBitField(
+            STCInternal::kScratchReg, STCInternal::kScratchReg,
+            UntaggedClosure::FunctionTypeArgumentsIndexBits::shift() +
+                kSmiTagShift,
+            UntaggedClosure::FunctionTypeArgumentsIndexBits::bitsize());
+        __ pushl(FieldAddress(TypeTestABI::kInstanceReg,
+                              STCInternal::kScratchReg, TIMES_WORD_SIZE,
+                              target::Closure::element_offset(0)));
+        __ jmp((n >= 6) ? &load_delayed_type_arguments : &loop,
+               Assembler::kNearJump);
+
+        __ Bind(&no_function_type_arguments);
+        __ pushl(raw_null);
+      }
+
+      if (n >= 6) {
+        Label no_delayed_type_arguments;
+        __ Bind(&load_delayed_type_arguments);
+
+        __ testl(FieldAddress(TypeTestABI::kInstanceReg,
+                              target::Closure::length_and_flags_offset()),
+                 Immediate(UntaggedClosure::kHasDelayedTypeArgumentsBit +
+                           kSmiTagShift));
+        __ j(ZERO, &no_delayed_type_arguments, Assembler::kNearJump);
+        __ pushl(
+            FieldAddress(TypeTestABI::kInstanceReg,
+                         target::Closure::element_offset(
+                             UntaggedClosure::kDelayedTypeArgumentsIndex)));
+        __ jmp(&loop, Assembler::kNearJump);
+
+        __ Bind(&no_delayed_type_arguments);
+        __ pushl(raw_null);
+      }
     }
-    if (n >= 5) {
-      __ pushl(FieldAddress(TypeTestABI::kInstanceReg,
-                            target::Closure::function_type_arguments_offset()));
-    }
-    if (n >= 6) {
-      __ pushl(FieldAddress(TypeTestABI::kInstanceReg,
-                            target::Closure::delayed_type_arguments_offset()));
-    }
+
     __ jmp(&loop, Assembler::kNearJump);
   }
 
@@ -2986,14 +2933,6 @@ void StubCodeCompiler::GenerateSubtypeNTestCacheStub(Assembler* assembler,
   // filling in the entry. Thus, we load the null object explicitly instead of
   // just using the (possibly mid-update) test result field.
   __ movl(TypeTestABI::kSubtypeTestCacheResultReg, raw_null);
-  __ ret();
-}
-
-// Return the current stack pointer address, used to do stack alignment checks.
-// TOS + 0: return address
-// Result in EAX.
-void StubCodeCompiler::GenerateGetCStackPointerStub() {
-  __ leal(EAX, Address(ESP, target::kWordSize));
   __ ret();
 }
 
@@ -3404,7 +3343,7 @@ void StubCodeCompiler::GenerateAllocateTypedDataArrayStub(intptr_t cid) {
       Label size_tag_overflow, done;
       __ cmpl(EDI, Immediate(target::UntaggedObject::kSizeTagMaxSizeTag));
       __ j(ABOVE, &size_tag_overflow, Assembler::kNearJump);
-      __ shll(EDI, Immediate(target::UntaggedObject::kTagBitsSizeTagPos -
+      __ shll(EDI, Immediate(target::UntaggedObject::kSizeTagPos -
                              target::ObjectAlignment::kObjectAlignmentLog2));
       __ jmp(&done, Assembler::kNearJump);
       __ Bind(&size_tag_overflow);

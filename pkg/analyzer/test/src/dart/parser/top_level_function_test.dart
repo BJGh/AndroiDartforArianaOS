@@ -15,6 +15,53 @@ main() {
 
 @reflectiveTest
 class TopLevelFunctionParserTest extends ParserDiagnosticsTest {
+  test_function_abstract() {
+    var parseResult = parseStringWithErrors(r'''
+abstract void foo() {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_function_abstract_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+abstract void foo() {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 15, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
   test_function_augment() {
     var parseResult = parseStringWithErrors(r'''
 augment void foo() {}
@@ -32,6 +79,141 @@ FunctionDeclaration
     parameters: FormalParameterList
       leftParenthesis: (
       rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_function_augment_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+augment void foo();
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  augmentKeyword: augment
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_function_augment_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+augment void foo() {}
+''');
+    parseResult.assertErrors([
+      error(diag.missingConstFinalVarOrType, 15, 7),
+      error(diag.expectedToken, 15, 7),
+    ]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_function_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+void foo();
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_function_body_empty_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+void foo();
+''');
+    parseResult.assertErrors([error(diag.missingFunctionBody, 25, 1)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: void
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_getter_abstract() {
+    var parseResult = parseStringWithErrors(r'''
+abstract int get foo {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: int
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_getter_abstract_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+abstract int get foo {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 15, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: int
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
     body: BlockFunctionBody
       block: Block
         leftBracket: {
@@ -58,6 +240,86 @@ FunctionDeclaration
       functionDefinition: =>
       expression: IntegerLiteral
         literal: 0
+      semicolon: ;
+''');
+  }
+
+  test_getter_augment_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+augment int get foo;
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  augmentKeyword: augment
+  returnType: NamedType
+    name: int
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_getter_augment_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+augment int get foo => 0;
+''');
+    parseResult.assertErrors([error(diag.expectedToken, 23, 3)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
+    body: ExpressionFunctionBody
+      functionDefinition: =>
+      expression: IntegerLiteral
+        literal: 0
+      semicolon: ;
+''');
+  }
+
+  test_getter_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+int get foo;
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: int
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_getter_body_empty_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+int get foo;
+''');
+    parseResult.assertErrors([error(diag.missingFunctionBody, 26, 1)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: int
+  propertyKeyword: get
+  name: foo
+  functionExpression: FunctionExpression
+    body: EmptyFunctionBody
       semicolon: ;
 ''');
   }
@@ -121,6 +383,59 @@ FunctionDeclaration
     );
   }
 
+  test_setter_abstract() {
+    var parseResult = parseStringWithErrors(r'''
+abstract set foo(int _) {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_setter_abstract_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+abstract set foo(int _) {}
+''');
+    parseResult.assertErrors([error(diag.extraneousModifier, 15, 8)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
   test_setter_augment() {
     var parseResult = parseStringWithErrors(r'''
 augment set foo(int _) {}
@@ -136,7 +451,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
         name: _
@@ -145,6 +460,109 @@ FunctionDeclaration
       block: Block
         leftBracket: {
         rightBracket: }
+''');
+  }
+
+  test_setter_augment_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+augment set foo(int _);
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  augmentKeyword: augment
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_setter_augment_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+augment set foo(int _) {}
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  returnType: NamedType
+    name: augment
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: BlockFunctionBody
+      block: Block
+        leftBracket: {
+        rightBracket: }
+''');
+  }
+
+  test_setter_body_empty() {
+    var parseResult = parseStringWithErrors(r'''
+set foo(int _);
+''');
+    parseResult.assertNoErrors();
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
+''');
+  }
+
+  test_setter_body_empty_language305() {
+    var parseResult = parseStringWithErrors('''
+// @dart = 3.5
+set foo(int _);
+''');
+    parseResult.assertErrors([error(diag.missingFunctionBody, 29, 1)]);
+
+    var node = parseResult.findNode.singleFunctionDeclaration;
+    assertParsedNodeText(node, r'''
+FunctionDeclaration
+  propertyKeyword: set
+  name: foo
+  functionExpression: FunctionExpression
+    parameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+        name: _
+      rightParenthesis: )
+    body: EmptyFunctionBody
+      semicolon: ;
 ''');
   }
 
@@ -162,7 +580,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: ( @8 <synthetic>
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: <empty> @8 <synthetic>
       rightParenthesis: ) @8 <synthetic>
     body: BlockFunctionBody
@@ -188,7 +606,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: ( @7
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: a @9
       rightParenthesis: ) @11
     body: BlockFunctionBody
@@ -214,7 +632,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: ( @7
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: a @9
       rightParenthesis: ) @11
     body: BlockFunctionBody
@@ -240,7 +658,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: ( @7
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: a @8
       rightParenthesis: ) @15
     body: BlockFunctionBody
@@ -266,7 +684,7 @@ FunctionDeclaration
   functionExpression: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: ( @7
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: <empty> @8 <synthetic>
       rightParenthesis: ) @8
     body: BlockFunctionBody

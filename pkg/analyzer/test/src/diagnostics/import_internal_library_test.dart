@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
-import 'package:analyzer/utilities/package_config_file_builder.dart';
+import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -22,15 +22,12 @@ class ImportInternalLibraryTest extends PubPackageResolutionTest {
     // directive for the error, this is such a minor corner case that we don't
     // think we should add the additional computation time to figure out such
     // cases.
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'dart:_internal';
-''',
-      [
-        error(diag.importInternalLibrary, 7, 16),
-        error(diag.unusedImport, 7, 16),
-      ],
-    );
+//     ^^^^^^^^^^^^^^^^
+// [diag.importInternalLibrary] The library 'dart:_internal' is internal and can't be imported.
+// [diag.unusedImport] Unused import: 'dart:_internal'.
+''');
   }
 
   test_wasm_fromJs() async {
@@ -43,15 +40,12 @@ import 'dart:_wasm';
   }
 
   test_wasm_fromTest() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'dart:_wasm';
-''',
-      [
-        error(diag.importInternalLibrary, 7, 12),
-        error(diag.unusedImport, 7, 12),
-      ],
-    );
+//     ^^^^^^^^^^^^
+// [diag.importInternalLibrary] The library 'dart:_wasm' is internal and can't be imported.
+// [diag.unusedImport] Unused import: 'dart:_wasm'.
+''');
   }
 
   test_wasm_fromUi() async {
@@ -68,7 +62,7 @@ import 'dart:_wasm';
     var builder = PackageConfigFileBuilder();
     builder.add(
       name: packageName,
-      rootPath: packageRootPath,
+      rootFolder: getFolder(packageRootPath),
       languageVersion: testPackageLanguageVersion,
     );
     writePackageConfig(packageRootPath, builder);

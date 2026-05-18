@@ -61,6 +61,10 @@
 #include "vm/perfetto_utils.h"
 #endif  // defined(SUPPORT_PERFETTO)
 
+#if defined(DART_HOST_OS_WINDOWS)
+#include <psapi.h>
+#endif  // defined(DART_HOST_OS_WINDOWS)
+
 namespace dart {
 
 #define Z (T->zone())
@@ -1751,8 +1755,8 @@ static void GetStack(Thread* thread, JSONStream* js) {
   jsobj.AddProperty("truncated", truncated);
 
   {
-    MessageHandler::AcquiredQueues aq(isolate->message_handler());
-    jsobj.AddProperty("messages", aq.queue());
+    // Deprecated and always empty since protocol version 4.22.
+    JSONArray jsarr(&jsobj, "messages");
   }
 }
 
@@ -1882,14 +1886,13 @@ static ObjectPtr LookUpObjectByServiceId(
 
   ASSERT(thread->isolate() != nullptr);
   const Isolate& isolate = *thread->isolate();
-  if (id_zone_part_of_service_id >= isolate.NumServiceIdZones()) {
+  RingServiceIdZone* id_zone =
+      isolate.GetServiceIdZone(id_zone_part_of_service_id);
+  if (id_zone == nullptr) {
     *kind = ObjectIdRing::kInvalid;
     return Object::null();
   }
-
-  RingServiceIdZone& id_zone =
-      *isolate.GetServiceIdZone(id_zone_part_of_service_id);
-  return id_zone.GetObjectForId(object_part_of_service_id, kind);
+  return id_zone->GetObjectForId(object_part_of_service_id, kind);
 }
 
 static ObjectPtr LookupClassMembers(Thread* thread,
@@ -2205,29 +2208,6 @@ static ObjectPtr LookupHeapObjectCode(char** parts, int num_parts) {
   return Object::sentinel().ptr();
 }
 
-static ObjectPtr LookupHeapObjectMessage(Thread* thread,
-                                         char** parts,
-                                         int num_parts) {
-  if (num_parts != 2) {
-    return Object::sentinel().ptr();
-  }
-  uword message_id = 0;
-  if (!GetUnsignedIntegerId(parts[1], &message_id, 16)) {
-    return Object::sentinel().ptr();
-  }
-  MessageHandler::AcquiredQueues aq(thread->isolate()->message_handler());
-  Message* message = aq.queue()->FindMessageById(message_id);
-  if (message == nullptr) {
-    // The user may try to load an expired message.
-    return Object::sentinel().ptr();
-  }
-  if (message->IsRaw()) {
-    return message->raw_obj();
-  } else {
-    return ReadMessage(thread, message);
-  }
-}
-
 static ObjectPtr LookupHeapObject(Thread* thread,
                                   const char* id_original,
                                   ObjectIdRing::LookupResult* result) {
@@ -2280,8 +2260,6 @@ static ObjectPtr LookupHeapObject(Thread* thread,
     return LookupHeapObjectTypeArguments(thread, parts, num_parts);
   } else if (strcmp(parts[0], "code") == 0) {
     return LookupHeapObjectCode(parts, num_parts);
-  } else if (strcmp(parts[0], "messages") == 0) {
-    return LookupHeapObjectMessage(thread, parts, num_parts);
   }
 
   // Not found.
@@ -4031,8 +4009,6 @@ static void ReloadKernel(Thread* thread, JSONStream* js) {
   isolate_group->ReloadKernel(js, force_reload, kernel_buffer,
                               kernel_buffer_size);
 
-  free(kernel_buffer);
-
   Service::CheckForPause(isolate, js);
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
@@ -4891,7 +4867,7 @@ static void AddVMMappings(JSONArray* rss_children) {
         continue;  // Malformed input.
       }
 
-      strncpy(path, path_start, sizeof(path) - 1);
+      strncpy(path, path_start, sizeof(path));
       path[sizeof(path) - 1] = '\0';
       int len = strlen(path);
       if ((len > 0) && path[len - 1] == '\n') {
@@ -4921,7 +4897,7 @@ static void AddVMMappings(JSONArray* rss_children) {
         }
         if (!updated) {
           VMMapping mapping;
-          strncpy(mapping.path, path, sizeof(mapping.path) - 1);
+          strncpy(mapping.path, path, sizeof(mapping.path));
           mapping.path[sizeof(mapping.path) - 1] = '\0';
           mapping.size = size;
           mappings.Add(mapping);
@@ -4939,6 +4915,64 @@ static void AddVMMappings(JSONArray* rss_children) {
                         "Mapped file / shared library / executable");
     mapping.AddProperty64("size", mappings[i].size * KB);
     JSONArray(&mapping, "children");
+  }
+}
+#endif
+
+#if defined(DART_HOST_OS_WINDOWS) && !defined(DART_TARGET_OS_WINDOWS_UWP)
+class VMMappingTrait {
+ public:
+  struct Pair {
+    char* path;
+    size_t size;
+  };
+  using Key = char*;
+  using Value = size_t;
+
+  static Key KeyOf(const Pair& kv) { return kv.path; }
+  static Value ValueOf(const Pair& kv) { return kv.size; }
+  static uword Hash(Key key) { return Utils::StringHash(key, strlen(key)); }
+  static bool IsKeyEqual(const Pair& kv, Key key) {
+    return strcmp(kv.path, key) == 0;
+  }
+};
+
+static void AddVMMappings(JSONArray* rss_children) {
+  MallocDirectChainedHashMap<VMMappingTrait> mappings;
+
+  MEMORY_BASIC_INFORMATION mbi;
+  uint8_t* address = nullptr;
+  while (VirtualQuery(address, &mbi, sizeof(mbi)) == sizeof(mbi)) {
+    if ((mbi.State == MEM_COMMIT) &&
+        (mbi.Type == MEM_IMAGE || mbi.Type == MEM_MAPPED)) {
+      char path_buffer[MAX_PATH];
+      if (GetMappedFileNameA(GetCurrentProcess(), address, path_buffer,
+                             MAX_PATH) != 0) {
+        auto lookup_result = mappings.Lookup(path_buffer);
+        if (lookup_result != nullptr) {
+          lookup_result->size += mbi.RegionSize;
+        } else {
+          char* path = strdup(path_buffer);
+          mappings.Insert({path, mbi.RegionSize});
+        }
+      }
+    }
+    if (address == nullptr) {
+      address = reinterpret_cast<uint8_t*>(mbi.RegionSize);
+    } else {
+      address += mbi.RegionSize;
+    }
+  }
+
+  auto it = mappings.GetIterator();
+  for (auto* pair = it.Next(); pair != nullptr; pair = it.Next()) {
+    JSONObject mapping(rss_children);
+    mapping.AddProperty("name", pair->path);
+    mapping.AddProperty("description",
+                        "Mapped file / shared library / executable");
+    mapping.AddProperty64("size", pair->size);
+    JSONArray(&mapping, "children");
+    free(pair->path);
   }
 }
 #endif
@@ -5053,6 +5087,8 @@ static intptr_t GetProcessMemoryUsageHelper(JSONStream* js) {
 
 #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
   AddVMMappings(&rss_children);
+#elif defined(DART_HOST_OS_WINDOWS) && !defined(DART_TARGET_OS_WINDOWS_UWP)
+  AddVMMappings(&rss_children);
 #endif
   // TODO(46166): Implement for other operating systems.
 
@@ -5139,54 +5175,81 @@ static const MethodParameter* const get_persistent_handles_params[] = {
     nullptr,
 };
 
-template <typename T>
 class PersistentHandleVisitor : public HandleVisitor {
  public:
-  explicit PersistentHandleVisitor(JSONArray* handles)
-      : HandleVisitor(), handles_(handles) {
-    ASSERT(handles_ != nullptr);
-  }
+  explicit PersistentHandleVisitor(Zone* zone)
+      : HandleVisitor(), zone_(zone), objects_(zone, 0) {}
 
-  void Append(PersistentHandle* persistent_handle) {
-    JSONObject obj(handles_);
-    obj.AddProperty("type", "_PersistentHandle");
-    const Object& object = Object::Handle(persistent_handle->ptr());
-    obj.AddProperty("object", object);
-  }
-
-  void Append(FinalizablePersistentHandle* weak_persistent_handle) {
-    if (!weak_persistent_handle->ptr()->IsHeapObject()) {
-      return;  // Free handle.
+  void Serialize(JSONArray* array) {
+    for (intptr_t i = 0, n = objects_.length(); i < n; ++i) {
+      JSONObject js_obj(array);
+      js_obj.AddProperty("type", "_PersistentHandle");
+      js_obj.AddProperty("object", *objects_[i]);
     }
-
-    JSONObject obj(handles_);
-    obj.AddProperty("type", "_WeakPersistentHandle");
-    const Object& object = Object::Handle(weak_persistent_handle->ptr());
-    obj.AddProperty("object", object);
-    obj.AddPropertyF(
-        "peer", "0x%" Px "",
-        reinterpret_cast<uintptr_t>(weak_persistent_handle->peer()));
-    obj.AddPropertyF(
-        "callbackAddress", "0x%" Px "",
-        reinterpret_cast<uintptr_t>(weak_persistent_handle->callback()));
-    // Attempt to include a native symbol name.
-    const char* name = NativeSymbolResolver::LookupSymbolName(
-        reinterpret_cast<uword>(weak_persistent_handle->callback()), nullptr);
-    obj.AddProperty("callbackSymbolName", (name == nullptr) ? "" : name);
-    if (name != nullptr) {
-      NativeSymbolResolver::FreeSymbolName(name);
-    }
-    obj.AddPropertyF("externalSize", "%" Pd "",
-                     weak_persistent_handle->external_size());
   }
 
  protected:
   void VisitHandle(uword addr) override {
-    T* handle = reinterpret_cast<T*>(addr);
-    Append(handle);
+    auto* const handle = reinterpret_cast<PersistentHandle*>(addr);
+    const Object& obj = Object::Handle(zone_, handle->ptr());
+    objects_.Add(&obj);
   }
 
-  JSONArray* handles_;
+  Zone* const zone_;
+  ZoneGrowableArray<const Object*> objects_;
+};
+
+class WeakPersistentHandleVisitor : public HandleVisitor {
+ public:
+  explicit WeakPersistentHandleVisitor(Zone* zone)
+      : HandleVisitor(),
+        zone_(zone),
+        objects_(zone, 0),
+        peers_(zone, 0),
+        callbacks_(zone, 0),
+        names_(zone, 0),
+        external_sizes_(zone, 0) {}
+
+  void Serialize(JSONArray* array) {
+    for (intptr_t i = 0, n = objects_.length(); i < n; ++i) {
+      JSONObject js_obj(array);
+      js_obj.AddProperty("type", "_WeakPersistentHandle");
+      js_obj.AddProperty("object", *objects_[i]);
+      js_obj.AddPropertyF("peer", "0x%" Px "", peers_[i]);
+      js_obj.AddPropertyF("callbackAddress", "0x%" Px "", callbacks_[i]);
+      js_obj.AddProperty("callbackSymbolName", names_[i]);
+      js_obj.AddPropertyF("externalSize", "%" Pd "", external_sizes_[i]);
+    }
+  }
+
+ protected:
+  void VisitHandle(uword addr) override {
+    auto* const handle = reinterpret_cast<FinalizablePersistentHandle*>(addr);
+    if (!handle->ptr()->IsHeapObject()) {
+      return;  // Free handle.
+    }
+    const Object& obj = Object::Handle(zone_, handle->ptr());
+    objects_.Add(&obj);
+    peers_.Add(reinterpret_cast<uword>(handle->peer()));
+    auto const callback = reinterpret_cast<uword>(handle->callback());
+    callbacks_.Add(callback);
+    // Attempt to include a native symbol name.
+    if (auto* const name =
+            NativeSymbolResolver::LookupSymbolName(callback, nullptr)) {
+      names_.Add(OS::SCreate(zone_, "%s", name));
+      NativeSymbolResolver::FreeSymbolName(name);
+    } else {
+      names_.Add("");
+    }
+    external_sizes_.Add(handle->external_size());
+  }
+
+  Zone* const zone_;
+  ZoneGrowableArray<const Object*> objects_;
+  ZoneGrowableArray<uword> peers_;
+  ZoneGrowableArray<uword> callbacks_;
+  ZoneGrowableArray<const char*> names_;
+  ZoneGrowableArray<intptr_t> external_sizes_;
 };
 
 static void GetPersistentHandles(Thread* thread, JSONStream* js) {
@@ -5196,28 +5259,30 @@ static void GetPersistentHandles(Thread* thread, JSONStream* js) {
   ApiState* api_state = isolate->group()->api_state();
   ASSERT(api_state != nullptr);
 
+  auto* const zone = thread->zone();
   {
     JSONObject obj(js);
     obj.AddProperty("type", "_PersistentHandles");
-    // Persistent handles.
+
+    // For each set of handles, separate out retrieval and serialization,
+    // since the former requires a no safepoint scope and the latter may
+    // cause allocation.
     {
-      JSONArray persistent_handles(&obj, "persistentHandles");
+      PersistentHandleVisitor visitor(zone);
       api_state->RunWithLockedPersistentHandles(
-          [&](PersistentHandles& handles) {
-            PersistentHandleVisitor<PersistentHandle> visitor(
-                &persistent_handles);
-            handles.Visit(&visitor);
-          });
+          [&](PersistentHandles& handles) { handles.Visit(&visitor); });
+      JSONArray persistent_handles(&obj, "persistentHandles");
+      visitor.Serialize(&persistent_handles);
     }
-    // Weak persistent handles.
+
     {
-      JSONArray weak_persistent_handles(&obj, "weakPersistentHandles");
+      WeakPersistentHandleVisitor visitor(zone);
       api_state->RunWithLockedWeakPersistentHandles(
           [&](FinalizablePersistentHandles& handles) {
-            PersistentHandleVisitor<FinalizablePersistentHandle> visitor(
-                &weak_persistent_handles);
             handles.VisitHandles(&visitor);
           });
+      JSONArray weak_persistent_handles(&obj, "weakPersistentHandles");
+      visitor.Serialize(&weak_persistent_handles);
     }
   }
 }
@@ -5359,7 +5424,7 @@ static void DeleteIdZone(Thread* thread, JSONStream* js) {
 
   intptr_t id_zone_id = ServiceIdZone::StringIdToInt(id_zone_id_arg);
   ASSERT(id_zone_id != -1);
-  ASSERT(id_zone_id < isolate->NumServiceIdZones());
+  ASSERT(isolate->GetServiceIdZone(id_zone_id) != nullptr);
 
   isolate->DeleteServiceIdZone(id_zone_id);
 

@@ -22,22 +22,6 @@
         },
         {
           "disambiguators": [
-            "instance"
-          ],
-          "kind": "getter",
-          "name": "instanceGetter"
-        }
-      ],
-      "uri": "package:record_use_test/extension_getters_setters.dart"
-    },
-    {
-      "path": [
-        {
-          "kind": "extension",
-          "name": "Ext"
-        },
-        {
-          "disambiguators": [
             "static"
           ],
           "kind": "getter",
@@ -56,7 +40,23 @@
           "disambiguators": [
             "instance"
           ],
-          "kind": "setter",
+          "kind": "method",
+          "name": "instanceGetter"
+        }
+      ],
+      "uri": "package:record_use_test/extension_getters_setters.dart"
+    },
+    {
+      "path": [
+        {
+          "kind": "extension",
+          "name": "Ext"
+        },
+        {
+          "disambiguators": [
+            "instance"
+          ],
+          "kind": "method",
           "name": "instanceSetter"
         }
       ],
@@ -84,20 +84,13 @@
       "name": "1"
     }
   ],
-  "metadata": {
-    "comment": "Recorded usages of objects tagged with a `RecordUse` annotation.",
-    "version": "0.4.0"
-  },
   "uses": {
     "static_calls": [
       {
         "definition_index": 0,
         "uses": [
           {
-            "loading_unit_indices": [
-              0
-            ],
-            "receiver": 2,
+            "loading_unit_index": 0,
             "type": "with_arguments"
           }
         ]
@@ -106,9 +99,8 @@
         "definition_index": 1,
         "uses": [
           {
-            "loading_unit_indices": [
-              0
-            ],
+            "loading_unit_index": 0,
+            "receiver": 2,
             "type": "with_arguments"
           }
         ]
@@ -117,9 +109,7 @@
         "definition_index": 2,
         "uses": [
           {
-            "loading_unit_indices": [
-              0
-            ],
+            "loading_unit_index": 0,
             "positional": [
               1
             ],
@@ -132,9 +122,7 @@
         "definition_index": 3,
         "uses": [
           {
-            "loading_unit_indices": [
-              0
-            ],
+            "loading_unit_index": 0,
             "positional": [
               0
             ],

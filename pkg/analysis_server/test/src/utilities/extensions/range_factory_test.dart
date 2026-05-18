@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analysis_server/src/utilities/extensions/ast.dart';
 import 'package:analysis_server/src/utilities/extensions/range_factory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
@@ -24,7 +23,7 @@ void main() {
 abstract class BaseRangeFactoryTest extends AbstractSingleUnitTest {
   /// Assuming that the test code starts with a function whose block body starts
   /// with a method invocation, return the list of arguments in that invocation.
-  NodeList<Expression> get _argumentList {
+  NodeList<Argument> get _argumentList {
     var invocation = findNode.methodInvocations.single;
     return invocation.argumentList.arguments;
   }
@@ -40,7 +39,7 @@ abstract class BaseRangeFactoryTest extends AbstractSingleUnitTest {
 
   void _assertClassMemberRanges(Map<int, SourceRange> expectedRanges) {
     var class_ = findNode.classDeclaration('class');
-    var list = class_.members2;
+    var list = class_.body.members;
     for (var entry in expectedRanges.entries) {
       expect(
         range.nodeWithComments(testUnit.lineInfo, list[entry.key]),

@@ -101,7 +101,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -318,7 +318,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -357,10 +357,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -434,9 +434,13 @@ CompilationUnit
 extension const a = 0;
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 0, 9),
-      error(diag.expectedTypeName, 10, 5),
-      error(diag.expectedExtensionBody, 10, 5),
+      error(diag.extensionPrimaryConstructor, 10, 5),
+      error(diag.expectedToken, 16, 1),
+      error(diag.expectedTypeName, 18, 1),
+      error(diag.expectedExtensionBody, 18, 1),
+      error(diag.expectedExecutable, 18, 1),
+      error(diag.expectedExecutable, 20, 1),
+      error(diag.unexpectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -444,6 +448,7 @@ CompilationUnit
   declarations
     ExtensionDeclaration
       extensionKeyword: extension
+      name: a
       onClause: ExtensionOnClause
         onKeyword: on <synthetic>
         extendedType: NamedType
@@ -451,16 +456,6 @@ CompilationUnit
       body: BlockClassBody
         leftBracket: { <synthetic>
         rightBracket: } <synthetic>
-    TopLevelVariableDeclaration
-      variables: VariableDeclarationList
-        keyword: const
-        variables
-          VariableDeclaration
-            name: a
-            equals: =
-            initializer: IntegerLiteral
-              literal: 0
-      semicolon: ;
 ''');
   }
 
@@ -490,7 +485,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -722,7 +717,6 @@ extension typedef A = B Function(C, D);
       error(diag.expectedToken, 10, 7),
       error(diag.expectedExtensionBody, 18, 1),
       error(diag.expectedExecutable, 20, 1),
-      error(diag.missingFunctionBody, 38, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -745,9 +739,9 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: D
           rightParenthesis: )
         body: EmptyFunctionBody
@@ -883,7 +877,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -1124,7 +1118,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -1167,10 +1161,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -1304,7 +1298,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -1532,7 +1526,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -1574,10 +1568,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -1923,7 +1917,7 @@ CompilationUnit
             name: a
             parameters: FormalParameterList
               leftParenthesis: (
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 name: b
               rightParenthesis: )
             body: BlockFunctionBody
@@ -1943,7 +1937,6 @@ extension E on String { typedef A = B Function(C, D);
       error(diag.typedefInClass, 24, 7),
       error(diag.missingConstFinalVarOrType, 32, 1),
       error(diag.expectedToken, 36, 1),
-      error(diag.extensionDeclaresAbstractMember, 38, 8),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1972,9 +1965,9 @@ CompilationUnit
             name: Function
             parameters: FormalParameterList
               leftParenthesis: (
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 name: C
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 name: D
               rightParenthesis: )
             body: EmptyFunctionBody

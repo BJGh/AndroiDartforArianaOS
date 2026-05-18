@@ -4,7 +4,6 @@
 
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -12,6 +11,7 @@ import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/analysis/results.dart';
+import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
@@ -24,6 +24,7 @@ import 'package:analyzer/src/test_utilities/find_element2.dart';
 import 'package:analyzer/src/test_utilities/find_node.dart';
 import 'package:analyzer_testing/resource_provider_mixin.dart';
 import 'package:analyzer_testing/src/analysis_rule/pub_package_resolution.dart';
+import 'package:analyzer_testing/src/expected_diagnostics.dart';
 import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:test/test.dart';
 
@@ -348,9 +349,8 @@ mixin ResolutionTest implements ResourceProviderMixin {
 
   void assertTypeDynamic(Object? typeOrExpression) {
     DartType? actual;
-    if (typeOrExpression is DartType?) {
+    if (typeOrExpression case DartType? type) {
       actual = typeOrExpression;
-      var type = typeOrExpression;
       expect(type, isDynamicType);
     } else {
       actual = (typeOrExpression as Expression).staticType;
@@ -463,6 +463,23 @@ mixin ResolutionTest implements ResourceProviderMixin {
     return resolveTestFile();
   }
 
+  /// Resolves [code] and checks that its inline diagnostic markers match the
+  /// diagnostics. Unmarked code is expected to have no diagnostics.
+  Future<void> resolveTestCodeWithDiagnostics(String code) async {
+    addTestFile(code);
+    await resolveTestFile();
+
+    var actual = updateExpectedDiagnostics(
+      content: code,
+      actualDiagnostics: result.diagnostics,
+    );
+    if (actual != code) {
+      NodeTextExpectationsCollector.add(actual);
+      printPrettyDiff(code, actual);
+      fail('See the difference above.');
+    }
+  }
+
   Future<void> resolveTestFile() {
     return resolveFile2(testFile);
   }
@@ -490,6 +507,15 @@ mixin ResolutionTest implements ResourceProviderMixin {
         configuration: nodeTextConfiguration,
       ),
     );
+
+    var unit = node.thisOrAncestorOfType<CompilationUnitImpl>();
+    if (unit != null) {
+      sink.writeElements('invalidNodes', unit.invalidNodes, (node) {
+        var range = '[${node.offset}, ${node.end})';
+        sink.writelnWithIndent('${node.runtimeType} $range');
+      });
+    }
+
     return buffer.toString();
   }
 }

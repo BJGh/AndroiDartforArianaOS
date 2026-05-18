@@ -62,40 +62,38 @@ void main() {
     test('address', () {
       asm.ldr(R0, asm.address(R0, -256));
       asm.str(R1, asm.address(R0, 0x7ff8));
-      // TODO: support large offsets
-      expectThrows(() {
-        asm.address(R0, -257);
-      });
-      expectThrows(() {
-        asm.address(R0, 257);
-      });
-      expectThrows(() {
-        asm.address(R0, 0x8000);
-      });
+      asm.ldr(R2, asm.address(R0, -257));
+      asm.str(R3, asm.address(R0, 257));
+      asm.ldr(R4, asm.address(R0, 0x8002, .u16), .u16);
       expectDisassembly(
         'ldr r0, [r0, #-256]\n'
-        'str r1, [r0, #32760]\n',
+        'str r1, [r0, #32760]\n'
+        'sub r17, r0, #0x200\n'
+        'ldr r2, [r17, #255]\n'
+        'add r17, r0, #0x100\n'
+        'str r3, [r17, #1]\n'
+        'add r17, r0, #0x8000\n'
+        'ldrh r4, [r17, #2]\n',
       );
     });
     test('pairAddress', () {
       asm.ldp(R1, R2, asm.pairAddress(R0, -0x200));
       asm.stp(R1, R2, asm.pairAddress(R0, 0x1f8));
-      // TODO: support large and unaligned offsets
-      expectThrows(() {
-        asm.pairAddress(R0, 3);
-      });
-      expectThrows(() {
-        asm.pairAddress(R0, -1);
-      });
-      expectThrows(() {
-        asm.pairAddress(R0, -0x208);
-      });
-      expectThrows(() {
-        asm.pairAddress(R0, 0x200);
-      });
+      asm.ldp(R1, R2, asm.pairAddress(R0, 3));
+      asm.stp(R1, R2, asm.pairAddress(R0, -1));
+      asm.ldp(R1, R2, asm.pairAddress(R0, -0x208));
+      asm.stp(R1, R2, asm.pairAddress(R0, 0x204, .s32), .s32);
       expectDisassembly(
         'ldp r1, r2, [r0, #-512]\n'
-        'stp r1, r2, [r0, #504]\n',
+        'stp r1, r2, [r0, #504]\n'
+        'add r17, r0, #0x3\n'
+        'ldp r1, r2, [r17, #0]\n'
+        'sub r17, r0, #0x1\n'
+        'stp r1, r2, [r17, #0]\n'
+        'sub r17, r0, #0x400\n'
+        'ldp r1, r2, [r17, #504]\n'
+        'add r17, r0, #0x200\n'
+        'stpw r1, r2, [r17, #4]\n',
       );
     });
     test('enterDartFrame', () {
@@ -190,10 +188,16 @@ void main() {
         asm.loadFromPool(R0, ConstantValue.fromString('$offs') as Object);
         expected.write('ldr r0, [pp, #$offs]\n');
       }
-      // TODO: support large offsets
-      expectThrows(() {
-        asm.loadFromPool(R0, ConstantValue.fromString('oops') as Object);
-      });
+      asm.loadFromPool(R0, ConstantValue.fromString('oops1') as Object);
+      expected.write(
+        'add r17, pp, #0x8000\n'
+        'ldr r0, [r17]\n',
+      );
+      asm.loadFromPool(R0, ConstantValue.fromString('oops2') as Object);
+      expected.write(
+        'add r17, pp, #0x8000\n'
+        'ldr r0, [r17, #8]\n',
+      );
       expectDisassembly(expected.toString());
     });
     test('loadConstant', () {
@@ -201,11 +205,17 @@ void main() {
       asm.loadConstant(R1, ConstantValue(UnboxedIntConstant(42)));
       asm.loadConstant(R2, ConstantValue.fromInt(42));
       asm.loadConstant(R3, ConstantValue.fromInt(0x7fffffff_ffffffff));
+      asm.loadConstant(R4, ConstantValue.fromNull());
+      asm.loadConstant(R5, ConstantValue.fromBool(true));
+      asm.loadConstant(R6, ConstantValue.fromBool(false));
       expectDisassembly(
         'ldr r0, [pp, #${objectPoolBase}]\n'
         'movz r1, #0x2a\n'
         'movz r2, #0x54\n'
-        'ldr r3, [pp, #${objectPoolBase + 8}]\n',
+        'ldr r3, [pp, #${objectPoolBase + 8}]\n'
+        'mov r4, null\n'
+        'add r5, null, #0x${trueOffsetFromNull(wordSize).toRadixString(16)}\n'
+        'add r6, null, #0x${falseOffsetFromNull(wordSize).toRadixString(16)}\n',
       );
     });
     test('loadImmediate', () {
@@ -266,16 +276,16 @@ void main() {
         'sub r1, r2, #0xabc\n'
         'add r1, r2, #0xabc000\n'
         'sub r1, r2, #0xabc000\n'
-        'movz tmp, #0x7788\n'
-        'movk tmp, #0x5566 lsl 16\n'
-        'movk tmp, #0x3344 lsl 32\n'
-        'movk tmp, #0x1122 lsl 48\n'
-        'add r1, r2, tmp\n'
-        'movz tmp, #0x7788\n'
-        'movk tmp, #0x5566 lsl 16\n'
-        'movk tmp, #0x3344 lsl 32\n'
-        'movk tmp, #0x1122 lsl 48\n'
-        'add csp, fp, tmp uxtx 0\n',
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'add r1, r2, r17\n'
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'add csp, fp, r17 uxtx 0\n',
       );
     });
     test('subImmediate', () {
@@ -295,16 +305,44 @@ void main() {
         'add r1, r2, #0xabc\n'
         'sub r1, r2, #0xabc000\n'
         'add r1, r2, #0xabc000\n'
-        'movz tmp, #0x7788\n'
-        'movk tmp, #0x5566 lsl 16\n'
-        'movk tmp, #0x3344 lsl 32\n'
-        'movk tmp, #0x1122 lsl 48\n'
-        'sub r1, r2, tmp\n'
-        'movz tmp, #0x7788\n'
-        'movk tmp, #0x5566 lsl 16\n'
-        'movk tmp, #0x3344 lsl 32\n'
-        'movk tmp, #0x1122 lsl 48\n'
-        'sub csp, fp, tmp uxtx 0\n',
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'sub r1, r2, r17\n'
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'sub csp, fp, r17 uxtx 0\n',
+      );
+    });
+    test('cmpImmediate', () {
+      asm.cmpImmediate(R1, 0);
+      asm.cmpImmediate(R3, 0xabc);
+      asm.cmpImmediate(R4, 0xabc000);
+      asm.cmpImmediate(R0, 0x1001);
+      asm.cmpImmediate(R6, 0x11223344_55667788);
+      asm.cmpImmediate(FP, -1);
+      asm.cmpImmediate(R4, -0xabc);
+      asm.cmpImmediate(R5, -0xabc000);
+      asm.cmpImmediate(R7, -0x1001);
+      expectDisassembly(
+        'cmp r1, #0x0\n'
+        'cmp r3, #0xabc\n'
+        'cmp r4, #0xabc000\n'
+        'movz r17, #0x1001\n'
+        'cmp r0, r17\n'
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'cmp r6, r17\n'
+        'cmn fp, #0x1\n'
+        'cmn r4, #0xabc\n'
+        'cmn r5, #0xabc000\n'
+        'movn r17, #0x1000\n'
+        'cmp r7, r17\n',
       );
     });
     test('andImmediate', () {
@@ -320,11 +358,11 @@ void main() {
         'mov r1, r2\n'
         'movw r1, r2\n'
         'and r1, r2, 0xff\n'
-        'movz tmp, #0x7788\n'
-        'movk tmp, #0x5566 lsl 16\n'
-        'movk tmp, #0x3344 lsl 32\n'
-        'movk tmp, #0x1122 lsl 48\n'
-        'and r1, r2, tmp\n',
+        'movz r17, #0x7788\n'
+        'movk r17, #0x5566 lsl 16\n'
+        'movk r17, #0x3344 lsl 32\n'
+        'movk r17, #0x1122 lsl 48\n'
+        'and r1, r2, r17\n',
       );
     });
     test('callRuntime', () {
@@ -438,6 +476,21 @@ void main() {
         'cmp r2, r3\n'
         'bcc -8\n'
         'add r0, r0, #0x1\n',
+      );
+    });
+    test('loadClassId', () {
+      asm.loadClassId(R0, R0);
+      asm.loadClassId(R1, R5);
+      final lowBit = vmOffsets.UntaggedObject_kClassIdTagPos;
+      final highBit =
+          vmOffsets.UntaggedObject_kClassIdTagPos +
+          vmOffsets.UntaggedObject_kClassIdTagSize -
+          1;
+      expectDisassembly(
+        'ldr r0, [r0, #${vmOffsets.Object_tags_offset - heapObjectTag}]\n'
+        'ubfm r0, r0, #$lowBit, #$highBit\n'
+        'ldr r1, [r5, #${vmOffsets.Object_tags_offset - heapObjectTag}]\n'
+        'ubfm r1, r1, #$lowBit, #$highBit\n',
       );
     });
   });
@@ -638,6 +691,86 @@ void main() {
       });
     });
 
+    test('csel', () {
+      asm.csel(R0, R1, R2, .greater);
+      asm.csel(R1, ZR, R0, .unsignedLessOrEqual);
+      asm.csel(R1, R1, R3, .notEqual, .s32);
+      expectDisassembly(
+        'csel r0, r1, r2, gt\n'
+        'csel r1, zr, r0, ls\n'
+        'cselw r1, r1, r3, ne\n',
+      );
+      expectThrows(() {
+        asm.csel(SP, R1, R2, .greater);
+      });
+      expectThrows(() {
+        asm.csel(R0, SP, R2, .greater);
+      });
+      expectThrows(() {
+        asm.csel(R0, R1, SP, .greater);
+      });
+    });
+
+    test('csinc', () {
+      asm.csinc(R0, R1, R2, .less);
+      asm.csinc(R1, ZR, R0, .noOverflow);
+      asm.csinc(R1, R1, R3, .unsignedGreater, .s32);
+      expectDisassembly(
+        'csinc r0, r1, r2, lt\n'
+        'csinc r1, zr, r0, vc\n'
+        'csincw r1, r1, r3, hi\n',
+      );
+      expectThrows(() {
+        asm.csinc(SP, R1, R2, .less);
+      });
+      expectThrows(() {
+        asm.csinc(R0, SP, R2, .less);
+      });
+      expectThrows(() {
+        asm.csinc(R0, R1, SP, .less);
+      });
+    });
+
+    test('csinv', () {
+      asm.csinv(R5, R6, R7, .negative);
+      asm.csinv(R1, ZR, R0, .equal);
+      asm.csinv(R1, R1, R3, .lessOrEqual, .s32);
+      expectDisassembly(
+        'csinv r5, r6, r7, mi\n'
+        'csinv r1, zr, r0, eq\n'
+        'csinvw r1, r1, r3, le\n',
+      );
+      expectThrows(() {
+        asm.csinv(SP, R1, R2, .negative);
+      });
+      expectThrows(() {
+        asm.csinv(R0, SP, R2, .negative);
+      });
+      expectThrows(() {
+        asm.csinv(R0, R1, SP, .negative);
+      });
+    });
+
+    test('csneg', () {
+      asm.csneg(R5, R6, R7, .greaterOrEqual);
+      asm.csneg(R1, ZR, R0, .unsignedLess);
+      asm.csneg(R1, R1, R3, .positiveOrZero, .s32);
+      expectDisassembly(
+        'csneg r5, r6, r7, ge\n'
+        'csneg r1, zr, r0, cc\n'
+        'csnegw r1, r1, r3, pl\n',
+      );
+      expectThrows(() {
+        asm.csneg(SP, R1, R2, .negative);
+      });
+      expectThrows(() {
+        asm.csneg(R0, SP, R2, .negative);
+      });
+      expectThrows(() {
+        asm.csneg(R0, R1, SP, .negative);
+      });
+    });
+
     test('ubfx', () {
       asm.ubfx(R0, R1, 4, 8);
       expectDisassembly('ubfm r0, r1, #4, #11\n');
@@ -750,6 +883,124 @@ void main() {
       });
       expectThrows(() {
         asm.asr(R4, SP, 1);
+      });
+    });
+
+    test('lsl', () {
+      asm.lsl(R0, R1, 0);
+      asm.lsl(R0, R1, 0, .s32);
+      asm.lsl(R1, R2, 1);
+      asm.lsl(R1, R2, 1, .s32);
+      asm.lsl(R4, R2, 31, .s32);
+      asm.lsl(R4, R2, 63);
+      expectDisassembly(
+        'mov r0, r1\n'
+        'movw r0, r1\n'
+        'lsl r1, r2, #1\n'
+        'lslw r1, r2, #1\n'
+        'lslw r4, r2, #31\n'
+        'lsl r4, r2, #63\n',
+      );
+      expectThrows(() {
+        asm.lsl(R4, R2, -1);
+      });
+      expectThrows(() {
+        asm.lsl(R4, R2, 64);
+      });
+      expectThrows(() {
+        asm.lsl(R4, R2, 32, .s32);
+      });
+      expectThrows(() {
+        asm.lsl(SP, R2, 1);
+      });
+      expectThrows(() {
+        asm.lsl(R4, SP, 1);
+      });
+    });
+
+    test('lsr', () {
+      asm.lsr(R0, R1, 0);
+      asm.lsr(R0, R1, 0, .s32);
+      asm.lsr(R1, R2, 1);
+      asm.lsr(R1, R2, 1, .s32);
+      asm.lsr(R4, R2, 31, .s32);
+      asm.lsr(R4, R2, 63);
+      expectDisassembly(
+        'mov r0, r1\n'
+        'movw r0, r1\n'
+        'lsr r1, r2, #1\n'
+        'lsrw r1, r2, #1\n'
+        'lsrw r4, r2, #31\n'
+        'lsr r4, r2, #63\n',
+      );
+      expectThrows(() {
+        asm.lsr(R4, R2, -1);
+      });
+      expectThrows(() {
+        asm.lsr(R4, R2, 64);
+      });
+      expectThrows(() {
+        asm.lsr(R4, R2, 32, .s32);
+      });
+      expectThrows(() {
+        asm.lsr(SP, R2, 1);
+      });
+      expectThrows(() {
+        asm.lsr(R4, SP, 1);
+      });
+    });
+
+    test('asrv', () {
+      asm.asrv(R0, R1, R2);
+      asm.asrv(R3, R4, R5, .s32);
+      expectDisassembly(
+        'asr r0, r1, r2\n'
+        'asrw r3, r4, r5\n',
+      );
+      expectThrows(() {
+        asm.asrv(SP, R1, R2);
+      });
+      expectThrows(() {
+        asm.asrv(R0, SP, R2);
+      });
+      expectThrows(() {
+        asm.asrv(R0, R1, SP);
+      });
+    });
+
+    test('lslv', () {
+      asm.lslv(R0, R1, R2);
+      asm.lslv(R3, R4, R5, .s32);
+      expectDisassembly(
+        'lsl r0, r1, r2\n'
+        'lslw r3, r4, r5\n',
+      );
+      expectThrows(() {
+        asm.lslv(SP, R1, R2);
+      });
+      expectThrows(() {
+        asm.lslv(R0, SP, R2);
+      });
+      expectThrows(() {
+        asm.lslv(R0, R1, SP);
+      });
+    });
+
+    test('lsrv', () {
+      asm.lsrv(R0, R1, R2);
+      asm.lsrv(R3, R4, R5, .s32);
+      expectDisassembly(
+        'lsr r0, r1, r2\n'
+        'lsrw r3, r4, r5\n',
+      );
+      expectThrows(() {
+        asm.lsrv(SP, R1, R2);
+      });
+      expectThrows(() {
+        asm.lsrv(R0, SP, R2);
+      });
+      expectThrows(() {
+        asm.lsrv(R0, R1, SP);
       });
     });
 
@@ -1370,6 +1621,29 @@ void main() {
         'ret\n'
         'ret r1\n',
       );
+    });
+
+    test('scvtf', () {
+      asm.scvtf(V0, R0);
+      asm.scvtf(V1, R2, .s32);
+      asm.scvtf(V3, ZR);
+      expectDisassembly(
+        'scvtfd v0, r0\n'
+        'scvtfdw v1, r2\n'
+        'scvtfd v3, zr\n',
+      );
+      expectThrows(() {
+        asm.scvtf(V0, R0, .s16);
+      });
+      expectThrows(() {
+        asm.scvtf(V0, R0, .s64, .s8);
+      });
+      expectThrows(() {
+        asm.scvtf(V0, R0, .s64, .simd128);
+      });
+      expectThrows(() {
+        asm.scvtf(V0, SP);
+      });
     });
   });
 }

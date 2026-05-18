@@ -180,7 +180,8 @@ class Interpreter {
                     ObjectPtr* call_top,
                     const KBCInstr** pc,
                     ObjectPtr** FP,
-                    ObjectPtr** SP);
+                    ObjectPtr** SP,
+                    bool check_dynamic_call = false);
 
   bool CopyParameters(Thread* thread,
                       const KBCInstr** pc,
@@ -243,6 +244,8 @@ class Interpreter {
                        ObjectPtr* FP,
                        ObjectPtr* SP);
   bool AllocateClosure(Thread* thread,
+                       FunctionPtr function,
+                       SmiPtr length_and_flags,
                        const KBCInstr* pc,
                        ObjectPtr* FP,
                        ObjectPtr* SP);
@@ -257,7 +260,7 @@ class Interpreter {
                                             ObjectPtr* result) {
     ASSERT(instance_size > 0);
     ASSERT(Utils::IsAligned(instance_size, kObjectAlignment));
-    ASSERT(IsAllocatableInNewSpace(instance_size));
+    ASSERT(Heap::IsAllocatableInNewSpace(instance_size));
 
 #if !defined(PRODUCT)
     auto* const class_table = thread->isolate_group()->class_table();
@@ -288,6 +291,17 @@ class Interpreter {
   bool IsWritingTraceFile() const;
   void FlushTraceBuffer();
   void WriteInstructionToTrace(const KBCInstr* pc);
+
+  // Prints at most the requested number of interpreted stack frames.
+  //
+  // If [depth] is non-positive, prints all stack frames.
+  //
+  // If the top frame on the stack is an entry frame, should be
+  // called with pc == (const KBCInstr*)kEntryFramePcMarker.
+  void PrintStackFrames(const ObjectPtr* FP,
+                        const ObjectPtr* SP,
+                        const KBCInstr* pc,
+                        intptr_t depth = 0);
 
   void* trace_file_;
   uint64_t trace_file_bytes_written_;

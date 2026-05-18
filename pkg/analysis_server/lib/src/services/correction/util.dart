@@ -132,8 +132,8 @@ AstNode? getEnclosingClassOrUnitMember(AstNode input) {
   for (var node in input.withAncestors) {
     switch (node) {
       case BlockClassBody _:
+      case BlockEnumBody _:
       case CompilationUnit _:
-      case EnumBody _:
         return member;
     }
     member = node;
@@ -350,27 +350,21 @@ bool isLeftHandOfAssignment(SimpleIdentifier node) {
       (node.parent as VariableDeclaration).name == node.token;
 }
 
-/// Return `true` if the given [node] is the name of a [NamedExpression].
-bool isNamedExpressionName(SimpleIdentifier node) {
-  var parent = node.parent;
-  if (parent is Label) {
-    var label = parent;
-    if (identical(label.label, node)) {
-      var parent2 = label.parent;
-      if (parent2 is NamedExpression) {
-        return identical(parent2.name, label);
-      }
+/// If the given [node] is a [NamedArgument], returns it.
+/// If it is an [Expression] that is the `argumentExpression` of a
+/// [NamedArgument], returns that [NamedArgument].
+/// Otherwise returns [node].
+AstNode stepUpNamedExpression(AstNode node) {
+  if (node is NamedArgument) {
+    return node;
+  }
+  if (node is Expression) {
+    var parent = node.parent;
+    if (parent is NamedArgument && parent.argumentExpression == node) {
+      return parent;
     }
   }
-  return false;
-}
-
-/// If the given [expression] is the `expression` property of a
-/// [NamedExpression] then returns this [NamedExpression], otherwise returns
-/// [expression].
-Expression stepUpNamedExpression(Expression expression) {
-  var parent = expression.parent;
-  return parent is NamedExpression ? parent : expression;
+  return node;
 }
 
 /// Return `true` if the given [lists] are identical at the given [position].
@@ -393,8 +387,7 @@ class ReturnTypeComputer extends RecursiveAstVisitor<void> {
 
   DartType? returnType;
 
-  ReturnTypeComputer(this._typeSystem, {bool isGenerator = false})
-    : _isGenerator = isGenerator;
+  ReturnTypeComputer(this._typeSystem, {this._isGenerator = false});
 
   @override
   void visitBlockFunctionBody(BlockFunctionBody node) {}

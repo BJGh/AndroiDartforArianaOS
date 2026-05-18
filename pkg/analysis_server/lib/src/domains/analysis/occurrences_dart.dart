@@ -4,6 +4,7 @@
 
 import 'package:analysis_server/plugin/analysis/occurrences/occurrences_core.dart';
 import 'package:analysis_server/src/protocol_server.dart' as protocol;
+import 'package:analysis_server/src/utilities/extensions/element.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
@@ -218,6 +219,14 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
   }
 
   @override
+  void visitNamedArgument(NamedArgument node) {
+    if (node.correspondingParameter case var element?) {
+      _addOccurrence(element, node.name);
+    }
+    super.visitNamedArgument(node);
+  }
+
+  @override
   void visitNamedType(NamedType node) {
     var element = node.element;
     if (element != null) {
@@ -251,13 +260,21 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
   }
 
   @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
+  void visitRegularFormalParameter(RegularFormalParameter node) {
     var nameToken = node.name;
     if (nameToken != null) {
-      _addOccurrence(node.declaredFragment!.element, nameToken);
+      var element = node.declaredFragment?.element;
+      if (element is FieldFormalParameterElement) {
+        var field = element.field;
+        if (field != null) {
+          _addOccurrence(field, nameToken);
+        }
+      } else if (element != null) {
+        _addOccurrence(element, nameToken);
+      }
     }
 
-    super.visitSimpleFormalParameter(node);
+    super.visitRegularFormalParameter(node);
   }
 
   @override
@@ -301,22 +318,10 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
   }
 
   void _addOccurrence(Element element, Token token) {
-    var canonicalElement = _canonicalizeElement(element);
+    var canonicalElement = element.canonical;
     if (canonicalElement == null) {
       return;
     }
     (occurrences[canonicalElement] ??= []).add(token);
-  }
-
-  Element? _canonicalizeElement(Element element) {
-    Element? canonicalElement = element;
-    if (canonicalElement is FieldFormalParameterElement) {
-      canonicalElement = canonicalElement.field;
-    } else if (canonicalElement case PropertyAccessorElement(
-      :var variable,
-    ) when variable.isOriginDeclaration) {
-      canonicalElement = variable;
-    }
-    return canonicalElement?.baseElement;
   }
 }

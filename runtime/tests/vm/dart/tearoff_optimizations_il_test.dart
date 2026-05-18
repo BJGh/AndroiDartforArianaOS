@@ -116,7 +116,8 @@ void matchIL$testCSE2(FlowGraph graph) {
       'b' << match.Parameter(index: 0),
       match.CheckStackOverflow(),
       'b_type_args' << match.LoadField('b'),
-      'b_bar' << match.AllocateClosure(match.any, 'b', 'b_type_args'),
+      'b_bar' << match.AllocateClosure(match.any, 'b'),
+      match.StoreField('b_bar', 'b_type_args', slot: ':closure_element[1]'),
       match.MoveArgument('b_bar'),
       match.StaticCall(),
       'cond' << match.LoadStaticField(),
@@ -145,12 +146,11 @@ void matchIL$testCSE3(FlowGraph graph) {
       'b' << match.Parameter(index: 0),
       match.CheckStackOverflow(),
       'b_type_args' << match.LoadField('b'),
-      'b_bar' << match.AllocateClosure(match.any, 'b', 'b_type_args'),
+      'b_bar' << match.AllocateClosure(match.any, 'b'),
+      match.StoreField('b_bar', 'b_type_args', slot: ':closure_element[1]'),
       match.MoveArgument('b_bar'),
       match.MoveArgument(match.any),
-      match.StaticCall(), // _boundsCheckForPartialInstantiation
-      'b_bar_int' << match.AllocateClosure(match.any, 'b', 'b_type_args'),
-      match.StoreField('b_bar_int', match.any),
+      'b_bar_int' << match.StaticCall(), // _instantiateClosure
       match.MoveArgument('b_bar_int'),
       match.StaticCall(),
       'cond' << match.LoadStaticField(),
@@ -164,9 +164,7 @@ void matchIL$testCSE3(FlowGraph graph) {
         match.block('Target', [
           match.MoveArgument('b_bar'),
           match.MoveArgument(match.any),
-          match.StaticCall(), // _boundsCheckForPartialInstantiation
-          'b_bar_num' << match.AllocateClosure(match.any, 'b', 'b_type_args'),
-          match.StoreField('b_bar_num', match.any),
+          'b_bar_num' << match.StaticCall(), // _instantiateClosure
           match.MoveArgument('b_bar_num'),
           match.StaticCall(),
           match.Goto('B5'),
@@ -216,7 +214,8 @@ void matchIL$testLICM2(FlowGraph graph) {
       'b' << match.Parameter(index: 0),
       match.CheckStackOverflow(),
       'b_type_args' << match.LoadField('b'),
-      'b_bar' << match.AllocateClosure(match.any, 'b', 'b_type_args'),
+      'b_bar' << match.AllocateClosure(match.any, 'b'),
+      match.StoreField('b_bar', 'b_type_args', slot: ':closure_element[1]'),
       match.Goto('B5'),
     ]),
     'B5' <<

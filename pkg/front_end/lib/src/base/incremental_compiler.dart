@@ -7,7 +7,7 @@ import 'dart:convert' show JsonEncoder;
 import 'dart:typed_data';
 
 import 'package:_fe_analyzer_shared/src/parser/experimental_features.dart'
-    show ExperimentalFeatures;
+    show ExperimentalFeatures, ExperimentalFeaturesExtension;
 import 'package:_fe_analyzer_shared/src/scanner/abstract_scanner.dart'
     show ScannerConfiguration;
 import 'package:front_end/src/base/name_space.dart';
@@ -25,8 +25,6 @@ import 'package:kernel/canonical_name.dart'
     show CanonicalNameError, CanonicalNameSdkError;
 import 'package:kernel/class_hierarchy.dart'
     show ClassHierarchy, ClassHierarchySubtypes, ClosedWorldClassHierarchy;
-import 'package:kernel/dart_scope_calculator.dart'
-    show DartScope, DartScopeBuilder2;
 import 'package:kernel/kernel.dart'
     show
         Class,
@@ -35,7 +33,6 @@ import 'package:kernel/kernel.dart'
         DartType,
         DynamicType,
         Expression,
-        ExpressionVariable,
         ExtensionType,
         Field,
         FunctionNode,
@@ -57,8 +54,6 @@ import 'package:kernel/kernel.dart'
         TypeParameter,
         TypeParameterType,
         VariableDeclaration,
-        VariableGet,
-        VariableSet,
         VisitorDefault,
         VisitorVoidMixin;
 import 'package:kernel/kernel.dart' as kernel show Combinator;
@@ -94,8 +89,14 @@ import '../dill/dill_library_builder.dart' show DillLibraryBuilder;
 import '../dill/dill_loader.dart' show DillLoader;
 import '../dill/dill_target.dart' show DillTarget;
 import '../kernel/benchmarker.dart' show BenchmarkPhases, Benchmarker;
+import '../kernel/dart_scope_calculator.dart' show DartScope, DartScopeBuilder2;
 import '../kernel/hierarchy/hierarchy_builder.dart' show ClassHierarchyBuilder;
-import '../kernel/internal_ast.dart' show VariableDeclarationImpl;
+import '../kernel/internal_ast.dart'
+    show
+        VariableDeclarationImpl,
+        InternalVariableGet,
+        InternalVariableSet,
+        InternalVariable;
 import '../kernel/kernel_target.dart' show BuildResult, KernelTarget;
 import '../source/check_helper.dart';
 import '../source/source_compilation_unit.dart' show SourceCompilationUnitImpl;
@@ -442,6 +443,15 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
         );
         componentWithDill = buildResult.component;
       }
+      // Coverage-ignore(suite): Not run.
+      else if (componentWithDill != null) {
+        context.options.target.performOutlineTransformations(
+          componentWithDill,
+          libraries: currentKernelTarget.loader.libraries,
+          changedStructureNotifier:
+              currentKernelTarget.changedStructureNotifier,
+        );
+      }
 
       _benchmarker
       // Coverage-ignore(suite): Not run.
@@ -578,6 +588,11 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
       // Copy the metadata *just created*. This will likely not contain metadata
       // about other libraries.
       result.metadata.addAll(componentWithDill.metadata);
+
+      if (outlineOnly) {
+        // Coverage-ignore-block(suite): Not run.
+        context.options.target.performOutlineComponentOperations(result);
+      }
 
       // We're now done. Allow any waiting compile to start.
       Completer<dynamic> currentlyCompilingLocal = _currentlyCompiling!;
@@ -1197,14 +1212,10 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
           );
           return null;
         }
-        ScannerConfiguration scannerConfiguration = new ScannerConfiguration(
-          enableTripleShift:
-              /* should this be on the library? */
-              /* this is effectively what the constant evaluator does */
-              context.options.globalFeatures.tripleShift.isEnabled,
-        );
         ExperimentalFeatures experimentalFeatures =
             new ExperimentalFeaturesFromVersion(builder.languageVersion);
+        ScannerConfiguration scannerConfiguration = experimentalFeatures
+            .buildScannerConfiguration();
         String? before = textualOutline(
           previousSource,
           scannerConfiguration,
@@ -1212,7 +1223,6 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
           experimentalFeatures: experimentalFeatures,
         );
         if (before == null) {
-          // Coverage-ignore-block(suite): Not run.
           recorderForTesting?.recordAdvancedInvalidationResult(
             AdvancedInvalidationResult.noPreviousOutline,
           );
@@ -1864,17 +1874,6 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
       if (scriptUri != null && offset != TreeNode.noOffset) {
         Uri? scriptUriAsUri = Uri.tryParse(scriptUri);
         if (scriptUriAsUri != null) {
-          if (scriptUriAsUri.isScheme("package")) {
-            // TODO(jensj): Add tests for this.
-            // Methods etc saves file uris, so try to convert the script uri to
-            // a file uri.
-            scriptUriAsUri =
-                lastGoodKernelTarget.uriTranslator.translate(
-                  scriptUriAsUri,
-                  false,
-                ) ??
-                scriptUriAsUri;
-          }
           Library library = libraryBuilder.library;
           Class? cls;
           if (className != null) {
@@ -1885,6 +1884,13 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
               }
             }
           }
+
+          scriptUriAsUri = _processScriptUri(
+            scriptUriAsUri,
+            lastGoodKernelTarget.uriTranslator,
+            library,
+          );
+
           DartScope foundScope = DartScopeBuilder2.findScopeFromOffsetAndClass(
             library,
             scriptUriAsUri,
@@ -1934,7 +1940,8 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
                     isConst: true,
                     hasDeclaredInitializer: true,
                     initializer: def.value.initializer,
-                  )..fileOffset = def.value.fileOffset,
+                    fileOffset: def.value.fileOffset,
+                  ),
                 );
               } else if (def.value.isInitializingFormal ||
                   def.value.isSuperInitializingFormal) {
@@ -1951,7 +1958,8 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
                     def.key,
                     type: substitution.substituteType(def.value.type),
                     isConst: false,
-                  )..fileOffset = def.value.fileOffset,
+                    fileOffset: def.value.fileOffset,
+                  ),
                 );
               }
             } else if (existingType is DynamicType ||
@@ -2127,7 +2135,6 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
             conditionalImportSupported:
                 libraryBuilder.conditionalImportSupported,
             importability: libraryBuilder.importability,
-            forAugmentationLibrary: false,
             forPatchLibrary: false,
             referenceIsPartOwner: null,
             packageUri: null,
@@ -2193,7 +2200,6 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
         parentExtensionScope: debugCompilationUnit.extensionScope,
         conditionalImportSupported: libraryBuilder.conditionalImportSupported,
         importability: libraryBuilder.importability,
-        forAugmentationLibrary: false,
         forPatchLibrary: false,
         referenceIsPartOwner: null,
         packageUri: null,
@@ -2225,7 +2231,8 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
           VariableDeclarationImpl variable = new VariableDeclarationImpl(
             def.key,
             type: def.value,
-          )..fileOffset = offsetToUse ?? libraryBuilder.library.fileOffset;
+            fileOffset: offsetToUse ?? libraryBuilder.library.fileOffset,
+          );
 
           if (isExtensionOrExtensionTypeInstanceMember &&
               isExtensionThisName(def.key) &&
@@ -2536,7 +2543,7 @@ class IncrementalCompiler implements IncrementalKernelGenerator {
 
 // Coverage-ignore(suite): Not run.
 class ExpressionEvaluationHelperImpl implements ExpressionEvaluationHelper {
-  final Set<VariableDeclarationImpl> knownButUnavailable = {};
+  final Set<InternalVariable> knownButUnavailable = {};
   final ClassHierarchy hierarchy;
 
   ExpressionEvaluationHelperImpl(
@@ -2554,17 +2561,17 @@ class ExpressionEvaluationHelperImpl implements ExpressionEvaluationHelper {
   }
 
   @override
-  ExpressionInferenceResult? visitVariableGet(
-    VariableGet node,
+  ExpressionInferenceResult? visitInternalVariableGet(
+    InternalVariableGet node,
     DartType typeContext,
     ProblemReporting problemReporting,
     CompilerContext compilerContext,
     Uri fileUri,
   ) {
-    if (knownButUnavailable.contains(node.expressionVariable)) {
+    if (knownButUnavailable.contains(node.variable)) {
       return _returnKnownVariableUnavailable(
         node,
-        node.expressionVariable,
+        node.variable,
         problemReporting,
         compilerContext,
         fileUri,
@@ -2574,17 +2581,17 @@ class ExpressionEvaluationHelperImpl implements ExpressionEvaluationHelper {
   }
 
   @override
-  ExpressionInferenceResult? visitVariableSet(
-    VariableSet node,
+  ExpressionInferenceResult? visitInternalVariableSet(
+    InternalVariableSet node,
     DartType typeContext,
     ProblemReporting problemReporting,
     CompilerContext compilerContext,
     Uri fileUri,
   ) {
-    if (knownButUnavailable.contains(node.expressionVariable)) {
+    if (knownButUnavailable.contains(node.variable)) {
       return _returnKnownVariableUnavailable(
         node,
-        node.expressionVariable,
+        node.variable,
         problemReporting,
         compilerContext,
         fileUri,
@@ -2595,7 +2602,7 @@ class ExpressionEvaluationHelperImpl implements ExpressionEvaluationHelper {
 
   ExpressionInferenceResult _returnKnownVariableUnavailable(
     Expression node,
-    ExpressionVariable variable,
+    InternalVariable variable,
     ProblemReporting problemReporting,
     CompilerContext compilerContext,
     Uri fileUri,
@@ -3214,6 +3221,108 @@ extension on UriTranslator {
     }
     return fileUri;
   }
+}
+
+// Coverage-ignore(suite): Not run.
+/// Translate a script uri provided as a package uri to a file uri.
+/// Otherwise return as is.
+///
+/// ```
+/// // Returns as-is for non-package uri.
+/// DartDocTest(
+///   _processScriptUri(
+///     Uri.parse("file://a/b/c.dart"),
+///     UriTranslator.forTesting(),
+///     Library(
+///       Uri.parse("package:foo/c.dart"),
+///       fileUri: Uri.parse("file://a/b/c.dart"),
+///     ),
+///   ),
+///   Uri.parse("file://a/b/c.dart"),
+/// )
+///
+/// // Returns libraries file-uri if import uri matches.
+/// DartDocTest(
+///   _processScriptUri(
+///     Uri.parse("package:foo/c.dart"),
+///     UriTranslator.forTesting(),
+///     Library(
+///       Uri.parse("package:foo/c.dart"),
+///       fileUri: Uri.parse("file://a/b/c.dart"),
+///     ),
+///   ),
+///   Uri.parse("file://a/b/c.dart"),
+/// )
+///
+/// // Can find uri from part.
+/// DartDocTest(
+///   _processScriptUri(
+///     Uri.parse("package:foo/e.dart"),
+///     UriTranslator.forTesting(),
+///     Library(
+///       Uri.parse("package:foo/c.dart"),
+///       fileUri: Uri.parse("file://a/b/c.dart"),
+///       parts: [
+///         LibraryPart([], "d.dart"),
+///         LibraryPart([], "e.dart"),
+///         LibraryPart([], "f.dart"),
+///       ],
+///     ),
+///   ),
+///   Uri.parse("file://a/b/e.dart"),
+/// )
+///
+/// // Part uri can be package uri too though :(
+/// DartDocTest(
+///   _processScriptUri(
+///     Uri.parse("package:foo/e.dart"),
+///     UriTranslator.forTesting(),
+///     Library(
+///       Uri.parse("package:foo/c.dart"),
+///       fileUri: Uri.parse("file://a/b/c.dart"),
+///       parts: [
+///         LibraryPart([], "d.dart"),
+///         LibraryPart([], "package:foo/e.dart"),
+///         LibraryPart([], "f.dart"),
+///       ],
+///     ),
+///   ),
+///   Uri.parse("package:foo/e.dart"),
+/// )
+/// ```
+Uri _processScriptUri(
+  Uri scriptUriAsUri,
+  UriTranslator uriTranslator,
+  Library library,
+) {
+  if (!scriptUriAsUri.isScheme("package")) return scriptUriAsUri;
+
+  // Methods etc saves file uris, so try to convert the script uri to
+  // a file uri.
+  Uri? fileUri = uriTranslator.translate(scriptUriAsUri, false);
+  if (fileUri != null) return fileUri;
+
+  // If the result above is null, the packages file likely doesn't
+  // exist (anymore).
+  // For non-parts the library should have the answer directly.
+  if (library.importUri == scriptUriAsUri) {
+    return library.fileUri;
+  }
+
+  // If we still don't have an answer it's probably a part file.
+  for (LibraryPart part in library.parts) {
+    Uri partImportUri = getPartUri(library.importUri, part);
+    if (partImportUri == scriptUriAsUri) {
+      return getPartUri(library.fileUri, part);
+    }
+  }
+
+  // We failed. Likely there's no packages file, it's a part and the part is
+  // specified with a package uri.
+  // TODO(jensj): What more can we do? We might be able to find the data we want
+  // from the components `uriToSource`. If that has been removed it might be ok
+  // for expression compilation not to work?
+  return scriptUriAsUri;
 }
 
 /// Result of advanced invalidation used for testing.

@@ -55,18 +55,44 @@ const int numberOfRegisters = 32;
 // Register aliases.
 const Register FP = R29;
 const Register LR = R30;
+
+/// Return value of a call.
 const Register returnReg = R0;
+
+/// Temporary register for code generator.
 const Register tempReg = R16;
+
+/// Temporary register for macro-instructions in assembler.
 const Register temp2Reg = R17;
+
+/// Untagged object pool.
 const Register poolPointerReg = R27;
+
+/// Dispatch table.
 const Register dispatchTableReg = R21;
+
+/// Code object during a call.
 const Register codeReg = R24;
+
+/// Function object during a call.
 const Register functionReg = R0;
+
+/// Dart stack pointer.
 const Register stackPointerReg = R15;
+
+/// ICData object during a call.
 const Register inlineCacheDataReg = R5;
+
+/// Arguments descriptor during a call.
 const Register argumentsDescriptorReg = R4;
+
+/// Current thread.
 const Register threadReg = R26;
+
+/// Write barrier mask << 32 | heap base >> 32.
 const Register heapBitsReg = R28;
+
+/// Dart null object.
 const Register nullReg = R22;
 
 const Set<Register> allRegisters = {
@@ -320,7 +346,7 @@ const int B31 = (1 << 31);
 /// invalid cases. Certain macro-instructions can be used to lift these
 /// restrictions by generating extra code.
 ///
-/// TODO: support long branches, large offsets and floating-point instructions.
+/// TODO: support long branches and floating-point instructions.
 /// TODO: measure performance overhead of always checking encoding constraints.
 final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
   final ObjectLayout objectLayout;
@@ -335,6 +361,7 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register base,
     int offset, [
     OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
   ]) {
     final scale = sz.log2sizeInBytes;
     if (_isInt(9, offset) ||
@@ -342,7 +369,15 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
             ((offset & (sz.sizeInBytes - 1)) == 0))) {
       return RegOffsetAddress(base, offset);
     } else {
-      throw 'Large address offsets are not implemented yet: $offset';
+      assert(base != scratch);
+      final offsetBits = ((offset & (sz.sizeInBytes - 1)) == 0)
+          ? 12 + scale
+          : 8;
+      final mask = (1 << offsetBits) - 1;
+      final low = offset & mask;
+      final high = offset & (~mask);
+      addImmediate(scratch, base, high, .s64, scratch);
+      return RegOffsetAddress(scratch, low);
     }
   }
 
@@ -353,12 +388,19 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register base,
     int offset, [
     OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
   ]) {
     final scale = sz.log2sizeInBytes;
     if (_isInt(7 + scale, offset) && ((offset & (sz.sizeInBytes - 1)) == 0)) {
       return RegOffsetAddress(base, offset);
     } else {
-      throw 'Large address offsets are not implemented yet: $offset';
+      assert(base != scratch);
+      final offsetBits = ((offset & (sz.sizeInBytes - 1)) == 0) ? 6 + scale : 0;
+      final mask = (1 << offsetBits) - 1;
+      final low = offset & mask;
+      final high = offset & (~mask);
+      addImmediate(scratch, base, high, .s64, scratch);
+      return RegOffsetAddress(scratch, low);
     }
   }
 
@@ -481,6 +523,17 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
   }
 
   @override
+  void branchIfBoolIs(Register left, bool right, Label label) {
+    // Test bool value bit: 0 = true, 1 = false.
+    final boolValueBit = boolValueBitPosition(log2wordSize);
+    if (right) {
+      tbz(left, boolValueBit, label);
+    } else {
+      tbnz(left, boolValueBit, label);
+    }
+  }
+
+  @override
   void loadFromPool(Register reg, Object obj) {
     int poolIndex = objectPool.getObject(obj);
     ldr(
@@ -513,6 +566,16 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
       } else {
         loadFromPool(reg, value as Object);
       }
+    } else if (value.isNull) {
+      mov(reg, nullReg);
+    } else if (value.isBool) {
+      addImmediate(
+        reg,
+        nullReg,
+        value.boolValue
+            ? trueOffsetFromNull(wordSize)
+            : falseOffsetFromNull(wordSize),
+      );
     } else {
       loadFromPool(reg, value as Object);
     }
@@ -591,6 +654,7 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register src,
     int value, [
     OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
   ]) {
     assert(sz.is32or64);
     assert(_isInt(sz.bitWidth, value) || _isUint(sz.bitWidth, value));
@@ -603,12 +667,12 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     } else if (canEncodeImm12(-value)) {
       sub(dst, src, Immediate(-value), sz);
     } else {
-      assert(src != tempReg);
-      loadImmediate(tempReg, value);
+      assert(src != scratch);
+      loadImmediate(scratch, value);
       if (dst == SP || src == SP) {
-        add(dst, src, ExtRegOperand(tempReg, .UXTX, 0), sz);
+        add(dst, src, ExtRegOperand(scratch, .UXTX, 0), sz);
       } else {
-        add(dst, src, tempReg, sz);
+        add(dst, src, scratch, sz);
       }
     }
   }
@@ -619,6 +683,7 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register src,
     int value, [
     OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
   ]) {
     assert(sz.is32or64);
     assert(_isInt(sz.bitWidth, value) || _isUint(sz.bitWidth, value));
@@ -631,13 +696,33 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     } else if (canEncodeImm12(-value)) {
       add(dst, src, Immediate(-value), sz);
     } else {
-      assert(src != tempReg);
-      loadImmediate(tempReg, value);
+      assert(src != scratch);
+      loadImmediate(scratch, value);
       if (dst == SP || src == SP) {
-        sub(dst, src, ExtRegOperand(tempReg, .UXTX, 0), sz);
+        sub(dst, src, ExtRegOperand(scratch, .UXTX, 0), sz);
       } else {
-        sub(dst, src, tempReg, sz);
+        sub(dst, src, scratch, sz);
       }
+    }
+  }
+
+  @override
+  void cmpImmediate(
+    Register reg,
+    int value, [
+    OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
+  ]) {
+    assert(sz.is32or64);
+    assert(_isInt(sz.bitWidth, value) || _isUint(sz.bitWidth, value));
+    if (canEncodeImm12(value)) {
+      cmp(reg, Immediate(value), sz);
+    } else if (canEncodeImm12(-value)) {
+      cmn(reg, Immediate(-value), sz);
+    } else {
+      assert(reg != scratch);
+      loadImmediate(scratch, value);
+      cmp(reg, scratch, sz);
     }
   }
 
@@ -647,6 +732,7 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     Register src,
     int value, [
     OperandSize sz = OperandSize.s64,
+    Register scratch = temp2Reg,
   ]) {
     assert(sz.is32or64);
     assert(_isInt(sz.bitWidth, value) || _isUint(sz.bitWidth, value));
@@ -657,9 +743,9 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     } else if (canEncodeBitMasks(value, sz)) {
       and(dst, src, Immediate(value), sz);
     } else {
-      assert(src != tempReg);
-      loadImmediate(tempReg, value);
-      and(dst, src, tempReg, sz);
+      assert(src != scratch);
+      loadImmediate(scratch, value);
+      and(dst, src, scratch, sz);
     }
   }
 
@@ -690,6 +776,20 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     loadFromPool(codeReg, stub);
     ldr(LR, fieldAddress(codeReg, vmOffsets.Code_entry_point_offset.first));
     blr(LR);
+  }
+
+  // TODO: remove after all stubs are implemented in the compiler
+  void callVmStub(StubCode vmStub) {
+    loadFromPool(codeReg, vmStub);
+    ldr(LR, fieldAddress(codeReg, vmOffsets.Code_entry_point_offset.first));
+    blr(LR);
+  }
+
+  // TODO: remove after all stubs are implemented in the compiler
+  void jumpVmStub(StubCode vmStub) {
+    loadFromPool(codeReg, vmStub);
+    ldr(LR, fieldAddress(codeReg, vmOffsets.Code_entry_point_offset.first));
+    br(LR);
   }
 
   @override
@@ -765,6 +865,16 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     addImmediate(resultReg, resultReg, heapObjectTag);
   }
 
+  void loadClassId(Register result, Register object) {
+    ldr(result, fieldAddress(object, vmOffsets.Object_tags_offset));
+    ubfx(
+      result,
+      result,
+      vmOffsets.UntaggedObject_kClassIdTagPos,
+      vmOffsets.UntaggedObject_kClassIdTagSize,
+    );
+  }
+
   // [rd] and [rn] can be SP if [o] is Immediate or ExtRegOperand.
   // For an unmodified rm in this case, use ExtRegOperand(rm, Extend.UXTX, 0).
   void add(
@@ -830,6 +940,14 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
 
   void cmn(Register rn, Operand o, [OperandSize sz = OperandSize.s64]) {
     adds(ZR, rn, o, sz);
+  }
+
+  void neg(Register rd, Operand o, [OperandSize sz = OperandSize.s64]) {
+    sub(rd, ZR, o, sz);
+  }
+
+  void negs(Register rd, Operand o, [OperandSize sz = OperandSize.s64]) {
+    subs(rd, ZR, o, sz);
   }
 
   void _emitAddSub(
@@ -990,6 +1108,86 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     );
   }
 
+  void csel(
+    Register rd,
+    Register rn,
+    Register rm,
+    Condition condition, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitConditionalSelect(B23 | B25 | B27 | B28, rd, rn, rm, condition, sz);
+  }
+
+  void csinc(
+    Register rd,
+    Register rn,
+    Register rm,
+    Condition condition, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitConditionalSelect(
+      B10 | B23 | B25 | B27 | B28,
+      rd,
+      rn,
+      rm,
+      condition,
+      sz,
+    );
+  }
+
+  void csinv(
+    Register rd,
+    Register rn,
+    Register rm,
+    Condition condition, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitConditionalSelect(
+      B23 | B25 | B27 | B28 | B30,
+      rd,
+      rn,
+      rm,
+      condition,
+      sz,
+    );
+  }
+
+  void csneg(
+    Register rd,
+    Register rn,
+    Register rm,
+    Condition condition, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitConditionalSelect(
+      B10 | B23 | B25 | B27 | B28 | B30,
+      rd,
+      rn,
+      rm,
+      condition,
+      sz,
+    );
+  }
+
+  void _emitConditionalSelect(
+    int opcode,
+    Register rd,
+    Register rn,
+    Register rm,
+    Condition condition,
+    OperandSize sz,
+  ) {
+    assert(sz.is32or64);
+    emit(
+      opcode |
+          rd.encodingRd() |
+          rn.encodingRn() |
+          rm.encodingRm() |
+          (condition.encoding << 12) |
+          (sz.is64 ? B31 : 0),
+    );
+  }
+
   void bfm(
     Register rd,
     Register rn,
@@ -1126,6 +1324,34 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
     }
   }
 
+  void lsl(
+    Register rd,
+    Register rn,
+    int shift, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    assert((0 <= shift) && (shift < sz.bitWidth));
+    if (shift == 0) {
+      mov(rd, rn, sz);
+    } else {
+      ubfm(rd, rn, sz.bitWidth - shift, sz.bitWidth - shift - 1, sz);
+    }
+  }
+
+  void lsr(
+    Register rd,
+    Register rn,
+    int shift, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    assert((0 <= shift) && (shift < sz.bitWidth));
+    if (shift == 0) {
+      mov(rd, rn, sz);
+    } else {
+      ubfm(rd, rn, shift, sz.bitWidth - 1, sz);
+    }
+  }
+
   void _emitBitfieldMove(
     int opcode,
     Register rd,
@@ -1144,6 +1370,51 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
           (immS << 10) |
           (immR << 16) |
           (sz.is64 ? (B31 | B22) : 0),
+    );
+  }
+
+  void asrv(
+    Register rd,
+    Register rn,
+    Register rm, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitVariableShift(B11, rd, rn, rm, sz);
+  }
+
+  void lslv(
+    Register rd,
+    Register rn,
+    Register rm, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitVariableShift(0, rd, rn, rm, sz);
+  }
+
+  void lsrv(
+    Register rd,
+    Register rn,
+    Register rm, [
+    OperandSize sz = OperandSize.s64,
+  ]) {
+    _emitVariableShift(B10, rd, rn, rm, sz);
+  }
+
+  void _emitVariableShift(
+    int opcode,
+    Register rd,
+    Register rn,
+    Register rm,
+    OperandSize sz,
+  ) {
+    assert(sz.is32or64);
+    emit(
+      (B13 | B22 | B23 | B25 | B27 | B28) |
+          opcode |
+          rd.encodingRd() |
+          rn.encodingRn() |
+          rm.encodingRm() |
+          (sz.is64 ? B31 : 0),
     );
   }
 
@@ -1607,6 +1878,28 @@ final class Arm64Assembler extends Assembler with Uint32OutputBuffer {
           rn.encodingRn(),
     );
   }
+
+  void scvtf(
+    FPRegister rd,
+    Register rn, [
+    OperandSize srcSize = OperandSize.s64,
+    OperandSize dstSize = OperandSize.s64,
+  ]) {
+    assert(srcSize.is32or64);
+    assert(dstSize.is16or32or64);
+    emit(
+      B17 |
+          B21 |
+          B25 |
+          B26 |
+          B27 |
+          B28 |
+          rd.encodingRd |
+          rn.encodingRn() |
+          (dstSize.is64 ? B22 : (dstSize.is32 ? 0 : (B22 | B23))) |
+          (srcSize.is64 ? B31 : 0),
+    );
+  }
 }
 
 bool _isUint(int numBits, int value) => (value >>> numBits) == 0;
@@ -1635,6 +1928,7 @@ extension on Register {
 }
 
 extension on FPRegister {
+  int get encodingRd => index;
   int get encodingRt => index;
 }
 

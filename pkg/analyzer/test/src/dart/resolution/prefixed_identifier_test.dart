@@ -2,21 +2,22 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(PrefixedIdentifierResolutionTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class PrefixedIdentifierResolutionTest extends PubPackageResolutionTest {
   test_class_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -44,7 +45,7 @@ PrefixedIdentifier
   }
 
   test_class_read_staticMethod_generic() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A<T> {
   static void foo<U>(int a, U u) {}
 }
@@ -72,7 +73,7 @@ PrefixedIdentifier
   }
 
   test_class_read_staticMethod_ofGenericClass() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A<T> {
   static void foo(int a) {}
 }
@@ -100,7 +101,7 @@ PrefixedIdentifier
   }
 
   test_class_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -140,7 +141,7 @@ AssignmentExpression
   }
 
   test_class_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -180,7 +181,7 @@ AssignmentExpression
   }
 
   test_enum_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   int get foo => 0;
@@ -209,7 +210,7 @@ PrefixedIdentifier
   }
 
   test_enum_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   set foo(int _) {}
@@ -250,7 +251,7 @@ AssignmentExpression
   }
 
   test_functionClass_call_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(Function a) {
   a.call;
 }
@@ -274,7 +275,7 @@ PrefixedIdentifier
   }
 
   test_functionType_call_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(int Function(String) a) {
   a.call;
 }
@@ -298,7 +299,7 @@ PrefixedIdentifier
   }
 
   test_hasReceiver_typeAlias_staticGetter() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   static int get foo => 0;
 }
@@ -335,7 +336,7 @@ class A {
 
 A a;
 ''');
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart';
 
 int Function() foo() {
@@ -360,16 +361,15 @@ class A {
 
 A? a;
 ''');
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart';
 
 int Function() foo() {
   return a;
+//       ^
+// [diag.returnOfInvalidTypeFromFunction] A value of type 'A?' can't be returned from the function 'foo' because it has a return type of 'int Function()'.
 }
-''',
-      [error(diag.returnOfInvalidTypeFromFunction, 50, 1)],
-    );
+''');
 
     var node = findNode.simple('a;');
     assertResolvedNodeText(node, r'''
@@ -385,7 +385,7 @@ SimpleIdentifier
 void foo() {}
 ''');
 
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -398,7 +398,7 @@ void f() {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: prefix
-    element: <testLibraryFragment>::@prefix2::prefix
+    element: <testLibraryFragment>::@prefix::prefix
     staticType: null
   period: .
   identifier: SimpleIdentifier
@@ -415,7 +415,7 @@ PrefixedIdentifier
 int get foo => 0;
 ''');
 
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -428,7 +428,7 @@ void f() {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: prefix
-    element: <testLibraryFragment>::@prefix2::prefix
+    element: <testLibraryFragment>::@prefix::prefix
     staticType: null
   period: .
   identifier: SimpleIdentifier
@@ -445,23 +445,22 @@ PrefixedIdentifier
 set foo(int _) {}
 ''');
 
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
   prefix.foo;
+//       ^^^
+// [diag.undefinedPrefixedName] The name 'foo' is being referenced through the prefix 'prefix', but it isn't defined in any of the libraries imported using that prefix.
 }
-''',
-      [error(diag.undefinedPrefixedName, 48, 3)],
-    );
+''');
 
-    var node = findNode.prefixed('prefix.');
+    var node = findNode.prefixed('prefix.foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: prefix
-    element: <testLibraryFragment>::@prefix2::prefix
+    element: <testLibraryFragment>::@prefix::prefix
     staticType: null
   period: .
   identifier: SimpleIdentifier
@@ -478,7 +477,7 @@ PrefixedIdentifier
 final foo = 0;
 ''');
 
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -491,7 +490,7 @@ void f() {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: prefix
-    element: <testLibraryFragment>::@prefix2::prefix
+    element: <testLibraryFragment>::@prefix::prefix
     staticType: null
   period: .
   identifier: SimpleIdentifier
@@ -583,20 +582,14 @@ PrefixedIdentifier
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofClassName_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  static int get foo;
+}
 
 augment class A {
   augment static int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {
-  static int get foo => 0;
 }
 
 void f() {
@@ -609,17 +602,90 @@ void f() {
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: A
-    staticElement: <testLibraryFragment>::@class::A
     element: <testLibrary>::@class::A
     staticType: null
   period: .
   identifier: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@getter::foo#element
+    element: <testLibrary>::@class::A::@getter::foo
     staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-  element: <testLibraryFragment>::@class::A::@getter::foo#element
+  element: <testLibrary>::@class::A::@getter::foo
+  staticType: int
+''');
+  }
+
+  test_ofClassName_augmentationAugments_method() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  static void foo();
+}
+
+augment class A {
+  augment static void foo() {}
+}
+
+void f() {
+  A.foo;
+}
+''');
+
+    var node = findNode.singlePrefixedIdentifier;
+    assertResolvedNodeText(node, r'''
+PrefixedIdentifier
+  prefix: SimpleIdentifier
+    token: A
+    element: <testLibrary>::@class::A
+    staticType: null
+  period: .
+  identifier: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@class::A::@method::foo
+    staticType: void Function()
+  element: <testLibrary>::@class::A::@method::foo
+  staticType: void Function()
+''');
+  }
+
+  test_ofClassName_augmentationAugments_setter() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  static set foo(int _);
+}
+
+augment class A {
+  augment static set foo(int _) {}
+}
+
+void f() {
+  A.foo = 0;
+}
+''');
+
+    var node = findNode.singleAssignmentExpression;
+    assertResolvedNodeText(node, r'''
+AssignmentExpression
+  leftHandSide: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: A
+      element: <testLibrary>::@class::A
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: foo
+      element: <null>
+      staticType: null
+    element: <null>
+    staticType: null
+  operator: =
+  rightHandSide: IntegerLiteral
+    literal: 0
+    correspondingParameter: <testLibrary>::@class::A::@setter::foo::@formalParameter::_
+    staticType: int
+  readElement: <null>
+  readType: null
+  writeElement: <testLibrary>::@class::A::@setter::foo
+  writeType: int
+  element: <null>
   staticType: int
 ''');
   }
@@ -703,7 +769,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -731,7 +797,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableRepresentation() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int? it) {
   int get foo => 0;
 }
@@ -759,18 +825,17 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableType() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
 
 void f(A? a) {
   a.foo;
+//  ^^^
+// [diag.uncheckedPropertyAccessOfNullableValue] The property 'foo' can't be unconditionally accessed because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedPropertyAccessOfNullableValue, 69, 3)],
-    );
+''');
 
     var node = findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
@@ -790,7 +855,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableType_nullAware() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -817,7 +882,7 @@ PropertyAccess
   }
 
   test_ofExtensionType_write() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   set foo(int _) {}
 }
@@ -974,7 +1039,7 @@ PrefixedIdentifier
   }
 
   test_read_dynamicIdentifier_hashCode() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   a.hashCode;
 }
@@ -998,7 +1063,7 @@ PrefixedIdentifier
   }
 
   test_read_dynamicIdentifier_identifier() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   a.foo;
 }
@@ -1022,14 +1087,13 @@ PrefixedIdentifier
   }
 
   test_read_interfaceType_unresolved() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 void f(int a) {
   a.foo;
+//  ^^^
+// [diag.undefinedGetter] The getter 'foo' isn't defined for the type 'int'.
 }
-''',
-      [error(diag.undefinedGetter, 20, 3)],
-    );
+''');
 
     var node = findNode.prefixed('foo;');
     assertResolvedNodeText(node, r'''

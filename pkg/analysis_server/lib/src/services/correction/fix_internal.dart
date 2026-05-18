@@ -38,6 +38,7 @@ import 'package:analysis_server/src/services/correction/dart/add_super_parameter
 import 'package:analysis_server/src/services/correction/dart/add_switch_case_break.dart';
 import 'package:analysis_server/src/services/correction/dart/add_trailing_comma.dart';
 import 'package:analysis_server/src/services/correction/dart/add_type_annotation.dart';
+import 'package:analysis_server/src/services/correction/dart/add_type_name.dart';
 import 'package:analysis_server/src/services/correction/dart/ambiguous_import_fix.dart';
 import 'package:analysis_server/src/services/correction/dart/change_argument_name.dart';
 import 'package:analysis_server/src/services/correction/dart/change_to.dart';
@@ -47,6 +48,7 @@ import 'package:analysis_server/src/services/correction/dart/change_type_annotat
 import 'package:analysis_server/src/services/correction/dart/convert_add_all_to_spread.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_class_to_enum.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_conditional_expression_to_if_element.dart';
+import 'package:analysis_server/src/services/correction/dart/convert_default_to_primary_constructor.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_documentation_into_line.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_flutter_child.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_flutter_children.dart';
@@ -62,6 +64,7 @@ import 'package:analysis_server/src/services/correction/dart/convert_to_boolean_
 import 'package:analysis_server/src/services/correction/dart/convert_to_cascade.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_constant_pattern.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_contains.dart';
+import 'package:analysis_server/src/services/correction/dart/convert_to_declaring_parameter.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_expression_function_body.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_flutter_style_todo.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_for_each.dart';
@@ -79,6 +82,7 @@ import 'package:analysis_server/src/services/correction/dart/convert_to_null_awa
 import 'package:analysis_server/src/services/correction/dart/convert_to_null_aware_spread.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_on_type.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_package_import.dart';
+import 'package:analysis_server/src/services/correction/dart/convert_to_primary_constructor.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_raw_string.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_relative_import.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_set_literal.dart';
@@ -127,6 +131,7 @@ import 'package:analysis_server/src/services/correction/dart/make_variable_nulla
 import 'package:analysis_server/src/services/correction/dart/merge_combinators.dart';
 import 'package:analysis_server/src/services/correction/dart/move_annotation_to_library_directive.dart';
 import 'package:analysis_server/src/services/correction/dart/move_doc_comment_to_library_directive.dart';
+import 'package:analysis_server/src/services/correction/dart/move_initialization_to_field_declaration.dart';
 import 'package:analysis_server/src/services/correction/dart/move_type_arguments_to_class.dart';
 import 'package:analysis_server/src/services/correction/dart/organize_imports.dart';
 import 'package:analysis_server/src/services/correction/dart/qualify_reference.dart';
@@ -151,6 +156,7 @@ import 'package:analysis_server/src/services/correction/dart/remove_deprecated_n
 import 'package:analysis_server/src/services/correction/dart/remove_duplicate_case.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_empty_catch.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_empty_constructor_body.dart';
+import 'package:analysis_server/src/services/correction/dart/remove_empty_container_body.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_empty_else.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_empty_statement.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_extends_clause.dart';
@@ -180,6 +186,7 @@ import 'package:analysis_server/src/services/correction/dart/remove_this_express
 import 'package:analysis_server/src/services/correction/dart/remove_to_list.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_type_annotation.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_type_arguments.dart';
+import 'package:analysis_server/src/services/correction/dart/remove_type_name.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_unawaited.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_unexpected_underscores.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_unnecessary_cast.dart';
@@ -242,6 +249,7 @@ import 'package:analysis_server/src/services/correction/dart/replace_with_tear_o
 import 'package:analysis_server/src/services/correction/dart/replace_with_unicode_escape.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_var.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_wildcard.dart';
+import 'package:analysis_server/src/services/correction/dart/simplify_directive_path.dart';
 import 'package:analysis_server/src/services/correction/dart/sort_child_property_last.dart';
 import 'package:analysis_server/src/services/correction/dart/sort_combinators.dart';
 import 'package:analysis_server/src/services/correction/dart/sort_constructor_first.dart';
@@ -326,6 +334,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.discardedFutures: [AddAsync.discardedFutures, WrapInUnawaited.new],
   diag.emptyCatches: [RemoveEmptyCatch.new],
   diag.emptyConstructorBodies: [RemoveEmptyConstructorBody.new],
+  diag.emptyContainerBodies: [RemoveEmptyContainerBody.new],
   diag.emptyStatements: [RemoveEmptyStatement.new, ReplaceWithBrackets.new],
   diag.eolAtEndOfFile: [AddEolAtEndOfFile.new],
   diag.exhaustiveCases: [AddMissingEnumLikeCaseClauses.new],
@@ -333,6 +342,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.hashAndEquals: [CreateMethod.equalityOrHashCode],
   diag.implicitCallTearoffs: [AddExplicitCall.new],
   diag.implicitReopen: [AddReopen.new],
+  diag.initializeInFieldDeclaration: [MoveInitializationToFieldDeclaration.new],
   diag.invalidCasePatterns: [AddConst.new],
   diag.leadingNewlinesInMultilineStrings: [AddLeadingNewlineToString.new],
   diag.libraryAnnotations: [MoveAnnotationToLibraryDirective.new],
@@ -415,6 +425,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.preferVoidToNull: [ReplaceNullWithVoid.new],
   diag.requireTrailingCommas: [AddTrailingComma.new],
+  diag.simpleDirectivePaths: [SimplifyDirectivePath.new],
   diag.simplifyVariablePattern: [RemoveUnnecessaryName.new],
   diag.sizedBoxForWhitespace: [ReplaceContainerWithSizedBox.new],
   diag.slashForDocComments: [ConvertDocumentationIntoLine.new],
@@ -436,6 +447,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.unnecessaryBraceInStringInterps: [RemoveInterpolationBraces.new],
   diag.unnecessaryBreaks: [RemoveBreak.new],
   diag.unnecessaryConst: [RemoveUnnecessaryConst.new],
+  diag.unnecessaryConstInEnumConstructor: [RemoveUnnecessaryConst.new],
   diag.unnecessaryConstructorName: [RemoveConstructorName.new],
   diag.unnecessaryFinalWithType: [ReplaceFinalWithVar.new],
   diag.unnecessaryFinalWithoutType: [ReplaceFinalWithVar.new],
@@ -467,11 +479,13 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.unnecessaryToListInSpreads: [RemoveToList.new],
   diag.unnecessaryThis: [RemoveThisExpression.new],
+  diag.unnecessaryTypeNameInConstructor: [RemoveTypeName.new],
   diag.unnecessaryUnawaited: [RemoveUnawaited.new],
   diag.unnecessaryUnderscores: [ConvertToWildcardVariable.automatically],
   diag.unreachableFromMain: [RemoveUnusedElement.new],
   diag.unrelatedTypeEqualityChecksInExpression: [ReplaceWithIs.new],
   diag.useColoredBox: [ReplaceContainerWithColoredBox.new],
+  diag.useDeclaringParameters: [ConvertToDeclaringParameter.new],
   diag.useDecoratedBox: [ReplaceWithDecoratedBox.new],
   diag.useEnums: [ConvertClassToEnum.new],
   diag.useFullHexValuesForFlutterColors: [ReplaceWithEightDigitHex.new],
@@ -482,6 +496,10 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.useKeyInWidgetConstructors: [AddKeyToConstructors.new],
   diag.useNamedConstants: [ReplaceWithNamedConstant.new],
   diag.useNullAwareElements: [ConvertNullCheckToNullAwareElementOrEntry.new],
+  diag.usePrimaryConstructors: [
+    ConvertDefaultToPrimaryConstructor.new,
+    ConvertToPrimaryConstructor.new,
+  ],
   diag.useRawStrings: [ConvertToRawString.new],
   diag.useRethrowWhenPossible: [UseRethrow.new],
   diag.useStringInPartOfDirectives: [ReplaceWithPartOrUriEmpty.new],
@@ -551,6 +569,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
     ReplaceEmptyMapPattern.empty,
   ],
   diag.enumWithAbstractMember: [ConvertIntoBlockBody.missingBody],
+  diag.experimentNotEnabled: [AddTypeName.new],
   diag.extendsDisallowedClass: [RemoveNameFromDeclarationClause.new],
   diag.extendsNonClass: [
     ChangeTo.classOrMixin,
@@ -565,6 +584,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.extensionTypeDeclaresInstanceField: [ConvertIntoGetter.new],
   diag.extensionOverrideAccessToStaticMember: [ReplaceWithExtensionName.new],
   diag.extensionOverrideWithCascade: [ReplaceCascadeWithDot.new],
+  diag.extensionPrimaryConstructor: [RemoveConstructor.new],
   diag.extensionTypeWithAbstractMember: [ConvertIntoBlockBody.missingBody],
   diag.extraPositionalArguments: [CreateConstructor.new],
   diag.extraPositionalArgumentsCouldBeNamed: [
@@ -607,8 +627,8 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.implicitSuperInitializerMissingArguments: [AddSuperParameter.new],
   diag.implicitThisReferenceInInitializer: [
-    ConvertIntoGetter.implicitThis,
-    AddLate.implicitThis,
+    ConvertIntoGetter.this_,
+    AddLate.this_,
   ],
   diag.importOfNonLibrary: [RemoveUnusedImport.new],
   diag.importInternalLibrary: [RemoveUnusedImport.new],
@@ -630,6 +650,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.invalidModifierOnConstructor: [RemoveLexeme.modifier],
   diag.invalidModifierOnSetter: [RemoveLexeme.modifier],
+  diag.invalidReferenceToThis: [ConvertIntoGetter.this_, AddLate.this_],
   diag.invalidUseOfCovariant: [RemoveLexeme.keyword],
   diag.invocationOfNonFunctionExpression: [
     RemoveParenthesesInGetterInvocation.new,
@@ -651,6 +672,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.missingRequiredArgument: [AddMissingRequiredArgument.new],
   diag.mixinApplicationNotImplementedInterface: [ExtendClassForMixin.new],
   diag.mixinClassDeclarationExtendsNotObject: [RemoveExtendsClause.new],
+  diag.mixinPrimaryConstructor: [RemoveConstructor.new],
   diag.mixinSubtypeOfBaseIsNotBase: [AddClassModifier.baseModifier],
   diag.mixinSubtypeOfFinalIsNotBase: [AddClassModifier.baseModifier],
   diag.mixinOfDisallowedClass: [RemoveNameFromDeclarationClause.new],
@@ -713,6 +735,9 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.nullableTypeInOnClause: [RemoveQuestionMark.new],
   diag.nullableTypeInWithClause: [RemoveQuestionMark.new],
   diag.obsoleteColonForDefaultValue: [ReplaceColonWithEquals.new],
+  diag.primaryConstructorBodyWithExpressionBody: [
+    ConvertIntoBlockBody.missingBody,
+  ],
   diag.recordLiteralOnePositionalNoTrailingCommaByType: [AddTrailingComma.new],
   diag.representationFieldModifier: [RemoveKeyword.varKeyword],
   diag.returnOfInvalidTypeFromClosure: [AddAsync.wrongReturnType],
@@ -877,8 +902,10 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.abstractStaticMethod: [RemoveLexeme.modifier],
   diag.colonInPlaceOfIn: [ReplaceColonWithIn.new],
   diag.constClass: [RemoveConst.new],
+  diag.constConstructorWithNonFinalField: [RemoveConst.new],
   diag.constFactory: [RemoveConst.new],
   diag.constMethod: [RemoveConst.new],
+  diag.constPrimaryConstructorWithBlockBody: [RemoveConst.new],
   diag.covariantMember: [RemoveLexeme.modifier],
   diag.defaultInSwitchExpression: [ReplaceWithWildcard.new],
   diag.duplicatedModifier: [RemoveLexeme.modifier],
@@ -941,6 +968,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.varAsTypeName: [ReplaceVarWithDynamic.new],
   diag.varReturnType: [RemoveVar.new],
   diag.wrongSeparatorForPositionalParameter: [ReplaceColonWithEquals.new],
+  diag.unawaitedReturnInTryBlock: [AddAwait.return_],
   diag.unexpectedSeparatorInNumber: [RemoveUnexpectedUnderscores.new],
   diag.deadNullAwareExpression: [RemoveDeadIfNull.new],
   diag.invalidNullAwareElement: [ReplaceWithNotNullAwareElementOrEntry.entry],
@@ -1195,6 +1223,7 @@ final _builtInNonLintMultiGenerators = {
     // TODO(brianwilkerson): Support ImportLibrary for non-extension members.
     ImportLibrary.forExtensionMember,
   ],
+  diag.uriDoesNotExist: [DataDriven.new],
   diag.useOfPrivateParameterName: [ChangeArgumentName.new],
   diag.wrongNumberOfTypeArguments: [DataDriven.new],
   diag.wrongNumberOfTypeArgumentsConstructor: [DataDriven.new],

@@ -408,6 +408,7 @@ class UntaggedObject : public AllStatic {
   static const word kCardRememberedBit;
   static const word kCanonicalBit;
   static const word kNewOrEvacuationCandidateBit;
+  static const word kAlwaysSetBit;
   static const word kOldAndNotRememberedBit;
   static const word kNotMarkedBit;
   static const word kShallowImmutableBit;
@@ -421,12 +422,21 @@ class UntaggedObject : public AllStatic {
   static const word kHashTagSize;
 #endif
   static const word kSizeTagMaxSizeTag;
-  static const word kTagBitsSizeTagPos;
   static const word kBarrierOverlapShift;
   static const word kGenerationalBarrierMask;
   static const word kIncrementalBarrierMask;
 
   static bool IsTypedDataClassId(intptr_t cid);
+};
+
+class UntaggedClosure : public AllStatic {
+  static const word kHasDelayedTypeArgumentsBit;
+  static const word kHasInstantiatorTypeArgumentsBit;
+  static const word kHasFunctionTypeArgumentsBit;
+  static const word kFunctionTypeArgumentsIndexBitsPos;
+  static const word kFunctionTypeArgumentsIndexBitsSize;
+  static const word kLengthBitsPos;
+  static const word kLengthBitsSize;
 };
 
 class UntaggedAbstractType : public AllStatic {
@@ -661,6 +671,7 @@ class LinkedHashBase : public AllStatic {
   static word deleted_keys_offset();
   static word type_arguments_offset();
   static word InstanceSize();
+  static word NextFieldOffset();
 };
 
 class ImmutableLinkedHashBase : public LinkedHashBase {
@@ -905,6 +916,8 @@ class CompressedStackMaps : public AllStatic {
 
 class LocalVarDescriptors : public AllStatic {
  public:
+  static word element_offset(intptr_t index);
+  static word InstanceSize(intptr_t length);
   static word InstanceSize();
   FINAL_CLASS();
 };
@@ -1472,13 +1485,13 @@ class Context : public AllStatic {
 
 class Closure : public AllStatic {
  public:
-  static word context_offset();
-  static word delayed_type_arguments_offset();
   static word entry_point_offset();
   static word function_offset();
-  static word function_type_arguments_offset();
-  static word instantiator_type_arguments_offset();
   static word hash_offset();
+  static word length_and_flags_offset();
+  static word element_offset(intptr_t index);
+  static intptr_t element_index_at_offset(intptr_t offset_in_bytes);
+  static word InstanceSize(intptr_t length);
   static word InstanceSize();
   FINAL_CLASS();
 };
@@ -1502,6 +1515,8 @@ class Page : public AllStatic {
 
 class Heap : public AllStatic {
  public:
+  static const word kNewAllocatableSize;
+
   // Return true if an object with the given instance size is allocatable
   // in new space on the target.
   static bool IsAllocatableInNewSpace(intptr_t instance_size);

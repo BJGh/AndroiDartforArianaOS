@@ -42,7 +42,7 @@ void main() {
         (String line) {
           final match = devToolsBannerRegex.firstMatch(line);
           if (match != null) {
-            completer.complete(match.group(1)!);
+            completer.complete(match[1]!);
           }
         },
         onDone: () {
@@ -71,7 +71,13 @@ void main() {
       final resp = await req.close();
       expect(resp.statusCode, 200);
       final bodyContent = await resp.transform(utf8.decoder).join();
-      expect(bodyContent, contains('Dart DevTools'));
+      // This is a sanity check to make sure we're actually getting the content
+      // we expect. This String is in the DevTools index.html file:
+      // https://github.com/flutter/devtools/blob/master/packages/devtools_app/web/index.html#L14
+      expect(
+        bodyContent,
+        contains('Note: This tag is replaced when served through DDS!'),
+      );
     }, timeout: const Timeout.factor(10));
 
     /// A set of test cases to verify base hrefs for.
@@ -98,7 +104,7 @@ void main() {
 
         // Extract the base href so if the test failures, we get a simpler error
         // than just the entire content.
-        final actualBaseHref = baseHrefRegex.firstMatch(bodyContent)!.group(1);
+        final actualBaseHref = baseHrefRegex.firstMatch(bodyContent)![1];
         expect(actualBaseHref, htmlEscape.convert(expectedBaseHref));
       }, timeout: const Timeout.factor(10));
     }

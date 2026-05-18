@@ -416,6 +416,7 @@ class DietListener extends StackListenerImpl {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -601,7 +602,7 @@ class DietListener extends StackListenerImpl {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     debugEvent("Import");
     Object? name = pop(NullValues.Prefix);
 
@@ -611,11 +612,7 @@ class DietListener extends StackListenerImpl {
 
     // Native imports must be skipped because they aren't assigned corresponding
     // LibraryDependency nodes.
-    Token importUriToken =
-        augmentToken
-            // Coverage-ignore(suite): Not run.
-            ?.next ??
-        importKeyword.next!;
+    Token importUriToken = importKeyword.next!;
     String importUri = unescapeString(
       importUriToken.lexeme,
       importUriToken,
@@ -1017,6 +1014,22 @@ class DietListener extends StackListenerImpl {
   }
 
   @override
+  // Coverage-ignore(suite): Not run.
+  void handleNoExtensionBody(Token semicolonToken) {
+    assert(
+      checkState(semicolonToken, [
+        ValueKinds.Token,
+        ValueKinds.IdentifierOrParserRecoveryOrNull,
+        ValueKinds.TokenOrNull,
+      ]),
+    );
+    debugEvent("NoExtensionBody");
+    pop(); // Begin token
+    pop(); // Name
+    pop(); // Annotation begin token.
+  }
+
+  @override
   void handleNoExtensionTypeBody(Token semicolonToken) {
     assert(
       checkState(semicolonToken, [
@@ -1026,6 +1039,22 @@ class DietListener extends StackListenerImpl {
       ]),
     );
     debugEvent("NoExtensionTypeBody");
+    pop(); // Begin token
+    pop(); // Name
+    pop(); // Annotation begin token.
+  }
+
+  @override
+  // Coverage-ignore(suite): Not run.
+  void handleNoMixinBody(Token semicolonToken) {
+    assert(
+      checkState(semicolonToken, [
+        ValueKinds.Token,
+        ValueKinds.IdentifierOrParserRecoveryOrNull,
+        ValueKinds.TokenOrNull,
+      ]),
+    );
+    debugEvent("NoMixinBody");
     pop(); // Begin token
     pop(); // Name
     pop(); // Annotation begin token.
@@ -1047,7 +1076,6 @@ class DietListener extends StackListenerImpl {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -1137,10 +1165,11 @@ class DietListener extends StackListenerImpl {
 
   @override
   void endPrimaryConstructor(
+    DeclarationKind kind,
     Token beginToken,
+    Token endToken,
     Token? constKeyword,
     bool hasConstructorName,
-    bool forExtensionType,
   ) {
     assert(
       checkState(beginToken, [
@@ -1177,9 +1206,9 @@ class DietListener extends StackListenerImpl {
 
   @override
   void handleNoPrimaryConstructor(
+    DeclarationKind kind,
     Token token,
     Token? constKeyword,
-    bool forExtensionType,
   ) {
     // The [memberScope] is set in [beginClassOrMixinOrExtensionBody] and
     // [beginEnumBody], assuming that it is currently the
@@ -1283,6 +1312,20 @@ class DietListener extends StackListenerImpl {
     Token leftBrace,
   ) {
     debugEvent("EnumHeader");
+  }
+
+  @override
+  // Coverage-ignore(suite): Not run.
+  void handleNoEnumBody(Token semicolonToken) {
+    assert(
+      checkState(semicolonToken, [
+        ValueKinds.IdentifierOrParserRecovery,
+        ValueKinds.TokenOrNull,
+      ]),
+    );
+    debugEvent("NoEnumBody");
+    pop(); // Name
+    pop(); // Annotations begin token.
   }
 
   @override

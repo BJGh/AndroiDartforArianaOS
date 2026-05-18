@@ -86,6 +86,10 @@ class LibraryAnalyzer {
   final Map<FileState, FileAnalysis> _libraryFiles = {};
   late final LibraryVerificationContext _libraryVerificationContext;
 
+  /// One verifier per library so that state of elements can be shared across
+  /// fragments in all files of this library.
+  late final InheritanceOverrideVerifier _inheritanceOverrideVerifier;
+
   final TestingData? _testingData;
   final TypeSystemOperations _typeSystemOperations;
 
@@ -110,6 +114,10 @@ class LibraryAnalyzer {
       constructorFieldsVerifier: ConstructorFieldsVerifier(
         typeSystem: _typeSystem,
       ),
+    );
+    _inheritanceOverrideVerifier = InheritanceOverrideVerifier(
+      _typeSystem,
+      _inheritance,
     );
   }
 
@@ -168,7 +176,12 @@ class LibraryAnalyzer {
         libraryFilePath: _library.file.path,
         unitFilePath: file.path,
       );
-      parsedUnit.accept(ElementBindingVisitor(libraryFragment, elementWalker));
+      parsedUnit.accept(
+        ElementBindingVisitor.forAnalysis(
+          fragment: libraryFragment,
+          walker: elementWalker,
+        ),
+      );
       parsedUnit.accept(
         ResolutionVisitor(
           libraryFragment: libraryFragment,
@@ -184,9 +197,6 @@ class LibraryAnalyzer {
         file.uri,
         inferenceDataForTesting!,
       );
-
-      // TODO(scheglov): We don't need to do this for the whole unit.
-      parsedUnit.accept(ScopeResolverVisitor(fileAnalysis.diagnosticReporter));
 
       var featureSet = _libraryElement.featureSet;
       var typeAnalyzerOptions = computeTypeAnalyzerOptions(featureSet);
@@ -466,11 +476,7 @@ class LibraryAnalyzer {
     _computeConstantErrors(fileAnalysis);
 
     // Compute inheritance and override errors.
-    InheritanceOverrideVerifier(
-      _typeSystem,
-      _inheritance,
-      diagnosticReporter,
-    ).verifyUnit(unit);
+    _inheritanceOverrideVerifier.verifyUnit(unit, diagnosticReporter);
 
     // Use the ErrorVerifier to compute errors.
     ErrorVerifier errorVerifier = ErrorVerifier(
@@ -815,7 +821,12 @@ class LibraryAnalyzer {
       libraryFilePath: _library.file.path,
       unitFilePath: fileAnalysis.file.path,
     );
-    unit.accept(ElementBindingVisitor(libraryFragment, elementWalker));
+    unit.accept(
+      ElementBindingVisitor.forAnalysis(
+        fragment: libraryFragment,
+        walker: elementWalker,
+      ),
+    );
 
     var docImportLibraries = [
       for (var import in _library.docLibraryImports)
@@ -840,8 +851,6 @@ class LibraryAnalyzer {
       fileAnalysis.file.uri,
       inferenceDataForTesting!,
     );
-
-    unit.accept(ScopeResolverVisitor(fileAnalysis.diagnosticReporter));
 
     // Nothing for RESOLVED_UNIT8?
     // Nothing for RESOLVED_UNIT9?

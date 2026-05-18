@@ -30,44 +30,85 @@ void main() async {
 
 Future runDart2wasmTests() async {
   final outputDataDir = Directory(
-      '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_tests/');
+    '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_tests/',
+  );
   final tests = outputDataDir
       .listSync()
       .where((fse) => fse is File && fse.path.endsWith('.dart'))
       .toList();
   for (final mainFile in tests) {
     final mainFilePath = mainFile.path;
-    final defaultSplitExpectationFile =
-        '${mainFilePath.substring(0, mainFilePath.length - '.dart'.length)}.default.txt';
+    final mainFileBasePath = mainFilePath.substring(
+      0,
+      mainFilePath.length - '.dart'.length,
+    );
 
-    // Test without constraints.
+    // Generate a partitioning without constraints under
+    // `<testname>.default.txt`.
     await testPartitionExpectation(
-        mainFilePath, null, defaultSplitExpectationFile);
+      mainFilePath,
+      null,
+      '$mainFileBasePath.default.txt',
+    );
+
+    // If the `<testname>.constraints.json` exists generate a partitioining with
+    // constraints under `<testname>.constraints.txt`.
+    final jsonConstraintsFile = File('$mainFileBasePath.constraints.json');
+    if (jsonConstraintsFile.existsSync()) {
+      final constraintsJsonString = jsonConstraintsFile
+          .readAsStringSync()
+          .replaceAll(
+            '\${SDK_ROOT}',
+            Directory.current.absolute.uri.toString(),
+          );
+      final constraints = Parser().read(constraintsJsonString);
+      await testPartitionExpectation(
+        mainFilePath,
+        constraints,
+        '$mainFileBasePath.constraints.txt',
+      );
+    }
   }
 }
 
 Future runDart2jsCustomSplitTests() async {
   final outputDataDir = Directory(
-      '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_tests_dart2js/custom_split');
-  await forEachDart2JsCustomSplitTest(
-      (testName, testDir, mainFile, constraintsFile) async {
+    '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_tests_dart2js/custom_split',
+  );
+  await forEachDart2JsCustomSplitTest((
+    testName,
+    testDir,
+    mainFile,
+    constraintsFile,
+  ) async {
     // Load constraints data.
     final constraintsJsonString = replaceDart2JsTestUris(
-        File('$testDir/constraints.json').readAsStringSync(), testDir);
+      File('$testDir/constraints.json').readAsStringSync(),
+      testDir,
+    );
     final constraints = Parser().read(constraintsJsonString);
 
     // Test with constraints.
-    await testPartitionExpectation(mainFile, constraints,
-        '${outputDataDir.path}/$testName.constraints.txt');
+    await testPartitionExpectation(
+      mainFile,
+      constraints,
+      '${outputDataDir.path}/$testName.constraints.txt',
+    );
 
     // Test without constraints.
     await testPartitionExpectation(
-        mainFile, null, '${outputDataDir.path}/$testName.default.txt');
+      mainFile,
+      null,
+      '${outputDataDir.path}/$testName.default.txt',
+    );
   });
 }
 
-Future testPartitionExpectation(String mainFile, ConstraintData? constraints,
-    String expectationFilepath) async {
+Future testPartitionExpectation(
+  String mainFile,
+  ConstraintData? constraints,
+  String expectationFilepath,
+) async {
   print('\nTesting $mainFile against $expectationFilepath');
   await withTempDir((tempDir) async {
     final outDill = '$tempDir/out.dill';
@@ -97,9 +138,14 @@ Future testPartitionExpectation(String mainFile, ConstraintData? constraints,
     component.accept(DeferredLoadingLowering(coreTypes, loadingMap));
 
     final assertsEnabled = true;
-    final partition = partitionAppplication(coreTypes, component,
-        assertsEnabled, loadingMap, findWasmRoots(coreTypes, component),
-        constraints: constraints);
+    final partition = partitionAppplication(
+      coreTypes,
+      component,
+      assertsEnabled,
+      loadingMap,
+      findWasmRoots(coreTypes, component),
+      constraints: constraints,
+    );
 
     final actual = partition.toText(sdkRootUri, includeRoot: false);
     final expectationFile = File(expectationFilepath);
@@ -125,19 +171,26 @@ Future testPartitionExpectation(String mainFile, ConstraintData? constraints,
 }
 
 Future forEachDart2JsCustomSplitTest(
-    Future Function(String testName, String testDir, String mainFile,
-            String constraintsFile)
-        fun) async {
+  Future Function(
+    String testName,
+    String testDir,
+    String mainFile,
+    String constraintsFile,
+  )
+  fun,
+) async {
   final dataDir = Directory('$sdkRoot/pkg/compiler/test/custom_split/data');
-  final testCases = dataDir
-      .listSync()
-      .whereType<Directory>()
-      .map((d) => d.path.split(Platform.pathSeparator).last)
-      .toList()
-    ..sort();
+  final testCases =
+      dataDir
+          .listSync()
+          .whereType<Directory>()
+          .map((d) => d.path.split(Platform.pathSeparator).last)
+          .toList()
+        ..sort();
 
   final outputDataDir = Directory(
-      '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_test_data');
+    '$sdkRoot/pkg/dart2wasm/test/deferred_loading/partition_test_data',
+  );
   if (!outputDataDir.existsSync()) {
     outputDataDir.createSync(recursive: true);
   }
@@ -190,7 +243,8 @@ String replaceDart2JsTestUris(String constraintsJsonString, String testDir) {
 
 (Component, CoreTypes) readKernel(String dillFilepath) {
   final component = createEmptyComponent();
-  BinaryBuilderWithMetadata(File(dillFilepath).readAsBytesSync())
-      .readComponent(component);
+  BinaryBuilderWithMetadata(
+    File(dillFilepath).readAsBytesSync(),
+  ).readComponent(component);
   return (component, CoreTypes(component));
 }

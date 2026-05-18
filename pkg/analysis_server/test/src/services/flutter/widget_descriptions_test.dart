@@ -212,6 +212,35 @@ void f() {
     expect(description, isNull);
   }
 
+  Future<void> test_primaryConstructor_declaringParameter() async {
+    verifyNoTestUnitErrors = false;
+    await resolveTestCode('''
+import 'package:flutter/material.dart';
+
+void f() {
+  MyWidget(0);
+}
+
+class MyWidget(final int i) extends StatelessWidget;
+''');
+    var property = await getWidgetProperty('MyWidget(0', 'i');
+    assertPropertyJsonText(property, r'''
+{
+  "expression": "0",
+  "isRequired": true,
+  "isSafeToUpdate": true,
+  "name": "i",
+  "children": [],
+  "editor": {
+    "kind": "INT"
+  },
+  "value": {
+    "intValue": 0
+  }
+}
+''');
+  }
+
   Future<void> test_type_double() async {
     await resolveTestCode('''
 import 'package:flutter/material.dart';
@@ -355,6 +384,14 @@ void f() {
 ''');
   }
 
+  @FailingTest(
+    reason:
+        'This test relies on the formatter failing in order to return the '
+        'error, but ChangeBuilder now guards against formatter errors. If this '
+        'code is in use, we should change the handler to parse the resulting '
+        'content and check whether there are parse errors, instead of using '
+        'the formatter for this',
+  )
   Future<void> test_expression_formatError() async {
     await resolveTestCode('''
 import 'package:flutter/material.dart';
@@ -651,6 +688,34 @@ class MyWidget<T> {
   }
 
   Future<void> test_named_changeValue() async {
+    await resolveTestCode('''
+import 'package:flutter/material.dart';
+
+class MyWidget({required final String s, required final int i}) extends StatelessWidget;
+
+void f() {
+  MyWidget(s: '', i: 0);
+}
+''');
+    var property = await getWidgetProperty('MyWidget(s', 'i');
+
+    var result = await descriptions.setPropertyValue(
+      property.id,
+      protocol.FlutterWidgetPropertyValue(intValue: 42),
+    );
+
+    assertExpectedChange(result, r'''
+import 'package:flutter/material.dart';
+
+class MyWidget({required final String s, required final int i}) extends StatelessWidget;
+
+void f() {
+  MyWidget(s: '', i: 42);
+}
+''');
+  }
+
+  Future<void> test_named_changeValue_primaryConstructor() async {
     await resolveTestCode('''
 import 'package:flutter/material.dart';
 

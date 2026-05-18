@@ -169,8 +169,7 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   /// comment don't yield an error like Dart syntax mistakes would yield.
   final bool _doExpectCommentRefs = false;
 
-  ExpectedCompletionsVisitor(this.result, {required int caretOffset})
-    : _caretOffset = caretOffset;
+  ExpectedCompletionsVisitor(this.result, {required this._caretOffset});
 
   /// Return the path of the file that is being visited.
   String get filePath => result.path;
@@ -465,7 +464,7 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitFieldFormalParameter(FieldFormalParameter node) {
     // 'final', 'const' or 'var'
-    safelyRecordKeywordCompletion(node.keyword);
+    safelyRecordKeywordCompletion(node.constFinalOrVarKeyword);
     safelyRecordKeywordCompletion(node.thisKeyword);
     super.visitFieldFormalParameter(node);
   }
@@ -646,6 +645,14 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitRegularFormalParameter(RegularFormalParameter node) {
+    // 'final', 'const' or 'var'
+    safelyRecordKeywordCompletion(node.constFinalOrVarKeyword);
+    safelyRecordKeywordCompletion(node.covariantKeyword);
+    super.visitRegularFormalParameter(node);
+  }
+
+  @override
   void visitRethrowExpression(RethrowExpression node) {
     safelyRecordKeywordCompletion(node.rethrowKeyword);
     return super.visitRethrowExpression(node);
@@ -667,14 +674,6 @@ class ExpectedCompletionsVisitor extends RecursiveAstVisitor<void> {
   void visitShowCombinator(ShowCombinator node) {
     safelyRecordKeywordCompletion(node.keyword);
     super.visitShowCombinator(node);
-  }
-
-  @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    // 'final', 'const' or 'var'
-    safelyRecordKeywordCompletion(node.keyword);
-    safelyRecordKeywordCompletion(node.covariantKeyword);
-    super.visitSimpleFormalParameter(node);
   }
 
   @override

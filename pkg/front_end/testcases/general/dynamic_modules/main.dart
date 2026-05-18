@@ -4,6 +4,8 @@
 
 import 'main_lib1.dart';
 import 'main_lib2.dart';
+import 'main_lib4.dart';
+import 'main_lib5.dart';
 
 dynamic x;
 
@@ -64,7 +66,7 @@ class C7Ext extends C7 {
 }
 
 void test() {
-  // Dynamic uses are not allowed.
+  // Dynamic uses are not allowed except for dynamically-callable members.
   x.foo().bar.baz = 42;
   if (x case < 3) {
     print('<3');
@@ -179,4 +181,118 @@ void test() {
   print(42.lib3IsPositive);
 }
 
+void testCanBeUsedAsType(Object? o) {
+  // Allowed, exposed as types individually or in groups
+  o is C10;
+  o as C10;
+  List<C10> list1;
+  print(C10);
+  print(<C10>[]);
+
+  o is ExtType10;
+  o as ExtType10;
+  List<ExtType10> list2;
+  print(ExtType10);
+  print(<ExtType10>[]);
+
+  o is C11;
+  o as C11;
+  List<C11> list3;
+  print(C11);
+  print(<C11>[]);
+
+  o is ExtType11;
+  o as ExtType11;
+  List<ExtType11> list4;
+  print(ExtType11);
+  print(<ExtType11>[]);
+
+  o is C12;
+  o as C12;
+  List<C12> list5;
+  print(C12);
+  print(<C12>[]);
+
+  o is ExtType12;
+  o as ExtType12;
+  List<ExtType12> list6;
+  print(ExtType12);
+  print(<ExtType12>[]);
+
+  // Allowed, exposed as types from the library level
+  o is Lib4Class;
+  o as Lib4Class;
+  List<Lib4Class> list7;
+  print(Lib4Class);
+  print(<Lib4Class>[]);
+
+  o is Lib4ExtType;
+  o as Lib4ExtType;
+  List<Lib4ExtType> list8;
+  print(Lib4ExtType);
+  print(<Lib4ExtType>[]);
+
+  // Not allowed - type is not automatically callable
+  print(C10());
+  print(ExtType10(20));
+
+  // Not allowed - type is not exposed as type or callable.
+  o is C13;
+  o as C13;
+  List<C13> list9;
+  print(C13);
+  print(<C13>[]);
+  print(<ExtType13>[]);
+
+  // Not allowed - inferred LUB type (C14) is not exposed.
+  final inferredList = [C15(), C16()];
+}
+
+void testDynamicallyCallable() {
+  // Allowed, C17 exposed as a whole.
+  x.dcMethod1();
+  x.dcMethod2('a', 2);
+  x.dcGetter1;
+  x.dcSetter1 = 42;
+  // Allowed, C18 members exposed individually.
+  x.dcMethod3();
+  x.dcMethod4('a', 2);
+  x.dcGetter2;
+  x.dcSetter2 = 42;
+  x.dcField1;
+  x.dcField2;
+  x.dcField2 = 42;
+  // Not allowed - getter was not exposed because field is final.
+  x.dcField1 = 42;
+  // Allowed - exposed via library
+  x.dcField5;
+  x.dcField5 = 42;
+  x.dcMethod5();
+
+  C26WithM3().method6();
+
+  // Allowed - selectors in the allowlist
+  x.allowedMethod();
+  x.allowedMethod; // tearoff implicitly allowed too.
+  x.allowedGetter;
+  x.allowedSetter = 2;
+
+  // Not allowed - selectors not in the allowlist or used in non intended
+  // ways (getter used for a call, setter used for a getter).
+  x.notAllowedGetter;
+  x.notAllowedMethod();
+  x.allowedGetter(); // not meant to be called
+  x.allowedSetter; // not meant to be used as getter
+}
+
 void main() {}
+
+// Child class that attempts to override noSuchMethod on a dynamically-callable
+// class.
+class Lib5WithNSM extends Lib5C1 {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+// Mixin transformation that copies a dynamic call to a private member.
+class C26WithM3 extends C26 with M3 {}

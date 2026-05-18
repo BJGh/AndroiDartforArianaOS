@@ -144,9 +144,9 @@ Dart_Handle SetupDartIoLibrary(const DartIoSettings& settings) {
 
   if (settings.enable_network_profiling) {
 #if !defined(PRODUCT)
-    ASSIGN_OR_RETURN(
-        Dart_Handle network_profiling_type,
-        DartUtils::GetDartType(DartUtils::kIOLibURL, "_NetworkProfiling"));
+    auto dart_type =
+        DartUtils::GetDartType(DartUtils::kIOLibURL, "_NetworkProfiling");
+    ASSIGN_OR_RETURN(Dart_Handle network_profiling_type, dart_type);
     RETURN_IF_ERROR(Dart_Invoke(
         network_profiling_type,
         DartUtils::NewString("_registerServiceExtension"), 0, nullptr));

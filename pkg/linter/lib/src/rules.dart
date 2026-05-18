@@ -82,6 +82,7 @@ import 'rules/do_not_use_environment.dart';
 import 'rules/document_ignores.dart';
 import 'rules/empty_catches.dart';
 import 'rules/empty_constructor_bodies.dart';
+import 'rules/empty_container_bodies.dart';
 import 'rules/empty_statements.dart';
 import 'rules/enable_null_safety.dart';
 import 'rules/eol_at_end_of_file.dart';
@@ -93,6 +94,7 @@ import 'rules/hash_and_equals.dart';
 import 'rules/implementation_imports.dart';
 import 'rules/implicit_call_tearoffs.dart';
 import 'rules/implicit_reopen.dart';
+import 'rules/initialize_in_field_declaration.dart';
 import 'rules/invalid_case_patterns.dart';
 import 'rules/invalid_runtime_check_with_js_interop_types.dart';
 import 'rules/invariant_booleans.dart';
@@ -182,6 +184,7 @@ import 'rules/public_member_api_docs.dart';
 import 'rules/recursive_getters.dart';
 import 'rules/remove_deprecations_in_breaking_version.dart';
 import 'rules/require_trailing_commas.dart';
+import 'rules/simple_directive_paths.dart';
 import 'rules/simplify_variable_pattern.dart';
 import 'rules/sized_box_for_whitespace.dart';
 import 'rules/sized_box_shrink_expand.dart';
@@ -207,6 +210,7 @@ import 'rules/unnecessary_await_in_return.dart';
 import 'rules/unnecessary_brace_in_string_interps.dart';
 import 'rules/unnecessary_breaks.dart';
 import 'rules/unnecessary_const.dart';
+import 'rules/unnecessary_const_in_enum_constructor.dart';
 import 'rules/unnecessary_constructor_name.dart';
 import 'rules/unnecessary_final.dart';
 import 'rules/unnecessary_getters_setters.dart';
@@ -229,6 +233,7 @@ import 'rules/unnecessary_string_escapes.dart';
 import 'rules/unnecessary_string_interpolations.dart';
 import 'rules/unnecessary_this.dart';
 import 'rules/unnecessary_to_list_in_spreads.dart';
+import 'rules/unnecessary_type_name_in_constructor.dart';
 import 'rules/unnecessary_unawaited.dart';
 import 'rules/unnecessary_underscores.dart';
 import 'rules/unreachable_from_main.dart';
@@ -237,6 +242,7 @@ import 'rules/unsafe_html.dart';
 import 'rules/unsafe_variance.dart';
 import 'rules/use_build_context_synchronously.dart';
 import 'rules/use_colored_box.dart';
+import 'rules/use_declaring_parameters.dart';
 import 'rules/use_decorated_box.dart';
 import 'rules/use_enums.dart';
 import 'rules/use_full_hex_values_for_flutter_colors.dart';
@@ -247,6 +253,7 @@ import 'rules/use_key_in_widget_constructors.dart';
 import 'rules/use_late_for_private_fields_and_variables.dart';
 import 'rules/use_named_constants.dart';
 import 'rules/use_null_aware_elements.dart';
+import 'rules/use_primary_constructors.dart';
 import 'rules/use_raw_strings.dart';
 import 'rules/use_rethrow_when_possible.dart';
 import 'rules/use_setters_to_change_properties.dart';
@@ -340,6 +347,7 @@ void registerLintRules() {
     ..registerLintRule(DoNotUseEnvironment())
     ..registerLintRule(EmptyCatches())
     ..registerLintRule(EmptyConstructorBodies())
+    ..registerLintRule(EmptyContainerBodies())
     ..registerLintRule(EmptyStatements())
     ..registerLintRule(enableNullSafety)
     ..registerLintRule(EolAtEndOfFile())
@@ -351,6 +359,7 @@ void registerLintRules() {
     ..registerLintRule(ImplementationImports())
     ..registerLintRule(ImplicitCallTearoffs())
     ..registerLintRule(ImplicitReopen())
+    ..registerLintRule(InitializeInFieldDeclaration())
     ..registerLintRule(InvalidCasePatterns())
     ..registerLintRule(invariantBooleans)
     ..registerLintRule(iterableContainsUnrelatedType)
@@ -437,6 +446,7 @@ void registerLintRules() {
     ..registerLintRule(RecursiveGetters())
     ..registerLintRule(RemoveDeprecationsInBreakingVersion())
     ..registerLintRule(RequireTrailingCommas())
+    ..registerLintRule(SimpleDirectivePaths())
     ..registerLintRule(SecurePubspecUrls())
     ..registerLintRule(SimplifyVariablePattern())
     ..registerLintRule(SizedBoxForWhitespace())
@@ -464,6 +474,7 @@ void registerLintRules() {
     ..registerLintRule(UnnecessaryBraceInStringInterps())
     ..registerLintRule(UnnecessaryBreaks())
     ..registerLintRule(UnnecessaryConst())
+    ..registerLintRule(UnnecessaryConstInEnumConstructor())
     ..registerLintRule(UnnecessaryConstructorName())
     ..registerLintRule(UnnecessaryFinal())
     ..registerLintRule(UnnecessaryGettersSetters())
@@ -486,6 +497,7 @@ void registerLintRules() {
     ..registerLintRule(UnnecessaryStringInterpolations())
     ..registerLintRule(UnnecessaryThis())
     ..registerLintRule(UnnecessaryToListInSpreads())
+    ..registerLintRule(UnnecessaryTypeNameInConstructor())
     ..registerLintRule(UnnecessaryUnawaited())
     ..registerLintRule(UnnecessaryUnderscores())
     ..registerLintRule(UnreachableFromMain())
@@ -495,6 +507,7 @@ void registerLintRules() {
     ..registerLintRule(UseBuildContextSynchronously())
     ..registerLintRule(UseColoredBox())
     ..registerLintRule(UseDecoratedBox())
+    ..registerLintRule(UseDeclaringParameters())
     ..registerLintRule(UseEnums())
     ..registerLintRule(UseFullHexValuesForFlutterColors())
     ..registerLintRule(UseFunctionTypeSyntaxForParameters())
@@ -504,6 +517,7 @@ void registerLintRules() {
     ..registerLintRule(UseLateForPrivateFieldsAndVariables())
     ..registerLintRule(UseNamedConstants())
     ..registerLintRule(UseNullAwareElements())
+    ..registerLintRule(UsePrimaryConstructors())
     ..registerLintRule(UseRawStrings())
     ..registerLintRule(UseRethrowWhenPossible())
     ..registerLintRule(UseSettersToChangeProperties())

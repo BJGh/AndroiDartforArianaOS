@@ -21,9 +21,11 @@ enum OperandSize {
   s64,
   simd128;
 
+  bool get is16 => (this == u16) || (this == s16);
   bool get is32 => (this == u32) || (this == s32);
   bool get is64 => (this == u64) || (this == s64);
   bool get is32or64 => is32 || is64;
+  bool get is16or32or64 => is16 || is32 || is64;
   bool get is128 => (this == simd128);
 
   bool get isSigned =>
@@ -152,6 +154,9 @@ abstract base class Assembler {
   void jump(Label label);
   void branchIf(Condition condition, Label label);
 
+  /// Jump to [label] if Dart `bool` value in [left] matches [right].
+  void branchIfBoolIs(Register left, bool right, Label label);
+
   void loadFromPool(Register reg, Object obj);
   void loadConstant(Register reg, ConstantValue value);
 
@@ -170,6 +175,13 @@ abstract base class Assembler {
   void subImmediate(
     Register dst,
     Register src,
+    int value, [
+    OperandSize sz = OperandSize.s64,
+  ]);
+
+  /// compare [reg] with arbitrary integer [value].
+  void cmpImmediate(
+    Register reg,
     int value, [
     OperandSize sz = OperandSize.s64,
   ]);

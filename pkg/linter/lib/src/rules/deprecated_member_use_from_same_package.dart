@@ -55,8 +55,7 @@ class DeprecatedMemberUseFromSamePackage extends MultiAnalysisRule {
 class _DeprecatedElementUsageReporter extends ElementUsageReporter<String> {
   final MultiAnalysisRule _rule;
 
-  _DeprecatedElementUsageReporter({required MultiAnalysisRule rule})
-    : _rule = rule;
+  _DeprecatedElementUsageReporter({required this._rule});
 
   @override
   void report(
@@ -152,13 +151,6 @@ class _RecursiveVisitor extends RecursiveAstVisitor<void> {
   void visitConstructorName(ConstructorName node) {
     _deprecatedVerifier.constructorName(node);
     super.visitConstructorName(node);
-  }
-
-  @override
-  void visitDefaultFormalParameter(DefaultFormalParameter node) {
-    _withDeprecatedFormalParameter(node, () {
-      super.visitDefaultFormalParameter(node);
-    });
   }
 
   @override
@@ -310,9 +302,9 @@ class _RecursiveVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
+  void visitRegularFormalParameter(RegularFormalParameter node) {
     _withDeprecatedFormalParameter(node, () {
-      super.visitSimpleFormalParameter(node);
+      super.visitRegularFormalParameter(node);
     });
   }
 
@@ -326,6 +318,13 @@ class _RecursiveVisitor extends RecursiveAstVisitor<void> {
   void visitSuperConstructorInvocation(SuperConstructorInvocation node) {
     _deprecatedVerifier.superConstructorInvocation(node);
     super.visitSuperConstructorInvocation(node);
+  }
+
+  @override
+  void visitSuperFormalParameter(SuperFormalParameter node) {
+    _withDeprecatedFormalParameter(node, () {
+      super.visitSuperFormalParameter(node);
+    });
   }
 
   @override

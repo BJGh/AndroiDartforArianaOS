@@ -1829,12 +1829,26 @@ struct CallbackContext {
   uword sp;
 };
 
+#if defined(SIMULATOR_FFI) && defined(HOST_ARCH_ARM64)
+
 extern "C" void DoRedirectedFfiCallback(CallbackContext* ctxt,
                                         uword trampoline) {
-  uword entry_point;
-  uword trampoline_type;
-  Thread* thread =
-      DLRT_GetFfiCallbackMetadata(trampoline, &entry_point, &trampoline_type);
+  // Assumptions in ffi_trampolines_arm64.S
+  COMPILE_ASSERT(sizeof(CallbackContext) == 144);
+  COMPILE_ASSERT(FfiCallbackMetadata::kDoRedirectedFfiCallback == 1);
+#if defined(DART_TARGET_OS_FUCHSIA)
+  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 4 * KB);
+  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 483);
+#elif defined(DART_TARGET_OS_MACOS)
+  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 16 * KB);
+  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 2019);
+#else
+  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 64 * KB);
+  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 8163);
+#endif
+
+  CallbackMetadata out;
+  Thread* thread = DLRT_GetFfiCallbackMetadata(trampoline, &out);
   if (thread == nullptr) {
     // If GetFfiCallbackMetadata returned a null thread, it means that the async
     // callback was invoked after it was deleted. In this case, do nothing.
@@ -1843,14 +1857,15 @@ extern "C" void DoRedirectedFfiCallback(CallbackContext* ctxt,
 
   Simulator* sim = Simulator::Current();
   ASSERT(sim != nullptr);
-  sim->DoRedirectedFfiCallback(thread, ctxt, entry_point, trampoline_type);
+  sim->DoRedirectedFfiCallback(thread, ctxt, &out);
 }
+
+#endif  // defined(SIMULATOR_FFI) && defined(HOST_ARCH_ARM64)
 
 // Compare FfiCallbackTrampolineStub.
 void Simulator::DoRedirectedFfiCallback(Thread* thread,
                                         CallbackContext* ctxt,
-                                        uword entry_point,
-                                        uword trampoline_type) {
+                                        CallbackMetadata* out) {
   // The C caller might not be using frame pointers, so we just hard-code a
   // maximum frame size instead of using FP-SP like we do for callouts.
   constexpr intptr_t kStackSlotsCopied = 128;
@@ -1863,11 +1878,13 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
     for (intptr_t i = kStackSlotsCopied - 1; i >= 0; i--) {
       *--sp = sp_in[i];
     }
-    *--sp = get_register(LR);
     *--sp = get_register(THR);
+    *--sp = get_register(LR);
+    *--sp = get_register(R20);
+    *--sp = get_register(R21);
     set_register(nullptr, R31, reinterpret_cast<uword>(sp));
     COMPILE_ASSERT(FfiCallbackMetadata::kNativeCallbackTrampolineStackDelta ==
-                   2);
+                   4);
   }
 
   set_register(nullptr, R0, ctxt->integer_arguments[0]);
@@ -1890,7 +1907,7 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
   set_register(nullptr, THR, reinterpret_cast<uword>(thread));
 
   set_register(nullptr, LR, kEndSimulatingPC);
-  set_pc(entry_point);
+  set_pc(out->entry_point);
   Execute();
 
   ctxt->integer_arguments[0] = get_register(R0);
@@ -1904,24 +1921,18 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
     // ldp lr, thr, [sp], 16!
     // <drop arguments>
     uword* sp = reinterpret_cast<uword*>(get_register(R31, R31IsSP));
-    set_register(nullptr, THR, *sp++);
+    set_register(nullptr, R21, *sp++);
+    set_register(nullptr, R20, *sp++);
     set_register(nullptr, LR, *sp++);
+    set_register(nullptr, THR, *sp++);
     sp += kStackSlotsCopied;
     set_register(nullptr, R31, reinterpret_cast<uword>(sp));
     COMPILE_ASSERT(FfiCallbackMetadata::kNativeCallbackTrampolineStackDelta ==
-                   2);
+                   4);
   }
 
-  if (trampoline_type ==
-      static_cast<uword>(FfiCallbackMetadata::TrampolineType::kAsync)) {
-    DLRT_ExitTemporaryIsolate();
-  } else if ((trampoline_type &
-              FfiCallbackMetadata::kSyncCallbackIsolateOwnershipFlag) != 0) {
-    thread->set_execution_state(Thread::kThreadInVM);
-    Thread::ExitIsolate(/*isolate_shutdown=*/false);
-  } else {
-    thread->EnterSafepointToNative();
-  }
+  auto epilogue = reinterpret_cast<void* (*)(Thread*)>(out->epilogue);
+  epilogue(thread);
 }
 
 void Simulator::ClobberVolatileRegisters() {
@@ -2059,8 +2070,13 @@ void Simulator::DecodeUnconditionalBranchReg(Instr* instr) {
         const Register rn = instr->RnField();
         const int64_t dest = get_register(rn, instr->RnMode());
         const int64_t ret = get_pc() + Instr::kInstrSize;
-        set_pc(dest);
+        // Set LR first so that the profiler does not get confused by
+        // observing the update to PC without the update to LR when we are
+        // calling out of the entry stub, i.e., failing to indentify the entry
+        // stub. On real hardware, the profiler's signal handler cannot
+        // observe a partially execute BLR.
         set_register(instr, LR, ret);
+        set_pc(dest);
         break;
       }
       case 2: {
@@ -4003,6 +4019,54 @@ void Simulator::ExecuteTrace() {
   }
 }
 
+// Verifies that callee-saved registers are preserved across Dart execution.
+// On construction, saves and overwrites callee-saved registers with a known
+// value. On destruction, asserts that the known value is still present and
+// restores the original values.
+class CalleeRegisterVerifier {
+ public:
+  explicit CalleeRegisterVerifier(Simulator* sim)
+      : sim_(sim),
+        callee_saved_value_(
+            bit_cast<int64_t, double>(static_cast<double>(sim->get_icount()))) {
+    for (int i = kAbiFirstPreservedCpuReg; i <= kAbiLastPreservedCpuReg; i++) {
+      const Register r = static_cast<Register>(i);
+      preserved_cpu_[i - kAbiFirstPreservedCpuReg] = sim->get_register(r);
+      sim->set_register(nullptr, r, callee_saved_value_);
+    }
+    // Only the bottom half of the V registers must be preserved.
+    for (int i = kAbiFirstPreservedFpuReg; i <= kAbiLastPreservedFpuReg; i++) {
+      const VRegister r = static_cast<VRegister>(i);
+      preserved_fpu_[i - kAbiFirstPreservedFpuReg] = sim->get_vregisterd(r, 0);
+      sim->set_vregisterd(r, 0, callee_saved_value_);
+      sim->set_vregisterd(r, 1, 0);
+    }
+  }
+
+  ~CalleeRegisterVerifier() {
+    for (int i = kAbiFirstPreservedCpuReg; i <= kAbiLastPreservedCpuReg; i++) {
+      const Register r = static_cast<Register>(i);
+      ASSERT(callee_saved_value_ == sim_->get_register(r));
+      sim_->set_register(nullptr, r,
+                         preserved_cpu_[i - kAbiFirstPreservedCpuReg]);
+    }
+    for (int i = kAbiFirstPreservedFpuReg; i <= kAbiLastPreservedFpuReg; i++) {
+      const VRegister r = static_cast<VRegister>(i);
+      ASSERT(callee_saved_value_ == sim_->get_vregisterd(r, 0));
+      sim_->set_vregisterd(r, 0, preserved_fpu_[i - kAbiFirstPreservedFpuReg]);
+      sim_->set_vregisterd(r, 1, 0);
+    }
+  }
+
+ private:
+  Simulator* const sim_;
+  const int64_t callee_saved_value_;
+  int64_t preserved_cpu_[kAbiPreservedCpuRegCount];
+  int64_t preserved_fpu_[kAbiPreservedFpuRegCount];
+
+  DISALLOW_COPY_AND_ASSIGN(CalleeRegisterVerifier);
+};
+
 int64_t Simulator::Call(int64_t entry,
                         int64_t parameter0,
                         int64_t parameter1,
@@ -4045,43 +4109,10 @@ int64_t Simulator::Call(int64_t entry,
   // the LR the simulation stops when returning to this call point.
   set_register(nullptr, LR, kEndSimulatingPC);
 
-  // Remember the values of callee-saved registers, and set them up with a
-  // known value so that we are able to check that they are preserved
-  // properly across Dart execution.
-  int64_t preserved_vals[kAbiPreservedCpuRegCount];
-  const double dicount = static_cast<double>(icount_);
-  const int64_t callee_saved_value = bit_cast<int64_t, double>(dicount);
-  for (int i = kAbiFirstPreservedCpuReg; i <= kAbiLastPreservedCpuReg; i++) {
-    const Register r = static_cast<Register>(i);
-    preserved_vals[i - kAbiFirstPreservedCpuReg] = get_register(r);
-    set_register(nullptr, r, callee_saved_value);
-  }
-
-  // Only the bottom half of the V registers must be preserved.
-  int64_t preserved_dvals[kAbiPreservedFpuRegCount];
-  for (int i = kAbiFirstPreservedFpuReg; i <= kAbiLastPreservedFpuReg; i++) {
-    const VRegister r = static_cast<VRegister>(i);
-    preserved_dvals[i - kAbiFirstPreservedFpuReg] = get_vregisterd(r, 0);
-    set_vregisterd(r, 0, callee_saved_value);
-    set_vregisterd(r, 1, 0);
-  }
-
-  // Start the simulation.
-  Execute();
-
-  // Check that the callee-saved registers have been preserved,
-  // and restore them with the original value.
-  for (int i = kAbiFirstPreservedCpuReg; i <= kAbiLastPreservedCpuReg; i++) {
-    const Register r = static_cast<Register>(i);
-    ASSERT(callee_saved_value == get_register(r));
-    set_register(nullptr, r, preserved_vals[i - kAbiFirstPreservedCpuReg]);
-  }
-
-  for (int i = kAbiFirstPreservedFpuReg; i <= kAbiLastPreservedFpuReg; i++) {
-    const VRegister r = static_cast<VRegister>(i);
-    ASSERT(callee_saved_value == get_vregisterd(r, 0));
-    set_vregisterd(r, 0, preserved_dvals[i - kAbiFirstPreservedFpuReg]);
-    set_vregisterd(r, 1, 0);
+  {
+    // Verify callee-saved registers are preserved across Dart execution.
+    CalleeRegisterVerifier callee_saved(this);
+    Execute();
   }
 
   // Restore the SP register and return R0.

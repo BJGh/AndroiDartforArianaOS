@@ -528,7 +528,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
             if (dartSignature.returnType is VoidType) {
               // The Dart signature has a `void` return type, so we create a new
               // `FunctionType` with FFI's `Void` as the return type.
-              dartSignature = FunctionTypeImpl.v2(
+              dartSignature = FunctionTypeImpl(
                 typeParameters: dartSignature.typeParameters,
                 formalParameters: dartSignature.formalParameters,
                 returnType: ffiVoidType ??= annotationType.element.library
@@ -702,7 +702,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       }
 
       // Include receiver when validating the full function type.
-      dartType = FunctionTypeImpl.v2(
+      dartType = FunctionTypeImpl(
         typeParameters: dartType.typeParameters,
         formalParameters: [
           FormalParameterElementImpl.synthetic(
@@ -786,7 +786,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       }
     }
 
-    var nativeType = FunctionTypeImpl.v2(
+    var nativeType = FunctionTypeImpl(
       typeParameters: ffiSignature.typeParameters,
       formalParameters: ffiParameters,
       returnType: ffiSignature.returnType,
@@ -844,15 +844,16 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     return computedConstant?.value != null;
   }
 
-  bool _isLeaf(NodeList<Expression>? args) {
+  bool _isLeaf(NodeList<Argument>? args) {
     if (args == null) {
       return false;
     }
     for (var arg in args) {
-      if (arg is! NamedExpression || arg.element?.name != _isLeafParamName) {
+      if (arg is! NamedArgument ||
+          arg.correspondingParameter?.name != _isLeafParamName) {
         continue;
       }
-      return _maybeGetBoolConstValue(arg.expression) ?? false;
+      return _maybeGetBoolConstValue(arg.argumentExpression) ?? false;
     }
     return false;
   }
@@ -1243,14 +1244,13 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       allowVoid: true,
       allowEmptyStruct: true,
     )) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(
               executableName:
                   '$_allocatorExtensionName.$_allocateExtensionMethodName',
             )
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -1496,11 +1496,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     }
     var dartType = typeArgumentTypes[0];
     if (!_isValidFfiNativeType(dartType)) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(executableName: '$errorClass.create')
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -1511,11 +1510,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       var T = targetType.typeArguments[0];
 
       if (!_isValidFfiNativeType(T, allowVoid: true, allowEmptyStruct: true)) {
-        AstNode errorNode = node;
         _diagnosticReporter.report(
           diag.nonConstantTypeArgument
               .withArguments(executableName: 'elementAt')
-              .at(errorNode),
+              .at(node),
         );
       }
     }
@@ -1667,7 +1665,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     }
 
     var f = node.argumentList.arguments[0];
-    var FT = f.typeOrThrow;
+    var FT = f.argumentExpression.typeOrThrow;
     if (!_validateCompatibleFunctionTypes(
       _FfiTypeCheckDirection.dartToNative,
       FT,
@@ -1701,7 +1699,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
             .at(node.methodName),
       );
     } else {
-      Expression e = node.argumentList.arguments[1];
+      Expression e = node.argumentList.arguments[1].argumentExpression;
       var eType = e.typeOrThrow;
       if (!_validateCompatibleNativeType(
         _FfiTypeCheckDirection.dartToNative,
@@ -1730,13 +1728,13 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     var args = node.argumentList.arguments;
     if (args.isNotEmpty) {
       for (var arg in args) {
-        if (arg is NamedExpression) {
-          if (arg.element?.name == _isLeafParamName) {
-            if (!_isConst(arg.expression)) {
+        if (arg is NamedArgument) {
+          if (arg.correspondingParameter?.name == _isLeafParamName) {
+            if (!_isConst(arg.argumentExpression)) {
               _diagnosticReporter.report(
                 diag.argumentMustBeAConstant
                     .withArguments(argumentName: _isLeafParamName)
-                    .at(arg.expression),
+                    .at(arg.argumentExpression),
               );
             }
           }
@@ -1844,7 +1842,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
               );
             }
           } else {
-            if (argument.staticType case var staticType?
+            if (argument.argumentExpression.staticType case var staticType?
                 when nativeType is DynamicType) {
               // No type argument was given on the @Native annotation, so we try
               // to infer the native type from the Dart signature.
@@ -1852,7 +1850,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
                 if (staticType.returnType is VoidType) {
                   // The Dart signature has a `void` return type, so we create a
                   // new `FunctionType` with FFI's `Void` as the return type.
-                  staticType = FunctionTypeImpl.v2(
+                  staticType = FunctionTypeImpl(
                     typeParameters: staticType.typeParameters,
                     formalParameters: staticType.formalParameters,
                     returnType: ffiVoidType ??= annotationType.element.library
@@ -1942,7 +1940,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     }
 
     var f = node.argumentList.arguments[0];
-    var funcType = f.typeOrThrow;
+    var funcType = f.argumentExpression.typeOrThrow;
     if (!_validateCompatibleFunctionTypes(
       _FfiTypeCheckDirection.dartToNative,
       funcType,
@@ -1978,7 +1976,8 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
           diag.missingExceptionValue.withArguments(methodName: name).at(node),
         );
       } else {
-        var e = (node.argumentList.arguments[1] as NamedExpression).expression;
+        var e = (node.argumentList.arguments[1] as NamedArgument)
+            .argumentExpression;
         var eType = e.typeOrThrow;
         if (!_validateCompatibleNativeType(
           _FfiTypeCheckDirection.dartToNative,
@@ -2060,11 +2059,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       allowEmptyStruct: true,
       allowArray: true,
     )) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(executableName: '[]')
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -2074,11 +2072,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
   void _validateRefPrefixedIdentifier(PrefixedIdentifierImpl node) {
     var targetType = node.prefix.staticType;
     if (!_isValidFfiNativeType(targetType, allowEmptyStruct: true)) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(executableName: 'ref')
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -2086,11 +2083,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
   void _validateRefPropertyAccess(PropertyAccessImpl node) {
     var targetType = node.realTarget.typeOrThrow;
     if (!_isValidFfiNativeType(targetType, allowEmptyStruct: true)) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(executableName: 'ref')
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -2116,11 +2112,10 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
     }
     var T = typeArgumentTypes[0];
     if (!_isValidFfiNativeType(T, allowVoid: true, allowEmptyStruct: true)) {
-      AstNode errorNode = node;
       _diagnosticReporter.report(
         diag.nonConstantTypeArgument
             .withArguments(executableName: 'sizeOf')
-            .at(errorNode),
+            .at(node),
       );
     }
   }
@@ -2177,12 +2172,9 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       return switch (annotation.arguments) {
         // `@Array.variableMulti([..], variableDimension: ..)`
         ArgumentList(
-          arguments: [
-            ListLiteral dimensions,
-            NamedExpression variableDimension,
-          ],
+          arguments: [ListLiteral dimensions, NamedArgument variableDimension],
         ) =>
-          (dimensions.elements, variableDimension.expression),
+          (dimensions.elements, variableDimension.argumentExpression),
         // `@Array.variableMulti([..])`
         ArgumentList(arguments: [ListLiteral dimensions]) => (
           dimensions.elements,
@@ -2190,7 +2182,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
         ),
         // `@Array(..)`, `@Array.variable(..)`,
         // `@Array.variableWithVariableDimension(..)`
-        ArgumentList(arguments: NodeList<AstNode> dimensions) => (
+        ArgumentList(arguments: NodeList<Argument> dimensions) => (
           dimensions,
           null,
         ),
@@ -2205,7 +2197,7 @@ class FfiVerifier extends RecursiveAstVisitor<void> {
       if (dimensionsNodes case var dimensionsNodes?) {
         if (dimensionsNodes.length > i && variableDimensionNode == null) {
           var node = dimensionsNodes[i];
-          errorNode = node is NamedExpression ? node.expression : node;
+          errorNode = node is Argument ? node.argumentExpression : node;
         }
       }
 

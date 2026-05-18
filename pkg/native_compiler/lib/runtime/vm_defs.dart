@@ -8,7 +8,6 @@ export 'vm_offsets.g.dart';
 const int smiBit = 0;
 const int heapObjectTag = 1;
 const int smiShift = 1;
-const int barrierOverlapShift = 2;
 
 int objectAlignment(int wordSize) => wordSize * 2;
 int log2objectAlignment(int log2wordSize) => log2wordSize + 1;
@@ -16,8 +15,73 @@ int log2objectAlignment(int log2wordSize) => log2wordSize + 1;
 /// This bit is 0 for bool 'true', 1 for bool 'false'.
 int boolValueBitPosition(int log2wordSize) => log2objectAlignment(log2wordSize);
 
+/// Offset of bool 'true' object from 'null' object.
+int trueOffsetFromNull(int wordSize) => objectAlignment(wordSize) * 2;
+
+/// Offset of bool 'false' object from 'null' object.
+int falseOffsetFromNull(int wordSize) => objectAlignment(wordSize) * 3;
+
 /// The number of bits in the _magnitude_ of a Smi, not counting the sign bit.
 int smiBits(int compressedWordSize) => (compressedWordSize * 8) - 2;
+
+/// Predicates on predefined class ids.
+extension ClassIdPredicates on ClassId {
+  bool get isString => switch (this) {
+    .StringCid || .OneByteStringCid || .TwoByteStringCid => true,
+    _ => false,
+  };
+
+  bool get isUnmodifiableTypedDataView => switch (this) {
+    .UnmodifiableTypedDataInt8ArrayViewCid ||
+    .UnmodifiableTypedDataUint8ArrayViewCid ||
+    .UnmodifiableTypedDataUint8ClampedArrayViewCid ||
+    .UnmodifiableTypedDataInt16ArrayViewCid ||
+    .UnmodifiableTypedDataUint16ArrayViewCid ||
+    .UnmodifiableTypedDataInt32ArrayViewCid ||
+    .UnmodifiableTypedDataUint32ArrayViewCid ||
+    .UnmodifiableTypedDataInt64ArrayViewCid ||
+    .UnmodifiableTypedDataUint64ArrayViewCid ||
+    .UnmodifiableTypedDataFloat32ArrayViewCid ||
+    .UnmodifiableTypedDataFloat64ArrayViewCid ||
+    .UnmodifiableTypedDataFloat32x4ArrayViewCid ||
+    .UnmodifiableTypedDataInt32x4ArrayViewCid ||
+    .UnmodifiableTypedDataFloat64x2ArrayViewCid ||
+    .UnmodifiableByteDataViewCid => true,
+    _ => false,
+  };
+
+  bool get isShallowImmutable =>
+      (this == .ClosureCid) || isUnmodifiableTypedDataView;
+
+  bool get isDeeplyImmutable =>
+      isString ||
+      switch (this) {
+        .NumberCid ||
+        .IntegerCid ||
+        .SmiCid ||
+        .MintCid ||
+        .NeverCid ||
+        .SentinelCid ||
+        .StackTraceCid ||
+        .DoubleCid ||
+        .Float32x4Cid ||
+        .Float64x2Cid ||
+        .Int32x4Cid ||
+        .SendPortCid ||
+        .CapabilityCid ||
+        .RegExpCid ||
+        .BoolCid ||
+        .NullCid ||
+        .PointerCid ||
+        .TypeCid ||
+        .TypeArgumentsCid ||
+        .TypeParameterCid ||
+        .RecordTypeCid ||
+        .FunctionTypeCid ||
+        .ConstMapCid => true,
+        _ => false,
+      };
+}
 
 extension ComputedOffsets on VMOffsets {
   /// Offset of [entry] in the Thread.
@@ -31,6 +95,58 @@ extension ComputedOffsets on VMOffsets {
   int Thread_leaf_runtime_entry_offset(LeafRuntimeEntry entry, int wordSize) =>
       Thread_DeoptimizeCopyFrame_entry_point_offset +
       (entry.index - LeafRuntimeEntry.DeoptimizeCopyFrame.index) * wordSize;
+
+  /// Object tags for a freshly allocated object.
+  int computeNewObjectTags(ClassId cid, int instanceSize, int log2wordSize) {
+    final log2align = log2objectAlignment(log2wordSize);
+    assert(instanceSize >= 0);
+    assert((instanceSize & ((1 << log2align) - 1)) == 0);
+    int encodedSize = instanceSize >> log2align;
+    if (encodedSize >= (1 << UntaggedObject_kSizeTagSize)) {
+      encodedSize = 0;
+    }
+    return (1 << UntaggedObject_kNewOrEvacuationCandidateBit) |
+        (1 << UntaggedObject_kAlwaysSetBit) |
+        (1 << UntaggedObject_kNotMarkedBit) |
+        (cid.isShallowImmutable
+            ? (1 << UntaggedObject_kShallowImmutableBit)
+            : 0) |
+        (cid.isDeeplyImmutable
+            ? (1 << UntaggedObject_kDeeplyImmutableBit)
+            : 0) |
+        (encodedSize << UntaggedObject_kSizeTagPos) |
+        (cid.index << UntaggedObject_kClassIdTagPos);
+  }
+
+  int encodeClosureLengthAndFlags(
+    int numElements, {
+    required bool hasDelayedTypeArgs,
+    required bool hasInstantiatorTypeArgs,
+    required bool hasFunctionTypeArgs,
+  }) {
+    assert(
+      (0 <= numElements) &&
+          (numElements < (1 << UntaggedClosure_kLengthBitsSize)),
+    );
+    final functionTypeArgsIndex =
+        (hasDelayedTypeArgs ? 1 : 0) + (hasInstantiatorTypeArgs ? 1 : 0);
+    assert(
+      functionTypeArgsIndex <
+          (1 << UntaggedClosure_kFunctionTypeArgumentsIndexBitsSize),
+    );
+    return (hasDelayedTypeArgs
+            ? (1 << UntaggedClosure_kHasDelayedTypeArgumentsBit)
+            : 0) |
+        (hasInstantiatorTypeArgs
+            ? (1 << UntaggedClosure_kHasInstantiatorTypeArgumentsBit)
+            : 0) |
+        (hasFunctionTypeArgs
+            ? ((1 << UntaggedClosure_kHasFunctionTypeArgumentsBit) |
+                  (functionTypeArgsIndex <<
+                      UntaggedClosure_kFunctionTypeArgumentsIndexBitsPos))
+            : 0) |
+        (numElements << UntaggedClosure_kLengthBitsPos);
+  }
 }
 
 // Symbol names used in Dart snapshots.

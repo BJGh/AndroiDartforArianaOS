@@ -126,8 +126,12 @@ class _ResolverContext {
   void inferSingleTargetAnnotation({
     required SingleTargetAnnotations singleTarget,
   }) {
+    Annotatable target = singleTarget.target;
+    if (target is InternalVariable) {
+      target = target.astVariable;
+    }
     _inferAnnotations(
-      annotatable: singleTarget.target,
+      annotatable: target,
       indices: singleTarget.indicesOfAnnotationsToBeInferred,
     );
   }
@@ -211,24 +215,39 @@ class _InitializerBuilder {
        this._needsImplicitSuperInitializer = bodyBuilderContext
            .needsImplicitSuperInitializer(coreTypes);
 
-  void _inferInitializer(Initializer initializer) {
-    InitializerInferenceResult result = _bodyBuilderContext.inferInitializer(
-      typeInferrer: _typeInferrer,
-      fileUri: _fileUri,
-      initializer: initializer,
-    );
+  ScopeProviderInfo? _inferInitializer(
+    Initializer initializer, {
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
+    required ContextAllocationStrategy contextAllocationStrategy,
+  }) {
+    InferredConstructorInitializer result = _bodyBuilderContext
+        .inferInitializer(
+          typeInferrer: _typeInferrer,
+          fileUri: _fileUri,
+          initializer: initializer,
+          parameters: parameters,
+          internalThisVariable: internalThisVariable,
+          scopeProviderInfo: scopeProviderInfo,
+          contextAllocationStrategy: contextAllocationStrategy,
+        );
     if (!_bodyBuilderContext.isExternalConstructor) {
-      _addInferredInitializer(result);
+      _addInferredInitializer(result.initializerInferenceResult);
     }
+    return result.scopeProviderInfo;
   }
 
-  void processInitializers({
+  ScopeProviderInfo? processInitializers({
     required SourceLibraryBuilder libraryBuilder,
     required LibraryFeatures libraryFeatures,
     required _SuperParameterArguments? superParameterArguments,
     required List<Initializer> initializers,
-    required AsyncMarker asyncMarker,
-    required int? asyncModifierFileOffset,
+    required AsyncModifier asyncModifier,
+    required bool forPrimaryConstructor,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
+    required ContextAllocationStrategy contextAllocationStrategy,
   }) {
     if (initializers.isNotEmpty) {
       if (_bodyBuilderContext.isMixinClass) {
@@ -240,12 +259,18 @@ class _InitializerBuilder {
             className: _bodyBuilderContext.className,
           ),
           fileUri: _fileUri,
-          fileOffset: _bodyBuilderContext.memberNameOffset,
+          // It is allowed to have a primary constructor without a body, so
+          // for primary constructors we report the error on the first
+          // initializer and not the name of the constructor.
+          fileOffset: forPrimaryConstructor
+              ? initializers.first.fileOffset
+              : _bodyBuilderContext.memberNameOffset,
           length: noLength,
         );
       }
     }
 
+    ScopeProviderInfo? scopeProviderInfo;
     for (Initializer initializer in initializers) {
       switch (initializer) {
         case AuxiliaryInitializer():
@@ -253,9 +278,21 @@ class _InitializerBuilder {
             switch (initializer) {
               case ExtensionTypeRedirectingInitializer():
                 _needsImplicitSuperInitializer = false;
-                _inferInitializer(initializer);
+                scopeProviderInfo = _inferInitializer(
+                  initializer,
+                  parameters: parameters,
+                  internalThisVariable: internalThisVariable,
+                  scopeProviderInfo: scopeProviderInfo,
+                  contextAllocationStrategy: contextAllocationStrategy,
+                );
               case ExtensionTypeRepresentationFieldInitializer():
-                _inferInitializer(initializer);
+                scopeProviderInfo = _inferInitializer(
+                  initializer,
+                  parameters: parameters,
+                  internalThisVariable: internalThisVariable,
+                  scopeProviderInfo: scopeProviderInfo,
+                  contextAllocationStrategy: contextAllocationStrategy,
+                );
               case InternalRedirectingInitializer():
                 _needsImplicitSuperInitializer = false;
                 if (_bodyBuilderContext.isEnumClass) {
@@ -263,21 +300,31 @@ class _InitializerBuilder {
                       _bodyBuilderContext.formals!;
                   ActualArguments arguments = initializer.arguments;
                   List<Expression> enumSyntheticArguments = [
-                    new VariableGet(formals[0].variable)
-                      ..parent = initializer.arguments,
-                    new VariableGet(formals[1].variable)
-                      ..parent = initializer.arguments,
+                    intern.createVariableGet(
+                      formals[0].variable,
+                      fileOffset: formals[0].fileOffset,
+                    )..parent = initializer.arguments,
+                    intern.createVariableGet(
+                      formals[1].variable,
+                      fileOffset: formals[1].fileOffset,
+                    )..parent = initializer.arguments,
                   ];
                   arguments.prependArguments([
                     new PositionalArgument(enumSyntheticArguments[0]),
                     new PositionalArgument(enumSyntheticArguments[1]),
                   ], positionalCount: 2);
                 }
-                _inferInitializer(initializer);
+                scopeProviderInfo = _inferInitializer(
+                  initializer,
+                  parameters: parameters,
+                  internalThisVariable: internalThisVariable,
+                  scopeProviderInfo: scopeProviderInfo,
+                  contextAllocationStrategy: contextAllocationStrategy,
+                );
               case InternalSuperInitializer():
                 _needsImplicitSuperInitializer = false;
                 if (_bodyBuilderContext.isEnumClass) {
-                  initializer = createInvalidInitializer(
+                  initializer = extern.createInvalidInitializer(
                     _problemReporting.buildProblem(
                       compilerContext: _compilerContext,
                       message: diag.enumConstructorSuperInitializer,
@@ -324,16 +371,34 @@ class _InitializerBuilder {
                     );
                   }
                 }
-                _inferInitializer(initializer);
+                scopeProviderInfo = _inferInitializer(
+                  initializer,
+                  parameters: parameters,
+                  internalThisVariable: internalThisVariable,
+                  scopeProviderInfo: scopeProviderInfo,
+                  contextAllocationStrategy: contextAllocationStrategy,
+                );
             }
           }
         case InvalidInitializer():
           _needsImplicitSuperInitializer = false;
-          _inferInitializer(initializer);
+          scopeProviderInfo = _inferInitializer(
+            initializer,
+            parameters: parameters,
+            internalThisVariable: internalThisVariable,
+            scopeProviderInfo: scopeProviderInfo,
+            contextAllocationStrategy: contextAllocationStrategy,
+          );
         case FieldInitializer():
         case LocalInitializer():
         case AssertInitializer():
-          _inferInitializer(initializer);
+          scopeProviderInfo = _inferInitializer(
+            initializer,
+            parameters: parameters,
+            internalThisVariable: internalThisVariable,
+            scopeProviderInfo: scopeProviderInfo,
+            contextAllocationStrategy: contextAllocationStrategy,
+          );
         // Coverage-ignore(suite): Not run.
         case SuperInitializer():
         case RedirectingInitializer():
@@ -344,26 +409,33 @@ class _InitializerBuilder {
       }
     }
 
-    if (asyncMarker != AsyncMarker.Sync) {
-      _inferInitializer(
-        createInvalidInitializer(
+    if (asyncModifier.kind != AsyncMarker.Sync) {
+      scopeProviderInfo = _inferInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.constructorNotSync,
             fileUri: _fileUri,
-            fileOffset: asyncModifierFileOffset!,
+            fileOffset: asyncModifier.fileOffset,
             length: noLength,
           ),
         ),
+        parameters: parameters,
+        internalThisVariable: internalThisVariable,
+        scopeProviderInfo: scopeProviderInfo,
+        contextAllocationStrategy: contextAllocationStrategy,
       );
       _needsImplicitSuperInitializer = false;
     }
 
     if (_needsImplicitSuperInitializer) {
-      _addImplicitSuperInitializer(
+      scopeProviderInfo = _addImplicitSuperInitializer(
         libraryBuilder: libraryBuilder,
         typeInferrer: _typeInferrer,
         superParameterArguments: superParameterArguments,
+        internalThisVariable: internalThisVariable,
+        scopeProviderInfo: scopeProviderInfo,
+        contextAllocationStrategy: contextAllocationStrategy,
       );
     }
     _bodyBuilderContext.registerInitializers([
@@ -371,6 +443,8 @@ class _InitializerBuilder {
       ?_redirectingInitializer,
       ?_superInitializer,
     ], isErroneous: _isErroneous);
+
+    return scopeProviderInfo;
   }
 
   void _addSuperInitializer(
@@ -379,7 +453,7 @@ class _InitializerBuilder {
   ) {
     if (_superInitializer != null) {
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.moreThanOneSuperInitializer,
@@ -392,7 +466,7 @@ class _InitializerBuilder {
       _needsImplicitSuperInitializer = false;
     } else if (_redirectingInitializer != null) {
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.redirectingConstructorWithSuperInitializer,
@@ -416,7 +490,7 @@ class _InitializerBuilder {
     if (_superInitializer != null) {
       // Point to the existing super initializer.
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.redirectingConstructorWithSuperInitializer,
@@ -430,7 +504,7 @@ class _InitializerBuilder {
       _needsImplicitSuperInitializer = false;
     } else if (_redirectingInitializer != null) {
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message:
@@ -449,7 +523,7 @@ class _InitializerBuilder {
         Initializer initializer = _regularInitializers[i];
         int length = noLength;
         if (initializer is AssertInitializer) length = "assert".length;
-        _regularInitializers[i] = createInvalidInitializer(
+        _regularInitializers[i] = extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.redirectingConstructorWithAnotherInitializer,
@@ -477,7 +551,7 @@ class _InitializerBuilder {
       int length = noLength;
       if (initializer is AssertInitializer) length = "assert".length;
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.redirectingConstructorWithAnotherInitializer,
@@ -491,7 +565,7 @@ class _InitializerBuilder {
       _needsImplicitSuperInitializer = false;
     } else if (_superInitializer != null) {
       _regularInitializers.add(
-        createInvalidInitializer(
+        extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.superInitializerNotLast,
@@ -509,25 +583,30 @@ class _InitializerBuilder {
     }
   }
 
-  void _addInferredInitializer(InitializerInferenceResult inferenceResult) {
-    Initializer initializer = inferenceResult.initializer;
+  void _addInferredInitializer(
+    InitializerInferenceResult initializerInferenceResult,
+  ) {
+    Initializer initializer = initializerInferenceResult.initializer;
     switch (initializer) {
       case SuperInitializer():
-        _addSuperInitializer(inferenceResult, initializer);
+        _addSuperInitializer(initializerInferenceResult, initializer);
       case RedirectingInitializer():
-        _addRedirectingInitializer(inferenceResult, initializer);
+        _addRedirectingInitializer(initializerInferenceResult, initializer);
       case LocalInitializer():
       case AssertInitializer():
       case InvalidInitializer():
       case FieldInitializer():
-        _addRegularInitializer(inferenceResult, initializer);
+        _addRegularInitializer(initializerInferenceResult, initializer);
       case AuxiliaryInitializer():
         if (initializer is InternalInitializer) {
           switch (initializer) {
             case ExtensionTypeRedirectingInitializer():
-              _addRedirectingInitializer(inferenceResult, initializer);
+              _addRedirectingInitializer(
+                initializerInferenceResult,
+                initializer,
+              );
             case ExtensionTypeRepresentationFieldInitializer():
-              _addRegularInitializer(inferenceResult, initializer);
+              _addRegularInitializer(initializerInferenceResult, initializer);
             // Coverage-ignore(suite): Not run.
             case InternalRedirectingInitializer():
             case InternalSuperInitializer():
@@ -545,10 +624,13 @@ class _InitializerBuilder {
     }
   }
 
-  void _addImplicitSuperInitializer({
+  ScopeProviderInfo? _addImplicitSuperInitializer({
     required SourceLibraryBuilder libraryBuilder,
     required TypeInferrer typeInferrer,
     required _SuperParameterArguments? superParameterArguments,
+    required ThisVariable? internalThisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
+    required ContextAllocationStrategy contextAllocationStrategy,
   }) {
     /// >If no superinitializer is provided, an implicit superinitializer
     /// >of the form super() is added at the end of the constructor's
@@ -568,8 +650,14 @@ class _InitializerBuilder {
             formals[0].name == "#index" &&
             formals[1].name == "#name",
       );
-      Expression indexExpression = new VariableGet(formals[0].variable);
-      Expression nameExpression = new VariableGet(formals[1].variable);
+      Expression indexExpression = intern.createVariableGet(
+        formals[0].variable,
+        fileOffset: formals[0].fileOffset,
+      );
+      Expression nameExpression = intern.createVariableGet(
+        formals[1].variable,
+        fileOffset: formals[1].fileOffset,
+      );
       (argumentsOriginalOrder ??= []).insertAll(0, [
         new PositionalArgument(indexExpression),
         new PositionalArgument(nameExpression),
@@ -590,16 +678,15 @@ class _InitializerBuilder {
       argumentsOffset = _bodyBuilderContext.memberNameOffset;
     }
 
-    const Forest forest = const Forest();
     if (argumentsOriginalOrder != null) {
-      arguments = forest.createArguments(
+      arguments = intern.createArguments(
         argumentsOffset,
         arguments: argumentsOriginalOrder,
         hasNamedBeforePositional: false,
         positionalCount: positionalCount,
       );
     } else {
-      arguments = forest.createArgumentsEmpty(argumentsOffset);
+      arguments = intern.createArgumentsEmpty(argumentsOffset);
     }
 
     MemberLookupResult? result = _bodyBuilderContext.lookupSuperConstructor(
@@ -613,7 +700,7 @@ class _InitializerBuilder {
         if (length == 0) {
           length = _bodyBuilderContext.className.length;
         }
-        initializer = createInvalidInitializer(
+        initializer = extern.createInvalidInitializer(
           LookupResult.createDuplicateExpression(
             result,
             context: _compilerContext,
@@ -639,7 +726,7 @@ class _InitializerBuilder {
         if (length == 0) {
           length = _bodyBuilderContext.className.length;
         }
-        initializer = createInvalidInitializer(
+        initializer = extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.superclassHasNoDefaultConstructor.withArguments(
@@ -684,7 +771,7 @@ class _InitializerBuilder {
                         fileOffset: argument.expression.fileOffset,
                         length: noLength,
                       );
-                  errorMessageInitializer ??= createInvalidInitializer(
+                  errorMessageInitializer ??= extern.createInvalidInitializer(
                     errorMessageExpression,
                     isSuperInitializer: true,
                   );
@@ -702,7 +789,7 @@ class _InitializerBuilder {
                         fileOffset: argument.namedExpression.fileOffset,
                         length: noLength,
                       );
-                  errorMessageInitializer ??= createInvalidInitializer(
+                  errorMessageInitializer ??= extern.createInvalidInitializer(
                     errorMessageExpression,
                     isSuperInitializer: true,
                   );
@@ -710,7 +797,7 @@ class _InitializerBuilder {
             }
           }
         }
-        errorMessageInitializer ??= createInvalidInitializer(
+        errorMessageInitializer ??= extern.createInvalidInitializer(
           _problemReporting.buildProblem(
             compilerContext: _compilerContext,
             message: diag.implicitSuperInitializerMissingArguments
@@ -738,7 +825,15 @@ class _InitializerBuilder {
         )..fileOffset = _bodyBuilderContext.memberNameOffset;
       }
     }
-    _inferInitializer(initializer);
+    // The [parameters] and [internalThisVariable] won't be used in the implicit
+    // super initializer.
+    return _inferInitializer(
+      initializer,
+      parameters: [],
+      internalThisVariable: internalThisVariable,
+      scopeProviderInfo: scopeProviderInfo,
+      contextAllocationStrategy: contextAllocationStrategy,
+    );
   }
 }
 

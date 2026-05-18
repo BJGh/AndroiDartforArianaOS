@@ -36,7 +36,7 @@ Client workspace settings are requested with `workspace/configuration` during in
 
 - `dart.analysisExcludedFolders` (`List<String>?`): An array of paths (absolute or relative to each workspace folder) that should be excluded from analysis.
 - `dart.enableSdkFormatter` (`bool?`): When set to `false`, prevents registration (or unregisters) the SDK formatter. When set to `true` or not supplied, will register/reregister the SDK formatter.
-- `dart.lineLength` (`int?`): Sets a default value for the formatter to wrap code at if no value is specified in `formatter.page_width` in `analysis_options.yaml`. If unspecified by both, code will be wrapped at `80` characters.
+- `dart.lineLength` (`int?`): **Deprecated** Use `formatter.page_width` in `analysis_options.yaml` instead. Sets a default value for the formatter to wrap code at if no value is specified in `formatter.page_width` in `analysis_options.yaml`. If unspecified by both, code will be wrapped at `80` characters.
 - `dart.completeFunctionCalls` (`bool?`): When set to true, completes functions/methods with their required parameters.
 - `dart.showTodos` (`bool?`): Whether to generate diagnostics for TODO comments. If unspecified, diagnostics will not be generated.
 - `dart.renameFilesWithClasses` (`String`): When set to `"always"`, will include edits to rename files when classes are renamed if the filename matches the class name (but in snake_form). When set to `"prompt"`, a prompt will be shown on each class rename asking to confirm the file rename. Otherwise, files will not be renamed. Renames are performed using LSP's ResourceOperation edits - that means the rename is simply included in the resulting `WorkspaceEdit` and must be handled by the client.
@@ -278,6 +278,36 @@ Element: as defined for the `dart/textDocument/publishOutline` notification.
 Notifies the client when Flutter outline information is available (or updated) for a file.
 
 Nodes contains multiple ranges as described for the `dart/textDocument/publishOutline` notification.
+
+### dart/textDocument/getFlutterWidgetPreviews Method
+
+Direction: Client -> Server
+Params: `TextDocumentIdentifier`
+Returns: `FlutterWidgetPreviews | null`
+
+Returns the set of detected Flutter Widget Previews in the provided document or null if the document doesn't exist.
+
+### dart/workspace/getFlutterWidgetPreviews Method
+
+Direction: Client -> Server
+Params: None
+Returns: `FlutterWidgetPreviews | null`
+
+Returns the set of detected Flutter Widget Previews in the analyzed project.
+
+### dart/workspace/migrate Method
+
+Direction: Client -> Server
+Params: `DartMigrateParams`
+Returns: `DartMigrateResult`
+
+Migrates the provided pub workspace folders or non-pub workspace packages to the
+latest Dart version. For packages that are part of a pub workspace, only the
+workspace root should be passed. Migrating individual packages within a
+workspace independently is not supported.
+
+The response includes a summary of the results and a `WorkspaceEdit` containing
+the changes to be applied.
 
 ### dart/openUri Notification
 

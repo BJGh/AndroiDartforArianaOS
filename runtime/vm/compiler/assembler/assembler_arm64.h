@@ -459,6 +459,8 @@ class Assembler : public AssemblerBase {
 
   void PushRegisters(const RegisterSet& registers);
   void PopRegisters(const RegisterSet& registers);
+  void PushRegistersAligned(const RegisterSet& registers, intptr_t space);
+  void PopRegistersAligned(const RegisterSet& registers, intptr_t space);
 
   void PushRegistersInOrder(std::initializer_list<Register> regs);
 
@@ -2100,6 +2102,13 @@ class Assembler : public AssemblerBase {
   }
   void PushImmediate(Immediate immediate) { PushImmediate(immediate.value()); }
   void CompareObject(Register reg, const Object& object);
+
+  void ExtractBitField(Register dst,
+                       Register src,
+                       intptr_t low_bit,
+                       intptr_t width) override {
+    ubfx(dst, src, low_bit, width);
+  }
 
   void ExtractClassIdFromTags(Register result, Register tags);
   void ExtractInstanceSizeFromTags(Register result, Register tags);

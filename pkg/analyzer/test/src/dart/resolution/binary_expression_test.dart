@@ -20,7 +20,7 @@ main() {
 class BinaryExpressionResolutionTest extends PubPackageResolutionTest
     with BinaryExpressionResolutionTestCases {
   test_eqEq_alwaysBool() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type MyBool(bool it) implements bool {}
 
 class A {
@@ -31,7 +31,6 @@ void f(A a) {
   a == 0;
 }
 ''');
-
     var node = findNode.binary('a == 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -51,14 +50,13 @@ BinaryExpression
   }
 
   test_eqEq_switchExpression_left() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     _ => 1,
   } == 0);
 }
 ''');
-
     var node = findNode.binary('== 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -95,14 +93,13 @@ BinaryExpression
   }
 
   test_eqEq_switchExpression_right() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   0 == switch (x) {
     _ => 1,
   };
 }
 ''');
-
     var node = findNode.binary('0 ==');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -139,7 +136,7 @@ BinaryExpression
   }
 
   test_expression_recordType_hasOperator() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((String,) a) {
   a + 0;
 }
@@ -148,7 +145,6 @@ extension on (String,) {
   int operator +(int other) => 0;
 }
 ''');
-
     var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -159,24 +155,22 @@ BinaryExpression
   operator: +
   rightOperand: IntegerLiteral
     literal: 0
-    correspondingParameter: <testLibrary>::@extension::0::@method::+::@formalParameter::other
+    correspondingParameter: <testLibrary>::@extension::#0::@method::+::@formalParameter::other
     staticType: int
-  element: <testLibrary>::@extension::0::@method::+
+  element: <testLibrary>::@extension::#0::@method::+
   staticInvokeType: int Function(int)
   staticType: int
 ''');
   }
 
   test_expression_recordType_noOperator() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((String,) a) {
   a + 0;
+//  ^
+// [diag.undefinedOperator] The operator '+' isn't defined for the type '(String,)'.
 }
-''',
-      [error(diag.undefinedOperator, 26, 1)],
-    );
-
+''');
     var node = findNode.binary('+ 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -196,7 +190,7 @@ BinaryExpression
   }
 
   test_gtGtGt() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   A operator >>>(int amount) => this;
 }
@@ -205,7 +199,6 @@ void f(A a) {
   a >>> 3;
 }
 ''');
-
     var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -225,7 +218,7 @@ BinaryExpression
   }
 
   test_ifNull_left_nullableContext() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 T f<T>(T t) => t;
 
 int g() => f(null) ?? 0;
@@ -264,7 +257,7 @@ BinaryExpression
   }
 
   test_ifNull_lubUsedEvenIfItDoesNotSatisfyContext() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 // @dart=3.3
 class A {}
 class B1 extends A {}
@@ -298,7 +291,7 @@ BinaryExpression
   }
 
   test_ifNull_nullableInt_int() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(int? x, int y) {
   x ?? y;
 }
@@ -323,7 +316,7 @@ BinaryExpression
   }
 
   test_ifNull_nullableInt_nullableDouble() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(int? x, double? y) {
   x ?? y;
 }
@@ -348,7 +341,7 @@ BinaryExpression
   }
 
   test_ifNull_nullableInt_nullableInt() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(int? x) {
   x ?? x;
 }
@@ -372,243 +365,8 @@ BinaryExpression
 ''');
   }
 
-  test_plus_augmentedExpression_augments_nothing() async {
-    await assertErrorsInCode(
-      '''
-class A {
-  int operator+(Object? a) {
-    return augmented + 0;
-  }
-}
-''',
-      [error(diag.undefinedIdentifier, 50, 9)],
-    );
-
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: SimpleIdentifier
-    token: augmented
-    element: <null>
-    staticType: InvalidType
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 0
-    correspondingParameter: <null>
-    staticType: int
-  element: <null>
-  staticInvokeType: null
-  staticType: InvalidType
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_plus_augmentedExpression_augments_plus() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'test.dart';
-
-class A {
-  int operator+(Object? a) => 0;
-}
-''');
-
-    await assertNoErrorsInCode('''
-part of 'a.dart';
-
-augment class A {
-  augment int operator+(Object? a) {
-    return augmented + 0;
-  }
-}
-''');
-
-    var node = findNode.singleBinaryExpression;
-    // TODO(scheglov): implement augmentation
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: AugmentedExpression
-    augmentedKeyword: augmented
-    element: package:test/a.dart::<fragment>::@class::A::@method::+
-    fragment: package:test/a.dart::<fragment>::@class::A::@method::+
-    staticType: A
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 0
-    parameter: package:test/a.dart::<fragment>::@class::A::@method::+::@parameter::a
-    staticType: int
-  staticElement: <null>
-  element: <null>
-  staticInvokeType: int Function(Object?)
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_plus_augmentedExpression_augments_unaryMinus() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'test.dart';
-
-class A {
-  int operator-() => 0;
-}
-''');
-
-    await assertErrorsInCode(
-      '''
-part of 'a.dart';
-
-augment class A {
-  augment int operator-() {
-    return augmented + 0;
-  }
-}
-''',
-      [error(diag.augmentedExpressionNotOperator, 76, 9)],
-    );
-
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: AugmentedExpression
-    augmentedKeyword: augmented
-    element: package:test/a.dart::<fragment>::@class::A::@method::unary-
-    fragment: package:test/a.dart::<fragment>::@class::A::@method::unary-
-    staticType: A
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 0
-    parameter: <null>
-    staticType: int
-  staticElement: <null>
-  element: <null>
-  staticInvokeType: null
-  staticType: InvalidType
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_plus_augmentedExpression_class_field() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'test.dart';
-
-class A {
-  num foo = 0;
-}
-''');
-
-    await assertNoErrorsInCode('''
-part of 'a.dart';
-
-augment class A {
-  augment num foo = augmented + 1;
-}
-''');
-
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: AugmentedExpression
-    augmentedKeyword: augmented
-    element: package:test/a.dart::<fragment>::@class::A::@field::foo
-    fragment: package:test/a.dart::<fragment>::@class::A::@field::foo
-    staticType: num
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 1
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
-    staticType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
-  element: dart:core::<fragment>::@class::num::@method::+#element
-  staticInvokeType: num Function(num)
-  staticType: num
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_plus_augmentedExpression_getter() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'test.dart';
-
-class A {
-  int get foo => 0;
-}
-''');
-
-    await assertNoErrorsInCode('''
-part of 'a.dart';
-
-augment class A {
-  augment int get foo {
-    return augmented + 1;
-  }
-}
-''');
-
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: AugmentedExpression
-    augmentedKeyword: augmented
-    element: package:test/a.dart::<fragment>::@class::A::@getter::foo
-    fragment: package:test/a.dart::<fragment>::@class::A::@getter::foo
-    staticType: int
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 1
-    parameter: dart:core::<fragment>::@class::num::@method::+::@parameter::other
-    staticType: int
-  staticElement: dart:core::<fragment>::@class::num::@method::+
-  element: dart:core::<fragment>::@class::num::@method::+#element
-  staticInvokeType: num Function(num)
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_plus_augmentedExpression_setter() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part 'test.dart';
-
-class A {
-  set foo(int _) {}
-}
-''');
-
-    await assertErrorsInCode(
-      '''
-part of 'a.dart';
-
-augment class A {
-  augment set foo(int _) {
-    augmented + 1;
-  }
-}
-''',
-      [error(diag.augmentedExpressionIsSetter, 68, 9)],
-    );
-
-    var node = findNode.singleBinaryExpression;
-    assertResolvedNodeText(node, r'''
-BinaryExpression
-  leftOperand: AugmentedExpression
-    augmentedKeyword: augmented
-    element: package:test/a.dart::<fragment>::@class::A::@setter::foo
-    fragment: package:test/a.dart::<fragment>::@class::A::@setter::foo
-    staticType: InvalidType
-  operator: +
-  rightOperand: IntegerLiteral
-    literal: 1
-    parameter: <null>
-    staticType: int
-  staticElement: <null>
-  element: <null>
-  staticInvokeType: null
-  staticType: InvalidType
-''');
-  }
-
   test_plus_extensionType_int() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 extension type Int(int i) implements int {
   Int operator +(int other) {
     return Int(i + other);
@@ -640,7 +398,7 @@ BinaryExpression
   }
 
   test_plus_int_never() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 f(int a, Never b) {
   a + b;
 }
@@ -665,14 +423,15 @@ BinaryExpression
   }
 
   test_plus_never_int() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(Never a, int b) {
   a + b;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 22, 1), error(diag.deadCode, 24, 3)],
-    );
+''');
 
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
@@ -693,7 +452,7 @@ BinaryExpression
   }
 
   test_plus_switchExpression_left() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     _ => 1,
@@ -737,7 +496,7 @@ BinaryExpression
   }
 
   test_plus_switchExpression_right() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   0 + switch (x) {
     _ => 1,
@@ -781,18 +540,17 @@ BinaryExpression
   }
 
   test_star_syntheticOperand_both() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   final v = * ;
+//      ^
+// [diag.unusedLocalVariable] The value of the local variable 'v' isn't used.
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.missingIdentifier] Expected an identifier.
 }
-''',
-      [
-        error(diag.unusedLocalVariable, 19, 1),
-        error(diag.missingIdentifier, 23, 1),
-        error(diag.missingIdentifier, 25, 1),
-      ],
-    );
+''');
 
     var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
@@ -814,17 +572,15 @@ BinaryExpression
   }
 
   test_star_syntheticOperand_left() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   final v = * 2;
+//      ^
+// [diag.unusedLocalVariable] The value of the local variable 'v' isn't used.
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
 }
-''',
-      [
-        error(diag.unusedLocalVariable, 19, 1),
-        error(diag.missingIdentifier, 23, 1),
-      ],
-    );
+''');
 
     var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
@@ -845,17 +601,15 @@ BinaryExpression
   }
 
   test_star_syntheticOperand_right() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   final v = 2 * ;
+//      ^
+// [diag.unusedLocalVariable] The value of the local variable 'v' isn't used.
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 }
-''',
-      [
-        error(diag.unusedLocalVariable, 19, 1),
-        error(diag.missingIdentifier, 27, 1),
-      ],
-    );
+''');
 
     var node = findNode.singleBinaryExpression;
     assertResolvedNodeText(node, r'''
@@ -876,7 +630,7 @@ BinaryExpression
   }
 
   test_superQualifier_plus() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int operator +(int other) => 0;
 }
@@ -908,7 +662,7 @@ BinaryExpression
   }
 
   test_thisExpression_plus() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int operator +(int other) => 0;
 
@@ -1432,17 +1186,15 @@ MethodInvocation
   }
 
   test_plus_double_context_int() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(double a) {
   h(a + f());
+//  ^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'double' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 45, 7)],
-    );
-
+''');
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1462,13 +1214,12 @@ MethodInvocation
   }
 
   test_plus_double_context_none() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(double a) {
   a + f();
 }
 ''');
-
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1488,12 +1239,11 @@ MethodInvocation
   }
 
   test_plus_double_dynamic() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(double a, dynamic b) {
   a + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1513,14 +1263,13 @@ BinaryExpression
   }
 
   test_plus_int_context_double() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a + f());
 }
 h(double x) {}
 ''');
-
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1540,14 +1289,13 @@ MethodInvocation
   }
 
   test_plus_int_context_int() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a + f());
 }
 h(int x) {}
 ''');
-
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1567,14 +1315,13 @@ MethodInvocation
   }
 
   test_plus_int_context_int_target_rewritten() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int Function() a) {
   h(a() + f());
 }
 h(int x) {}
 ''');
-
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1594,20 +1341,18 @@ MethodInvocation
   }
 
   test_plus_int_context_int_via_extension_explicit() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 extension E on int {
   String operator+(num x) => '';
 }
 T f<T>() => throw Error();
 g(int a) {
   h(E(a) + f());
+//  ^^^^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'String' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 98, 10)],
-    );
-
+''');
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1627,13 +1372,12 @@ MethodInvocation
   }
 
   test_plus_int_context_none() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   a + f();
 }
 ''');
-
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -1653,12 +1397,11 @@ MethodInvocation
   }
 
   test_plus_int_double() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, double b) {
   a + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1678,12 +1421,11 @@ BinaryExpression
   }
 
   test_plus_int_dynamic() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, dynamic b) {
   a + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1703,12 +1445,11 @@ BinaryExpression
   }
 
   test_plus_int_int() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, int b) {
   a + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1728,12 +1469,11 @@ BinaryExpression
   }
 
   test_plus_int_int_target_rewritten() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 f(int Function() a, int b) {
   a() + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a() + b'), r'''
 BinaryExpression
   leftOperand: FunctionExpressionInvocation
@@ -1760,7 +1500,7 @@ BinaryExpression
   }
 
   test_plus_int_int_via_extension_explicit() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 extension E on int {
   String operator+(int other) => '';
 }
@@ -1768,7 +1508,6 @@ f(int a, int b) {
   E(a) + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('E(a) + b'), r'''
 BinaryExpression
   leftOperand: ExtensionOverride
@@ -1798,12 +1537,11 @@ BinaryExpression
   }
 
   test_plus_int_num() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, num b) {
   a + b;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('a + b'), r'''
 BinaryExpression
   leftOperand: SimpleIdentifier
@@ -1823,7 +1561,7 @@ BinaryExpression
   }
 
   test_plus_int_typeVariable_via_extension() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class Foo {}
 
 extension FooExtension<F extends Foo> on F {
@@ -1832,7 +1570,6 @@ extension FooExtension<F extends Foo> on F {
   F get gg => this + 1;
 }
 ''');
-
     assertResolvedNodeText(findNode.binary('this + 1'), r'''
 BinaryExpression
   leftOperand: ThisExpression
@@ -1852,15 +1589,13 @@ BinaryExpression
   }
 
   test_plus_invalidType_int() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   x + 0;
+//^
+// [diag.undefinedIdentifier] Undefined name 'x'.
 }
-''',
-      [error(diag.undefinedIdentifier, 13, 1)],
-    );
-
+''');
     var node = findNode.binary('x + 0');
     assertResolvedNodeText(node, r'''
 BinaryExpression
@@ -1880,16 +1615,15 @@ BinaryExpression
   }
 
   test_plus_num_context_int() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(num a) {
   h(a + f());
+//  ^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'num' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 42, 7)],
-    );
+''');
 
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
@@ -1910,19 +1644,18 @@ MethodInvocation
   }
 
   test_plus_other_context_int() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 abstract class A {
   num operator+(String x);
 }
 T f<T>() => throw Error();
 g(A a) {
   h(a + f());
+//  ^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'num' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 88, 7)],
-    );
+''');
 
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
@@ -1943,8 +1676,7 @@ MethodInvocation
   }
 
   test_plus_other_context_int_via_extension_explicit() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String operator+(num x) => '';
@@ -1952,11 +1684,11 @@ extension E on A {
 T f<T>() => throw Error();
 g(A a) {
   h(E(a) + f());
+//  ^^^^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'String' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 105, 10)],
-    );
+''');
 
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
@@ -1977,8 +1709,7 @@ MethodInvocation
   }
 
   test_plus_other_context_int_via_extension_implicit() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String operator+(num x) => '';
@@ -1986,11 +1717,11 @@ extension E on A {
 T f<T>() => throw Error();
 g(A a) {
   h(a + f());
+//  ^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'String' can't be assigned to the parameter type 'int'.
 }
 h(int x) {}
-''',
-      [error(diag.argumentTypeNotAssignable, 105, 7)],
-    );
+''');
 
     var node = findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
@@ -2011,7 +1742,7 @@ MethodInvocation
   }
 
   test_plus_other_double() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 abstract class A {
   String operator+(double other);
 }
@@ -2039,7 +1770,7 @@ BinaryExpression
   }
 
   test_plus_other_int_via_extension_explicit() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String operator+(int other) => '';
@@ -2078,7 +1809,7 @@ BinaryExpression
   }
 
   test_plus_other_int_via_extension_implicit() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String operator+(int other) => '';
@@ -2107,7 +1838,7 @@ BinaryExpression
   }
 
   test_receiverTypeParameter_bound_dynamic() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f<T extends dynamic>(T a) {
   a + 0;
 }
@@ -2131,7 +1862,7 @@ BinaryExpression
   }
 
   test_receiverTypeParameter_bound_num() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f<T extends num>(T a) {
   a + 0;
 }
@@ -2155,7 +1886,7 @@ BinaryExpression
   }
 
   test_slash() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, int b) {
   a / b;
 }
@@ -2180,7 +1911,7 @@ BinaryExpression
   }
 
   test_star_int_context_int() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a * f());
@@ -2207,7 +1938,7 @@ MethodInvocation
   }
 
   test_star_int_double() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, double b) {
   a * b;
 }
@@ -2232,7 +1963,7 @@ BinaryExpression
   }
 
   test_star_int_int() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(int a, int b) {
   a * b;
 }
@@ -2260,7 +1991,7 @@ BinaryExpression
 @reflectiveTest
 class InferenceUpdate3Test extends PubPackageResolutionTest {
   test_ifNull_contextIsConvertedToATypeUsingGreatestClosure() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 class B1<T> extends A {}
 class B2<T> extends A {}
@@ -2293,7 +2024,7 @@ f(C1<int>? c1, C2<double> c2) {
   }
 
   test_ifNull_contextNotUsedIfLhsDoesNotSatisfyContext() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 class B1 extends A {}
 class B2 extends A {}
@@ -2325,7 +2056,7 @@ f(B2? b2, C1 c1, Object? o) {
   }
 
   test_ifNull_contextNotUsedIfRhsDoesNotSatisfyContext() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 class B1 extends A {}
 class B2 extends A {}
@@ -2357,7 +2088,7 @@ f(C1? c1, B2 b2, Object? o) {
   }
 
   test_ifNull_contextUsedInsteadOfLubIfLubDoesNotSatisfyContext() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 class B1 extends A {}
 class B2 extends A {}

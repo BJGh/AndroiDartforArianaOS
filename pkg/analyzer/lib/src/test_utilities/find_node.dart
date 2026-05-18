@@ -72,6 +72,8 @@ class FindNode {
 
   DotShorthandPropertyAccess get singleDotShorthandPropertyAccess => _single();
 
+  DottedName get singleDottedName => _single();
+
   EnumDeclaration get singleEnumDeclaration => _single();
 
   ExportDirective get singleExportDirective => _single();
@@ -109,9 +111,6 @@ class FindNode {
   FunctionReference get singleFunctionReference => _single();
 
   FunctionTypeAlias get singleFunctionTypeAlias => _single();
-
-  FunctionTypedFormalParameter get singleFunctionTypedFormalParameter =>
-      _single();
 
   GenericFunctionType get singleGenericFunctionType => _single();
 
@@ -215,6 +214,8 @@ class FindNode {
   WhileStatement get singleWhileStatement => _single();
 
   WithClause get singleWithClause => _single();
+
+  YieldStatement get singleYieldStatement => _single();
 
   AdjacentStrings adjacentStrings(String search) {
     return _node(search, (n) => n is AdjacentStrings);
@@ -369,10 +370,6 @@ class FindNode {
     return _node(search, (n) => n is DeclaredVariablePattern);
   }
 
-  DefaultFormalParameter defaultParameter(String search) {
-    return _node(search, (n) => n is DefaultFormalParameter);
-  }
-
   DoStatement doStatement(String search) {
     return _node(search, (n) => n is DoStatement);
   }
@@ -389,6 +386,10 @@ class FindNode {
 
   DotShorthandPropertyAccess dotShorthandPropertyAccess(String search) {
     return _node(search, (n) => n is DotShorthandPropertyAccess);
+  }
+
+  DottedName dottedName(String search) {
+    return _node(search, (n) => n is DottedName);
   }
 
   DoubleLiteral doubleLiteral(String search) {
@@ -526,8 +527,10 @@ class FindNode {
     return _node(search, (n) => n is FunctionTypeAlias);
   }
 
-  FunctionTypedFormalParameter functionTypedFormalParameter(String search) {
-    return _node(search, (n) => n is FunctionTypedFormalParameter);
+  FunctionTypedFormalParameterSuffix functionTypedFormalParameterSuffix(
+    String search,
+  ) {
+    return _node(search, (n) => n is FunctionTypedFormalParameterSuffix);
   }
 
   GenericFunctionType genericFunctionType(String search) {
@@ -602,10 +605,6 @@ class FindNode {
     return _node(search, (n) => n is LibraryDirective);
   }
 
-  LibraryIdentifier libraryIdentifier(String search) {
-    return _node(search, (n) => n is LibraryIdentifier);
-  }
-
   ListLiteral listLiteral(String search) {
     return _node(search, (n) => n is ListLiteral);
   }
@@ -650,12 +649,16 @@ class FindNode {
     return _node(search, (n) => n is MixinDeclaration);
   }
 
-  NamedExpression namedExpression(String search) {
-    return _node(search, (n) => n is NamedExpression);
+  NamedArgument namedArgument(String search) {
+    return _node(search, (n) => n is NamedArgument);
   }
 
   NamedType namedType(String search) {
     return _node(search, (n) => n is NamedType);
+  }
+
+  NameWithTypeParameters nameWithTypeParameters(String search) {
+    return _node(search, (n) => n is NameWithTypeParameters);
   }
 
   NativeClause nativeClause(String search) {
@@ -745,6 +748,10 @@ class FindNode {
     return _node(search, (n) => n is PrefixedIdentifier);
   }
 
+  PrimaryConstructorDeclaration primaryConstructorDeclaration(String search) {
+    return _node(search, (n) => n is PrimaryConstructorDeclaration);
+  }
+
   PropertyAccess propertyAccess(String search) {
     return _node(search, (n) => n is PropertyAccess);
   }
@@ -765,6 +772,10 @@ class FindNode {
     String search,
   ) {
     return _node(search, (n) => n is RedirectingConstructorInvocation);
+  }
+
+  RegularFormalParameter regularFormalParameter(String search) {
+    return _node(search, (n) => n is RegularFormalParameter);
   }
 
   RelationalPattern relationalPattern(String search) {
@@ -793,14 +804,6 @@ class FindNode {
 
   SimpleIdentifier simple(String search) {
     return _node(search, (_) => true);
-  }
-
-  SimpleFormalParameter simpleFormalParameter(String search) {
-    return _node(search, (n) => n is SimpleFormalParameter);
-  }
-
-  SimpleFormalParameter simpleParameter(String search) {
-    return _node(search, (n) => n is SimpleFormalParameter);
   }
 
   SimpleStringLiteral simpleStringLiteral(String search) {

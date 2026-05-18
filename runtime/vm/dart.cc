@@ -60,11 +60,14 @@ namespace dart {
 
 DECLARE_FLAG(bool, print_class_table);
 DEFINE_FLAG(bool, trace_shutdown, false, "Trace VM shutdown on stderr");
+DEFINE_FLAG(bool,
+            check_core_snapshot_match,
+            false,
+            "Also check core snapshot matches on OS and arch");
 
 Isolate* Dart::vm_isolate_ = nullptr;
 int64_t Dart::start_time_micros_ = 0;
 ThreadPool* Dart::thread_pool_ = nullptr;
-ReadOnlyHandles* Dart::predefined_handles_ = nullptr;
 Snapshot::Kind Dart::vm_snapshot_kind_ = Snapshot::kInvalid;
 Dart_ThreadStartCallback Dart::thread_start_callback_ = nullptr;
 Dart_ThreadExitCallback Dart::thread_exit_callback_ = nullptr;
@@ -75,29 +78,6 @@ Dart_FileCloseCallback Dart::file_close_callback_ = nullptr;
 Dart_EntropySource Dart::entropy_source_callback_ = nullptr;
 Dart_DwarfStackTraceFootnoteCallback Dart::dwarf_stacktrace_footnote_callback_ =
     nullptr;
-
-// Structure for managing read-only global handles allocation used for
-// creating global read-only handles that are pre created and initialized
-// for use across all isolates. Having these global pre created handles
-// stored in the vm isolate ensures that we don't constantly create and
-// destroy handles for read-only objects referred in the VM code
-// (e.g: symbols, null object, empty array etc.)
-// The ReadOnlyHandles C++ Wrapper around VMHandles which is a ValueObject is
-// to ensure that the handles area is not trashed by automatic running of C++
-// static destructors when 'exit()" is called by any isolate. There might be
-// other isolates running at the same time and trashing the handles area will
-// have unintended consequences.
-class ReadOnlyHandles {
- public:
-  ReadOnlyHandles() {}
-
- private:
-  VMHandles handles_;
-  LocalHandles api_handles_;
-
-  friend class Dart;
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyHandles);
-};
 
 class DartInitializationState : public AllStatic {
  public:
@@ -355,11 +335,7 @@ char* Dart::DartInit(const Dart_InitializeParams* params) {
     NOT_IN_PRODUCT(CodeObservers::RegisterExternal(*params->code_observer));
   }
   start_time_micros_ = OS::GetCurrentMonotonicMicros();
-#if defined(DART_HOST_OS_FUCHSIA)
-  VirtualMemory::Init(params->vmex_resource);
-#else
   VirtualMemory::Init();
-#endif
 
 #if defined(DART_PRECOMPILED_RUNTIME) && defined(DART_TARGET_OS_LINUX)
   if (VirtualMemory::PageSize() > kElfPageSize) {
@@ -383,20 +359,15 @@ char* Dart::DartInit(const Dart_InitializeParams* params) {
   Service::Init();
   FreeListElement::Init();
   ForwardingCorpse::Init();
-  Api::Init();
   NativeSymbolResolver::Init();
   Page::Init();
   StoreBuffer::Init();
   MarkingStack::Init();
   TargetCPUFeatures::Init();
-  FfiCallbackMetadata::Init();
 
 #if defined(DART_INCLUDE_SIMULATOR)
   Simulator::Init();
 #endif
-  // Create the read-only handles area.
-  ASSERT(predefined_handles_ == nullptr);
-  predefined_handles_ = new ReadOnlyHandles();
   // Create the VM isolate and finish the VM initialization.
   ASSERT(thread_pool_ == nullptr);
   thread_pool_ = new ThreadPool();
@@ -434,10 +405,7 @@ char* Dart::DartInit(const Dart_InitializeParams* params) {
     Thread* T = Thread::Current();
     ASSERT(T != nullptr);
     StackZone zone(T);
-    HandleScope handle_scope(T);
     Object::InitNullAndBool(vm_isolate_->group());
-    // Now that null is initialized properly.
-    group->tag_table_ = GrowableObjectArray::null();
     vm_isolate_->isolate_group_->set_object_store(new ObjectStore());
     vm_isolate_->isolate_object_store()->Init();
     vm_isolate_->finalizers_ = GrowableObjectArray::null();
@@ -473,10 +441,9 @@ char* Dart::DartInit(const Dart_InitializeParams* params) {
         return Utils::StrDup("Invalid vm isolate snapshot seen");
       }
       FullSnapshotReader reader(snapshot, params->vm_snapshot_instructions, T);
-      const Error& error = Error::Handle(reader.ReadVMSnapshot());
-      if (!error.IsNull()) {
-        // Must copy before leaving the zone.
-        return Utils::StrDup(error.ToErrorCString());
+      char* error = reader.ReadVMSnapshot();
+      if (error != nullptr) {
+        return error;
       }
 
       Object::FinishInit(vm_isolate_->group());
@@ -771,8 +738,6 @@ char* Dart::Cleanup() {
 #endif  // defined(DART_INCLUDE_PROFILER)
 
   Api::Cleanup();
-  delete predefined_handles_;
-  predefined_handles_ = nullptr;
 
   // Set the VM isolate as current isolate.
   if (FLAG_trace_shutdown) {
@@ -810,7 +775,6 @@ char* Dart::Cleanup() {
   ICData::Cleanup();
   ArgumentsDescriptor::Cleanup();
   OffsetsTable::Cleanup();
-  FfiCallbackMetadata::Cleanup();
   TargetCPUFeatures::Cleanup();
   MarkingStack::Cleanup();
   StoreBuffer::Cleanup();
@@ -882,17 +846,16 @@ Isolate* Dart::CreateIsolate(const char* name_prefix,
   return isolate;
 }
 
-ErrorPtr Dart::InitIsolateGroupFromSnapshot(
-    Thread* T,
-    const uint8_t* snapshot_data,
-    const uint8_t* snapshot_instructions,
-    const uint8_t* kernel_buffer,
-    intptr_t kernel_buffer_size) {
+char* Dart::InitIsolateGroupFromSnapshot(Thread* T,
+                                         const uint8_t* snapshot_data,
+                                         const uint8_t* snapshot_instructions,
+                                         const uint8_t* kernel_buffer,
+                                         intptr_t kernel_buffer_size) {
   auto IG = T->isolate_group();
   Error& error = Error::Handle(T->zone());
   error = Object::Init(IG, kernel_buffer, kernel_buffer_size);
   if (!error.IsNull()) {
-    return error.ptr();
+    return Utils::StrDup(error.ToCString());
   }
   if (snapshot_data != nullptr && kernel_buffer == nullptr) {
     // Read the snapshot and setup the initial state.
@@ -902,23 +865,21 @@ ErrorPtr Dart::InitIsolateGroupFromSnapshot(
 #endif  // defined(SUPPORT_TIMELINE)
     const Snapshot* snapshot = Snapshot::SetupFromBuffer(snapshot_data);
     if (snapshot == nullptr) {
-      const String& message = String::Handle(String::New("Invalid snapshot"));
-      return ApiError::New(message);
+      return Utils::StrDup("Invalid snapshot");
     }
     if (!IsSnapshotCompatible(vm_snapshot_kind_, snapshot->kind())) {
-      const String& message = String::Handle(String::NewFormatted(
-          "Incompatible snapshot kinds: vm '%s', isolate '%s'",
-          Snapshot::KindToCString(vm_snapshot_kind_),
-          Snapshot::KindToCString(snapshot->kind())));
-      return ApiError::New(message);
+      return OS::SCreate(nullptr,
+                         "Incompatible snapshot kinds: vm '%s', isolate '%s'",
+                         Snapshot::KindToCString(vm_snapshot_kind_),
+                         Snapshot::KindToCString(snapshot->kind()));
     }
     if (FLAG_trace_isolates) {
       OS::PrintErr("Size of isolate snapshot = %" Pd "\n", snapshot->length());
     }
     FullSnapshotReader reader(snapshot, snapshot_instructions, T);
-    const Error& error = Error::Handle(reader.ReadProgramSnapshot());
-    if (!error.IsNull()) {
-      return error.ptr();
+    char* error = reader.ReadProgramSnapshot();
+    if (error != nullptr) {
+      return error;
     }
     {
       // Initialize sentinel field table, which should have sentinel values for
@@ -946,16 +907,14 @@ ErrorPtr Dart::InitIsolateGroupFromSnapshot(
     }
   } else {
     if ((vm_snapshot_kind_ != Snapshot::kNone) && kernel_buffer == nullptr) {
-      const String& message =
-          String::Handle(String::New("Missing isolate snapshot"));
-      return ApiError::New(message);
+      return Utils::StrDup("Missing isolate snapshot");
     }
   }
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
   IG->class_table()->PopulateUserVisibleNames();
 #endif
 
-  return Error::null();
+  return nullptr;
 }
 
 #if !defined(DART_PRECOMPILED_RUNTIME)
@@ -979,16 +938,16 @@ static void FinalizeBuiltinClasses(Thread* thread) {
 }
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
 
-ErrorPtr Dart::InitializeIsolateGroup(Thread* T,
-                                      const uint8_t* snapshot_data,
-                                      const uint8_t* snapshot_instructions,
-                                      const uint8_t* kernel_buffer,
-                                      intptr_t kernel_buffer_size) {
-  auto& error = Error::Handle(
+char* Dart::InitializeIsolateGroup(Thread* T,
+                                   const uint8_t* snapshot_data,
+                                   const uint8_t* snapshot_instructions,
+                                   const uint8_t* kernel_buffer,
+                                   intptr_t kernel_buffer_size) {
+  char* error =
       InitIsolateGroupFromSnapshot(T, snapshot_data, snapshot_instructions,
-                                   kernel_buffer, kernel_buffer_size));
-  if (!error.IsNull()) {
-    return error.ptr();
+                                   kernel_buffer, kernel_buffer_size);
+  if (error != nullptr) {
+    return error;
   }
 
   Object::VerifyBuiltinVtables();
@@ -1008,9 +967,9 @@ ErrorPtr Dart::InitializeIsolateGroup(Thread* T,
 
   if (snapshot_data == nullptr || kernel_buffer != nullptr) {
     auto object_store = IG->object_store();
-    error ^= object_store->PreallocateObjects();
+    const Error& error = Error::Handle(object_store->PreallocateObjects());
     if (!error.IsNull()) {
-      return error.ptr();
+      return Utils::StrDup(error.ToErrorCString());
     }
   }
 
@@ -1018,9 +977,10 @@ ErrorPtr Dart::InitializeIsolateGroup(Thread* T,
     IG->class_table()->Print();
   }
 
-  IG->set_tag_table(GrowableObjectArray::Handle(GrowableObjectArray::New()));
+  IG->object_store()->set_tag_table(
+      GrowableObjectArray::Handle(GrowableObjectArray::New()));
 
-  return Error::null();
+  return nullptr;
 }
 
 ErrorPtr Dart::InitializeIsolate(Thread* T,
@@ -1130,7 +1090,9 @@ char* Dart::FeaturesString(IsolateGroup* isolate_group,
                              FLAG_branch_coverage);
       ADD_ISOLATE_GROUP_FLAG(coverage, coverage, FLAG_coverage);
     }
+  }
 
+  if (Snapshot::IncludesCode(kind) || FLAG_check_core_snapshot_match) {
     // Generated code must match the host architecture and ABI. We check the
     // strong condition of matching on operating system so that
     // Platform.isAndroid etc can be compile-time constants.
@@ -1204,32 +1166,6 @@ void Dart::ShutdownIsolate(Thread* T) {
 
 int64_t Dart::UptimeMicros() {
   return OS::GetCurrentMonotonicMicros() - Dart::start_time_micros_;
-}
-
-uword Dart::AllocateReadOnlyHandle() {
-  ASSERT(Isolate::Current() == Dart::vm_isolate());
-  ASSERT(predefined_handles_ != nullptr);
-  uword handle = predefined_handles_->handles_.AllocateScopedHandle();
-#if defined(DEBUG)
-  *reinterpret_cast<uword*>(handle + kOffsetOfIsZoneHandle * kWordSize) = 0;
-#endif
-  return handle;
-}
-
-LocalHandle* Dart::AllocateReadOnlyApiHandle() {
-  ASSERT(Isolate::Current() == Dart::vm_isolate());
-  ASSERT(predefined_handles_ != nullptr);
-  return predefined_handles_->api_handles_.AllocateHandle();
-}
-
-bool Dart::IsReadOnlyHandle(uword address) {
-  ASSERT(predefined_handles_ != nullptr);
-  return predefined_handles_->handles_.IsValidScopedHandle(address);
-}
-
-bool Dart::IsReadOnlyApiHandle(Dart_Handle handle) {
-  ASSERT(predefined_handles_ != nullptr);
-  return predefined_handles_->api_handles_.IsValidHandle(handle);
 }
 
 }  // namespace dart

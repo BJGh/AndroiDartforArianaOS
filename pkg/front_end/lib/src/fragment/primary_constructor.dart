@@ -9,13 +9,14 @@ class PrimaryConstructorFragment implements Fragment, FunctionFragment {
 
   final Uri fileUri;
   final int startOffset;
+  final int endOffset;
   final int formalsOffset;
   final Modifiers modifiers;
   final OmittedTypeBuilder returnType;
   final NominalParameterNameSpace typeParameterNameSpace;
   final LookupScope typeParameterScope;
   final List<FormalParameterBuilder>? formals;
-  final bool forAbstractClassOrMixin;
+  final bool forAbstractClassOrEnumOrMixin;
   Token? _beginInitializers;
   final DeclarationFragment enclosingDeclaration;
   final LibraryFragment enclosingCompilationUnit;
@@ -37,13 +38,14 @@ class PrimaryConstructorFragment implements Fragment, FunctionFragment {
     required this.constructorName,
     required this.fileUri,
     required this.startOffset,
+    required this.endOffset,
     required this.formalsOffset,
     required this.modifiers,
     required this.returnType,
     required this.typeParameterNameSpace,
     required this.typeParameterScope,
     required this.formals,
-    required this.forAbstractClassOrMixin,
+    required this.forAbstractClassOrEnumOrMixin,
     required Token? beginInitializers,
     required this.enclosingDeclaration,
     required this.enclosingCompilationUnit,

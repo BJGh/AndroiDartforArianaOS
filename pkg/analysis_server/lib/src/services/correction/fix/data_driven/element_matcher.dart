@@ -125,9 +125,11 @@ class ElementMatcher {
     if (validKinds.isNotEmpty && !validKinds.contains(element.kind)) {
       return false;
     }
-    //
+    // If this is a library element, then there are no imported URIs to check.
+    if (element.kind == ElementKind.libraryKind) {
+      return true;
+    }
     // Check whether the element is in an imported library.
-    //
     var libraryUris = element.libraryUris;
     for (var importedUri in importedUris) {
       if (libraryUris.contains(importedUri)) {
@@ -209,14 +211,29 @@ class _MatcherBuilder {
       _buildFromExtensionOverride(node);
     } else if (node is FunctionDeclaration) {
       _addMatcher(components: [node.name.lexeme], kinds: []);
+    } else if (node is ImportDirective) {
+      _addMatcher(
+        components: [node.uri.stringValue ?? ''],
+        kinds: [ElementKind.libraryKind],
+        node: node,
+      );
     } else if (node is Literal) {
       var parent = node.parent;
-      if (parent is NamedExpression) {
+      if (parent is NamedArgument) {
         parent = parent.parent;
       }
       if (parent is ArgumentList) {
         _buildFromArgumentList(parent);
       }
+      if (parent is ImportDirective && node is SimpleStringLiteral) {
+        _addMatcher(
+          components: [node.value],
+          kinds: [ElementKind.libraryKind],
+          node: parent,
+        );
+      }
+    } else if (node is NamedArgument) {
+      _buildFromArgumentList(node.parent as ArgumentList);
     } else if (node is NamedType) {
       _buildFromNamedType(node);
     } else if (node is PrefixedIdentifier) {
@@ -605,11 +622,6 @@ class _MatcherBuilder {
       _buildFromDotShorthand(parent, parent.constructorName.name, [
         ElementKind.constructorKind,
       ]);
-    } else if (parent is Label && parent.parent is NamedExpression) {
-      // The parent of the named expression is an argument list. Because we
-      // don't represent parameters as elements, the element we need to match
-      // against is the invocation containing those arguments.
-      _buildFromArgumentList(parent.parent!.parent as ArgumentList);
     } else if (parent is NamedType) {
       _buildFromNamedType(parent);
     } else if (parent is MethodDeclaration && nameToken == parent.name) {

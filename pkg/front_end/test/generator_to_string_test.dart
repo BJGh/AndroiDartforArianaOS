@@ -108,7 +108,6 @@ Future<void> main() async {
       ),
       originImportUri: uri,
       indexedLibrary: null,
-      forAugmentationLibrary: false,
       augmentationRoot: null,
       resolveInLibrary: null,
       referenceIsPartOwner: null,
@@ -258,7 +257,12 @@ Future<void> main() async {
     );
     check(
       "ThisPropertyAccessGenerator(offset: 4, name: bar)",
-      new ThisPropertyAccessGenerator(helper, token, name),
+      new ThisPropertyAccessGenerator(
+        helper,
+        token,
+        name,
+        isThisExplicit: false,
+      ),
     );
     check(
       "NullAwarePropertyAccessGenerator(offset: 4,"
@@ -301,6 +305,7 @@ Future<void> main() async {
         getter,
         null,
         setter,
+        isQualifiedAccess: true,
       ),
     );
     check(

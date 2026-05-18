@@ -26,11 +26,16 @@ import 'state_machine.dart' as stateMachineCodeGen;
 /// The implementation is mostly copied from the old VM async/await transformer
 /// with some changes. The old pass was removed in commit 94c120a.
 void transformLibraries(
-    List<Library> libraries, ClassHierarchy hierarchy, CoreTypes coreTypes) {
+  List<Library> libraries,
+  ClassHierarchy hierarchy,
+  CoreTypes coreTypes,
+) {
   final typeEnv = TypeEnvironment(coreTypes, hierarchy);
 
-  var rewriter =
-      _AwaitTransformer(StatefulStaticTypeContext.stacked(typeEnv), coreTypes);
+  var rewriter = _AwaitTransformer(
+    StatefulStaticTypeContext.stacked(typeEnv),
+    coreTypes,
+  );
 
   for (var library in libraries) {
     rewriter.transform(library);
@@ -47,8 +52,11 @@ class _AwaitTransformer extends Transformer {
   late final _ExpressionTransformer expressionTransformer;
 
   _AwaitTransformer(this.staticTypeContext, this.coreTypes) {
-    expressionTransformer =
-        _ExpressionTransformer(this, staticTypeContext, coreTypes);
+    expressionTransformer = _ExpressionTransformer(
+      this,
+      staticTypeContext,
+      coreTypes,
+    );
   }
 
   @override
@@ -83,14 +91,15 @@ class _AwaitTransformer extends Transformer {
       Statement newBody = transformer.transform(body);
 
       final List<Statement> newStatements = [
-        ...transformer.expressionTransformer.variables,
+        for (final variable in transformer.expressionTransformer.variables)
+          VariableStatement(variable),
         ...transformer.statements,
       ];
 
       if (newStatements.isNotEmpty) {
         newBody = Block([
           ...newStatements,
-          ...newBody is Block ? newBody.statements : [newBody]
+          ...newBody is Block ? newBody.statements : [newBody],
         ]);
       }
 
@@ -142,7 +151,7 @@ class _AwaitTransformer extends Transformer {
         // assert { if (C) {} else { S*; assert(false, M); }}
         stmt.condition = BoolLiteral(false)..parent = stmt;
         return AssertBlock([
-          IfStatement(cond, EmptyStatement(), Block(msgEffects..add(stmt)))
+          IfStatement(cond, EmptyStatement(), Block(msgEffects..add(stmt))),
         ]);
       }
     } else {
@@ -160,7 +169,8 @@ class _AwaitTransformer extends Transformer {
         // assert { S0*; if (C) {} else { S1*; assert(false, M); }}
         stmt.condition = BoolLiteral(false)..parent = stmt;
         condEffects.add(
-            IfStatement(cond, EmptyStatement(), Block(msgEffects..add(stmt))));
+          IfStatement(cond, EmptyStatement(), Block(msgEffects..add(stmt))),
+        );
       }
       return AssertBlock(condEffects);
     }
@@ -189,8 +199,9 @@ class _AwaitTransformer extends Transformer {
     final saved = statements;
     statements = [];
     statements.add(transform(stmt));
-    final result =
-        statements.length == 1 ? statements.first : Block(statements);
+    final result = statements.length == 1
+        ? statements.first
+        : Block(statements);
     statements = saved;
     return result;
   }
@@ -235,29 +246,34 @@ class _AwaitTransformer extends Transformer {
     // with await in the loop's variable initializers or update expressions.
     bool isSimple = true;
     int length = stmt.variables.length;
-    List<List<Statement>> initEffects =
-        List<List<Statement>>.generate(length, (int i) {
-      VariableDeclaration decl = stmt.variables[i];
+    List<List<Statement>> initEffects = List<List<Statement>>.generate(length, (
+      int i,
+    ) {
+      VariableStatement decl = stmt.variables[i];
       List<Statement> statements = <Statement>[];
-      if (decl.initializer != null) {
-        decl.initializer = expressionTransformer.rewrite(
-            decl.initializer!, statements)
-          ..parent = decl;
+      if (decl.variable.initializer != null) {
+        decl.variable.initializer = expressionTransformer.rewrite(
+          decl.variable.initializer!,
+          statements,
+        )..parent = decl.variable;
       }
       isSimple = isSimple && statements.isEmpty;
       return statements;
     });
 
     length = stmt.updates.length;
-    List<List<Statement>> updateEffects =
-        List<List<Statement>>.generate(length, (int i) {
-      List<Statement> statements = <Statement>[];
-      stmt.updates[i] = expressionTransformer.rewrite(
-          stmt.updates[i], statements)
-        ..parent = stmt;
-      isSimple = isSimple && statements.isEmpty;
-      return statements;
-    });
+    List<List<Statement>> updateEffects = List<List<Statement>>.generate(
+      length,
+      (int i) {
+        List<Statement> statements = <Statement>[];
+        stmt.updates[i] = expressionTransformer.rewrite(
+          stmt.updates[i],
+          statements,
+        )..parent = stmt;
+        isSimple = isSimple && statements.isEmpty;
+        return statements;
+      },
+    );
 
     Statement body = visitDelimited(stmt.body);
     Expression? cond = stmt.condition;
@@ -321,29 +337,41 @@ class _AwaitTransformer extends Transformer {
     //
     // temps.first is the flag 'first'.
     List<VariableDeclaration> temps = <VariableDeclaration>[
-      VariableDeclaration.forValue(BoolLiteral(true), isFinal: false)
+      VariableDeclaration.forValue(BoolLiteral(true), isFinal: false),
     ];
     List<Statement> loopBody = <Statement>[];
     List<Statement> initializers = <Statement>[
-      ExpressionStatement(VariableSet(temps.first, BoolLiteral(false)))
+      ExpressionStatement(VariableSet(temps.first, BoolLiteral(false))),
     ];
     List<Statement> updates = <Statement>[];
     List<Statement> newBody = <Statement>[body];
     for (int i = 0; i < stmt.variables.length; ++i) {
-      VariableDeclaration decl = stmt.variables[i];
-      temps
-          .add(VariableDeclaration(null, type: decl.type, isSynthesized: true));
+      VariableStatement decl = stmt.variables[i];
+      temps.add(
+        VariableDeclaration(
+          null,
+          type: decl.variable.type,
+          isSynthesized: true,
+        ),
+      );
       loopBody.add(decl);
       if (decl.initializer != null) {
         initializers.addAll(initEffects[i]);
-        initializers
-            .add(ExpressionStatement(VariableSet(decl, decl.initializer!)));
+        initializers.add(
+          ExpressionStatement(VariableSet(decl.variable, decl.initializer!)),
+        );
         decl.initializer = null;
       }
-      updates
-          .add(ExpressionStatement(VariableSet(decl, VariableGet(temps.last))));
-      newBody
-          .add(ExpressionStatement(VariableSet(temps.last, VariableGet(decl))));
+      updates.add(
+        ExpressionStatement(
+          VariableSet(decl.variable, VariableGet(temps.last)),
+        ),
+      );
+      newBody.add(
+        ExpressionStatement(
+          VariableSet(temps.last, VariableGet(decl.variable)),
+        ),
+      );
     }
     // Add the updates to their guarded list of statements.
     for (int i = 0; i < stmt.updates.length; ++i) {
@@ -351,8 +379,13 @@ class _AwaitTransformer extends Transformer {
       updates.add(ExpressionStatement(stmt.updates[i]));
     }
     // Initializers or updates could be empty.
-    loopBody.add(IfStatement(
-        VariableGet(temps.first), Block(initializers), Block(updates)));
+    loopBody.add(
+      IfStatement(
+        VariableGet(temps.first),
+        Block(initializers),
+        Block(updates),
+      ),
+    );
 
     LabeledStatement labeled = LabeledStatement(null);
     if (cond != null) {
@@ -363,7 +396,10 @@ class _AwaitTransformer extends Transformer {
     loopBody.add(IfStatement(cond, Block(newBody), BreakStatement(labeled)));
     labeled.body = WhileStatement(BoolLiteral(true), Block(loopBody))
       ..parent = labeled;
-    return Block(<Statement>[...temps, labeled]);
+    return Block(<Statement>[
+      for (VariableDeclaration temp in temps) VariableStatement(temp),
+      labeled,
+    ]);
   }
 
   @override
@@ -393,8 +429,9 @@ class _AwaitTransformer extends Transformer {
   TreeNode visitReturnStatement(ReturnStatement stmt) {
     if (stmt.expression != null) {
       stmt.expression = expressionTransformer.rewrite(
-          stmt.expression!, statements)
-        ..parent = stmt;
+        stmt.expression!,
+        statements,
+      )..parent = stmt;
     }
 
     return stmt;
@@ -421,15 +458,16 @@ class _AwaitTransformer extends Transformer {
       // the current exception after the `await`.
       //
       // TODO (omersa): We could mark [TreeNode]s with `await`s and only do this
-      catch_.exception ??= VariableDeclaration(null,
-          type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
-          isSynthesized: true)
-        ..parent = catch_;
-      catch_.stackTrace ??= VariableDeclaration(null,
-          type:
-              InterfaceType(coreTypes.stackTraceClass, Nullability.nonNullable),
-          isSynthesized: true)
-        ..parent = catch_;
+      catch_.exception ??= VariableDeclaration(
+        null,
+        type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
+        isSynthesized: true,
+      )..parent = catch_;
+      catch_.stackTrace ??= VariableDeclaration(
+        null,
+        type: InterfaceType(coreTypes.stackTraceClass, Nullability.nonNullable),
+        isSynthesized: true,
+      )..parent = catch_;
 
       var body = visitDelimited(catch_.body);
 
@@ -437,9 +475,11 @@ class _AwaitTransformer extends Transformer {
       // to the context if the catch block has an await.
       if (body is Block) {
         body.statements.add(
-            ExpressionStatement(VariableGet(catch_.exception!))..parent = body);
-        body.statements.add(ExpressionStatement(VariableGet(catch_.stackTrace!))
-          ..parent = body);
+          ExpressionStatement(VariableGet(catch_.exception!))..parent = body,
+        );
+        body.statements.add(
+          ExpressionStatement(VariableGet(catch_.stackTrace!))..parent = body,
+        );
       } else {
         body = Block([
           body,
@@ -461,22 +501,28 @@ class _AwaitTransformer extends Transformer {
     // code generation.
 
     // Variable for the finalizer block continuation.
-    final continuationVar = VariableDeclaration(null,
-        initializer: IntLiteral(stateMachineCodeGen.continuationFallthrough),
-        type: InterfaceType(coreTypes.intClass, Nullability.nonNullable),
-        isSynthesized: true);
+    final continuationVar = VariableDeclaration(
+      null,
+      initializer: IntLiteral(stateMachineCodeGen.continuationFallthrough),
+      type: InterfaceType(coreTypes.intClass, Nullability.nonNullable),
+      isSynthesized: true,
+    );
 
     // When the finalizer continuation is "rethrow", this stores the exception
     // to rethrow.
-    final exceptionVar = VariableDeclaration(null,
-        type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
-        isSynthesized: true);
+    final exceptionVar = VariableDeclaration(
+      null,
+      type: InterfaceType(coreTypes.objectClass, Nullability.nonNullable),
+      isSynthesized: true,
+    );
 
     // When the finalizer continuation is "rethrow", this stores the stack
     // trace of the exception in [exceptionVar].
-    final stackTraceVar = VariableDeclaration(null,
-        type: InterfaceType(coreTypes.stackTraceClass, Nullability.nonNullable),
-        isSynthesized: true);
+    final stackTraceVar = VariableDeclaration(
+      null,
+      type: InterfaceType(coreTypes.stackTraceClass, Nullability.nonNullable),
+      isSynthesized: true,
+    );
 
     final body = visitDelimited(stmt.body);
     var finalizer = visitDelimited(stmt.finalizer);
@@ -484,12 +530,15 @@ class _AwaitTransformer extends Transformer {
     // Add a use of `continuationVar` in finally so that it will be added to
     // the context
     if (finalizer is Block) {
-      finalizer.statements.add(ExpressionStatement(VariableGet(continuationVar))
-        ..parent = finalizer);
       finalizer.statements.add(
-          ExpressionStatement(VariableGet(exceptionVar))..parent = finalizer);
+        ExpressionStatement(VariableGet(continuationVar))..parent = finalizer,
+      );
       finalizer.statements.add(
-          ExpressionStatement(VariableGet(stackTraceVar))..parent = finalizer);
+        ExpressionStatement(VariableGet(exceptionVar))..parent = finalizer,
+      );
+      finalizer.statements.add(
+        ExpressionStatement(VariableGet(stackTraceVar))..parent = finalizer,
+      );
     } else {
       finalizer = Block([
         finalizer,
@@ -500,19 +549,21 @@ class _AwaitTransformer extends Transformer {
     }
 
     return Block([
-      continuationVar,
-      exceptionVar,
-      stackTraceVar,
-      TryFinally(body, finalizer)
+      VariableStatement(continuationVar),
+      VariableStatement(exceptionVar),
+      VariableStatement(stackTraceVar),
+      TryFinally(body, finalizer),
     ]);
   }
 
   @override
-  TreeNode visitVariableDeclaration(VariableDeclaration stmt) {
-    final initializer = stmt.initializer;
+  TreeNode visitLegacyVariableStatement(LegacyVariableStatement stmt) {
+    final initializer = stmt.variable.initializer;
     if (initializer != null) {
-      stmt.initializer = expressionTransformer.rewrite(initializer, statements)
-        ..parent = stmt;
+      stmt.variable.initializer = expressionTransformer.rewrite(
+        initializer,
+        statements,
+      )..parent = stmt.variable;
     }
     return stmt;
   }
@@ -521,8 +572,10 @@ class _AwaitTransformer extends Transformer {
   TreeNode visitWhileStatement(WhileStatement stmt) {
     final Statement body = visitDelimited(stmt.body);
     final List<Statement> effects = [];
-    final Expression cond =
-        expressionTransformer.rewrite(stmt.condition, effects);
+    final Expression cond = expressionTransformer.rewrite(
+      stmt.condition,
+      effects,
+    );
     if (effects.isEmpty) {
       stmt.condition = cond..parent = stmt;
       stmt.body = body..parent = stmt;
@@ -562,8 +615,10 @@ class _AwaitTransformer extends Transformer {
   TreeNode defaultExpression(Expression expr) {
     // This visits initializer expressions, annotations etc.
     final List<Statement> effects = [];
-    final Expression transformedExpr =
-        expressionTransformer.rewrite(expr, effects);
+    final Expression transformedExpr = expressionTransformer.rewrite(
+      expr,
+      effects,
+    );
     if (effects.isEmpty) {
       return transformedExpr;
     } else {
@@ -638,7 +693,10 @@ class _ExpressionTransformer extends Transformer {
   final CoreTypes coreTypes;
 
   _ExpressionTransformer(
-      this._statementTransformer, this.staticTypeContext, this.coreTypes);
+    this._statementTransformer,
+    this.staticTypeContext,
+    this.coreTypes,
+  );
 
   // Helpers
 
@@ -650,8 +708,10 @@ class _ExpressionTransformer extends Transformer {
     return castVariableGet(temp, type);
   }
 
-  VariableDeclaration allocateTemporary(int index,
-      [DartType type = const DynamicType()]) {
+  VariableDeclaration allocateTemporary(
+    int index, [
+    DartType type = const DynamicType(),
+  ]) {
     if (variables.length > index) {
       // Re-using a temporary. Re-type it to dynamic if we detect reuse with
       // different type.
@@ -785,8 +845,11 @@ class _ExpressionTransformer extends Transformer {
   /// Transform an expression given an action to transform the children. For
   /// this purposes of the await transformer the children should generally be
   /// translated from right to left, in the reverse of evaluation order.
-  Expression transformTreeNode(Expression expr, void Function() action,
-      {bool alwaysName = false}) {
+  Expression transformTreeNode(
+    Expression expr,
+    void Function() action, {
+    bool alwaysName = false,
+  }) {
     final bool shouldName = alwaysName || seenAwait;
 
     // 1. If there is an await in a sibling to the right, emit an assignment to
@@ -1070,8 +1133,9 @@ class _ExpressionTransformer extends Transformer {
     final InterfaceType type = staticTypeContext.typeEnvironment.coreTypes
         .boolRawType(staticTypeContext.nonNullable);
     final VariableDeclaration result = allocateTemporary(nameIndex, type);
-    rightBody
-        .addStatement(ExpressionStatement(VariableSet(result, expr.right)));
+    rightBody.addStatement(
+      ExpressionStatement(VariableSet(result, expr.right)),
+    );
     final Statement then;
     final Statement? otherwise;
     if (expr.operatorEnum == LogicalExpressionOperator.AND) {
@@ -1086,8 +1150,14 @@ class _ExpressionTransformer extends Transformer {
 
     seenAwait = false;
     ifStatement.condition = transform(expr.left)..parent = ifStatement;
-    statements.add(ExpressionStatement(VariableSet(result,
-        BoolLiteral(expr.operatorEnum == LogicalExpressionOperator.OR))));
+    statements.add(
+      ExpressionStatement(
+        VariableSet(
+          result,
+          BoolLiteral(expr.operatorEnum == LogicalExpressionOperator.OR),
+        ),
+      ),
+    );
 
     nameIndex += 1;
     seenAwait = seenAwait || rightAwait;
@@ -1113,9 +1183,10 @@ class _ExpressionTransformer extends Transformer {
 
     final List<Statement> otherwiseStatements = [];
     seenAwait = false;
-    expr.otherwise =
-        delimit(() => transform(expr.otherwise), otherwiseStatements)
-          ..parent = expr;
+    expr.otherwise = delimit(
+      () => transform(expr.otherwise),
+      otherwiseStatements,
+    )..parent = expr;
     final otherwiseAwait = seenAwait;
 
     // Only one side of this branch will get executed at a time, so just make
@@ -1145,8 +1216,9 @@ class _ExpressionTransformer extends Transformer {
     final thenBody = blockOf(thenStatements);
     final otherwiseBody = blockOf(otherwiseStatements);
     thenBody.addStatement(ExpressionStatement(VariableSet(result, expr.then)));
-    otherwiseBody
-        .addStatement(ExpressionStatement(VariableSet(result, expr.otherwise)));
+    otherwiseBody.addStatement(
+      ExpressionStatement(VariableSet(result, expr.otherwise)),
+    );
     final branch = IfStatement(expr.condition, thenBody, otherwiseBody);
     statements.add(branch);
 
@@ -1198,7 +1270,7 @@ class _ExpressionTransformer extends Transformer {
       // <body's statements>
       //
       // and return the body's value.
-      statements.add(variable);
+      statements.add(VariableStatement(variable));
       var index = nameIndex;
       seenAwait = false;
       variable.initializer = transform(variable.initializer!)
@@ -1260,6 +1332,7 @@ class _ExpressionTransformer extends Transformer {
   @override
   TreeNode defaultStatement(Statement stmt) {
     throw UnsupportedError(
-        "Use _rewriteStatement to transform statement: $stmt");
+      "Use _rewriteStatement to transform statement: $stmt",
+    );
   }
 }

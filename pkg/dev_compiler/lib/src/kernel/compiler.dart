@@ -11,6 +11,8 @@ import 'package:_js_interop_checks/src/js_interop.dart'
     show getDartJSInteropJSName, hasDartJSInteropAnnotation;
 import 'package:_js_interop_checks/src/transformations/js_util_optimizer.dart'
     show ExtensionIndex;
+import 'package:front_end/src/api_prototype/external_effect.dart'
+    show ExternalEffect;
 import 'package:front_end/src/api_unstable/ddc.dart';
 import 'package:js_shared/synced/embedded_names.dart' show JsGetName, JsBuiltin;
 import 'package:kernel/class_hierarchy.dart';
@@ -3644,8 +3646,7 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     _currentUri = savedUri;
     _staticTypeContext.leaveMember(p);
 
-    if (_options.dynamicModule &&
-        p.annotations.any((a) => _isEntrypointPragma(a, _coreTypes))) {
+    if (_options.dynamicModule && _isDynamicModuleEntryPoint(p, _coreTypes)) {
       if (_dynamicEntrypoint == null) {
         if (p.function.requiredParameterCount > 0) {
           // TODO(sigmund): this error should be caught by a kernel checker that
@@ -4860,10 +4861,10 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   @override
   js_ast.Statement visitForStatement(ForStatement node) {
     return _translateLoop(node, () {
-      js_ast.VariableInitialization emitForInitializer(VariableDeclaration v) =>
+      js_ast.VariableInitialization emitForInitializer(VariableStatement s) =>
           js_ast.VariableInitialization(
-            _emitVariableDef(v),
-            _visitInitializer(v.initializer, v.annotations),
+            _emitVariableDef(s.variable),
+            _visitInitializer(s.variable.initializer, s.variable.annotations),
           );
 
       if (node.variables.any(containsFunctionExpression)) {
@@ -4933,30 +4934,34 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   js_ast.Statement _rewriteAsWhile(ForStatement node) {
     var initFlagTempId = _emitScopedId('t#_init');
     var loopVariableIds = {
-      for (var variable in node.variables) variable: _emitVariableDef(variable),
+      for (var stmt in node.variables)
+        stmt.variable: _emitVariableDef(stmt.variable),
     };
     var prevVariableTempIds = {
-      for (var variable in node.variables)
-        variable: _emitScopedId('t#_prev_${variable.name!}'),
+      for (var stmt in node.variables)
+        stmt.variable: _emitScopedId('t#_prev_${stmt.variable.name!}'),
     };
     var inits = js_ast.Block([
       // Set init flag to false so the initialization only happens on the first
       // iteration of the while loop.
       js.statement('# = false;', [initFlagTempId]),
       // Initialize fresh loop variables to initial values.
-      for (var variable in node.variables)
+      for (var stmt in node.variables)
         js.statement('# = #;', [
-          loopVariableIds[variable]!,
-          _visitInitializer(variable.initializer, variable.annotations),
+          loopVariableIds[stmt.variable]!,
+          _visitInitializer(
+            stmt.variable.initializer,
+            stmt.variable.annotations,
+          ),
         ]),
     ]);
     var prevInits = js_ast.Block([
       // Initialize fresh loop variables with the value from the previous
       // iteration.
-      for (var variable in node.variables)
+      for (var stmt in node.variables)
         js.statement('# = #;', [
-          loopVariableIds[variable],
-          prevVariableTempIds[variable],
+          loopVariableIds[stmt.variable],
+          prevVariableTempIds[stmt.variable],
         ]),
       // Original update expressions.
       for (var update in node.updates) _visitExpression(update).toStatement(),
@@ -4969,8 +4974,11 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
             initFlagTempId,
             js_ast.LiteralBool(true),
           ),
-          for (var variable in node.variables)
-            js_ast.VariableInitialization(prevVariableTempIds[variable]!, null),
+          for (var stmt in node.variables)
+            js_ast.VariableInitialization(
+              prevVariableTempIds[stmt.variable]!,
+              null,
+            ),
         ]).toStatement(),
         // The for loop transformed into a while loop.
         js_ast.While(
@@ -4979,9 +4987,9 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
               // Create fresh loop variables every iteration.
               if (node.variables.isNotEmpty)
                 js_ast.VariableDeclarationList('let', [
-                  for (var variable in node.variables)
+                  for (var stmt in node.variables)
                     js_ast.VariableInitialization(
-                      loopVariableIds[variable]!,
+                      loopVariableIds[stmt.variable]!,
                       null,
                     ),
                 ]).toStatement(),
@@ -4994,15 +5002,15 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
               // Original loop body.
               _visitScope(_effectiveBodyOf(node, node.body)),
               // Save previous loop variables
-              for (var variable in node.variables)
+              for (var stmt in node.variables)
                 js.statement('# = #;', [
-                    prevVariableTempIds[variable]!,
-                    _emitVariableRef(variable),
+                    prevVariableTempIds[stmt.variable]!,
+                    _emitVariableRef(stmt.variable),
                   ])
                   // Map these locations to the variable declaration so stepping
                   // in the Dart debugger doesn't jump to the previous line when
                   // stepping.
-                  ..sourceInformation = _nodeStart(variable),
+                  ..sourceInformation = _nodeStart(stmt.variable),
             ]),
           )
           // The while loop gets mapped to the original for loop location.
@@ -6684,6 +6692,9 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   @override
   js_ast.Expression visitStaticInvocation(StaticInvocation node) {
     var target = node.target;
+    if (ExternalEffect.isExternalEffect(node)) {
+      return js_ast.LiteralNull();
+    }
     if (isInlineJS(target)) return _emitInlineJSCode(node) as js_ast.Expression;
     if (target.isFactory) return _emitFactoryInvocation(node);
 
@@ -8061,6 +8072,12 @@ class ProgramCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     var init = _visitExpression(v.initializer!);
     var body = _visitExpression(node.body);
     var temp = _tempVariables.remove(v);
+    // TODO(eernst): Remove the following `if` if anonymous-methods is rejected.
+    // Otherwise, revise this method to be more readable.
+    // See https://github.com/dart-lang/language/issues/260.
+    if (temp == null && !_isTemporaryVariable(v)) {
+      temp = _emitVariableRef(v);
+    }
     if (temp != null) {
       if (_letVariables != null) {
         init = js_ast.Assignment(temp, init);
@@ -9275,12 +9292,6 @@ class _SwitchLabelState {
 ///
 /// Used to denote the entrypoint method of a dynamic module.
 // TODO(sigmund): move to package:kernel.
-bool _isEntrypointPragma(Expression expression, CoreTypes coreTypes) {
-  if (expression is! ConstantExpression) return false;
-  final value = expression.constant;
-  if (value is! InstanceConstant) return false;
-  if (value.classReference != coreTypes.pragmaClass.reference) return false;
-  final name = value.fieldValues[coreTypes.pragmaName.fieldReference];
-  if (name is! StringConstant) return false;
-  return name.value == 'dyn-module:entry-point';
+bool _isDynamicModuleEntryPoint(Procedure p, CoreTypes coreTypes) {
+  return hasPragma(p, 'dyn-module:entry-point', coreTypes);
 }

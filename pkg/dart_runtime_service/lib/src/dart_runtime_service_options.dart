@@ -10,8 +10,12 @@ class DartRuntimeServiceOptions {
     this.enableLogging = false,
     this.port = 0,
     this.disableAuthCodes = false,
+    this.disableOriginCheck = false,
     this.sseHandlerPath,
     this.autoStart = true,
+    this.serveDevTools = false,
+    this.enableServicePortFallback = false,
+    this.host,
   });
 
   /// If true, enables log output for the service.
@@ -28,6 +32,11 @@ class DartRuntimeServiceOptions {
   /// Defaults to false.
   final bool disableAuthCodes;
 
+  /// If true, CORS requests to the service will be accepted.
+  ///
+  /// Defaults to false.
+  final bool disableOriginCheck;
+
   /// If non-null, allow for SSE connections to be established at
   /// [sseHandlerPath].
   ///
@@ -37,19 +46,40 @@ class DartRuntimeServiceOptions {
   /// If true, the HTTP server will be started on initialization.
   final bool autoStart;
 
+  /// If true, Dart DevTools should be made available via the HTTP server.
+  final bool serveDevTools;
+
+  /// If true, the service should attempt to bind to a different port if [port]
+  /// is unavailable.
+  final bool enableServicePortFallback;
+
+  /// The host the service should attempt to bind to.
+  ///
+  /// If null, defaults to loopback IPv4 address.
+  final String? host;
+
   DartRuntimeServiceOptions copyWith({
     bool? enableLogging,
     int? port,
     bool? disableAuthCodes,
+    bool? disableOriginCheck,
     String? sseHandlerPath,
     bool? autoStart,
+    bool? serveDevTools,
+    bool? enableServicePortFallback,
+    String? host,
   }) {
     return DartRuntimeServiceOptions(
       enableLogging: enableLogging ?? this.enableLogging,
       port: port ?? this.port,
       disableAuthCodes: disableAuthCodes ?? this.disableAuthCodes,
+      disableOriginCheck: disableOriginCheck ?? this.disableOriginCheck,
       sseHandlerPath: sseHandlerPath ?? this.sseHandlerPath,
       autoStart: autoStart ?? this.autoStart,
+      serveDevTools: serveDevTools ?? this.serveDevTools,
+      enableServicePortFallback:
+          enableServicePortFallback ?? this.enableServicePortFallback,
+      host: host ?? this.host,
     );
   }
 }

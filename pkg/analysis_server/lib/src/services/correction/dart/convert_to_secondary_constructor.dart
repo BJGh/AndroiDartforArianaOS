@@ -7,7 +7,6 @@ import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
-import 'package:analyzer/src/dart/ast/token.dart';
 import 'package:analyzer_plugin/utilities/assist/assist.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
@@ -76,7 +75,13 @@ class ConvertToSecondaryConstructor extends ResolvedCorrectionProducer {
     EnumDeclaration enumDeclaration,
   ) async {
     var containerBody = enumDeclaration.body;
-    if (containerBody.constants.isEmpty) return;
+    if (containerBody is! BlockEnumBody) {
+      return;
+    }
+
+    var constants = containerBody.constants;
+    if (constants.isEmpty) return;
+
     var namePart = enumDeclaration.namePart;
     if (namePart is! PrimaryConstructorDeclaration) return;
 
@@ -101,8 +106,7 @@ class ConvertToSecondaryConstructor extends ResolvedCorrectionProducer {
     var parameterList = declaration.formalParameters;
 
     for (var parameter in parameterList.parameters) {
-      var normalParameter = parameter.normalParameter;
-      if (normalParameter.name == null ||
+      if (parameter.name == null ||
           parameter.declaredFragment?.element == null) {
         return;
       }
@@ -114,10 +118,11 @@ class ConvertToSecondaryConstructor extends ResolvedCorrectionProducer {
       var parent = declaration.parent;
       if (parent is EnumDeclaration) {
         var body = parent.body;
-        var semicolon = body.semicolon;
+        var semicolon = body is BlockEnumBody ? body.semicolon : null;
         if (semicolon == null) {
           needsSemicolon = true;
-          fieldOffset = body.constants.endToken?.end ?? fieldOffset;
+          var constants = body is BlockEnumBody ? body.constants : null;
+          fieldOffset = constants?.endToken?.end ?? fieldOffset;
         } else {
           fieldOffset = semicolon.end;
         }
@@ -193,8 +198,7 @@ class ConvertToSecondaryConstructor extends ResolvedCorrectionProducer {
     var parameterList = declaration.formalParameters;
 
     for (var parameter in parameterList.parameters) {
-      var normalParameter = parameter.normalParameter;
-      if (normalParameter.name == null ||
+      if (parameter.name == null ||
           parameter.declaredFragment?.element == null) {
         return;
       }
@@ -346,13 +350,12 @@ class ConvertToSecondaryConstructor extends ResolvedCorrectionProducer {
       int end = parameter.end;
       if (parameter.isDeclaring) {
         prefix = 'this.';
-        var normalParameter = parameter.normalParameter;
-        offset = normalParameter.name!.offset;
+        offset = parameter.name!.offset;
         if (parameter.isRequiredNamed) {
           prefix = 'required $prefix';
         }
-        if (parameter is FunctionTypedFormalParameter) {
-          end = parameter.name.end;
+        if (parameter.functionTypedSuffix != null) {
+          end = parameter.name!.end;
         }
       } else {
         prefix = '';
@@ -389,29 +392,10 @@ extension on ClassDeclaration {
 extension on FormalParameter {
   bool get isDeclaring {
     if (isFinal) return true;
-    var normalParameter = this.normalParameter;
-    return switch (normalParameter) {
-      SimpleFormalParameter() => normalParameter.keyword.isVar,
-      FunctionTypedFormalParameter() => normalParameter.keyword.isVar,
+    return switch (this) {
+      RegularFormalParameter parameter => parameter.varKeyword != null,
       FieldFormalParameter() => false,
       SuperFormalParameter() => false,
     };
-  }
-
-  /// Returns the normal formal parameter associated with `this`.
-  NormalFormalParameter get normalParameter {
-    var self = this;
-    return switch (self) {
-      DefaultFormalParameter(:var parameter) => parameter,
-      NormalFormalParameter() => self,
-    };
-  }
-}
-
-extension on Token? {
-  /// Whether this token is a `var` keyword.
-  bool get isVar {
-    var self = this;
-    return self is KeywordToken && self.keyword == Keyword.VAR;
   }
 }

@@ -72,7 +72,6 @@ class ForwardingListener implements Listener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -84,7 +83,6 @@ class ForwardingListener implements Listener {
     listener?.beginClassDeclaration(
       begin,
       abstractToken,
-      macroToken,
       sealedToken,
       baseToken,
       interfaceToken,
@@ -230,12 +228,14 @@ class ForwardingListener implements Listener {
   void beginFactory(
     DeclarationKind declarationKind,
     Token lastConsumed,
+    Token? augmentToken,
     Token? externalToken,
     Token? constToken,
   ) {
     listener?.beginFactory(
       declarationKind,
       lastConsumed,
+      augmentToken,
       externalToken,
       constToken,
     );
@@ -503,7 +503,6 @@ class ForwardingListener implements Listener {
   void beginNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -515,7 +514,6 @@ class ForwardingListener implements Listener {
     listener?.beginNamedMixinApplication(
       beginToken,
       abstractToken,
-      macroToken,
       sealedToken,
       baseToken,
       interfaceToken,
@@ -712,8 +710,8 @@ class ForwardingListener implements Listener {
   }
 
   @override
-  void endBinaryPattern(Token token) {
-    listener?.endBinaryPattern(token);
+  void endBinaryPattern(Token operatorToken) {
+    listener?.endBinaryPattern(operatorToken);
   }
 
   @override
@@ -1133,8 +1131,8 @@ class ForwardingListener implements Listener {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
-    listener?.endImport(importKeyword, augmentToken, semicolon);
+  void endImport(Token importKeyword, Token? semicolon) {
+    listener?.endImport(importKeyword, semicolon);
   }
 
   @override
@@ -1214,6 +1212,11 @@ class ForwardingListener implements Listener {
   @override
   void endMetadataStar(int count) {
     listener?.endMetadataStar(count);
+  }
+
+  @override
+  void handleNoMixinBody(Token semicolonToken) {
+    listener?.handleNoMixinBody(semicolonToken);
   }
 
   @override
@@ -1365,8 +1368,8 @@ class ForwardingListener implements Listener {
   @override
   void beginFields(
     DeclarationKind declarationKind,
-    Token? abstractToken,
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -1376,8 +1379,8 @@ class ForwardingListener implements Listener {
   ) {
     listener?.beginFields(
       declarationKind,
-      abstractToken,
       augmentToken,
+      abstractToken,
       externalToken,
       staticToken,
       covariantToken,
@@ -1390,6 +1393,7 @@ class ForwardingListener implements Listener {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -1401,6 +1405,7 @@ class ForwardingListener implements Listener {
   ) {
     listener?.endTopLevelFields(
       augmentToken,
+      abstractToken,
       externalToken,
       staticToken,
       covariantToken,
@@ -1557,8 +1562,18 @@ class ForwardingListener implements Listener {
   }
 
   @override
+  void handleNoExtensionBody(Token semicolonToken) {
+    listener?.handleNoExtensionBody(semicolonToken);
+  }
+
+  @override
   void handleEnumNoWithClause() {
     listener?.handleEnumNoWithClause();
+  }
+
+  @override
+  void handleNoEnumBody(Token semicolonToken) {
+    listener?.handleNoEnumBody(semicolonToken);
   }
 
   @override
@@ -2247,15 +2262,6 @@ class ForwardingListener implements Listener {
   }
 
   @override
-  void handleAugmentSuperExpression(
-    Token augmentToken,
-    Token superToken,
-    IdentifierContext context,
-  ) {
-    listener?.handleAugmentSuperExpression(augmentToken, superToken, context);
-  }
-
-  @override
   void handleSwitchCaseNoWhenClause(Token token) {
     listener?.handleSwitchCaseNoWhenClause(token);
   }
@@ -2417,26 +2423,28 @@ class ForwardingListener implements Listener {
 
   @override
   void endPrimaryConstructor(
+    DeclarationKind kind,
     Token beginToken,
+    Token endToken,
     Token? constKeyword,
     bool hasConstructorName,
-    bool forExtensionType,
   ) {
     listener?.endPrimaryConstructor(
+      kind,
       beginToken,
+      endToken,
       constKeyword,
       hasConstructorName,
-      forExtensionType,
     );
   }
 
   @override
   void handleNoPrimaryConstructor(
+    DeclarationKind kind,
     Token token,
     Token? constKeyword,
-    bool forExtensionType,
   ) {
-    listener?.handleNoPrimaryConstructor(token, constKeyword, forExtensionType);
+    listener?.handleNoPrimaryConstructor(kind, token, constKeyword);
   }
 
   @override

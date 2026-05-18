@@ -18,7 +18,6 @@ void main() {
 
 @reflectiveTest
 class AugmentedTest extends AbstractLspAnalysisServerTest {
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_body_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {}
@@ -31,7 +30,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_body_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class [!A!] {}
@@ -42,7 +40,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_name_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {}
@@ -53,7 +50,6 @@ augment class A^ {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_name_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class [!A!] {}
@@ -62,7 +58,6 @@ augment class ^A {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_body_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {
@@ -81,7 +76,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_body_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class A {
@@ -96,7 +90,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_name_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {
@@ -113,7 +106,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_name_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class A {
@@ -126,7 +118,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_getter_body() async {
     await verifyGoToAugmented('''
 class A {
@@ -134,12 +125,11 @@ class A {
 }
 
 augment class A {
-  augment String get foo => '^';
+  augment String get fo^o;
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_getter_name() async {
     await verifyGoToAugmented('''
 class A {
@@ -147,7 +137,7 @@ class A {
 }
 
 augment class A {
-  augment String get fo^o => '';
+  augment String get fo^o;
 }
 ''');
   }
@@ -160,7 +150,6 @@ class A {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_method_body_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {
@@ -168,18 +157,15 @@ class A {
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 
 augment class A {
-  augment void foo() {
-    ^
-  }
+  augment void fo^o();
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_method_body_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class A {
@@ -187,14 +173,11 @@ class A {
 }
 
 augment class A {
-  augment void foo() {
-    ^
-  }
+  augment void fo^o();
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_method_name_augmentationToAugmentation() async {
     await verifyGoToAugmented('''
 class A {
@@ -202,16 +185,15 @@ class A {
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 
 augment class A {
-  augment void fo^o() {}
+  augment void fo^o();
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_method_name_augmentationToDeclaration() async {
     await verifyGoToAugmented('''
 class A {
@@ -219,12 +201,11 @@ class A {
 }
 
 augment class A {
-  augment void f^oo() {}
+  augment void f^oo();
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_setter_body() async {
     await verifyGoToAugmented('''
 class A {
@@ -232,14 +213,11 @@ class A {
 }
 
 augment class A {
-  augment set foo(String value) {
-    ^
-  }
+  augment set fo^o(String value);
 }
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_setter_name() async {
     await verifyGoToAugmented('''
 class A {
@@ -247,7 +225,7 @@ class A {
 }
 
 augment class A {
-  augment set fo^o(String value) {}
+  augment set fo^o(String value);
 }
 ''');
   }

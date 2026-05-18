@@ -61,6 +61,12 @@ DEFINE_FLAG(bool,
 DECLARE_FLAG(bool, inline_alloc);
 DECLARE_FLAG(bool, use_slow_path);
 
+// Macro for shared code generation methods (EmitNativeCode and
+// MakeLocationSummary). Only assembly code that can be shared across all
+// architectures can be used. Machine specific register allocation and code
+// generation is located in il_<arch>.cc
+#define __ compiler->assembler()->
+
 class SubtypeFinder {
  public:
   SubtypeFinder(Zone* zone,
@@ -165,7 +171,6 @@ class CidCheckerForRanges : public ValueObject {
     subtype_ = to_check_.RareType();
     // Create local zone because deep hierarchies may allocate lots of handles.
     StackZone stack_zone(thread_);
-    HANDLESCOPE(thread_);
     return subtype_.IsSubtypeOf(supertype_, Heap::kNew);
   }
 
@@ -961,11 +966,6 @@ LocationSummary* AllocateClosureInstr::MakeLocationSummary(Zone* zone,
                Location::RegisterLocation(AllocateClosureABI::kFunctionReg));
   locs->set_in(kContextPos,
                Location::RegisterLocation(AllocateClosureABI::kContextReg));
-  if (has_instantiator_type_args()) {
-    locs->set_in(kInstantiatorTypeArgsPos,
-                 Location::RegisterLocation(
-                     AllocateClosureABI::kInstantiatorTypeArgsReg));
-  }
   locs->set_out(0, Location::RegisterLocation(AllocateClosureABI::kResultReg));
   return locs;
 }
@@ -973,19 +973,25 @@ LocationSummary* AllocateClosureInstr::MakeLocationSummary(Zone* zone,
 void AllocateClosureInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   auto object_store = compiler->isolate_group()->object_store();
   Code& stub = Code::ZoneHandle(compiler->zone());
-  if (has_instantiator_type_args()) {
-    if (is_generic()) {
-      stub = object_store->allocate_closure_ta_generic_stub();
-    } else {
-      stub = object_store->allocate_closure_ta_stub();
-    }
-  } else {
-    if (is_generic()) {
-      stub = object_store->allocate_closure_generic_stub();
-    } else {
-      stub = object_store->allocate_closure_stub();
-    }
+  const intptr_t num_elements = NumElements();
+  switch (num_elements) {
+    case 1:
+      stub = object_store->allocate_closure1_stub();
+      break;
+    case 2:
+      stub = object_store->allocate_closure2_stub();
+      break;
+    case 3:
+      stub = object_store->allocate_closure3_stub();
+      break;
+    case 4:
+      stub = object_store->allocate_closure4_stub();
+      break;
+    default:
+      UNREACHABLE();
   }
+  __ LoadImmediate(AllocateClosureABI::kLengthAndFlagsReg,
+                   compiler::target::ToRawSmi(EncodedLengthAndFlags()));
   compiler->GenerateStubCall(source(), stub, UntaggedPcDescriptors::kOther,
                              locs(), deopt_id(), env());
 }
@@ -2754,8 +2760,21 @@ bool LoadFieldInstr::TryEvaluateLoad(const Object& instance,
         const Record& record = Record::Cast(instance);
         if (index < record.num_fields()) {
           *result = record.FieldAt(index);
+          return true;
         }
-        return true;
+      }
+      return false;
+
+    case Slot::Kind::kClosureElement:
+      if (instance.IsClosure()) {
+        const intptr_t index =
+            compiler::target::Closure::element_index_at_offset(
+                field.offset_in_bytes());
+        const Closure& closure = Closure::Cast(instance);
+        if (index < closure.length()) {
+          *result = closure.ElementAt(index);
+          return true;
+        }
       }
       return false;
 
@@ -2833,22 +2852,21 @@ Definition* LoadFieldInstr::Canonicalize(FlowGraph* flow_graph) {
       // argument passed to the constructor.
       if (call->is_known_list_constructor() &&
           IsFixedLengthArrayCid(call->Type()->ToCid())) {
-        return call->ArgumentAt(1);
+        return call->ArgumentAt(call->FirstArgIndex());
       } else if (call->function().recognized_kind() ==
                  MethodRecognizer::kByteDataFactory) {
         // Similarly, we check for the ByteData constructor and forward its
         // explicit length argument appropriately.
-        return call->ArgumentAt(1);
+        return call->ArgumentAt(call->FirstArgIndex());
       } else if (IsTypedDataViewFactory(call->function())) {
-        // Typed data view factories all take three arguments (after
-        // the implicit type arguments parameter):
+        // Typed data view factories all take three arguments:
         //
         // 1) _TypedList buffer -- the underlying data for the view
         // 2) int offsetInBytes -- the offset into the buffer to start viewing
         // 3) int length        -- the number of elements in the view
         //
         // Here, we forward the third.
-        return call->ArgumentAt(3);
+        return call->ArgumentAt(call->FirstArgIndex() + 2);
       }
     } else if (LoadFieldInstr* load_array = orig_instance->AsLoadField()) {
       // For arrays with guarded lengths, replace the length load
@@ -2882,7 +2900,7 @@ Definition* LoadFieldInstr::Canonicalize(FlowGraph* flow_graph) {
       if (StaticCallInstr* call = orig_instance->AsStaticCall()) {
         if (IsTypedDataViewFactory(call->function()) ||
             IsUnmodifiableTypedDataViewFactory(call->function())) {
-          return call->ArgumentAt(1);
+          return call->ArgumentAt(call->FirstArgIndex());
         }
       }
       break;
@@ -2892,7 +2910,7 @@ Definition* LoadFieldInstr::Canonicalize(FlowGraph* flow_graph) {
       ASSERT(!calls_initializer());
       if (StaticCallInstr* call = orig_instance->AsStaticCall()) {
         if (IsTypedDataViewFactory(call->function())) {
-          return call->ArgumentAt(2);
+          return call->ArgumentAt(call->FirstArgIndex() + 1);
         } else if (call->function().recognized_kind() ==
                    MethodRecognizer::kByteDataFactory) {
           // A _ByteDataView returned from the ByteData constructor always
@@ -2925,7 +2943,8 @@ Definition* LoadFieldInstr::Canonicalize(FlowGraph* flow_graph) {
       }
       if (StaticCallInstr* call = orig_instance->AsStaticCall()) {
         if (call->is_known_list_constructor()) {
-          return call->ArgumentAt(0);
+          return (call->type_args_len() > 0) ? call->ArgumentAt(0)
+                                             : flow_graph->constant_null();
         } else if (IsTypedDataViewFactory(call->function()) ||
                    IsUnmodifiableTypedDataViewFactory(call->function())) {
           return flow_graph->constant_null();
@@ -3923,12 +3942,12 @@ Instruction* GuardFieldLengthInstr::Canonicalize(FlowGraph* flow_graph) {
   ConstantInstr* length = nullptr;
   if (call->is_known_list_constructor() &&
       LoadFieldInstr::IsFixedLengthArrayCid(call->Type()->ToCid())) {
-    length = call->ArgumentAt(1)->AsConstant();
+    length = call->ArgumentAt(call->FirstArgIndex())->AsConstant();
   } else if (call->function().recognized_kind() ==
              MethodRecognizer::kByteDataFactory) {
-    length = call->ArgumentAt(1)->AsConstant();
+    length = call->ArgumentAt(call->FirstArgIndex())->AsConstant();
   } else if (LoadFieldInstr::IsTypedDataViewFactory(call->function())) {
-    length = call->ArgumentAt(3)->AsConstant();
+    length = call->ArgumentAt(call->FirstArgIndex() + 2)->AsConstant();
   }
   if ((length != nullptr) && length->value().IsSmi() &&
       Smi::Cast(length->value()).Value() == expected_length) {
@@ -4247,13 +4266,6 @@ void CallTargets::Print() const {
   }
 }
 
-// Shared code generation methods (EmitNativeCode and
-// MakeLocationSummary). Only assembly code that can be shared across all
-// architectures can be used. Machine specific register allocation and code
-// generation is located in intermediate_language_<arch>.cc
-
-#define __ compiler->assembler()->
-
 LocationSummary* GraphEntryInstr::MakeLocationSummary(Zone* zone,
                                                       bool optimizing) const {
   UNREACHABLE();
@@ -4516,7 +4528,7 @@ LocationSummary* LoadStaticFieldInstr::MakeLocationSummary(Zone* zone,
   const intptr_t kNumTemps = does_throw_access_error_or_call_initializer() &&
                                      throw_exception_on_initialization() &&
                                      use_shared_stub
-                                 ? 1
+                                 ? 2
                                  : 0;
   LocationSummary* locs = new (zone) LocationSummary(
       zone, kNumInputs, kNumTemps,
@@ -4530,6 +4542,8 @@ LocationSummary* LoadStaticFieldInstr::MakeLocationSummary(Zone* zone,
       throw_exception_on_initialization() && use_shared_stub) {
     locs->set_temp(
         0, Location::RegisterLocation(LateInitializationErrorABI::kFieldReg));
+    locs->set_temp(1, Location::RegisterLocation(
+                          InitLateStaticFieldInternalRegs::kScratchReg));
   }
   locs->set_out(0,
                 does_throw_access_error_or_call_initializer()
@@ -5457,7 +5471,7 @@ Representation StaticCallInstr::RequiredInputRepresentation(
     intptr_t idx) const {
   // The first input is the array of types
   // for generic functions
-  if (type_args_len() > 0 || function().IsFactory()) {
+  if (type_args_len() > 0) {
     if (idx == 0) {
       return kTagged;
     }
@@ -5940,14 +5954,6 @@ void StaticCallInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   compiler->GenerateStaticCall(deopt_id(), source(), function(), args_info,
                                locs(), *call_ic_data, rebind_rule_,
                                entry_kind());
-  if (function().IsFactory()) {
-    TypeUsageInfo* type_usage_info = compiler->thread()->type_usage_info();
-    if (type_usage_info != nullptr) {
-      const Class& klass = Class::Handle(function().Owner());
-      RegisterTypeArgumentsUse(compiler->function(), type_usage_info, klass,
-                               ArgumentAt(0));
-    }
-  }
 }
 
 CachableIdempotentCallInstr::CachableIdempotentCallInstr(
@@ -5983,7 +5989,7 @@ CachableIdempotentCallInstr::CachableIdempotentCallInstr(
 Representation CachableIdempotentCallInstr::RequiredInputRepresentation(
     intptr_t idx) const {
   // The first input is the array of types for generic functions.
-  if (type_args_len() > 0 || function().IsFactory()) {
+  if (type_args_len() > 0) {
     if (idx == 0) {
       return kTagged;
     }
@@ -8589,6 +8595,16 @@ SimdOpInstr::Kind SimdOpInstr::KindForOperator(MethodRecognizer::Kind kind) {
       return SimdOpInstr::kFloat64x2Add;
     case MethodRecognizer::kFloat64x2Sub:
       return SimdOpInstr::kFloat64x2Sub;
+    case MethodRecognizer::kInt32x4Add:
+      return SimdOpInstr::kInt32x4Add;
+    case MethodRecognizer::kInt32x4Sub:
+      return SimdOpInstr::kInt32x4Sub;
+    case MethodRecognizer::kInt32x4BitAnd:
+      return SimdOpInstr::kInt32x4BitAnd;
+    case MethodRecognizer::kInt32x4BitOr:
+      return SimdOpInstr::kInt32x4BitOr;
+    case MethodRecognizer::kInt32x4BitXor:
+      return SimdOpInstr::kInt32x4BitXor;
     default:
       break;
   }
@@ -8611,6 +8627,11 @@ SimdOpInstr* SimdOpInstr::CreateFromCall(Zone* zone,
     case MethodRecognizer::kFloat64x2Div:
     case MethodRecognizer::kFloat64x2Add:
     case MethodRecognizer::kFloat64x2Sub:
+    case MethodRecognizer::kInt32x4Add:
+    case MethodRecognizer::kInt32x4Sub:
+    case MethodRecognizer::kInt32x4BitAnd:
+    case MethodRecognizer::kInt32x4BitOr:
+    case MethodRecognizer::kInt32x4BitXor:
       op = new (zone) SimdOpInstr(KindForOperator(kind), call->deopt_id());
       break;
 #if defined(TARGET_ARCH_IA32) || defined(TARGET_ARCH_X64)
@@ -8655,11 +8676,10 @@ SimdOpInstr* SimdOpInstr::CreateFromFactoryCall(Zone* zone,
                                                 Instruction* call) {
   SimdOpInstr* op =
       new (zone) SimdOpInstr(KindForMethod(kind), call->deopt_id());
+  ASSERT(call->ArgumentCount() == op->InputCount());
   for (intptr_t i = 0; i < op->InputCount(); i++) {
-    // Note: ArgumentAt(0) is type arguments which we don't need.
-    op->SetInputAt(i, call->ArgumentValueAt(i + 1)->CopyWithType(zone));
+    op->SetInputAt(i, call->ArgumentValueAt(i)->CopyWithType(zone));
   }
-  ASSERT(call->ArgumentCount() == (op->InputCount() + 1));
   return op;
 }
 

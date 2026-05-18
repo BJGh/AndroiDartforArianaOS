@@ -65,11 +65,7 @@ class VirtualMemory {
 #endif
   }
 
-#if defined(DART_HOST_OS_FUCHSIA)
-  static void Init(zx_handle_t vmex_resource);
-#else
   static void Init();
-#endif
   static void Cleanup();
 
   DART_FORCE_INLINE static bool ShouldDualMapExecutablePages() {
@@ -146,6 +142,7 @@ class VirtualMemory {
   bool vm_owns_region() const { return reserved_.pointer() != nullptr; }
 
   static VirtualMemory* ForImagePage(void* pointer, uword size);
+  static VirtualMemory* Adopt(void* pointer, uword size);
 
  private:
   static intptr_t CalculatePageSize();

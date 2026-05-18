@@ -12,7 +12,7 @@ import '../verifier.dart';
 import 'changed_structure_notifier.dart';
 
 class TargetFlags {
-  final bool trackWidgetCreation;
+  final bool trackCreationLocations;
   final bool supportMirrors;
 
   /// Whether the backend expects closure contexts to be present in the AST.
@@ -31,18 +31,19 @@ class TargetFlags {
   /// by their target platform.
   final bool includeUnsupportedPlatformLibraryStubs;
 
-  const TargetFlags(
-      {this.trackWidgetCreation = false,
-      this.supportMirrors = true,
-      this.isClosureContextLoweringEnabled = false,
-      this.constKeepLocalsIndicator,
-      this.includeUnsupportedPlatformLibraryStubs = false});
+  const TargetFlags({
+    this.trackCreationLocations = false,
+    this.supportMirrors = true,
+    this.isClosureContextLoweringEnabled = false,
+    this.constKeepLocalsIndicator,
+    this.includeUnsupportedPlatformLibraryStubs = false,
+  });
 
   @override
   bool operator ==(other) {
     if (identical(this, other)) return true;
     return other is TargetFlags &&
-        trackWidgetCreation == other.trackWidgetCreation &&
+        trackCreationLocations == other.trackCreationLocations &&
         supportMirrors == other.supportMirrors &&
         includeUnsupportedPlatformLibraryStubs ==
             other.includeUnsupportedPlatformLibraryStubs &&
@@ -52,9 +53,10 @@ class TargetFlags {
   @override
   int get hashCode {
     int hash = 485786;
-    hash = 0x3fffffff & (hash * 31 + (hash ^ trackWidgetCreation.hashCode));
+    hash = 0x3fffffff & (hash * 31 + (hash ^ trackCreationLocations.hashCode));
     hash = 0x3fffffff & (hash * 31 + (hash ^ supportMirrors.hashCode));
-    hash = 0x3fffffff &
+    hash =
+        0x3fffffff &
         (hash * 31 + (hash ^ includeUnsupportedPlatformLibraryStubs.hashCode));
     hash =
         0x3fffffff & (hash * 31 + (hash ^ constKeepLocalsIndicator.hashCode));
@@ -79,8 +81,13 @@ Target? getTarget(String name, TargetFlags flags) {
 }
 
 abstract class DiagnosticReporter<M, C> {
-  void report(M message, int charOffset, int length, Uri? fileUri,
-      {List<C> context});
+  void report(
+    M message,
+    int charOffset,
+    int length,
+    Uri? fileUri, {
+    List<C> context,
+  });
 }
 
 /// The different kinds of number semantics supported by the constant evaluator.
@@ -107,7 +114,9 @@ class ConstantsBackend {
   ///
   /// This assumes that `isLoweredListConstant(constant)` is true.
   void forEachLoweredListConstantElement(
-      Constant constant, void Function(Constant element) f) {}
+    Constant constant,
+    void Function(Constant element) f,
+  ) {}
 
   /// Lowering of a set constant to a backend-specific representation.
   Constant lowerSetConstant(SetConstant constant) => constant;
@@ -120,7 +129,9 @@ class ConstantsBackend {
   ///
   /// This assumes that `isLoweredSetConstant(constant)` is true.
   void forEachLoweredSetConstantElement(
-      Constant constant, void Function(Constant element) f) {}
+    Constant constant,
+    void Function(Constant element) f,
+  ) {}
 
   /// Lowering of a map constant to a backend-specific representation.
   Constant lowerMapConstant(MapConstant constant) => constant;
@@ -133,7 +144,9 @@ class ConstantsBackend {
   ///
   /// This assumes that `lowerMapConstant(constant)` is true.
   void forEachLoweredMapConstantEntry(
-      Constant constant, void Function(Constant key, Constant value) f) {}
+    Constant constant,
+    void Function(Constant key, Constant value) f,
+  ) {}
 
   /// Number semantics to use for this backend.
   NumberSemantics get numberSemantics => NumberSemantics.vm;
@@ -153,7 +166,8 @@ class ConstantsBackend {
   /// This is only called if [alwaysInlineConstants] is `true`.
   bool shouldInlineConstant(ConstantExpression initializer) =>
       throw new UnsupportedError(
-          'Per-value constant inlining is not supported');
+        'Per-value constant inlining is not supported',
+      );
 
   /// Whether this target supports unevaluated constants.
   ///
@@ -189,8 +203,10 @@ abstract class DartLibrarySupport {
   /// despite it being supported in the platform dill, and for dart2js and DDC
   /// to consider `dart:_dart2js_only` and `dart:_ddc_only`, respectively, to be
   /// supported despite them being internal libraries.
-  bool computeDartLibrarySupport(String libraryName,
-      {required bool isSupportedBySpec});
+  bool computeDartLibrarySupport(
+    String libraryName, {
+    required bool isSupportedBySpec,
+  });
 
   static const String dartLibraryPrefix = "dart.library.";
 
@@ -209,11 +225,13 @@ abstract class DartLibrarySupport {
   /// constant values for "dart.library.[libraryName]" values.
   /// If the value is `false`, no environment entry exists for the library name,
   /// otherwise an entry with value `"true"` is created.
-  static bool isDartLibrarySupported(String libraryName,
-      {required bool libraryExists,
-      required bool isSynthetic,
-      required bool conditionalImportSupported,
-      required DartLibrarySupport dartLibrarySupport}) {
+  static bool isDartLibrarySupported(
+    String libraryName, {
+    required bool libraryExists,
+    required bool isSynthetic,
+    required bool conditionalImportSupported,
+    required DartLibrarySupport dartLibrarySupport,
+  }) {
     // A `dart:` library can be unsupported for several reasons:
     // * If the library doesn't exist from source or from dill, it is not
     //   supported.
@@ -230,8 +248,10 @@ abstract class DartLibrarySupport {
     //   compilation it is still unsupported.
     bool isSupported =
         libraryExists && !isSynthetic && conditionalImportSupported;
-    isSupported = dartLibrarySupport.computeDartLibrarySupport(libraryName,
-        isSupportedBySpec: isSupported);
+    isSupported = dartLibrarySupport.computeDartLibrarySupport(
+      libraryName,
+      isSupportedBySpec: isSupported,
+    );
     return isSupported;
   }
 }
@@ -242,9 +262,10 @@ class DefaultDartLibrarySupport implements DartLibrarySupport {
   const DefaultDartLibrarySupport();
 
   @override
-  bool computeDartLibrarySupport(String libraryName,
-          {required bool isSupportedBySpec}) =>
-      isSupportedBySpec;
+  bool computeDartLibrarySupport(
+    String libraryName, {
+    required bool isSupportedBySpec,
+  }) => isSupportedBySpec;
 }
 
 /// [DartLibrarySupport] that supports overriding `dart:*` library support
@@ -253,12 +274,16 @@ class CustomizedDartLibrarySupport implements DartLibrarySupport {
   final Set<String> supported;
   final Set<String> unsupported;
 
-  const CustomizedDartLibrarySupport(
-      {this.supported = const {}, this.unsupported = const {}});
+  const CustomizedDartLibrarySupport({
+    this.supported = const {},
+    this.unsupported = const {},
+  });
 
   @override
-  bool computeDartLibrarySupport(String libraryName,
-      {required bool isSupportedBySpec}) {
+  bool computeDartLibrarySupport(
+    String libraryName, {
+    required bool isSupportedBySpec,
+  }) {
     if (supported.contains(libraryName)) {
       return true;
     } else if (unsupported.contains(libraryName)) {
@@ -309,36 +334,53 @@ abstract class Target {
   /// Perform target-specific transformations on the outlines stored in
   /// [Component] when generating summaries.
   ///
-  /// This transformation is used to add metadata on outlines and to filter
-  /// unnecessary information before generating program summaries. This
-  /// transformation is not applied when compiling full kernel programs to
+  /// This is used to transform the libraries, but not for instance
+  /// filtering the output libraries or adding metadata. Do this in
+  /// [performOutlineComponentOperations] instead.
+  /// This transformation is not applied when compiling full kernel programs to
   /// prevent affecting the internal invariants of the compiler and accidentally
   /// slowing down compilation.
-  void performOutlineTransformations(Component component) {}
+  void performOutlineTransformations(
+    Component component, {
+    List<Library>? libraries,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {}
+
+  /// Perform target-specific operations on the [Component] storing the outlines
+  /// when generating summaries.
+  ///
+  /// This is not for transforming the libraries, but can be used to add
+  /// metadata and filter libraries.
+  /// This is not applied when compiling full kernel programs to prevent
+  /// affecting the internal invariants of the compiler and accidentally
+  /// slowing down compilation.
+  void performOutlineComponentOperations(Component component) {}
 
   /// Perform target-specific transformations on the given libraries that must
   /// run before constant evaluation.
   void performPreConstantEvaluationTransformations(
-      Component component,
-      CoreTypes coreTypes,
-      List<Library> libraries,
-      DiagnosticReporter diagnosticReporter,
-      {void Function(String msg)? logger,
-      ChangedStructureNotifier? changedStructureNotifier}) {}
+    Component component,
+    CoreTypes coreTypes,
+    List<Library> libraries,
+    DiagnosticReporter diagnosticReporter, {
+    void Function(String msg)? logger,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {}
 
   /// Perform target-specific modular transformations on the given libraries.
   void performModularTransformationsOnLibraries(
-      Component component,
-      CoreTypes coreTypes,
-      ClassHierarchy hierarchy,
-      List<Library> libraries,
-      // TODO(askesc): Consider how to generally pass compiler options to
-      // transformations.
-      Map<String, String>? environmentDefines,
-      DiagnosticReporter diagnosticReporter,
-      ReferenceFromIndex? referenceFromIndex,
-      {void Function(String msg)? logger,
-      ChangedStructureNotifier? changedStructureNotifier});
+    Component component,
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    List<Library> libraries,
+    // TODO(askesc): Consider how to generally pass compiler options to
+    // transformations.
+    Map<String, String>? environmentDefines,
+    DiagnosticReporter diagnosticReporter,
+    ReferenceFromIndex? referenceFromIndex, {
+    void Function(String msg)? logger,
+    ChangedStructureNotifier? changedStructureNotifier,
+  });
 
   /// Perform target-specific modular transformations on the given program.
   ///
@@ -346,13 +388,15 @@ abstract class Target {
   /// purposes. It is illegal to modify any of the enclosing nodes of the
   /// procedure.
   void performTransformationsOnProcedure(
-      CoreTypes coreTypes,
-      ClassHierarchy hierarchy,
-      Procedure procedure,
-      // TODO(askesc): Consider how to generally pass compiler options to
-      // transformations.
-      Map<String, String>? environmentDefines,
-      {void Function(String msg)? logger}) {}
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    Procedure procedure,
+    // TODO(askesc): Consider how to generally pass compiler options to
+    // transformations.
+    Map<String, String>? environmentDefines, {
+    void Function(String msg)? logger,
+    required DiagnosticReporter diagnosticReporter,
+  }) {}
 
   /// Whether a platform library may define a restricted type, such as `bool`,
   /// `int`, `double`, `num`, and `String`.
@@ -415,12 +459,16 @@ abstract class Target {
   /// [hasInitializer], [isFinal], and [isStatic].
   ///
   /// This is determined by the [enabledLateLowerings] mask.
-  bool isLateFieldLoweringEnabled(
-      {required bool hasInitializer,
-      required bool isFinal,
-      required bool isStatic}) {
+  bool isLateFieldLoweringEnabled({
+    required bool hasInitializer,
+    required bool isFinal,
+    required bool isStatic,
+  }) {
     int mask = LateLowering.getFieldLowering(
-        hasInitializer: hasInitializer, isFinal: isFinal, isStatic: isStatic);
+      hasInitializer: hasInitializer,
+      isFinal: isFinal,
+      isStatic: isStatic,
+    );
     return enabledLateLowerings & mask != 0;
   }
 
@@ -468,14 +516,16 @@ abstract class Target {
   /// [hasInitializer], [isFinal], and its type [isPotentiallyNullable].
   ///
   /// This is determined by the [enabledLateLowerings] mask.
-  bool isLateLocalLoweringEnabled(
-      {required bool hasInitializer,
-      required bool isFinal,
-      required bool isPotentiallyNullable}) {
+  bool isLateLocalLoweringEnabled({
+    required bool hasInitializer,
+    required bool isFinal,
+    required bool isPotentiallyNullable,
+  }) {
     int mask = LateLowering.getLocalLowering(
-        hasInitializer: hasInitializer,
-        isFinal: isFinal,
-        isPotentiallyNullable: isPotentiallyNullable);
+      hasInitializer: hasInitializer,
+      isFinal: isFinal,
+      isPotentiallyNullable: isPotentiallyNullable,
+    );
     return enabledLateLowerings & mask != 0;
   }
 
@@ -501,8 +551,14 @@ abstract class Target {
 
   /// Builds an expression that instantiates an [Invocation] that can be passed
   /// to [noSuchMethod].
-  Expression instantiateInvocation(CoreTypes coreTypes, Expression receiver,
-      String name, Arguments arguments, int offset, bool isSuper);
+  Expression instantiateInvocation(
+    CoreTypes coreTypes,
+    Expression receiver,
+    String name,
+    Arguments arguments,
+    int offset,
+    bool isSuper,
+  );
 
   /// Configure the given [Component] in a target specific way.
   /// Returns the configured component.
@@ -522,9 +578,11 @@ abstract class Target {
   Class? concreteSetLiteralClass(CoreTypes coreTypes) => null;
   Class? concreteConstSetLiteralClass(CoreTypes coreTypes) => null;
   Class? concreteClosureClass(CoreTypes coreTypes) => null;
-  Class getRecordImplementationClass(CoreTypes coreTypes,
-          int numPositionalFields, List<String> namedFields) =>
-      throw UnsupportedError('Target.getRecordImplementationClass');
+  Class getRecordImplementationClass(
+    CoreTypes coreTypes,
+    int numPositionalFields,
+    List<String> namedFields,
+  ) => throw UnsupportedError('Target.getRecordImplementationClass');
 
   Class? concreteIntLiteralClass(CoreTypes coreTypes, int value) => null;
   Class? concreteDoubleLiteralClass(CoreTypes coreTypes, double value) => null;
@@ -562,14 +620,27 @@ abstract class Target {
   /// invalidation was only within the body of the mixin member.
   bool get incrementalCompilerIncludeMixinApplicationInvalidatedLibraries =>
       false;
+
+  /// If this target is - or can be made - to be compatible with [other].
+  ///
+  /// Used for the modular incremental compilation pipeline.
+  bool isModularlyCompatibleWith(Target other) => true;
+
+  /// Update this target to be compatible with [other]. Assumes
+  /// [isModularlyCompatibleWith] returns true.
+  ///
+  /// Used for the modular incremental compilation pipeline.
+  void updateModularCompatibilityAs(Target other) {}
 }
 
 class NoneConstantsBackend extends ConstantsBackend {
   @override
   final bool supportsUnevaluatedConstants;
 
-  const NoneConstantsBackend(
-      {required this.supportsUnevaluatedConstants, super.keepLocals});
+  const NoneConstantsBackend({
+    required this.supportsUnevaluatedConstants,
+    super.keepLocals,
+  });
 }
 
 class NoneTarget extends Target {
@@ -601,21 +672,29 @@ class NoneTarget extends Target {
 
   @override
   void performModularTransformationsOnLibraries(
-      Component component,
-      CoreTypes coreTypes,
-      ClassHierarchy hierarchy,
-      List<Library> libraries,
-      Map<String, String>? environmentDefines,
-      DiagnosticReporter diagnosticReporter,
-      ReferenceFromIndex? referenceFromIndex,
-      {void Function(String msg)? logger,
-      ChangedStructureNotifier? changedStructureNotifier}) {}
+    Component component,
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    List<Library> libraries,
+    Map<String, String>? environmentDefines,
+    DiagnosticReporter diagnosticReporter,
+    ReferenceFromIndex? referenceFromIndex, {
+    void Function(String msg)? logger,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {}
 
   @override
-  Expression instantiateInvocation(CoreTypes coreTypes, Expression receiver,
-      String name, Arguments arguments, int offset, bool isSuper) {
+  Expression instantiateInvocation(
+    CoreTypes coreTypes,
+    Expression receiver,
+    String name,
+    Arguments arguments,
+    int offset,
+    bool isSuper,
+  ) {
     return new InvalidExpression(
-        'Unsupported: NoneTarget.instantiateInvocation');
+      'Unsupported: NoneTarget.instantiateInvocation',
+    );
   }
 
   @override
@@ -645,10 +724,11 @@ class LateLowering {
   static const int none = 0;
   static const int all = (1 << 16) - 1;
 
-  static int getLocalLowering(
-      {required bool hasInitializer,
-      required bool isFinal,
-      required bool isPotentiallyNullable}) {
+  static int getLocalLowering({
+    required bool hasInitializer,
+    required bool isFinal,
+    required bool isPotentiallyNullable,
+  }) {
     if (hasInitializer) {
       if (isFinal) {
         if (isPotentiallyNullable) {
@@ -680,10 +760,11 @@ class LateLowering {
     }
   }
 
-  static int getFieldLowering(
-      {required bool hasInitializer,
-      required bool isFinal,
-      required bool isStatic}) {
+  static int getFieldLowering({
+    required bool hasInitializer,
+    required bool isFinal,
+    required bool isStatic,
+  }) {
     if (hasInitializer) {
       if (isFinal) {
         if (isStatic) {
@@ -743,19 +824,20 @@ class TestTargetFlags extends TargetFlags {
   final Set<String> supportedDartLibraries;
   final Set<String> unsupportedDartLibraries;
 
-  const TestTargetFlags(
-      {bool trackWidgetCreation = false,
-      this.forceLateLoweringsForTesting,
-      this.forceLateLoweringSentinelForTesting,
-      this.forceStaticFieldLoweringForTesting,
-      this.forceNoExplicitGetterCallsForTesting,
-      this.forceConstructorTearOffLoweringForTesting,
-      this.supportedDartLibraries = const {},
-      this.unsupportedDartLibraries = const {},
-      bool isClosureContextLoweringEnabled = false})
-      : super(
-            trackWidgetCreation: trackWidgetCreation,
-            isClosureContextLoweringEnabled: isClosureContextLoweringEnabled);
+  const TestTargetFlags({
+    bool trackCreationLocations = false,
+    this.forceLateLoweringsForTesting,
+    this.forceLateLoweringSentinelForTesting,
+    this.forceStaticFieldLoweringForTesting,
+    this.forceNoExplicitGetterCallsForTesting,
+    this.forceConstructorTearOffLoweringForTesting,
+    this.supportedDartLibraries = const {},
+    this.unsupportedDartLibraries = const {},
+    bool isClosureContextLoweringEnabled = false,
+  }) : super(
+         trackCreationLocations: trackCreationLocations,
+         isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+       );
 }
 
 mixin TestTargetMixin on Target {
@@ -778,8 +860,8 @@ mixin TestTargetMixin on Target {
   @override
   bool get supportsExplicitGetterCalls =>
       flags.forceNoExplicitGetterCallsForTesting != null
-          ? !flags.forceNoExplicitGetterCallsForTesting!
-          : super.supportsExplicitGetterCalls;
+      ? !flags.forceNoExplicitGetterCallsForTesting!
+      : super.supportsExplicitGetterCalls;
 
   @override
   int get enabledConstructorTearOffLowerings =>
@@ -787,8 +869,10 @@ mixin TestTargetMixin on Target {
       super.enabledConstructorTearOffLowerings;
 
   @override
-  late final DartLibrarySupport dartLibrarySupport =
-      new TestDartLibrarySupport(super.dartLibrarySupport, flags);
+  late final DartLibrarySupport dartLibrarySupport = new TestDartLibrarySupport(
+    super.dartLibrarySupport,
+    flags,
+  );
 }
 
 class TestDartLibrarySupport implements DartLibrarySupport {
@@ -798,15 +882,19 @@ class TestDartLibrarySupport implements DartLibrarySupport {
   TestDartLibrarySupport(this.delegate, this.flags);
 
   @override
-  bool computeDartLibrarySupport(String libraryName,
-      {required bool isSupportedBySpec}) {
+  bool computeDartLibrarySupport(
+    String libraryName, {
+    required bool isSupportedBySpec,
+  }) {
     if (flags.supportedDartLibraries.contains(libraryName)) {
       return true;
     } else if (flags.unsupportedDartLibraries.contains(libraryName)) {
       return false;
     }
-    return delegate.computeDartLibrarySupport(libraryName,
-        isSupportedBySpec: isSupportedBySpec);
+    return delegate.computeDartLibrarySupport(
+      libraryName,
+      isSupportedBySpec: isSupportedBySpec,
+    );
   }
 }
 
@@ -904,10 +992,22 @@ class TargetWrapper extends Target {
       _target.extraRequiredLibrariesPlatform;
 
   @override
-  Expression instantiateInvocation(CoreTypes coreTypes, Expression receiver,
-      String name, Arguments arguments, int offset, bool isSuper) {
+  Expression instantiateInvocation(
+    CoreTypes coreTypes,
+    Expression receiver,
+    String name,
+    Arguments arguments,
+    int offset,
+    bool isSuper,
+  ) {
     return _target.instantiateInvocation(
-        coreTypes, receiver, name, arguments, offset, isSuper);
+      coreTypes,
+      receiver,
+      name,
+      arguments,
+      offset,
+      isSuper,
+    );
   }
 
   @override
@@ -920,55 +1020,83 @@ class TargetWrapper extends Target {
 
   @override
   void performModularTransformationsOnLibraries(
-      Component component,
-      CoreTypes coreTypes,
-      ClassHierarchy hierarchy,
-      List<Library> libraries,
-      Map<String, String>? environmentDefines,
-      DiagnosticReporter diagnosticReporter,
-      ReferenceFromIndex? referenceFromIndex,
-      {void Function(String msg)? logger,
-      ChangedStructureNotifier? changedStructureNotifier}) {
+    Component component,
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    List<Library> libraries,
+    Map<String, String>? environmentDefines,
+    DiagnosticReporter diagnosticReporter,
+    ReferenceFromIndex? referenceFromIndex, {
+    void Function(String msg)? logger,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {
     _target.performModularTransformationsOnLibraries(
-        component,
-        coreTypes,
-        hierarchy,
-        libraries,
-        environmentDefines,
-        diagnosticReporter,
-        referenceFromIndex,
-        logger: logger,
-        changedStructureNotifier: changedStructureNotifier);
+      component,
+      coreTypes,
+      hierarchy,
+      libraries,
+      environmentDefines,
+      diagnosticReporter,
+      referenceFromIndex,
+      logger: logger,
+      changedStructureNotifier: changedStructureNotifier,
+    );
   }
 
   @override
-  void performOutlineTransformations(Component component) {
-    _target.performOutlineTransformations(component);
+  void performOutlineTransformations(
+    Component component, {
+    List<Library>? libraries,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {
+    _target.performOutlineTransformations(
+      component,
+      libraries: libraries,
+      changedStructureNotifier: changedStructureNotifier,
+    );
+  }
+
+  @override
+  void performOutlineComponentOperations(Component component) {
+    _target.performOutlineComponentOperations(component);
   }
 
   @override
   void performPreConstantEvaluationTransformations(
-      Component component,
-      CoreTypes coreTypes,
-      List<Library> libraries,
-      DiagnosticReporter diagnosticReporter,
-      {void Function(String msg)? logger,
-      ChangedStructureNotifier? changedStructureNotifier}) {
+    Component component,
+    CoreTypes coreTypes,
+    List<Library> libraries,
+    DiagnosticReporter diagnosticReporter, {
+    void Function(String msg)? logger,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {
     _target.performPreConstantEvaluationTransformations(
-        component, coreTypes, libraries, diagnosticReporter,
-        logger: logger, changedStructureNotifier: changedStructureNotifier);
+      component,
+      coreTypes,
+      libraries,
+      diagnosticReporter,
+      logger: logger,
+      changedStructureNotifier: changedStructureNotifier,
+    );
   }
 
   @override
   void performTransformationsOnProcedure(
-      CoreTypes coreTypes,
-      ClassHierarchy hierarchy,
-      Procedure procedure,
-      Map<String, String>? environmentDefines,
-      {void Function(String msg)? logger}) {
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    Procedure procedure,
+    Map<String, String>? environmentDefines, {
+    void Function(String msg)? logger,
+    required DiagnosticReporter diagnosticReporter,
+  }) {
     _target.performTransformationsOnProcedure(
-        coreTypes, hierarchy, procedure, environmentDefines,
-        logger: logger);
+      coreTypes,
+      hierarchy,
+      procedure,
+      environmentDefines,
+      logger: logger,
+      diagnosticReporter: diagnosticReporter,
+    );
   }
 
   @override
@@ -1011,14 +1139,14 @@ mixin SummaryMixin on Target {
   bool get excludeNonSources;
 
   @override
-  void performOutlineTransformations(Component component) {
-    super.performOutlineTransformations(component);
+  void performOutlineComponentOperations(Component component) {
+    super.performOutlineComponentOperations(component);
     if (!excludeNonSources) return;
 
-    List<Library> libraries = new List.of(component.libraries);
+    List<Library> componentLibraries = new List.of(component.libraries);
     component.libraries.clear();
     Set<Uri> include = sources.toSet();
-    for (Library library in libraries) {
+    for (Library library in componentLibraries) {
       if (include.contains(library.importUri)) {
         component.libraries.add(library);
       } else {

@@ -3147,6 +3147,27 @@ void Assembler::PopRegisters(const RegisterSet& regs) {
   addi(SP, SP, size);
 }
 
+void Assembler::PushRegistersAligned(const RegisterSet& register_set,
+                                     intptr_t space) {
+  PushRegisters(register_set);
+  intptr_t aligned_space = Utils::RoundUp(register_set.SpillSize() + space,
+                                          OS::ActivationFrameAlignment()) -
+                           register_set.SpillSize();
+  if (aligned_space != 0) {
+    subi(SP, SP, aligned_space);
+  }
+}
+void Assembler::PopRegistersAligned(const RegisterSet& register_set,
+                                    intptr_t space) {
+  intptr_t aligned_space = Utils::RoundUp(register_set.SpillSize() + space,
+                                          OS::ActivationFrameAlignment()) -
+                           register_set.SpillSize();
+  if (aligned_space != 0) {
+    addi(SP, SP, aligned_space);
+  }
+  PopRegisters(register_set);
+}
+
 void Assembler::PushRegistersInOrder(std::initializer_list<Register> regs) {
   intptr_t offset = regs.size() * target::kWordSize;
   subi(SP, SP, offset);
@@ -4778,6 +4799,26 @@ void Assembler::CompareObject(Register reg, const Object& object) {
   }
 }
 
+void Assembler::ExtractBitField(Register dst,
+                                Register src,
+                                intptr_t low_bit,
+                                intptr_t width) {
+  ASSERT((0 <= low_bit) && (low_bit + width <= XLEN));
+  if (width == 1) {
+    if (low_bit == 0) {
+      andi(dst, src, 1);
+      return;
+    } else if (Supports(RV_Zbs)) {
+      bexti(dst, src, low_bit);
+      return;
+    }
+  }
+  if (low_bit + width < XLEN) {
+    slli(dst, src, XLEN - (low_bit + width));
+  }
+  srli(dst, dst, XLEN - width);
+}
+
 void Assembler::ExtractClassIdFromTags(Register result, Register tags) {
   ASSERT(target::UntaggedObject::kClassIdTagPos == 12);
   ASSERT(target::UntaggedObject::kClassIdTagSize == 20);
@@ -4889,10 +4930,10 @@ void Assembler::TransitionGeneratedToNative(Register destination,
   Register tmp = new_exit_through_ffi;
 
 #if defined(DEBUG)
-  ASSERT(T2 != TMP2);
-  mv(T2, TMP2);  // BranchIf in VerifyInGenerated clobbers TMP2.
+  ASSERT(S8 != TMP2);
+  mv(S8, TMP2);  // BranchIf in VerifyInGenerated clobbers TMP2.
   VerifyInGenerated(tmp);
-  mv(TMP2, T2);
+  mv(TMP2, S8);
 #endif
   // Mark that the thread is executing native code.
   sx(destination, Address(THR, target::Thread::vm_tag_offset()));
@@ -5227,8 +5268,10 @@ void Assembler::LeaveDartFrame(intptr_t fp_sp_dist) {
     subi(PP, PP, kHeapObjectTag);
   }
   set_constant_pool_allowed(false);
-  lx(FP, Address(SP, fp_offset));
+  // Update RA first so the profiler can identify the frame as the entry frame
+  // after FP is updated but before the return instruction.
   lx(RA, Address(SP, ra_offset));
+  lx(FP, Address(SP, fp_offset));
   addi(SP, SP, -fp_sp_dist);
 }
 

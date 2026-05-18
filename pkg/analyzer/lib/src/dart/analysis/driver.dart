@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:analyzer/dart/analysis/declared_variables.dart';
@@ -38,7 +39,8 @@ import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/resolver/flow_analysis_visitor.dart';
 import 'package:analyzer/src/dartdoc/dartdoc_directive_info.dart';
-import 'package:analyzer/src/diagnostic/diagnostic_message.dart';
+import 'package:analyzer/src/diagnostic/diagnostic.dart'
+    show DiagnosticMessageImpl;
 import 'package:analyzer/src/exception/exception.dart';
 import 'package:analyzer/src/fine/manifest_id.dart';
 import 'package:analyzer/src/fine/requirements.dart';
@@ -107,7 +109,7 @@ testFineAfterLibraryAnalyzerHook;
 // TODO(scheglov): Clean up the list of implicitly analyzed files.
 class AnalysisDriver {
   /// The version of data format, should be incremented on every format change.
-  static const int DATA_VERSION = 612;
+  static const int DATA_VERSION = 634;
 
   /// The number of exception contexts allowed to write. Once this field is
   /// zero, we stop writing any new exception contexts in this process.
@@ -206,8 +208,8 @@ class AnalysisDriver {
   final _definingClassMemberNameRequests =
       <_GetFilesDefiningClassMemberNameRequest>[];
 
-  /// The requests to compute files referencing a name.
-  final _referencingNameRequests = <_GetFilesReferencingNameRequest>[];
+  /// The requests to compute files referencing any of a set of names.
+  final _referencingNameRequests = <_GetFilesReferencingNamesRequest>[];
 
   /// The mapping from the files for which errors were requested using
   /// [getErrors] to the [Completer]s to report the result.
@@ -278,6 +280,9 @@ class AnalysisDriver {
   final TestingData? testingData;
 
   bool _disposed = false;
+
+  /// Whether memory-expensive data has been discarded.
+  bool _hasDiscardedMemoryExpensiveData = false;
 
   /// A map that associates files to corresponding analysis options.
   final AnalysisOptionsMap analysisOptionsMap;
@@ -674,6 +679,15 @@ class AnalysisDriver {
     _libraryContext = null;
   }
 
+  void discardMemoryExpensiveData() {
+    if (_hasDiscardedMemoryExpensiveData) {
+      return;
+    }
+    _hasDiscardedMemoryExpensiveData = true;
+    currentSession.clearHierarchies();
+    libraryContext.elementFactory.discardLibraryManifestInstances();
+  }
+
   /// Discovers all files that are potentially available, so that they are
   /// included in [knownFiles].
   void discoverAvailableFiles() {
@@ -828,10 +842,13 @@ class AnalysisDriver {
     return request.completer.future;
   }
 
-  /// Completes with files that reference the given external [name].
-  Future<List<FileState>> getFilesReferencingName(String name) async {
+  /// Completes with files that reference any of the given external [names].
+  Future<List<FileState>> getFilesReferencingNames(Set<String> names) async {
+    if (names.isEmpty) {
+      return const [];
+    }
     discoverAvailableFiles();
-    var request = _GetFilesReferencingNameRequest(name);
+    var request = _GetFilesReferencingNamesRequest(names);
     _referencingNameRequests.add(request);
     _scheduler.notify();
     return request.completer.future;
@@ -887,10 +904,11 @@ class AnalysisDriver {
     // Check if the element is already computed.
     if (_pendingFileChanges.isEmpty) {
       var rootReference = libraryContext.elementFactory.rootReference;
-      var reference = rootReference.getChild('$uriObj');
-      var element = reference.element;
-      if (element is LibraryElementImpl) {
-        return LibraryElementResultImpl(element);
+      if (rootReference.libraryIfExists(uriObj) case var reference?) {
+        var element = reference.element;
+        if (element is LibraryElementImpl) {
+          return LibraryElementResultImpl(element);
+        }
       }
     }
 
@@ -1216,9 +1234,9 @@ class AnalysisDriver {
       return;
     }
 
-    // Compute files referencing a name.
+    // Compute files referencing any of a set of names.
     if (_referencingNameRequests.removeLastOrNull() case var request?) {
-      await _getFilesReferencingName(request);
+      await _getFilesReferencingNames(request);
       return;
     }
 
@@ -1830,12 +1848,12 @@ class AnalysisDriver {
     request.completer.complete(result);
   }
 
-  Future<void> _getFilesReferencingName(
-    _GetFilesReferencingNameRequest request,
+  Future<void> _getFilesReferencingNames(
+    _GetFilesReferencingNamesRequest request,
   ) async {
     var result = <FileState>[];
     for (var file in knownFiles) {
-      if (file.referencedNames.contains(request.name)) {
+      if (request.names.any(file.referencedNames.contains)) {
         result.add(file);
       }
     }
@@ -1992,6 +2010,7 @@ class AnalysisDriver {
       keyBuilder.addString(file.path);
       keyBuilder.addString(file.uriStr);
       keyBuilder.addString(file.contentHash);
+      file.kind.addDirectivesSignature(keyBuilder);
     }
 
     var key = '${keyBuilder.toHex()}.resolved2';
@@ -2096,9 +2115,9 @@ class AnalysisDriver {
     var ownedFiles = this.ownedFiles;
     if (ownedFiles != null) {
       if (addedFiles.contains(file.path)) {
-        ownedFiles.addAdded(file.uri, this);
+        ownedFiles.addAdded(file.resource, this);
       } else {
-        ownedFiles.addKnown(file.uri, this);
+        ownedFiles.addKnown(file.resource, this);
       }
     }
   }
@@ -2537,27 +2556,27 @@ enum AnalysisDriverPriority {
 /// Instances of this class schedule work in multiple [AnalysisDriver]s so that
 /// work with the highest priority is performed first.
 class AnalysisDriverScheduler {
-  /// Time interval in milliseconds before pumping the event queue.
-  ///
-  /// Relinquishing execution flow and running the event loop after every task
-  /// has too much overhead. Instead we use a fixed length of time, so we can
-  /// spend less time overall and still respond quickly enough.
-  static const int _MS_BEFORE_PUMPING_EVENT_QUEUE = 2;
+  /// The number of microseconds of work to do per call to
+  /// `await Future.delayed(Duration.zero)` that will allow other async work to
+  /// complete.
+  static const int _microsecondsWorkPerWait = 1000000 ~/ 500;
 
-  /// Event queue pumping is required to allow IO and other asynchronous data
-  /// processing while analysis is active. For example Analysis Server needs to
-  /// be able to process `updateContent` or `setPriorityFiles` requests while
-  /// background analysis is in progress.
-  ///
-  /// The number of pumpings is arbitrary, might be changed if we see that
-  /// analysis or other data processing tasks are starving. Ideally we would
-  /// need to run all asynchronous operations using a single global scheduler.
-  static const int _NUMBER_OF_EVENT_QUEUE_PUMPINGS = 128;
+  /// The maximum number of calls to `await Future.delayed(Duration.zero)` to
+  /// do in a single batch.
+  static const int _maxWaits = 128;
 
   final PerformanceLog _logger;
 
   /// The object used to watch as analysis drivers are created and deleted.
   final DriverWatcher? driverWatcher;
+
+  /// When Analysis Server is idle, we want to reduce memory usage, so we
+  /// discard a few expensive data structures once [AnalysisDriver] has no
+  /// more work to do.
+  ///
+  /// This does not work well for `build_runner`, which makes requests one
+  /// by one, without big chunks of work in form of added files.
+  final bool shouldDiscardMemoryExpensiveDataOnIdle;
 
   /// The controller for [events] stream.
   final StreamController<Object> eventsController = StreamController<Object>();
@@ -2593,7 +2612,11 @@ class AnalysisDriverScheduler {
   /// File updates since last transition to working status.
   FileUpdatesStatistics _fileUpdatesStatistics = FileUpdatesStatistics();
 
-  AnalysisDriverScheduler(this._logger, {this.driverWatcher});
+  AnalysisDriverScheduler(
+    this._logger, {
+    this.driverWatcher,
+    this.shouldDiscardMemoryExpensiveDataOnIdle = true,
+  });
 
   /// The [Stream] that produces analysis results for all drivers, and status
   /// events.
@@ -2696,13 +2719,20 @@ class AnalysisDriverScheduler {
   void _run() async {
     // Give other microtasks the time to run before doing the analysis cycle.
     await null;
-    Stopwatch timer = Stopwatch()..start();
+
+    // The amount of time spent working without corresponding calls to
+    // `_pumpEventQueue`.
+    var workDuration = Duration.zero;
+
     PerformanceLogSection? analysisSection;
     while (true) {
-      // Pump the event queue.
-      if (timer.elapsedMilliseconds > _MS_BEFORE_PUMPING_EVENT_QUEUE) {
-        await _pumpEventQueue(_NUMBER_OF_EVENT_QUEUE_PUMPINGS);
-        timer.reset();
+      // Wait for other async work if needed to satisfy `_microscondsWorkPerWait`.
+      if (workDuration.inMicroseconds > _microsecondsWorkPerWait) {
+        var waits = workDuration.inMicroseconds ~/ _microsecondsWorkPerWait;
+        await _pumpEventQueue(min(waits, _maxWaits));
+        workDuration -= Duration(
+          microseconds: waits * _microsecondsWorkPerWait,
+        );
       }
 
       await _hasWork.signal;
@@ -2731,11 +2761,12 @@ class AnalysisDriverScheduler {
           bestPriority = priority;
         }
         if (priority == AnalysisDriverPriority.nothing) {
-          if (driver.withFineDependencies) {
-            driver.currentSession.clearHierarchies();
-            driver.libraryContext.elementFactory
-                .discardLibraryManifestInstances();
+          if (driver.withFineDependencies &&
+              shouldDiscardMemoryExpensiveDataOnIdle) {
+            driver.discardMemoryExpensiveData();
           }
+        } else {
+          driver._hasDiscardedMemoryExpensiveData = false;
         }
       }
 
@@ -2751,9 +2782,11 @@ class AnalysisDriverScheduler {
         continue;
       }
 
+      var workTimer = Stopwatch()..start();
       // Ask the driver to perform a chunk of work.
       await bestDriver.performWork();
       bestDriver.afterPerformWork();
+      workDuration += workTimer.elapsed;
 
       // Schedule one more cycle.
       _hasWork.notify();
@@ -2825,7 +2858,7 @@ class AnalysisDriverTestView {
   Set<String> get loadedLibraryUriSet {
     var elementFactory = driver.libraryContext.elementFactory;
     var libraryReferences = elementFactory.rootReference.children;
-    return libraryReferences.map((e) => e.name).toSet();
+    return libraryReferences.map((e) => e.uriString).toSet();
   }
 
   int get numberOfFilesToAnalyze => driver.numberOfFilesToAnalyze;
@@ -2971,24 +3004,41 @@ enum FileChangeKind { add, change, remove }
 
 /// Container that keeps track of file owners.
 class OwnedFiles {
-  /// Key: the absolute file URI.
+  /// Key: the file from the collection's resource provider.
   /// Value: the driver to which the file is added.
-  final Map<Uri, AnalysisDriver> addedFiles = {};
+  final Map<File, AnalysisDriver> addedFiles = {};
 
-  /// Key: the absolute file URI.
+  /// Key: the file from the collection's resource provider.
   /// Value: a driver in which this file is available via dependencies.
   /// This map does not contain any files that are in [addedFiles].
-  final Map<Uri, AnalysisDriver> knownFiles = {};
+  final Map<File, AnalysisDriver> knownFiles = {};
 
-  void addAdded(Uri uri, AnalysisDriver analysisDriver) {
-    addedFiles[uri] ??= analysisDriver;
-    knownFiles.remove(uri);
+  void addAdded(File file, AnalysisDriver analysisDriver) {
+    addedFiles[file] ??= analysisDriver;
+    knownFiles.remove(file);
   }
 
-  void addKnown(Uri uri, AnalysisDriver analysisDriver) {
-    if (!addedFiles.containsKey(uri)) {
-      knownFiles[uri] = analysisDriver;
+  void addKnown(File file, AnalysisDriver analysisDriver) {
+    if (!addedFiles.containsKey(file)) {
+      knownFiles[file] ??= analysisDriver;
     }
+  }
+
+  /// Return the files owned by [analysisDriver].
+  ///
+  /// The maps are intentionally append-only hints; each yielded result is
+  /// resolved through the current owner driver so stale entries are ignored.
+  List<FileState> filesFor(AnalysisDriver analysisDriver) {
+    return [
+      for (var map in [addedFiles, knownFiles])
+        for (var entry in map.entries)
+          if (identical(entry.value, analysisDriver))
+            ?analysisDriver.fsState.getExisting(entry.key),
+    ];
+  }
+
+  AnalysisDriver? ownerOf(File file) {
+    return addedFiles[file] ?? knownFiles[file];
   }
 }
 
@@ -3008,11 +3058,11 @@ class _GetFilesDefiningClassMemberNameRequest {
   _GetFilesDefiningClassMemberNameRequest(this.name);
 }
 
-class _GetFilesReferencingNameRequest {
-  final String name;
+class _GetFilesReferencingNamesRequest {
+  final Set<String> names;
   final completer = Completer<List<FileState>>();
 
-  _GetFilesReferencingNameRequest(this.name);
+  _GetFilesReferencingNamesRequest(this.names);
 }
 
 class _ResolveForCompletionRequest {

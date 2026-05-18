@@ -22,8 +22,8 @@ class SwitchStatementTest extends ParserDiagnosticsTest {
 f() { switch (a assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.expectedSwitchStatementBody, 16, 6),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -62,7 +62,7 @@ CompilationUnit
     var parseResult = parseStringWithErrors(r'''
 f() { switch (a {} }
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 19, 1)]);
+    parseResult.assertErrors([error(diag.expectedToken, 16, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -94,9 +94,9 @@ CompilationUnit
 f() { switch (a break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 23, 1),
       error(diag.expectedSwitchStatementBody, 16, 5),
       error(diag.breakOutsideOfLoop, 16, 5),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -132,9 +132,9 @@ CompilationUnit
 f() { switch (a continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 26, 1),
       error(diag.expectedSwitchStatementBody, 16, 8),
       error(diag.continueOutsideOfLoop, 16, 8),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -170,8 +170,8 @@ CompilationUnit
 f() { switch (a do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.expectedSwitchStatementBody, 16, 2),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -249,8 +249,8 @@ CompilationUnit
 f() { switch (a for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.expectedSwitchStatementBody, 16, 3),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -297,8 +297,8 @@ CompilationUnit
 f() { switch (a if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 29, 1),
       error(diag.expectedSwitchStatementBody, 16, 2),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -340,8 +340,8 @@ CompilationUnit
 f() { switch (a l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
       error(diag.expectedSwitchStatementBody, 16, 1),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -368,8 +368,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -383,8 +382,8 @@ CompilationUnit
 f() { switch (a int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 27, 1),
       error(diag.expectedSwitchStatementBody, 16, 3),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -430,8 +429,8 @@ CompilationUnit
 f() { switch (a void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.expectedSwitchStatementBody, 16, 4),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -477,8 +476,8 @@ CompilationUnit
 f() { switch (a var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 23, 1),
       error(diag.expectedSwitchStatementBody, 16, 3),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -518,8 +517,8 @@ CompilationUnit
 f() { switch (a return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 24, 1),
       error(diag.expectedSwitchStatementBody, 16, 6),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -555,8 +554,8 @@ CompilationUnit
 f() { switch (a switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 30, 1),
       error(diag.expectedSwitchStatementBody, 16, 6),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -597,8 +596,8 @@ CompilationUnit
 f() { switch (a try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.expectedSwitchStatementBody, 16, 3),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -640,8 +639,8 @@ CompilationUnit
 f() { switch (a while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.expectedSwitchStatementBody, 16, 5),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1040,8 +1039,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -1903,8 +1901,8 @@ CompilationUnit
 f() { switch ( assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 30, 1),
       error(diag.expectedSwitchStatementBody, 28, 1),
+      error(diag.expectedToken, 28, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1982,10 +1980,10 @@ CompilationUnit
 f() { switch ( break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
       error(diag.missingIdentifier, 15, 5),
       error(diag.expectedSwitchStatementBody, 15, 5),
       error(diag.breakOutsideOfLoop, 15, 5),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2021,10 +2019,10 @@ CompilationUnit
 f() { switch ( continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 25, 1),
       error(diag.missingIdentifier, 15, 8),
       error(diag.expectedSwitchStatementBody, 15, 8),
       error(diag.continueOutsideOfLoop, 15, 8),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2060,9 +2058,9 @@ CompilationUnit
 f() { switch ( do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.missingIdentifier, 15, 2),
       error(diag.expectedSwitchStatementBody, 15, 2),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2141,9 +2139,9 @@ CompilationUnit
 f() { switch ( for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.missingIdentifier, 15, 3),
       error(diag.expectedSwitchStatementBody, 15, 3),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2190,9 +2188,9 @@ CompilationUnit
 f() { switch ( if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.missingIdentifier, 15, 2),
       error(diag.expectedSwitchStatementBody, 15, 2),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2234,11 +2232,11 @@ CompilationUnit
 f() { switch ( l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 21, 1),
+      error(diag.expectedToken, 15, 1),
       error(diag.expectedSwitchStatementBody, 16, 1),
       error(diag.missingIdentifier, 16, 1),
-      error(diag.expectedToken, 15, 1),
       error(diag.unexpectedToken, 16, 1),
+      error(diag.expectedToken, 16, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2360,9 +2358,9 @@ CompilationUnit
 f() { switch ( var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
       error(diag.missingIdentifier, 15, 3),
       error(diag.expectedSwitchStatementBody, 15, 3),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2402,10 +2400,10 @@ CompilationUnit
 f() { switch ( return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 23, 1),
       error(diag.unexpectedToken, 15, 6),
       error(diag.missingIdentifier, 21, 1),
       error(diag.expectedSwitchStatementBody, 21, 1),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2480,9 +2478,9 @@ CompilationUnit
 f() { switch ( try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.missingIdentifier, 15, 3),
       error(diag.expectedSwitchStatementBody, 15, 3),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2524,9 +2522,9 @@ CompilationUnit
 f() { switch ( while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.missingIdentifier, 15, 5),
       error(diag.expectedSwitchStatementBody, 15, 5),
+      error(diag.expectedToken, 15, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2894,8 +2892,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {

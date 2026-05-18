@@ -337,6 +337,7 @@ class Package implements Comparable<Package> {
         const excludedPaths = {
           'pkg/analyzer_cli/test/data/',
           'pkg/analyzer_testing/lib/mock_packages/package_content/',
+          'pkg/dwds_test_common/fixtures/',
           'pkg/front_end/test/id_testing/data/',
           'pkg/front_end/test/enable_non_nullable/data/',
           'pkg/front_end/test/language_versioning/data/',
@@ -388,13 +389,13 @@ class Package implements Comparable<Package> {
 
       var match = importRegex1.firstMatch(line);
       if (match != null) {
-        results.add(match.group(2)!);
+        results.add(match[2]!);
         continue;
       }
 
       match = importRegex2.firstMatch(line);
       if (match != null) {
-        results.add(match.group(2)!);
+        results.add(match[2]!);
         continue;
       }
     }
@@ -444,7 +445,7 @@ class SdkDeps {
       var pkgDep = pkgRegExp.firstMatch(line);
 
       if (pkgDep != null) {
-        pkgs.add(pkgDep.group(1)!);
+        pkgs.add(pkgDep[1]!);
       }
     }
 

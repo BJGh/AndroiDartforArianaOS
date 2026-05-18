@@ -55,6 +55,7 @@ abstract class AbstractLspAnalysisServerTest
         LspReverseRequestHelpersMixin,
         LspEditHelpersMixin,
         LspVerifyEditHelpersMixin,
+        LspNotificationsMixin,
         LspAnalysisServerTestMixin,
         MockPackagesMixin,
         ConfigurationFilesMixin,
@@ -71,8 +72,14 @@ abstract class AbstractLspAnalysisServerTest
   /// resetContextBuildCounter() was called.
   int _previousContextBuilds = 0;
 
+  /// The set of reverse-requests received from the server that have not
+  /// yet been responded to.
+  final Set<RequestMessage> _pendingReverseRequests = {};
+
   @override
   AnalyticsManager get analyticsManager => server.analyticsManager;
+
+  bool get clientSupportsShowMessageNotification => true;
 
   DartFixPromptManager? get dartFixPromptManager => null;
 
@@ -262,6 +269,8 @@ abstract class AbstractLspAnalysisServerTest
 
   @override
   void sendResponseToServer(ResponseMessage response) {
+    _pendingReverseRequests.removeWhere((request) => request.id == response.id);
+
     channel.sendResponseToServer(response);
   }
 
@@ -273,6 +282,7 @@ abstract class AbstractLspAnalysisServerTest
     httpClient = MockHttpClient();
     processRunner = MockProcessRunner();
     channel = MockLspServerChannel(debugPrintCommunication);
+    _monitorReverseRequests();
 
     createMockSdk(resourceProvider: resourceProvider, root: sdkRoot);
 
@@ -348,6 +358,36 @@ $experiments
   Uri withTrailingSlashUri(Uri uri) {
     expect(uri.path, isNot(endsWith('/')));
     return uri.replace(path: '${uri.path}/');
+  }
+
+  /// Listens for server-to-client requests ("reverse requests") and responds
+  /// with an error if they are not responded to within a timeout period.
+  ///
+  /// This helps debug tests where the server is waiting for a response that the
+  /// test was not set up to provide (instead of the test just hanging).
+  void _monitorReverseRequests() {
+    requestsFromServer.listen((request) {
+      // Record the request as pending.
+      _pendingReverseRequests.add(request);
+
+      // Check in 5s whether this request was responded to and if not, fail
+      // the test.
+      Timer(const Duration(seconds: 5), () {
+        if (_pendingReverseRequests.remove(request)) {
+          sendResponseToServer(
+            ResponseMessage(
+              id: request.id,
+              error: ResponseError(
+                code: ErrorCodes.RequestFailed,
+                message: 'The test did not respond',
+              ),
+              jsonrpc: jsonRpcVersion,
+            ),
+          );
+          // fail('Server sent ${request.method} but the test did not respond');
+        }
+      });
+    }, onDone: _pendingReverseRequests.clear);
   }
 }
 
@@ -721,6 +761,8 @@ mixin ClientCapabilitiesHelperMixin {
     experimentalCapabilities['snippetTextEdit'] = supported;
   }
 
+  /// Sets the supported [CodeActionKind]s for this client. This implies
+  /// `codeActionLiteralSupport`.
   void setSupportedCodeActionKinds(List<CodeActionKind>? kinds) {
     textDocumentCapabilities = extendTextDocumentCapabilities(
       textDocumentCapabilities,
@@ -742,6 +784,14 @@ mixin ClientCapabilitiesHelperMixin {
     experimentalCapabilities['dartCodeAction'] = {
       'commandParameterSupport': {'supportedKinds': kinds?.toList()},
     };
+  }
+
+  void setSupportsWindowShowMessageRequest([bool supported = true]) {
+    if (supported) {
+      experimentalCapabilities['supportsWindowShowMessageRequest'] = true;
+    } else {
+      experimentalCapabilities.remove('supportsWindowShowMessageRequest');
+    }
   }
 
   void setTextDocumentDynamicRegistration(String name) {
@@ -794,7 +844,8 @@ mixin LspAnalysisServerTestMixin
     on
         LspRequestHelpersMixin,
         LspReverseRequestHelpersMixin,
-        LspEditHelpersMixin
+        LspEditHelpersMixin,
+        LspNotificationsMixin
     implements ClientCapabilitiesHelperMixin {
   late String projectFolderPath,
       mainFilePath,
@@ -831,12 +882,6 @@ mixin LspAnalysisServerTestMixin
   /// list.
   final diagnostics = <Uri, List<Diagnostic>>{};
 
-  /// Whether to fail tests if any error notifications are received from the
-  /// server.
-  ///
-  /// This does not need to be set when using [expectErrorNotification].
-  bool failTestOnAnyErrorNotification = true;
-
   /// Whether to fail tests if any error diagnostics are received from the
   /// server.
   bool failTestOnErrorDiagnostic = true;
@@ -853,11 +898,6 @@ mixin LspAnalysisServerTestMixin
   /// A [Future] that completes when the current analysis completes (or is
   /// already completed if no analysis is in progress).
   Future<void> get currentAnalysis => _currentAnalysisCompleter.future;
-
-  /// A stream of [NotificationMessage]s from the server that may be errors.
-  Stream<NotificationMessage> get errorNotificationsFromServer {
-    return notificationsFromServer.where(_isErrorNotification);
-  }
 
   /// The experimental capabilities returned from the server during initialization.
   Map<String, Object?> get experimentalServerCapabilities =>
@@ -883,6 +923,7 @@ mixin LspAnalysisServerTestMixin
   Uri get nonExistentFileUri => pathContext.toUri(nonExistentFilePath);
 
   /// A stream of [NotificationMessage]s from the server.
+  @override
   Stream<NotificationMessage> get notificationsFromServer {
     return serverToClient
         .where((m) => m is NotificationMessage)
@@ -1019,39 +1060,6 @@ mixin LspAnalysisServerTestMixin
       decoder: decoder,
       workDoneToken: workDoneToken,
     );
-  }
-
-  Future<ShowMessageParams> expectErrorNotification(
-    FutureOr<void> Function() f, {
-    Duration timeout = const Duration(seconds: 5),
-  }) async {
-    var firstError = errorNotificationsFromServer.first;
-
-    failTestOnAnyErrorNotification = false;
-
-    await f();
-    var notificationFromServer = await firstError.timeout(timeout);
-
-    failTestOnAnyErrorNotification = true;
-
-    expect(notificationFromServer, isNotNull);
-    return ShowMessageParams.fromJson(
-      notificationFromServer.params as Map<String, Object?>,
-    );
-  }
-
-  Future<T> expectNotification<T>(
-    bool Function(NotificationMessage) test,
-    FutureOr<void> Function() f, {
-    Duration timeout = const Duration(seconds: 5),
-  }) async {
-    var firstError = notificationsFromServer.firstWhere(test);
-    await f();
-
-    var notificationFromServer = await firstError.timeout(timeout);
-
-    expect(notificationFromServer, isNotNull);
-    return notificationFromServer.params as T;
   }
 
   /// Gets the current contents of a file.
@@ -1219,7 +1227,7 @@ mixin LspAnalysisServerTestMixin
       Method.client_registerCapability,
       RegistrationParams.fromJson,
       f,
-      handler: (registrationParams) {
+      handler: (registrationParams) async {
         registrations.addAll(registrationParams.registrations);
       },
     );
@@ -1244,7 +1252,7 @@ mixin LspAnalysisServerTestMixin
       Method.client_unregisterCapability,
       UnregistrationParams.fromJson,
       f,
-      handler: (unregistrationParams) {
+      handler: (unregistrationParams) async {
         registrations.removeWhere(
           (element) => unregistrationParams.unregisterations.any(
             (u) => u.id == element.id,
@@ -1452,6 +1460,26 @@ mixin LspAnalysisServerTestMixin
     return provideConfig(sendDidChangeConfiguration, config);
   }
 
+  /// Returns a [Future] that completes when the next analysis completion status
+  /// is received.
+  ///
+  /// To avoid races, this method should be called synchronously in the test
+  /// after the code that triggers the analysis and not after an `await` (or
+  /// it should be called before, but awaited after).
+  ///
+  /// Good:
+  /// ```
+  ///     await Future.wait([
+  ///       doSomething(),
+  ///       waitForAnalysisComplete(),
+  ///     ]);
+  /// ```
+  ///
+  /// Bad:
+  /// ```
+  ///     await doSomething();
+  ///     await waitForAnalysisComplete();
+  /// ```
   Future<void> waitForAnalysisComplete() => waitForAnalysisStatus(false);
 
   Future<void> waitForAnalysisStart() => waitForAnalysisStatus(true);
@@ -1610,22 +1638,6 @@ mixin LspAnalysisServerTestMixin
       throw Exception('Server tried to create already-active progress token');
     }
     _validProgressTokens.add(params.token);
-  }
-
-  /// Checks whether a notification is likely an error from the server (for
-  /// example a window/showMessage). This is useful for tests that want to
-  /// ensure no errors come from the server in response to notifications (which
-  /// don't have their own responses).
-  bool _isErrorNotification(NotificationMessage notification) {
-    var method = notification.method;
-    var params = notification.params as Map<String, Object?>?;
-    if (method == Method.window_logMessage && params != null) {
-      return LogMessageParams.fromJson(params).type == MessageType.Error;
-    } else if (method == Method.window_showMessage && params != null) {
-      return ShowMessageParams.fromJson(params).type == MessageType.Error;
-    } else {
-      return false;
-    }
   }
 }
 

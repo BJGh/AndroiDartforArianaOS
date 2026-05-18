@@ -5,7 +5,7 @@
 import 'package:kernel/ast.dart';
 import 'package:kernel/type_environment.dart';
 
-import '../type_inference/external_ast_helper.dart';
+import '../kernel/external_ast_helper.dart';
 import 'matching_cache.dart';
 
 /// Interface for delayed creating [Expression]s.
@@ -611,7 +611,7 @@ class EffectExpression implements DelayedExpression {
 /// to [_target].
 class DelayedAssignment extends DelayedExpression {
   final MatchingCache _cache;
-  final ExpressionVariable _target;
+  final VariableDeclaration _target;
   final DartType _type;
   final DelayedExpression _value;
   final bool hasEffect;
@@ -827,7 +827,6 @@ class DelayedAsExpression extends AbstractDelayedExpression {
       return createAsExpression(
         operand,
         _type,
-        forNonNullableByDefault: true,
         isCovarianceCheck: true,
         fileOffset: fileOffset,
       );
@@ -840,7 +839,6 @@ class DelayedAsExpression extends AbstractDelayedExpression {
     return createAsExpression(
       operand,
       _type,
-      forNonNullableByDefault: true,
       isUnchecked: isUnchecked,
       fileOffset: fileOffset,
     );

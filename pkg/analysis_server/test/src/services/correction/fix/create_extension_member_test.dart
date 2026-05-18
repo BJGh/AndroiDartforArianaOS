@@ -114,6 +114,25 @@ extension on String {
 ''');
   }
 
+  Future<void> test_existingExtension_emptyBody() async {
+    await resolveTestCode('''
+void f() {
+  ''.test;
+}
+
+extension E on String;
+''');
+    await assertHasFix('''
+void f() {
+  ''.test;
+}
+
+extension E on String {
+  get test => null;
+}
+''');
+  }
+
   Future<void> test_existingExtension_generic_matching() async {
     await resolveTestCode('''
 void f(List<int> a) {
@@ -218,6 +237,23 @@ extension on String {
 }
 
 extension on int {}
+''');
+  }
+
+  Future<void> test_inClass() async {
+    await resolveTestCode('''
+class C {
+  int get foo => test;
+}
+''');
+    await assertHasFix('''
+class C {
+  int get foo => test;
+}
+
+extension on C {
+  int get test => null;
+}
 ''');
   }
 
@@ -500,6 +536,23 @@ extension E on int {
 ''');
   }
 
+  Future<void> test_recursiveType() async {
+    await resolveTestCode('''
+class C<T extends C<T>> {
+  T get foo => test;
+}
+''');
+    await assertHasFix('''
+class C<T extends C<T>> {
+  T get foo => test;
+}
+
+extension <T extends C<T>> on C<T> {
+  T get test => null;
+}
+''');
+  }
+
   Future<void> test_static() async {
     await resolveTestCode('''
 extension E on String {
@@ -663,6 +716,25 @@ void f() {
 
 extension on String {
   int test() {}
+}
+''');
+  }
+
+  Future<void> test_existingExtension_emptyBody() async {
+    await resolveTestCode('''
+void f(List<int> a) {
+  a.test();
+}
+
+extension E on List<int>;
+''');
+    await assertHasFix('''
+void f(List<int> a) {
+  a.test();
+}
+
+extension E on List<int> {
+  void test() {}
 }
 ''');
   }
@@ -1363,6 +1435,51 @@ extension E on int {
 ''');
   }
 
+  Future<void> test_record_returnType_missingNamedField() async {
+    await resolveTestCode('''
+extension E on int {
+  ({int b}) get test => (a: testMethod());
+}
+''');
+    await assertHasFix('''
+extension E on int {
+  ({int b}) get test => (a: testMethod());
+
+  testMethod() {}
+}
+''', filter: (d) => d.diagnosticCode == diag.undefinedMethod);
+  }
+
+  Future<void> test_record_returnType_missingPositionalField() async {
+    await resolveTestCode('''
+extension E on int {
+  (int,) get test => (0, testMethod());
+}
+''');
+    await assertHasFix('''
+extension E on int {
+  (int,) get test => (0, testMethod());
+
+  testMethod() {}
+}
+''', filter: (d) => d.diagnosticCode == diag.undefinedMethod);
+  }
+
+  Future<void> test_record_returnType_positionalField_afterNamedField() async {
+    await resolveTestCode('''
+extension E on int {
+  (int, {int a}) get test => (a: 0, testMethod());
+}
+''');
+    await assertHasFix('''
+extension E on int {
+  (int, {int a}) get test => (a: 0, testMethod());
+
+  int testMethod() {}
+}
+''');
+  }
+
   Future<void> test_static() async {
     await resolveTestCode('''
 extension E on String {}
@@ -2002,7 +2119,7 @@ extension E on String {
 ''');
     await assertHasFix('''
 extension E on String {
-  set test(int test) {}
+  set test(int value) {}
 
   void f(String s) {
     test = 0;
@@ -2025,7 +2142,7 @@ void f() {
 }
 
 extension on String {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2044,7 +2161,7 @@ void f(List<int> a) {
 }
 
 extension on List<int> {
-  set test(int test) {}
+  set test(int value) {}
 }
 
 extension E<T> on Iterable<T> {}
@@ -2065,7 +2182,7 @@ void f(List<int> a) {
 }
 
 extension on List<int> {
-  set test(int test) {}
+  set test(int value) {}
 }
 
 extension E<K, V> on Map<K, V> {}
@@ -2089,7 +2206,7 @@ void f() {
 }
 
 extension E on String {
-  set test(int test) {}
+  set test(int value) {}
 
   // ignore:unused_element
   void foo() {}
@@ -2111,7 +2228,7 @@ void f() {
 }
 
 extension on String {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2130,10 +2247,31 @@ void f() {
 }
 
 extension on String {
-  set test(int test) {}
+  set test(int value) {}
 }
 
 extension on int {}
+''');
+  }
+
+  Future<void> test_inClass() async {
+    await resolveTestCode('''
+class C {
+  void m() {
+    test = 0;
+  }
+}
+''');
+    await assertHasFix('''
+class C {
+  void m() {
+    test = 0;
+  }
+}
+
+extension on C {
+  set test(int value) {}
+}
 ''');
   }
 
@@ -2145,7 +2283,7 @@ extension E on String {
 ''');
     await assertHasFix('''
 extension E on String {
-  set s(int s) {}
+  set s(int value) {}
 
   int m(int x) => s = x;
 }
@@ -2160,7 +2298,7 @@ extension E on String {
 ''');
     await assertHasFix('''
 extension E on String {
-  static set s(int s) {}
+  static set s(int value) {}
 
   static int m(int x) => s = x;
 }
@@ -2186,7 +2324,7 @@ void foo(Object a) {
 part of 'test.dart';
 
 extension E on Object {
-  set myUndefinedSetter(int myUndefinedSetter) {}
+  set myUndefinedSetter(int value) {}
 }
 ''', target: partPath);
   }
@@ -2203,7 +2341,7 @@ void f(Object? o) {
 }
 
 extension on Object? {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2220,7 +2358,7 @@ void f(int? p) {
 }
 
 extension on int? {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2236,7 +2374,7 @@ void f(String s) {
 ''');
     await assertHasFix('''
 extension E on String {
-  set test(String test) {}
+  set test(String value) {}
 }
 
 void f(String s) {
@@ -2266,7 +2404,7 @@ void f(String a) {
 }
 
 extension on String {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2283,7 +2421,7 @@ void f(String a) {
 }
 
 extension on String {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2307,7 +2445,7 @@ void foo(Object a) {
 part 'test.dart';
 
 extension E on Object {
-  set myUndefinedSetter(int myUndefinedSetter) {}
+  set myUndefinedSetter(int value) {}
 }
 ''', target: mainPath);
   }
@@ -2335,7 +2473,7 @@ void foo(Object a) {
 part of 'main.dart';
 
 extension E on Object {
-  set myUndefinedSetter(int myUndefinedSetter) {}
+  set myUndefinedSetter(int value) {}
 }
 ''', target: part1Path);
   }
@@ -2351,7 +2489,7 @@ void f(String s) {
 ''');
     await assertHasFix('''
 extension E on String {
-  static set test(int test) {}
+  static set test(int value) {}
 }
 
 void f(String s) {
@@ -2372,7 +2510,7 @@ void f(List<int> a) {
 }
 
 extension on List<int> {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }
@@ -2389,7 +2527,7 @@ void f<T>(T a) {
 }
 
 extension <T> on T {
-  set test(int test) {}
+  set test(int value) {}
 }
 ''');
   }

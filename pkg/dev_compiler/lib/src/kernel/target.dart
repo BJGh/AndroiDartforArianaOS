@@ -194,7 +194,10 @@ class DevCompilerTarget extends Target {
     Procedure procedure,
     Map<String, String>? environmentDefines, {
     void Function(String)? logger,
+    required DiagnosticReporter diagnosticReporter,
   }) {
+    _diagnosticReporter =
+        diagnosticReporter as DiagnosticReporter<Message, LocatedMessage>;
     _performTransformations(coreTypes, hierarchy, [procedure]);
   }
 
@@ -238,6 +241,28 @@ class DevCompilerTarget extends Target {
   }
 
   @override
+  void performOutlineTransformations(
+    Component component, {
+    List<Library>? libraries,
+    ChangedStructureNotifier? changedStructureNotifier,
+  }) {
+    super.performOutlineTransformations(
+      component,
+      libraries: libraries,
+      changedStructureNotifier: changedStructureNotifier,
+    );
+    // In addition to [performPreConstantEvaluationTransformations] this makes
+    // sure summaries are also transformed.
+    if (flags.trackCreationLocations) {
+      (_widgetTracker ??= WidgetCreatorTracker()).transform(
+        libraries ?? component.libraries,
+        component.libraries,
+        changedStructureNotifier,
+      );
+    }
+  }
+
+  @override
   void performPreConstantEvaluationTransformations(
     Component component,
     CoreTypes coreTypes,
@@ -246,9 +271,12 @@ class DevCompilerTarget extends Target {
     void Function(String msg)? logger,
     ChangedStructureNotifier? changedStructureNotifier,
   }) {
-    if (flags.trackWidgetCreation) {
-      _widgetTracker ??= WidgetCreatorTracker();
-      _widgetTracker!.transform(component, libraries, changedStructureNotifier);
+    if (flags.trackCreationLocations) {
+      (_widgetTracker ??= WidgetCreatorTracker()).transform(
+        libraries,
+        component.libraries,
+        changedStructureNotifier,
+      );
     }
   }
 

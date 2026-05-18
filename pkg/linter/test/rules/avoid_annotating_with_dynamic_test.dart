@@ -55,7 +55,7 @@ void f(dynamic o) { }
     var a = newFile('$testPackageLibPath/a.dart', r'''
 part 'b.dart';
 
-void f(int i) {}
+void f(int i);
 ''');
 
     var b = newFile('$testPackageLibPath/b.dart', r'''
@@ -84,7 +84,7 @@ class A {
 part of 'a.dart';
 
 augment class A {
-  augment void f(dynamic o) { }
+  augment void f(dynamic o);
 }
 ''');
 
@@ -102,7 +102,7 @@ void f(dynamic o) { }
     var b = newFile('$testPackageLibPath/b.dart', r'''
 part of 'a.dart';
 
-augment void f(dynamic o) { }
+augment void f(dynamic o);
 ''');
 
     await assertDiagnosticsInFile(a.path, [lint(23, 9)]);
@@ -119,18 +119,13 @@ void f(dynamic o) { }
     var b = newFile('$testPackageLibPath/b.dart', r'''
 part of 'a.dart';
 
-augment void f(dynamic o) { }
-augment void f(dynamic o) { }
+augment void f(dynamic o);
+augment void f(dynamic o);
 ''');
 
     await assertDiagnosticsInFile(a.path, [lint(23, 9)]);
     await assertNoDiagnosticsInFile(b.path);
   }
-
-  // TODO(srawlins): Test parameter of function-typed typedef (both old and
-  // new style).
-  // Test parameter of function-typed parameter (`f(void g(dynamic x))`).
-  // Test parameter with a default value.
 
   test_fieldFormals() async {
     await assertDiagnostics(
@@ -141,6 +136,24 @@ class A {
 }
 ''',
       [lint(23, 14)],
+    );
+  }
+
+  test_functionTypedParameter() async {
+    await assertDiagnostics(
+      r'''
+void f(void g(dynamic x)) {}
+''',
+      [lint(14, 9)],
+    );
+  }
+
+  test_genericTypedef() async {
+    await assertDiagnostics(
+      r'''
+typedef F = void Function(dynamic x);
+''',
+      [lint(26, 9)],
     );
   }
 
@@ -166,6 +179,45 @@ void f([dynamic p]) {}
 ''',
       [lint(8, 9)],
     );
+  }
+
+  test_parameter_defaultValue() async {
+    await assertDiagnostics(
+      r'''
+void f([dynamic x = 1]) {}
+''',
+      [lint(8, 13)],
+    );
+  }
+
+  test_primaryConstructor_declaringParameter() async {
+    await assertDiagnosticsFromMarkdown(r'''
+class C([!final dynamic a!]);
+''');
+  }
+
+  test_primaryConstructor_fieldFormalParameter() async {
+    await assertDiagnosticsFromMarkdown(r'''
+class C([!dynamic this.a!]) {
+  var a;
+}
+''');
+  }
+
+  test_primaryConstructor_simpleParameter() async {
+    await assertDiagnosticsFromMarkdown(r'''
+class C([!dynamic a!]);
+''');
+  }
+
+  test_primaryConstructor_superParameter() async {
+    await assertDiagnosticsFromMarkdown(r'''
+class A(this.a, this.b) {
+  var a;
+  var b;
+}
+class B(/*[0*/dynamic super.a/*0]*/, /*[1*/dynamic super.b/*1]*/) extends A;
+''');
   }
 
   test_requiredParameter() async {
@@ -198,6 +250,15 @@ class B extends A {
 }
 ''',
       [lint(75, 15), lint(92, 15)],
+    );
+  }
+
+  test_typedef() async {
+    await assertDiagnostics(
+      r'''
+typedef void F(dynamic x);
+''',
+      [lint(15, 9)],
     );
   }
 }

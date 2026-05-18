@@ -327,7 +327,6 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
       safepoint_handler_(new SafepointHandler(this)),
       store_buffer_(new StoreBuffer()),
       heap_(nullptr),
-      saved_unlinked_calls_(Array::null()),
       initial_field_table_(new FieldTable(/*isolate=*/nullptr)),
       sentinel_field_table_(new FieldTable(/*isolate=*/nullptr)),
       shared_initial_field_table_(new FieldTable(/*isolate=*/nullptr,
@@ -337,6 +336,7 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
 #if !defined(DART_PRECOMPILED_RUNTIME)
       background_compiler_(new BackgroundCompiler(this)),
 #endif
+      callback_metadata_(new FfiCallbackMetadata()),
       symbols_mutex_(),
       type_canonicalization_mutex_(),
       type_arguments_canonicalization_mutex_(),
@@ -359,7 +359,7 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
       handler_info_cache_(),
       catch_entry_moves_cache_(),
       tag_table_lock_(),
-      tag_table_(GrowableObjectArray::null()) {
+      roots_(new Roots()) {
   FlagsCopyFrom(api_flags);
   if (!is_vm_isolate) {
     intptr_t max_worker_threads;
@@ -386,20 +386,20 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
       new ClassTable(&class_table_allocator_);
   cached_class_table_table_.store(class_table_->table());
   memset(&native_assets_api_, 0, sizeof(NativeAssetsApi));
+
+  if (!is_vm_isolate) {
+    *roots() = *Dart::vm_isolate_group()->roots();
+  }
+  Roots::SetCurrent(roots());
 }
 
 IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
                            void* embedder_data,
                            Dart_IsolateFlags api_flags,
                            bool is_vm_isolate)
-    : IsolateGroup(source,
-                   embedder_data,
-                   new ObjectStore(),
-                   api_flags,
-                   is_vm_isolate) {
-  if (object_store() != nullptr) {
-    object_store()->InitStubs();
-  }
+    : IsolateGroup(source, embedder_data, nullptr, api_flags, is_vm_isolate) {
+  set_object_store(new ObjectStore());
+  object_store()->InitStubs();
 }
 
 IsolateGroup::~IsolateGroup() {
@@ -502,6 +502,8 @@ void IsolateGroup::CreateHeap(bool is_vm_isolate,
 }
 
 void IsolateGroup::Shutdown() {
+  Roots::SetCurrent(roots());
+
   char* name = nullptr;
   // We retrieve the flag value once to avoid the compiler complaining about the
   // possibly uninitialized value of name, as the compiler is unaware that when
@@ -560,6 +562,7 @@ void IsolateGroup::Shutdown() {
   }
 
   delete this;
+  Roots::ClearCurrent();
 
   // After this isolate group has died we might need to notify a pending
   // `Dart_Cleanup()` call.
@@ -592,10 +595,6 @@ void IsolateGroup::Shutdown() {
 void IsolateGroup::set_heap(std::unique_ptr<Heap> heap) {
   idle_time_handler_.InitializeWithHeap(heap.get());
   heap_ = std::move(heap);
-}
-
-void IsolateGroup::set_saved_unlinked_calls(const Array& saved_unlinked_calls) {
-  saved_unlinked_calls_ = saved_unlinked_calls.ptr();
 }
 
 static constexpr intptr_t kActiveMutatorPreemptionTimeout = 120;
@@ -918,6 +917,7 @@ void IsolateGroup::FreeStaticField(const Field& field) {
 }
 
 Isolate* IsolateGroup::EnterTemporaryIsolate() {
+  Roots::SetCurrent(roots());
   Dart_IsolateFlags flags;
   Isolate::FlagsInitialize(&flags);
   Isolate* const isolate = Isolate::InitIsolate("temp", this, flags);
@@ -931,6 +931,7 @@ void IsolateGroup::ExitTemporaryIsolate() {
   ASSERT(thread != nullptr);
   thread->set_execution_state(Thread::kThreadInVM);
   Dart::ShutdownIsolate(thread);
+  Roots::ClearCurrent();
 }
 
 void IsolateGroup::RunWithCachedCatchEntryMoves(
@@ -961,10 +962,6 @@ void IsolateGroup::ClearCatchEntryMovesCacheLocked() {
          (thread->task_kind() == Thread::kScavengerTask) ||
          (thread->task_kind() == Thread::kIncrementalCompactorTask));
   catch_entry_moves_cache_.Clear();
-}
-
-void IsolateGroup::set_tag_table(const GrowableObjectArray& value) {
-  tag_table_ = value.ptr();
 }
 
 void IsolateGroup::RehashConstants(Become* become) {
@@ -1450,7 +1447,6 @@ MessageHandler::MessageStatus IsolateMessageHandler::HandleMessage(
   Thread* thread = Thread::Current();
   StackZone stack_zone(thread);
   Zone* zone = stack_zone.GetZone();
-  HandleScope handle_scope(thread);
 #if defined(SUPPORT_TIMELINE)
   TimelineBeginEndScope tbes(
       thread, Timeline::GetIsolateStream(),
@@ -1551,11 +1547,17 @@ MessageHandler::MessageStatus IsolateMessageHandler::HandleMessage(
       }
     }
   } else {
-    const Object& msg_handler = Object::Handle(
+    Object& msg_handler = Object::Handle(
         zone, DartLibraryCalls::HandleMessage(message->dest_port(), msg));
-    if (msg_handler.IsError()) {
+    while (msg_handler.IsError()) {
       status = ProcessUnhandledException(Error::Cast(msg_handler));
-    } else if (msg_handler.IsNull()) {
+      if (status == kOK) {
+        msg_handler = DartLibraryCalls::DrainMicrotaskQueue();
+      } else {
+        break;
+      }
+    }
+    if (msg_handler.IsNull()) {
       // If the port has been closed then the message will be dropped at this
       // point. Make sure to post to the delivery failure port in that case.
     } else {
@@ -1573,7 +1575,6 @@ void IsolateMessageHandler::NotifyPauseOnStart() {
   if (Service::debug_stream.enabled() || FLAG_warn_on_pause_with_no_debugger) {
     StartIsolateScope start_isolate(I);
     StackZone zone(T);
-    HandleScope handle_scope(T);
     ServiceEvent pause_event(I, ServiceEvent::kPauseStart);
     Service::HandleEvent(&pause_event);
   } else if (FLAG_trace_service) {
@@ -1589,7 +1590,6 @@ void IsolateMessageHandler::NotifyPauseOnExit() {
   if (Service::debug_stream.enabled() || FLAG_warn_on_pause_with_no_debugger) {
     StartIsolateScope start_isolate(I);
     StackZone zone(T);
-    HandleScope handle_scope(T);
     ServiceEvent pause_event(I, ServiceEvent::kPauseExit);
     Service::HandleEvent(&pause_event);
   } else if (FLAG_trace_service) {
@@ -1839,6 +1839,7 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       pending_service_extension_calls_(GrowableObjectArray::null()),
       registered_service_extension_handlers_(GrowableObjectArray::null()),
       service_id_zones_(nullptr),
+      next_service_id_zone_id_(1),
 #define ISOLATE_METRIC_CONSTRUCTORS(type, variable, name, unit)                \
   metric_##variable##_(),
       ISOLATE_METRIC_LIST(ISOLATE_METRIC_CONSTRUCTORS)
@@ -1866,8 +1867,9 @@ Isolate::~Isolate() {
   delete debugger_;
   debugger_ = nullptr;
   if (service_id_zones_ != nullptr) {
-    for (intptr_t i = 0; i < service_id_zones_->length(); ++i) {
-      delete service_id_zones_->At(i);
+    auto it = service_id_zones_->GetIterator();
+    while (auto* pair = it.Next()) {
+      delete pair->value;
     }
     delete service_id_zones_;
     service_id_zones_ = nullptr;
@@ -2461,7 +2463,7 @@ void Isolate::SetStickyError(ErrorPtr sticky_error) {
 }
 
 void Isolate::Run() {
-  message_handler()->Run(group()->thread_pool(), nullptr, ShutdownIsolate,
+  message_handler()->Run(group()->thread_pool(), ShutdownIsolate,
                          reinterpret_cast<uword>(this));
 }
 
@@ -2476,7 +2478,6 @@ void Isolate::RunAndCleanupFinalizersOnShutdown() {
   // but we no longer allocate new heap objects.
   Thread* thread = Thread::Current();
   StackZone stack_zone(thread);
-  HandleScope handle_scope(thread);
   NoSafepointScope no_safepoint_scope;
 
   // Set live finalizers isolate to null, before deleting the message handler.
@@ -2524,7 +2525,6 @@ void Isolate::LowLevelShutdown() {
   // but we no longer allocate new heap objects.
   Thread* thread = Thread::Current();
   StackZone stack_zone(thread);
-  HandleScope handle_scope(thread);
   NoSafepointScope no_safepoint_scope;
 
   // Notify exit listeners that this isolate is shutting down.
@@ -2546,8 +2546,7 @@ void Isolate::LowLevelShutdown() {
   // Clean up any synchronous FFI callbacks registered with this isolate. Skip
   // if this isolate never registered any.
   if (ffi_callback_list_head_ != nullptr) {
-    FfiCallbackMetadata::Instance()->DeleteAllCallbacks(
-        &ffi_callback_list_head_);
+    group()->callback_metadata()->DeleteAllCallbacks(&ffi_callback_list_head_);
   }
 
 #if !defined(PRODUCT)
@@ -2610,7 +2609,6 @@ void Isolate::Shutdown() {
     StackZone zone(thread);
     ServiceIsolate::SendIsolateShutdownMessage();
 #if !defined(PRODUCT)
-    HandleScope handle_scope(thread);
     debugger()->Shutdown();
 #endif
 
@@ -2708,6 +2706,13 @@ void Isolate::LowLevelCleanup(Isolate* isolate) {
       // isolate group still being available.
       FinalizeWeakPersistentHandlesVisitor visitor(isolate_group);
       isolate_group->api_state()->VisitWeakHandlesUnlocked(&visitor);
+
+      // Clean up any synchronous FFI callbacks registered with this
+      // isolate group. Skip if this isolate group never registered any.
+      if (isolate_group->ffi_callback_list_head_ != nullptr) {
+        isolate_group->callback_metadata()->DeleteAllCallbacks(
+            &isolate_group->ffi_callback_list_head_);
+      }
 
       Thread::ExitIsolateGroupAsHelper(/*bypass_safepoint=*/false);
     }
@@ -2829,7 +2834,7 @@ void Isolate::DeferredMarkLiveTemporaries() {
 void Isolate::init_loaded_prefixes_set_storage() {
   ASSERT(loaded_prefixes_set_storage_ == nullptr);
   loaded_prefixes_set_storage_ =
-      HashTables::New<UnorderedHashSet<LibraryPrefixMapTraits> >(4);
+      HashTables::New<UnorderedHashSet<LibraryPrefixMapTraits>>(4);
 }
 
 bool Isolate::IsPrefixLoaded(const LibraryPrefix& prefix) const {
@@ -2961,8 +2966,6 @@ void IsolateGroup::VisitObjectPointers(ObjectPointerVisitor* visitor,
     isolate->VisitObjectPointers(visitor, validate_frames);
   }
   VisitStackPointers(visitor, validate_frames);
-
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&tag_table_));
 }
 
 void IsolateGroup::VisitSharedPointers(ObjectPointerVisitor* visitor,
@@ -2978,13 +2981,8 @@ void IsolateGroup::VisitSharedPointers(ObjectPointerVisitor* visitor,
       api_state()->VisitObjectPointersUnlocked(visitor);
       break;
     case kObjectStore:
-      if (object_store() != nullptr) {
-        object_store()->VisitObjectPointers(visitor);
-      }
-      break;
-    case kSavedUnlinkedCalls:
-      visitor->VisitPointer(
-          reinterpret_cast<ObjectPtr*>(&saved_unlinked_calls_));
+      object_store()->VisitObjectPointers(visitor);
+      roots()->VisitObjectPointers(visitor);
       break;
     case kInitialFieldTable:
       initial_field_table()->VisitObjectPointers(visitor);
@@ -3032,11 +3030,9 @@ void IsolateGroup::VisitSharedPointers(ObjectPointerVisitor* visitor,
 #if !defined(PRODUCT)
       if (visitor->trace_object_id_rings()) {
         for (Isolate* isolate : isolates_) {
-          for (intptr_t i = 0; i < isolate->NumServiceIdZones(); ++i) {
-            if (auto ring = isolate->GetServiceIdZone(i)) {
-              ring->VisitPointers(visitor);
-            }
-          }
+          isolate->ForEachServiceIdZone([visitor](RingServiceIdZone* ring) {
+            ring->VisitPointers(visitor);
+          });
         }
       }
 #endif  // !defined(PRODUCT)
@@ -3091,10 +3087,15 @@ RingServiceIdZone& Isolate::AddServiceIdZone(
     int32_t capacity) {
   EnsureDefaultServiceIdZone();
   switch (backing_buffer_kind) {
-    case ObjectIdRing::BackingBufferKind::kRing:
-      service_id_zones_->Add(new RingServiceIdZone(
-          service_id_zones_->length(), id_assignment_policy, capacity));
-      return *service_id_zones_->Last();
+    case ObjectIdRing::BackingBufferKind::kRing: {
+      const intptr_t zone_id = next_service_id_zone_id_++;
+
+      auto* zone =
+          new RingServiceIdZone(zone_id, id_assignment_policy, capacity);
+      service_id_zones_->Insert({zone_id, zone});
+
+      return *zone;
+    }
     default:
       UNREACHABLE();
   }
@@ -3102,35 +3103,33 @@ RingServiceIdZone& Isolate::AddServiceIdZone(
 
 void Isolate::DeleteServiceIdZone(int32_t id) {
   ASSERT(service_id_zones_ != nullptr);
-  ASSERT(id < service_id_zones_->length());
-  delete service_id_zones_->At(id);
-  (*service_id_zones_)[id] = nullptr;
+  auto* pair = service_id_zones_->Lookup(static_cast<intptr_t>(id));
+  ASSERT(pair != nullptr);
+
+  delete pair->value;
+  service_id_zones_->Remove(static_cast<intptr_t>(id));
 }
 
 RingServiceIdZone& Isolate::EnsureDefaultServiceIdZone() {
   if (service_id_zones_ == nullptr) {
-    service_id_zones_ = new MallocGrowableArray<RingServiceIdZone*>();
+    service_id_zones_ = new MallocDirectChainedHashMap<
+        IntKeyRawPointerValueTrait<RingServiceIdZone*>>();
   }
-  if (service_id_zones_->is_empty()) {
-    service_id_zones_->Add(
-        new RingServiceIdZone(0, ObjectIdRing::IdPolicy::kAllocateId,
-                              RingServiceIdZone::kCapacityOfDefaultIdZone));
+  if (!service_id_zones_->HasKey(0)) {
+    service_id_zones_->Insert(
+        {0,
+         new RingServiceIdZone(0, ObjectIdRing::IdPolicy::kAllocateId,
+                               RingServiceIdZone::kCapacityOfDefaultIdZone)});
   }
-  return *service_id_zones_->At(0);
+  return *service_id_zones_->Lookup(0)->value;
 }
 
 RingServiceIdZone* Isolate::GetServiceIdZone(intptr_t zone_id) const {
-  if (service_id_zones_ == nullptr || service_id_zones_->length() <= zone_id) {
+  if (service_id_zones_ == nullptr) {
     return nullptr;
   }
-  return service_id_zones_->At(zone_id);
-}
-
-intptr_t Isolate::NumServiceIdZones() const {
-  if (service_id_zones_ == nullptr) {
-    return 0;
-  }
-  return service_id_zones_->length();
+  auto* pair = service_id_zones_->Lookup(zone_id);
+  return pair != nullptr ? pair->value : nullptr;
 }
 
 static const char* ExceptionPauseInfoToServiceEnum(Dart_ExceptionPauseInfo pi) {
@@ -3811,7 +3810,7 @@ FfiCallbackMetadata::Trampoline Isolate::CreateAsyncFfiCallback(
     Zone* zone,
     const Function& send_function,
     Dart_Port send_port) {
-  return FfiCallbackMetadata::Instance()->CreateAsyncFfiCallback(
+  return group()->callback_metadata()->CreateAsyncFfiCallback(
       this, zone, send_function, send_port, &ffi_callback_list_head_);
 }
 
@@ -3823,19 +3822,22 @@ FfiCallbackMetadata::Trampoline Isolate::CreateIsolateLocalFfiCallback(
   if (keep_isolate_alive) {
     UpdateNativeCallableKeepIsolateAliveCounter(1);
   }
-  return FfiCallbackMetadata::Instance()->CreateLocalFfiCallback(
+  return group()->callback_metadata()->CreateLocalFfiCallback(
       this, /*isolate_group=*/nullptr, zone, trampoline, target,
       &ffi_callback_list_head_);
 }
 
-// TODO(aam): Should this be in IsolateGroup?
-FfiCallbackMetadata::Trampoline Isolate::CreateIsolateGroupBoundFfiCallback(
-    Zone* zone,
-    const Function& trampoline,
-    const Closure& target) {
-  return FfiCallbackMetadata::Instance()->CreateLocalFfiCallback(
-      /*isolate=*/nullptr, group(), zone, trampoline, target,
+FfiCallbackMetadata::Trampoline
+IsolateGroup::CreateIsolateGroupBoundFfiCallback(Zone* zone,
+                                                 const Function& trampoline,
+                                                 const Closure& target) {
+  return callback_metadata()->CreateLocalFfiCallback(
+      /*isolate=*/nullptr, this, zone, trampoline, target,
       &ffi_callback_list_head_);
+}
+
+void IsolateGroup::DeleteFfiCallback(FfiCallbackMetadata::Trampoline callback) {
+  callback_metadata()->DeleteCallback(callback, &ffi_callback_list_head_);
 }
 
 bool Isolate::HasLivePorts() {
@@ -3888,8 +3890,8 @@ void Isolate::CloseReceivePort(const ReceivePort& receive_port) {
 }
 
 void Isolate::DeleteFfiCallback(FfiCallbackMetadata::Trampoline callback) {
-  FfiCallbackMetadata::Instance()->DeleteCallback(callback,
-                                                  &ffi_callback_list_head_);
+  group()->callback_metadata()->DeleteCallback(callback,
+                                               &ffi_callback_list_head_);
 }
 
 void Isolate::UpdateNativeCallableKeepIsolateAliveCounter(intptr_t delta) {

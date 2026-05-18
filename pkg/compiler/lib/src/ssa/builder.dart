@@ -6,6 +6,10 @@
 import 'package:_js_interop_checks/src/js_interop.dart'
     show getDartJSInteropJSName;
 // ignore: implementation_imports
+import 'package:front_end/src/api_prototype/external_effect.dart'
+    as ir
+    show ExternalEffect;
+// ignore: implementation_imports
 import 'package:front_end/src/api_prototype/static_weak_references.dart'
     as ir
     show StaticWeakReferences;
@@ -36,8 +40,8 @@ import '../js/js.dart' as js;
 import '../js_backend/backend.dart' show FunctionInlineCache;
 import '../js_backend/field_analysis.dart'
     show FieldAnalysisData, JFieldAnalysis;
-import '../js_backend/interceptor_data.dart';
 import '../js_backend/inferred_data.dart';
+import '../js_backend/interceptor_data.dart';
 import '../js_backend/namer.dart' show ModularNamer;
 import '../js_backend/native_data.dart';
 import '../js_backend/runtime_types_resolution.dart';
@@ -48,8 +52,8 @@ import '../js_model/elements.dart' show JGeneratorBody, JParameterStub;
 import '../js_model/js_strategy.dart';
 import '../js_model/js_world.dart' show JClosedWorld;
 import '../js_model/locals.dart' show GlobalLocalsMap, JumpVisitor;
-import '../js_model/type_recipe.dart';
 import '../js_model/records.dart' show RecordData, JRecordGetter;
+import '../js_model/type_recipe.dart';
 import '../kernel/invocation_mirror.dart';
 import '../native/behavior.dart';
 import '../native/js.dart';
@@ -2047,11 +2051,19 @@ class KernelSsaGraphBuilder extends ir.VisitorDefault<void>
       if (_buildSpecialRuntimeEqualsMethod(function, functionNode)) return;
     }
 
-    // `external` functions in `dart:_foreign_helper` are queued for compilation
-    // in a modular or staged compile, so just generate an empty function. The
-    // actual call sites for these methods are recognized and replaced, so the
-    // method generated here is never called.
-    if (_commonElements.isForeignHelper(function)) {
+    final member = _elementMap.getMemberContextNode(function);
+
+    // `external` functions in `dart:_foreign_helper` or annotated with
+    // `@pragma('external-effect')` are queued for compilation in a modular or
+    // staged compile, so just generate an empty function. The actual call sites
+    // for these methods are recognized and replaced, so the method generated
+    // here is never called.
+    if (_commonElements.isForeignHelper(function) ||
+        (member != null &&
+            ir.ExternalEffect.isAnnotatedWithExternalEffect(
+              member,
+              closedWorld.elementMap.coreTypes,
+            ))) {
       _openFunction(
         function,
         functionNode: functionNode,
@@ -2553,7 +2565,7 @@ class KernelSsaGraphBuilder extends ir.VisitorDefault<void>
   void visitForStatement(ir.ForStatement node) {
     assert(_isReachable);
     void buildInitializer() {
-      for (ir.VariableDeclaration declaration in node.variables) {
+      for (ir.VariableStatement declaration in node.variables) {
         declaration.accept(this);
       }
     }
@@ -4740,7 +4752,12 @@ class KernelSsaGraphBuilder extends ir.VisitorDefault<void>
   }
 
   @override
-  void visitVariableDeclaration(ir.VariableDeclaration node) {
+  void visitLegacyVariableStatement(ir.LegacyVariableStatement node) {
+    defaultVariableDeclaration(node.variable);
+  }
+
+  @override
+  void defaultVariableDeclaration(ir.VariableDeclaration node) {
     Local local = _localsMap.getLocalVariable(node);
     if (node.initializer == null) {
       HInstruction initialValue = graph.addConstantNull(closedWorld);
@@ -5060,6 +5077,10 @@ class KernelSsaGraphBuilder extends ir.VisitorDefault<void>
         argument.accept(this);
         return;
       }
+      stack.add(graph.addConstantNull(closedWorld));
+      return;
+    }
+    if (ir.ExternalEffect.isExternalEffect(node)) {
       stack.add(graph.addConstantNull(closedWorld));
       return;
     }
@@ -9677,7 +9698,7 @@ class InlineWeeder extends ir.VisitorDefault<void> with ir.VisitorVoidMixin {
   }
 
   @override
-  void visitVariableDeclaration(ir.VariableDeclaration node) {
+  void defaultVariableDeclaration(ir.VariableDeclaration node) {
     registerRegularNode();
     skipReductiveNodes(() {
       visitList(node.annotations);

@@ -23,6 +23,7 @@ namespace dart {
 class Code;
 class Isolate;
 class ObjectPointerVisitor;
+class Thread;
 
 // Is it permitted for the stubs above to refer to Object::null(), which is
 // allocated in the VM isolate and shared across all isolates.
@@ -49,10 +50,12 @@ class StubCode : public AllStatic {
 
   // Check if specified pc is in the dart invocation stub used for
   // transitioning into dart code.
-  static bool InInvocationStub(uword pc, bool is_interpreted_frame = false);
+  static bool InInvocationStub(Thread* T,
+                               uword pc,
+                               bool is_interpreted_frame = false);
 
   // Check if the specified pc is in the jump to frame stub.
-  static bool InJumpToFrameStub(uword pc);
+  static bool InJumpToFrameStub(Thread* T, uword pc);
 
   // Returns nullptr if no stub found.
   static const char* NameOfStub(uword entry_point);
@@ -69,8 +72,7 @@ class StubCode : public AllStatic {
 
 // Define the shared stub code accessors.
 #define STUB_CODE_ACCESSOR(name)                                               \
-  static const Code& name() { return *entries_[k##name##Index].code; }         \
-  static intptr_t name##Size() { return name().Size(); }
+  static const Code& name() { return Roots::stub_handle(k##name##Index); }
   VM_STUB_CODE_LIST(STUB_CODE_ACCESSOR);
 #undef STUB_CODE_ACCESSOR
 
@@ -108,13 +110,13 @@ class StubCode : public AllStatic {
 
   static const Code& UnoptimizedStaticCallEntry(intptr_t num_args_tested);
 
-  static const char* NameAt(intptr_t index) { return entries_[index].name; }
+  static const char* NameAt(intptr_t index) { return StubNames[index]; }
 
-  static const Code& EntryAt(intptr_t index) { return *(entries_[index].code); }
-  static void EntryAtPut(intptr_t index, Code* entry) {
-    DEBUG_ASSERT(entry->IsReadOnlyHandle());
-    ASSERT(entries_[index].code == nullptr);
-    entries_[index].code = entry;
+  static const Code& EntryAt(intptr_t index) {
+    return Roots::stub_handle(index);
+  }
+  static void EntryAtPut(intptr_t index, CodePtr code) {
+    Roots::stub_handle(index).initRO(code);
   }
   static intptr_t NumEntries() { return kNumStubEntries; }
 
@@ -140,14 +142,6 @@ class StubCode : public AllStatic {
         kNumStubEntries
   };
 
-  struct StubCodeEntry {
-    Code* code;
-    const char* name;
-#if !defined(DART_PRECOMPILED_RUNTIME)
-    void (compiler::StubCodeCompiler::*generator)();
-#endif
-  };
-  static StubCodeEntry entries_[kNumStubEntries];
   static AcqRelAtomic<bool> initialized_;
 };
 

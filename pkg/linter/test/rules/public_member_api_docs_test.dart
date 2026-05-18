@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
-import 'package:analyzer/utilities/package_config_file_builder.dart';
+import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:analyzer_testing/utilities/utilities.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -43,10 +43,7 @@ extension type E(int i) {
   int? f;
 }
 ''',
-      [
-        // No lint.
-        error(diag.extensionTypeDeclaresInstanceField, 42, 1),
-      ],
+      [error(diag.extensionTypeDeclaresInstanceField, 42, 1)],
     );
   }
 
@@ -388,6 +385,38 @@ class A { }
     );
   }
 
+  test_primaryConstructor_bodyPartNoDoc() async {
+    await assertDiagnosticsFromMarkdown(r'''
+/// Doc.
+class C(int x) {
+  [!this!];
+}
+''');
+  }
+
+  test_primaryConstructor_bodyPartWithDoc() async {
+    await assertNoDiagnostics(r'''
+/// Class doc.
+class C(int x) {
+  /// Constructor doc.
+  this;
+}
+''');
+  }
+
+  test_primaryConstructor_classNoDoc() async {
+    await assertDiagnosticsFromMarkdown(r'''
+class [!C!](var int x);
+''');
+  }
+
+  test_primaryConstructor_declaringParameterNoDoc() async {
+    await assertDiagnosticsFromMarkdown(r'''
+/// Doc.
+class [!C!](var int x);
+''');
+  }
+
   /// https://github.com/dart-lang/linter/issues/4526
   test_sealedConstructor() async {
     await assertDiagnostics(
@@ -471,7 +500,8 @@ class PublicMemberApiDocsTestPackageTest extends LintRuleTest {
     newFolder(fixturePackageLibPath);
     writePackageConfig(
       '$myPackageRootPath/test/fixture/.dart_tool/package_config.json',
-      PackageConfigFileBuilder()..add(name: 'fixture', rootPath: '../lib'),
+      PackageConfigFileBuilder()
+        ..add(name: 'fixture', rootFolder: getFolder(fixturePackageLibPath)),
     );
   }
 

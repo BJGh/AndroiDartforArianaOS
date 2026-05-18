@@ -268,12 +268,10 @@ CompilationUnit
                   argumentList: ArgumentList
                     leftParenthesis: (
                     arguments
-                      NamedExpression
-                        name: Label
-                          label: SimpleIdentifier
-                            token: with
-                          colon: :
-                        expression: IntegerLiteral
+                      NamedArgument
+                        name: with
+                        colon: :
+                        argumentExpression: IntegerLiteral
                           literal: 3
                     rightParenthesis: )
                 semicolon: ;
@@ -298,14 +296,14 @@ CompilationUnit
         parameters: FormalParameterList
           leftParenthesis: (
           leftDelimiter: {
-          parameter: DefaultFormalParameter
-            parameter: SimpleFormalParameter
-              type: NamedType
-                name: int
-              name: with
-            separator: :
-            defaultValue: IntegerLiteral
-              literal: 0
+          parameter: RegularFormalParameter
+            type: NamedType
+              name: int
+            name: with
+            defaultClause: FormalParameterDefaultClause
+              separator: :
+              value: IntegerLiteral
+                literal: 0
           rightDelimiter: }
           rightParenthesis: )
         body: BlockFunctionBody
@@ -330,7 +328,6 @@ allValues.forEach((enum) {});
       error(diag.expectedIdentifierButGotKeyword, 39, 4),
       error(diag.missingIdentifier, 38, 1),
       error(diag.expectedToken, 45, 1),
-      error(diag.missingFunctionBody, 48, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -362,13 +359,14 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: FunctionTypedFormalParameter
+          parameter: RegularFormalParameter
             name: <empty> <synthetic>
-            parameters: FormalParameterList
-              leftParenthesis: (
-              parameter: SimpleFormalParameter
-                name: enum
-              rightParenthesis: )
+            functionTypedSuffix: FunctionTypedFormalParameterSuffix
+              formalParameters: FormalParameterList
+                leftParenthesis: (
+                parameter: RegularFormalParameter
+                  name: enum
+                rightParenthesis: )
           rightParenthesis: )
         body: EmptyFunctionBody
           semicolon: ;

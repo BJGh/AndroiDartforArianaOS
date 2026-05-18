@@ -31,16 +31,6 @@ DEFINE_FLAG(bool,
             "Generate probe points for installation of user space probes");
 #endif
 
-StubCode::StubCodeEntry StubCode::entries_[kNumStubEntries] = {
-#if defined(DART_PRECOMPILED_RUNTIME)
-#define STUB_CODE_DECLARE(name) {nullptr, #name},
-#else
-#define STUB_CODE_DECLARE(name)                                                \
-  {nullptr, #name, &compiler::StubCodeCompiler::Generate##name##Stub},
-#endif
-    VM_STUB_CODE_LIST(STUB_CODE_DECLARE)
-#undef STUB_CODE_DECLARE
-};
 AcqRelAtomic<bool> StubCode::initialized_ = {false};
 
 #if defined(DART_PRECOMPILED_RUNTIME)
@@ -55,17 +45,23 @@ void StubCode::Init() {
   compiler::ObjectPoolBuilder object_pool_builder;
 
   // Generate all the stubs.
-  for (size_t i = 0; i < ARRAY_SIZE(entries_); i++) {
-    entries_[i].code = Code::ReadOnlyHandle();
-    *(entries_[i].code) =
-        Generate(entries_[i].name, &object_pool_builder, entries_[i].generator);
+  static void (compiler::StubCodeCompiler::* const generators[])() = {
+#define STUB_CODE_DECLARE(name)                                                \
+  &compiler::StubCodeCompiler::Generate##name##Stub,
+      VM_STUB_CODE_LIST(STUB_CODE_DECLARE)
+#undef STUB_CODE_DECLARE
+  };
+
+  for (intptr_t i = 0; i < kNumStubEntries; i++) {
+    Roots::stub_handle(i).initRO(
+        Generate(StubNames[i], &object_pool_builder, generators[i]));
   }
 
   const ObjectPool& object_pool =
       ObjectPool::Handle(ObjectPool::NewFromBuilder(object_pool_builder));
 
-  for (size_t i = 0; i < ARRAY_SIZE(entries_); i++) {
-    entries_[i].code->set_object_pool(object_pool.ptr());
+  for (intptr_t i = 0; i < kNumStubEntries; i++) {
+    Roots::stub_handle(i).set_object_pool(object_pool.ptr());
   }
 
   InitializationDone();
@@ -74,10 +70,11 @@ void StubCode::Init() {
   {
     // Set Function owner for UnknownDartCode stub so it pretends to
     // be a Dart code.
-    Zone* zone = Thread::Current()->zone();
+    Thread* thread = Thread::Current();
+    Zone* zone = thread->zone();
     const auto& signature = FunctionType::Handle(zone, FunctionType::New());
     auto& owner = Object::Handle(zone);
-    owner = Object::void_class();
+    owner = thread->isolate_group()->class_table()->At(kVoidCid);
     ASSERT(!owner.IsNull());
     owner = Function::New(signature, Object::null_string(),
                           UntaggedFunction::kRegularFunction,
@@ -130,14 +127,16 @@ CodePtr StubCode::Generate(const char* name,
 
 void StubCode::Cleanup() {
   initialized_.store(false, std::memory_order_release);
-
-  for (size_t i = 0; i < ARRAY_SIZE(entries_); i++) {
-    entries_[i].code = nullptr;
-  }
 }
 
-bool StubCode::InInvocationStub(uword pc, bool is_interpreted_frame) {
-  ASSERT(HasBeenInitialized());
+bool StubCode::InInvocationStub(Thread* T,
+                                uword pc,
+                                bool is_interpreted_frame) {
+  // T might differ from the current thread on platforms where profiling is
+  // cross thread, like Mac/Windows/Fuchsia.
+  Roots* roots = T->isolate_group()->roots();
+  if (roots == nullptr) return false;
+
 #if defined(DART_DYNAMIC_MODULES)
   if (is_interpreted_frame) {
     // Recognize special marker set up by interpreter in entry frame.
@@ -145,22 +144,29 @@ bool StubCode::InInvocationStub(uword pc, bool is_interpreted_frame) {
         reinterpret_cast<const KBCInstr*>(pc));
   }
   {
-    uword entry = StubCode::InvokeDartCodeFromBytecode().EntryPoint();
-    uword size = StubCode::InvokeDartCodeFromBytecodeSize();
+    const Code& stub = roots->x_stub_handle(kInvokeDartCodeFromBytecodeIndex);
+    uword entry = Code::StubEntryPointOf(stub.ptr());
+    uword size = Code::StubPayloadSizeOf(stub.ptr());
     if ((pc >= entry) && (pc < (entry + size))) {
       return true;
     }
   }
 #endif  // defined(DART_DYNAMIC_MODULES)
-  uword entry = StubCode::InvokeDartCode().EntryPoint();
-  uword size = StubCode::InvokeDartCodeSize();
+  const Code& stub = roots->x_stub_handle(kInvokeDartCodeIndex);
+  uword entry = Code::StubEntryPointOf(stub.ptr());
+  uword size = Code::StubPayloadSizeOf(stub.ptr());
   return (pc >= entry) && (pc < (entry + size));
 }
 
-bool StubCode::InJumpToFrameStub(uword pc) {
-  ASSERT(HasBeenInitialized());
-  uword entry = StubCode::JumpToFrame().EntryPoint();
-  uword size = StubCode::JumpToFrameSize();
+bool StubCode::InJumpToFrameStub(Thread* T, uword pc) {
+  // T might differ from the current thread on platforms where profiling is
+  // cross thread, like Mac/Windows/Fuchsia.
+  Roots* roots = T->isolate_group()->roots();
+  if (roots == nullptr) return false;
+
+  const Code& stub = roots->x_stub_handle(kJumpToFrameIndex);
+  uword entry = Code::StubEntryPointOf(stub.ptr());
+  uword size = Code::StubPayloadSizeOf(stub.ptr());
   return (pc >= entry) && (pc < (entry + size));
 }
 
@@ -221,7 +227,7 @@ CodePtr StubCode::GetAllocationStubForClass(const Class& cls) {
     case kInt32x4Cid:
       return object_store->allocate_int32x4_stub();
     case kClosureCid:
-      return object_store->allocate_closure_stub();
+      return object_store->allocate_closure1_stub();
     case kRecordCid:
       return object_store->allocate_record_stub();
   }
@@ -349,9 +355,9 @@ const Code& StubCode::UnoptimizedStaticCallEntry(intptr_t num_args_tested) {
 
 void StubCode::ForEachStub(
     const std::function<bool(const char*, uword)>& callback) {
-  for (size_t i = 0; i < ARRAY_SIZE(entries_); i++) {
-    if (entries_[i].code != nullptr && !entries_[i].code->IsNull()) {
-      if (!callback(entries_[i].name, entries_[i].code->EntryPoint())) {
+  for (intptr_t i = 0; i < kNumStubEntries; i++) {
+    if (Roots::stub_handle(i).ptr() != nullptr) {
+      if (!callback(StubNames[i], Roots::stub_handle(i).EntryPoint())) {
         return;
       }
     }

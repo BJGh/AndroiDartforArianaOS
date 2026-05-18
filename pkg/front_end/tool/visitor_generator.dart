@@ -4,6 +4,7 @@
 
 import 'package:dart_style/dart_style.dart' show DartFormatter;
 
+import '../test/utils/io_utils.dart';
 import 'ast_model.dart';
 
 /// Generates a visitor library into [sb] based on [astModel] and [strategy].
@@ -75,7 +76,7 @@ String generateVisitor(
   String result = sb.toString();
   if (format) {
     result = new DartFormatter(
-      languageVersion: DartFormatter.latestShortStyleLanguageVersion,
+      languageVersion: getPackageVersionFor("kernel"),
     ).format(result);
   }
   return result;

@@ -70,34 +70,6 @@ abstract enum E {ONE}
     parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
   }
 
-  void test_abstractTopLevelFunction_function() {
-    var parseResult = parseStringWithErrors(r'''
-abstract f(v) {}
-''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
-  }
-
-  void test_abstractTopLevelFunction_getter() {
-    var parseResult = parseStringWithErrors(r'''
-abstract get m {}
-''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
-  }
-
-  void test_abstractTopLevelFunction_setter() {
-    var parseResult = parseStringWithErrors(r'''
-abstract set m(v) {}
-''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
-  }
-
-  void test_abstractTopLevelVariable() {
-    var parseResult = parseStringWithErrors(r'''
-abstract C f;
-''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 8)]);
-  }
-
   void test_abstractTypeDef() {
     var parseResult = parseStringWithErrors(r'''
 abstract typedef F();
@@ -683,14 +655,14 @@ typedef F = void Function({int x : 0});
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: x
-    separator: :
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: x
+    defaultClause: FormalParameterDefaultClause
+      separator: :
+      value: IntegerLiteral
+        literal: 0
   rightDelimiter: }
   rightParenthesis: )
 ''');
@@ -707,14 +679,14 @@ typedef F = void Function({int x = 0});
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: x
-    separator: =
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: x
+    defaultClause: FormalParameterDefaultClause
+      separator: =
+      value: IntegerLiteral
+        literal: 0
   rightDelimiter: }
   rightParenthesis: )
 ''');
@@ -731,14 +703,14 @@ typedef F = void Function([int x = 0]);
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: [
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: x
-    separator: =
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: x
+    defaultClause: FormalParameterDefaultClause
+      separator: =
+      value: IntegerLiteral
+        literal: 0
   rightDelimiter: ]
   rightParenthesis: )
 ''');
@@ -831,6 +803,13 @@ void f() {
   void test_emptyEnumBody() {
     var parseResult = parseStringWithErrors(r'''
 enum E {}
+''');
+    parseResult.assertNoErrors();
+  }
+
+  void test_emptyFunctionBody() {
+    var parseResult = parseStringWithErrors(r'''
+void f();
 ''');
     parseResult.assertNoErrors();
   }
@@ -1356,6 +1335,7 @@ class C {
     ]);
   }
 
+  @FailingTest() // TODO(scheglov): implement augmentation
   void test_factoryWithoutBody() {
     var parseResult = parseStringWithErrors(r'''
 class C {
@@ -1363,6 +1343,16 @@ class C {
 }
 ''');
     parseResult.assertErrors([error(diag.missingFunctionBody, 23, 1)]);
+  }
+
+  void test_factoryWithoutBody_language305() {
+    var parseResult = parseStringWithErrors(r'''
+// @dart = 3.5
+class C {
+  factory C();
+}
+''');
+    parseResult.assertErrors([error(diag.missingFunctionBody, 38, 1)]);
   }
 
   void test_fieldInitializerOutsideConstructor() {
@@ -2018,7 +2008,6 @@ var set foo; main(){}
     parseResult.assertErrors([
       error(diag.varReturnType, 0, 3),
       error(diag.missingFunctionParameters, 8, 3),
-      error(diag.missingFunctionBody, 11, 1),
     ]);
   }
 
@@ -2029,7 +2018,6 @@ var Function(var arg);
     parseResult.assertErrors([
       error(diag.varReturnType, 0, 3),
       error(diag.extraneousModifier, 13, 3),
-      error(diag.missingFunctionBody, 21, 1),
     ]);
   }
 
@@ -2043,7 +2031,6 @@ typedef var Function(var arg);
       error(diag.missingTypedefParameters, 8, 3),
       error(diag.varReturnType, 8, 3),
       error(diag.extraneousModifier, 21, 3),
-      error(diag.missingFunctionBody, 29, 1),
     ]);
   }
 
@@ -2210,7 +2197,7 @@ MethodDeclaration
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       name: E
     rightParenthesis: )
   body: EmptyFunctionBody
@@ -2350,10 +2337,7 @@ void f() {
     var parseResult = parseStringWithErrors(r'''
 void f(int a, int b ;
 ''');
-    parseResult.assertErrors([
-      error(diag.missingFunctionBody, 20, 1),
-      error(diag.expectedToken, 22, 1),
-    ]);
+    parseResult.assertErrors([error(diag.expectedToken, 20, 1)]);
   }
 
   void test_missingConstFinalVarOrType_static() {
@@ -2370,16 +2354,6 @@ a;
     parseResult.assertErrors([error(diag.missingConstFinalVarOrType, 0, 1)]);
   }
 
-  void test_missingEnumBody() {
-    var parseResult = parseStringWithErrors(r'''
-enum E;
-''');
-    parseResult.assertErrors([
-      error(diag.missingEnumBody, 6, 1),
-      error(diag.unexpectedToken, 6, 1),
-    ]);
-  }
-
   void test_missingEnumComma() {
     var parseResult = parseStringWithErrors(r'''
 enum E {one two}
@@ -2394,13 +2368,6 @@ void f() {
 }
 ''');
     parseResult.assertErrors([error(diag.missingExpressionInThrow, 18, 1)]);
-  }
-
-  void test_missingFunctionBody_emptyNotAllowed() {
-    var parseResult = parseStringWithErrors(r'''
-void f();
-''');
-    parseResult.assertErrors([error(diag.missingFunctionBody, 8, 1)]);
   }
 
   void test_missingFunctionBody_invalid() {
@@ -2667,14 +2634,14 @@ typedef F = void Function({int : 0});
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: <empty> <synthetic>
-    separator: :
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: <empty> <synthetic>
+    defaultClause: FormalParameterDefaultClause
+      separator: :
+      value: IntegerLiteral
+        literal: 0
   rightDelimiter: }
   rightParenthesis: )
 ''');
@@ -2694,14 +2661,14 @@ typedef F = void Function({int = 0});
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: <empty> <synthetic>
-    separator: =
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: <empty> <synthetic>
+    defaultClause: FormalParameterDefaultClause
+      separator: =
+      value: IntegerLiteral
+        literal: 0
   rightDelimiter: }
   rightParenthesis: )
 ''');
@@ -2718,11 +2685,10 @@ typedef F = void Function({int});
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-      name: <empty> <synthetic>
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+    name: <empty> <synthetic>
   rightDelimiter: }
   rightParenthesis: )
 ''');
@@ -2932,14 +2898,14 @@ void f(a, b : 0) {}
     assertParsedNodeText(list, r'''
 FormalParameterList
   leftParenthesis: (
-  parameter: SimpleFormalParameter
+  parameter: RegularFormalParameter
     name: a
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      name: b
-    separator: :
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    name: b
+    defaultClause: FormalParameterDefaultClause
+      separator: :
+      value: IntegerLiteral
+        literal: 0
   rightParenthesis: )
 ''');
   }
@@ -3085,14 +3051,14 @@ void f(a, b = 0) {}
     assertParsedNodeText(list, r'''
 FormalParameterList
   leftParenthesis: (
-  parameter: SimpleFormalParameter
+  parameter: RegularFormalParameter
     name: a
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      name: b
-    separator: =
-    defaultValue: IntegerLiteral
-      literal: 0
+  parameter: RegularFormalParameter
+    name: b
+    defaultClause: FormalParameterDefaultClause
+      separator: =
+      value: IntegerLiteral
+        literal: 0
   rightParenthesis: )
 ''');
   }
@@ -3168,7 +3134,7 @@ class C {
   static get m;
 }
 ''');
-    parseResult.assertErrors([error(diag.missingFunctionBody, 24, 1)]);
+    parseResult.assertNoErrors();
   }
 
   void test_staticOperator_noReturnType() {
@@ -3203,7 +3169,7 @@ class C {
   static set m(x);
 }
 ''');
-    parseResult.assertErrors([error(diag.missingFunctionBody, 27, 1)]);
+    parseResult.assertNoErrors();
   }
 
   void test_staticTopLevelDeclaration_class() {
@@ -3715,7 +3681,7 @@ void f(void a) {}
     result.assertNoErrors();
     var node = result.findNode.singleFormalParameter;
     assertParsedNodeText(node, r'''
-SimpleFormalParameter
+RegularFormalParameter
   type: NamedType
     name: void
   name: a

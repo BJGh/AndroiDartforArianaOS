@@ -143,7 +143,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: x
           rightParenthesis: )
         body: ExpressionFunctionBody
@@ -182,34 +182,28 @@ CompilationUnit
                   argumentList: ArgumentList
                     leftParenthesis: (
                     arguments
-                      NamedExpression
-                        name: Label
-                          label: SimpleIdentifier
-                            token: c
-                          colon: :
-                        expression: MethodInvocation
+                      NamedArgument
+                        name: c
+                        colon: :
+                        argumentExpression: MethodInvocation
                           methodName: SimpleIdentifier
                             token: c
                           argumentList: ArgumentList
                             leftParenthesis: (
                             arguments
-                              NamedExpression
-                                name: Label
-                                  label: SimpleIdentifier
-                                    token: d
-                                  colon: :
-                                expression: MethodInvocation
+                              NamedArgument
+                                name: d
+                                colon: :
+                                argumentExpression: MethodInvocation
                                   methodName: SimpleIdentifier
                                     token: d
                                   argumentList: ArgumentList
                                     leftParenthesis: (
                                     arguments
-                                      NamedExpression
-                                        name: Label
-                                          label: SimpleIdentifier
-                                            token: e
-                                          colon: :
-                                        expression: NullLiteral
+                                      NamedArgument
+                                        name: e
+                                        colon: :
+                                        argumentExpression: NullLiteral
                                           literal: null
                                       SimpleIdentifier
                                         token: f
@@ -239,7 +233,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: x
           rightParenthesis: )
         body: BlockFunctionBody
@@ -637,7 +631,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: v
           rightParenthesis: )
         body: ExpressionFunctionBody

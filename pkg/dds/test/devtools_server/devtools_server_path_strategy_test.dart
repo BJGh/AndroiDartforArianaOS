@@ -48,7 +48,7 @@ void main() {
       final resp = await req.close();
       expect(resp.statusCode, 200);
       final bodyContent = await resp.transform(utf8.decoder).join();
-      expect(bodyContent, contains('Dart DevTools'));
+      expect(bodyContent, contains('The Flutter Authors'));
     }, timeout: const Timeout.factor(10));
 
     test('serves 404 for requests that are not pages', () async {
@@ -85,7 +85,7 @@ void main() {
 
         // Extract the base href so if the test failures, we get a simpler error
         // than just the entire content.
-        final actualBaseHref = baseHrefRegex.firstMatch(bodyContent)!.group(1);
+        final actualBaseHref = baseHrefRegex.firstMatch(bodyContent)![1];
         expect(actualBaseHref, htmlEscape.convert(expectedBaseHref));
       }, timeout: const Timeout.factor(10));
     }

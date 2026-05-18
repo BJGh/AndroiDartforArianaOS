@@ -28,7 +28,7 @@ class SessionLogger {
     var sink = SessionLoggerInMemorySink(
       maxBufferLength: 1024,
       normalizer: normalizer,
-      filePath: filePath,
+      sessionLogFilePath: filePath,
     );
     return SessionLogger._(sink: sink, normalizer: normalizer);
   }
@@ -40,12 +40,12 @@ class SessionLogger {
   /// The [packageRoots] maps package names to package root paths.
   void addPackageRoots({
     required int index,
-    required Map<String, String> packageRoots,
+    required Map<String, Uri> packageRoots,
   }) {
-    for (var MapEntry(key: packageName, value: path) in packageRoots.entries) {
-      normalizer.addReplacement(
-        path,
-        '{{context-$index:package-root:$packageName}}',
+    for (var MapEntry(key: packageName, value: uri) in packageRoots.entries) {
+      normalizer.addReplacementsForUri(
+        uri,
+        'context-$index:package-root:$packageName',
       );
     }
   }
@@ -68,7 +68,7 @@ class SessionLogger {
     if (from == ProcessId.ide && to == ProcessId.server) {
       var msg = Message(message);
       if (msg.isInitializeRequest) {
-        normalizer.addWorkspaceFolderReplacements(msg);
+        normalizer.addLspWorkspaceReplacements(msg);
       }
     }
     sink?.writeLogEntry({

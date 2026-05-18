@@ -9,7 +9,7 @@ import 'package:collection/collection.dart';
 import 'package:front_end/src/api_prototype/lowering_predicates.dart';
 import 'package:front_end/src/kernel/record_use.dart' show isBeingRecorded;
 import 'package:kernel/ast.dart' as ast;
-import 'package:record_use/record_use_internal.dart';
+import 'package:record_use/record_use.dart';
 import 'package:vm/metadata/loading_units.dart' as vm_metadata;
 import 'package:vm/transformations/record_use/record_call.dart';
 import 'package:vm/transformations/record_use/record_instance.dart';
@@ -213,32 +213,17 @@ class _RecordUseVisitor extends ast.RecursiveVisitor {
 }
 
 Recordings _usages(
-  Map<Definition, List<CallReference>> calls,
-  Map<Definition, List<InstanceReference>> instances,
+  Map<DefinitionWithStaticCalls, List<CallReference>> calls,
+  Map<DefinitionWithInstances, List<InstanceReference>> instances,
 ) {
   return Recordings(calls: calls, instances: instances);
-}
-
-MaybeConstant evaluateExpression(ast.Expression expression) {
-  if (expression is ast.BasicLiteral) {
-    return evaluateLiteral(expression);
-  } else if (expression is ast.ConstantExpression) {
-    return evaluateConstant(expression.constant);
-  } else if (expression is ast.VariableGet &&
-      expression.variable.initializer != null) {
-    return evaluateExpression(expression.variable.initializer!);
-  } else {
-    return const NonConstant();
-  }
 }
 
 Constant evaluateConstant(ast.Constant constant) => switch (constant) {
   ast.NullConstant() => NullConstant(),
   ast.BoolConstant() => BoolConstant(constant.value),
   ast.IntConstant() => IntConstant(constant.value),
-  ast.DoubleConstant() => UnsupportedConstant(
-    'Double literals are not supported for recording.',
-  ),
+  ast.DoubleConstant() => DoubleConstant(constant.value),
   ast.StringConstant() => StringConstant(constant.value),
   ast.SymbolConstant() => SymbolConstant(
     constant.name,
@@ -257,19 +242,19 @@ Constant evaluateConstant(ast.Constant constant) => switch (constant) {
   ast.InstanceConstant() =>
     !isBeingRecorded(constant.classNode)
         ? UnsupportedConstant(
-          "The definition of '${constant.classNode.name}' from "
-          "'${constant.classNode.enclosingLibrary.importUri}' must be "
-          "annotated with '@RecordUse()'.",
-        )
+            "The definition of '${constant.classNode.name}' from "
+            "'${constant.classNode.enclosingLibrary.importUri}' must be "
+            "annotated with '@RecordUse()'.",
+          )
         : (constant.classNode.isEnum
-            ? evaluateEnumConstant(constant)
-            : evaluateInstanceConstant(constant)),
+              ? evaluateEnumConstant(constant)
+              : evaluateInstanceConstant(constant)),
   ast.RecordConstant() => evaluateRecordConstant(constant),
   // The following are not supported, but theoretically could be, so they
   // are listed explicitly here.
   ast.AuxiliaryConstant() => _unsupported('AuxiliaryConstant'),
-  ast.SetConstant() => UnsupportedConstant(
-    'Set literals are not supported for recording.',
+  ast.SetConstant() => SetConstant(
+    constant.entries.map(evaluateConstant).toList(),
   ),
   ast.InstantiationConstant() => evaluateConstant(constant.tearOffConstant),
   ast.TearOffConstant() => UnsupportedConstant(
@@ -289,9 +274,7 @@ Constant evaluateLiteral(ast.BasicLiteral expression) => switch (expression) {
   ast.IntLiteral() => IntConstant(expression.value),
   ast.BoolLiteral() => BoolConstant(expression.value),
   ast.StringLiteral() => StringConstant(expression.value),
-  ast.DoubleLiteral() => UnsupportedConstant(
-    'Double literals are not supported for recording.',
-  ),
+  ast.DoubleLiteral() => DoubleConstant(expression.value),
   ast.BasicLiteral() => _unsupported(expression.runtimeType.toString()),
 };
 
@@ -317,7 +300,8 @@ EnumConstant evaluateEnumConstant(ast.InstanceConstant constant) {
     }
   }
   return EnumConstant(
-    definition: _definitionFromClass(constant.classNode),
+    definition:
+        definitionFromClass(constant.classNode) as DefinitionWithInstances,
     index: index!,
     name: name!,
     fields: fields,
@@ -333,7 +317,8 @@ InstanceConstant evaluateInstanceConstant(ast.InstanceConstant constant) {
     );
   }
   return InstanceConstant(
-    definition: _definitionFromClass(constant.classNode),
+    definition:
+        definitionFromClass(constant.classNode) as DefinitionWithInstances,
     fields: constant.fieldValues.map(
       (key, value) => MapEntry(key.asField.name.text, evaluateConstant(value)),
     ),
@@ -351,23 +336,6 @@ RecordConstant evaluateRecordConstant(ast.RecordConstant constant) {
 
 UnsupportedConstant _unsupported(String constantType) =>
     UnsupportedConstant('$constantType is not supported for recording.');
-
-Name className(ast.Class cls) => Name(
-  cls.name,
-  kind:
-      cls.isEnum
-          ? DefinitionKind.enumKind
-          : cls.isMixinDeclaration
-          ? DefinitionKind.mixinKind
-          : DefinitionKind.classKind,
-);
-
-Definition _definitionFromClass(ast.Class cls) {
-  final enclosingLibrary = cls.enclosingLibrary;
-  final importUri = enclosingLibrary.importUri.toString();
-
-  return Definition(importUri, [className(cls)]);
-}
 
 ast.Library? enclosingLibrary(ast.TreeNode node) {
   while (node is! ast.Library) {

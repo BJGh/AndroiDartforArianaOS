@@ -5,20 +5,27 @@
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/analysis/experiments.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
-import 'package:analyzer/utilities/package_config_file_builder.dart';
 import 'package:analyzer_testing/mock_packages/mock_packages.dart';
+import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:analyzer_testing/utilities/extensions/resource_provider.dart';
 
 /// A mixin adding functionality to write `.dart_tool/package_config.json`
 /// files along with mock packages to a [ResourceProvider].
 mixin ConfigurationFilesMixin on MockPackagesMixin {
+  /// Adds the 'flutter_localizations' package to the package config file for
+  /// the package-under-test.
+  ///
+  /// This allows `package:flutter_localizations/flutter_localizations.dart`
+  /// imports to resolve.
+  bool get addFlutterLocalizationsPackageDep => false;
+
   /// Adds the 'flutter_test' package to the package config file for the
   /// package-under-test.
   ///
   /// This allows `package:flutter_test/flutter_test.dart` imports to resolve.
   bool get addFlutterTestPackageDep => false;
 
-  /// Adds the 'pedantic' package to the package config file for the
+  /// Adds the 'vector_math' package to the package config file for the
   /// package-under-test.
   ///
   /// This allows `package:vector_math/vector_math_64.dart` imports to resolve.
@@ -60,21 +67,24 @@ mixin ConfigurationFilesMixin on MockPackagesMixin {
     // Add this package to its own config.
     config.add(
       name: packageName ?? pathContext.basename(projectFolderPath),
-      rootPath: projectFolderPath,
+      rootFolder: resourceProvider.getFolder(projectFolderPath),
       languageVersion: languageVersion ?? testPackageLanguageVersion,
     );
 
     if (meta || flutter) {
       var libFolder = addMeta();
-      config.add(name: 'meta', rootPath: libFolder.parent.path);
+      config.add(name: 'meta', rootFolder: libFolder.parent);
     }
 
     if (flutter) {
       var skyEnginePath = addSkyEngine(sdkPath: dartSdkPath).parent.path;
-      config.add(name: 'sky_engine', rootPath: skyEnginePath);
+      config.add(
+        name: 'sky_engine',
+        rootFolder: resourceProvider.getFolder(skyEnginePath),
+      );
 
       var flutterLibFolder = addFlutter();
-      config.add(name: 'flutter', rootPath: flutterLibFolder.parent.path);
+      config.add(name: 'flutter', rootFolder: flutterLibFolder.parent);
     }
 
     if (addFlutterTestPackageDep) {
@@ -97,15 +107,15 @@ void main() {
 }
 
 ''');
-      config.add(name: 'flutter_test', rootPath: flutterTestRootPath);
+      config.add(name: 'flutter_test', rootFolder: flutterTestRoot);
     }
 
     if (addVectorMathPackageDep) {
       var libFolder = addVectorMath();
-      config.add(name: 'vector_math', rootPath: libFolder.parent.path);
+      config.add(name: 'vector_math', rootFolder: libFolder.parent);
     }
 
-    var content = config.toContent(pathContext: pathContext);
+    var content = config.toContent();
 
     var projectFolder = resourceProvider.getFolder(projectFolderPath);
     var dartToolFolder = projectFolder.getChildAssumingFolder(

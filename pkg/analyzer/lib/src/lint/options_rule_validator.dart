@@ -13,76 +13,75 @@ import 'package:analyzer/src/diagnostic/diagnostic_factory.dart';
 import 'package:analyzer/src/error/listener.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/lint/registry.dart';
+import 'package:analyzer/src/util/uri.dart';
 import 'package:analyzer/src/util/yaml.dart';
 import 'package:analyzer/src/utilities/extensions/string.dart';
 import 'package:analyzer/src/utilities/uri_cache.dart';
-import 'package:collection/collection.dart';
-import 'package:path/path.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
 
 /// Validates `linter` rule configurations.
 class LinterRuleOptionsValidator extends OptionsValidator {
-  static const includeKey = 'include';
-  static const linter = 'linter';
-  static const rulesKey = 'rules';
+  static const _includeKey = 'include';
+  static const _linter = 'linter';
+  static const _rulesKey = 'rules';
 
-  static final diagnosticFactory = DiagnosticFactory();
+  static final _diagnosticFactory = DiagnosticFactory();
 
-  static const trueValue = 'true';
-  static const falseValue = 'false';
-  static const ignoreValue = 'ignore';
-  static const infoValue = 'info';
-  static const warningValue = 'warning';
-  static const errorValue = 'error';
-  static const validLintValues = [
-    trueValue,
-    falseValue,
-    ...validLintStringValues,
+  static const _trueValue = 'true';
+  static const _falseValue = 'false';
+  static const _ignoreValue = 'ignore';
+  static const _infoValue = 'info';
+  static const _warningValue = 'warning';
+  static const _errorValue = 'error';
+  static const _validLintValues = [
+    _trueValue,
+    _falseValue,
+    ..._validLintStringValues,
   ];
-  static const validLintStringValues = [
-    ignoreValue,
-    infoValue,
-    warningValue,
-    errorValue,
+  static const _validLintStringValues = [
+    _ignoreValue,
+    _infoValue,
+    _warningValue,
+    _errorValue,
   ];
 
-  final VersionConstraint? sdkVersionConstraint;
+  final VersionConstraint? _sdkVersionConstraint;
 
   /// Whether the linter section being validated as a "primary source;" that is,
   /// whether it is not being analyzed as part of a chain of 'include's.
-  final bool isPrimarySource;
+  final bool _isPrimarySource;
 
-  final AnalysisOptionsProvider optionsProvider;
-  final ResourceProvider resourceProvider;
-  final SourceFactory sourceFactory;
+  final AnalysisOptionsProvider _optionsProvider;
+  final ResourceProvider _resourceProvider;
+  final SourceFactory _sourceFactory;
+
+  /// A cache of options file contents.
+  final AnalysisOptionsCache _analysisOptionsCache;
 
   LinterRuleOptionsValidator({
-    required this.resourceProvider,
-    required this.optionsProvider,
-    required this.sourceFactory,
-    this.sdkVersionConstraint,
-    this.isPrimarySource = true,
-  });
-
-  AbstractAnalysisRule? getRegisteredLint(String value) =>
-      Registry.ruleRegistry[value];
-
-  bool isDeprecatedInCurrentOrEarlierSdk(RuleState state) =>
-      state.isDeprecated && _beforeCurrentConstraint(state.since);
-
-  bool isRemovedInCurrentOrEarlierSdk(RuleState state) =>
-      state.isRemoved && _beforeCurrentConstraint(state.since);
+    required ResourceProvider resourceProvider,
+    required AnalysisOptionsProvider optionsProvider,
+    required SourceFactory sourceFactory,
+    VersionConstraint? sdkVersionConstraint,
+    bool isPrimarySource = true,
+    required AnalysisOptionsCache analysisOptionsCache,
+  }) : _sourceFactory = sourceFactory,
+       _resourceProvider = resourceProvider,
+       _optionsProvider = optionsProvider,
+       _isPrimarySource = isPrimarySource,
+       _sdkVersionConstraint = sdkVersionConstraint,
+       _analysisOptionsCache = analysisOptionsCache;
 
   @override
   void validate(DiagnosticReporter reporter, YamlMap options) {
-    var node = options.valueAt(linter);
+    var node = options.valueAt(_linter);
 
     YamlNode? rules;
     if (node is YamlMap) {
-      rules = node.valueAt(rulesKey);
+      rules = node.valueAt(_rulesKey);
     }
-    _validateRules(rules, reporter, options.valueAt(includeKey));
+    _validateRules(rules, reporter, options.valueAt(_includeKey));
   }
 
   Uri? _actualIncludePath(String includePath, Uri? sourceUri) {
@@ -99,8 +98,8 @@ class LinterRuleOptionsValidator extends OptionsValidator {
     if (includePath.isEmpty) return null;
 
     if (sourceUri != null) {
-      var source = FileSource(resourceProvider.getFile(sourceUri.toFilePath()));
-      var resolved = sourceFactory.resolveUri(source, includePath);
+      var source = FileSource(_fileFromFileUri(sourceUri));
+      var resolved = _sourceFactory.resolveUri(source, includePath);
       if (resolved is FileSource) {
         return resolved.file.toUri();
       }
@@ -130,7 +129,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
     // No "since" applies to all SDKs.
     if (since == null) return true;
 
-    return switch (sdkVersionConstraint) {
+    return switch (_sdkVersionConstraint) {
       VersionRange(min: var min?) => since <= min,
       _ => false,
     };
@@ -142,7 +141,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       for (var ruleNode in rules.nodes) {
         var value = ruleNode.value;
         if (value is String) {
-          var rule = getRegisteredLint(value);
+          var rule = _getRegisteredLint(value);
           if (rule != null && ruleNode is YamlScalar) {
             includeRules.add(ruleNode);
           }
@@ -159,7 +158,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
           continue;
         }
         if (enabled) {
-          var rule = getRegisteredLint(value);
+          var rule = _getRegisteredLint(value);
           if (entry.key case YamlScalar yaml when rule != null) {
             includeRules.add(yaml);
           }
@@ -167,6 +166,11 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       }
     }
     return includeRules;
+  }
+
+  File _fileFromFileUri(Uri uri) {
+    var path = fileUriToNormalizedPath(_resourceProvider.pathContext, uri);
+    return _resourceProvider.getFile(path);
   }
 
   /// Returns the first rule that is incompatible with the given [rule].
@@ -188,7 +192,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
                 _safeToLower(scalar.value) == incompatibleRule.toLowerCase(),
           );
           for (var scalar in list) {
-            var rule = getRegisteredLint(scalar.value.toString())!;
+            var rule = _getRegisteredLint(scalar.value.toString())!;
             incompatibleRules.add(
               _IncompatibleRuleData(
                 _RuleData(rule, scalar, isEnabled: true),
@@ -204,6 +208,15 @@ class LinterRuleOptionsValidator extends OptionsValidator {
     }
     return const [];
   }
+
+  AbstractAnalysisRule? _getRegisteredLint(String value) =>
+      Registry.ruleRegistry[value];
+
+  bool _isDeprecatedInCurrentOrEarlierSdk(RuleState state) =>
+      state.isDeprecated && _beforeCurrentConstraint(state.since);
+
+  bool _isRemovedInCurrentOrEarlierSdk(RuleState state) =>
+      state.isRemoved && _beforeCurrentConstraint(state.since);
 
   /// Processes an enabled rule by checking for incompatible rules and reporting
   /// any issues found.
@@ -226,17 +239,13 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       if (incompatible.where((data) => data.file == null)
           case var localIncompatible when localIncompatible.isNotEmpty) {
         reporter.report(
-          diagnosticFactory.incompatibleLint(
-            source: FileSource(
-              resourceProvider.getFile(
-                ruleData.node.span.sourceUrl!.toFilePath(),
-              ),
-            ),
+          _diagnosticFactory.incompatibleLint(
+            source: FileSource(_fileFromFileUri(ruleData.node.span.sourceUrl!)),
             reference: ruleData.node,
             incompatibleRules: {
               for (var data in localIncompatible)
-                if (ruleData.node.span.sourceUrl!.toString() case var value)
-                  fromUri(value): data.ruleData.node,
+                if (ruleData.node.span.sourceUrl case var uri?)
+                  _fileFromFileUri(uri).path: data.ruleData.node,
             },
           ),
         );
@@ -244,19 +253,15 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       if (incompatible.where((data) => data.file != null)
           case var includedIncompatible when includedIncompatible.isNotEmpty) {
         reporter.report(
-          diagnosticFactory.incompatibleLintFiles(
-            source: FileSource(
-              resourceProvider.getFile(
-                ruleData.node.span.sourceUrl!.toFilePath(),
-              ),
-            ),
+          _diagnosticFactory.incompatibleLintFiles(
+            source: FileSource(_fileFromFileUri(ruleData.node.span.sourceUrl!)),
             reference: ruleData.node,
             incompatibleRules: {
               for (var data in includedIncompatible)
                 if (data.file?.value case String value)
                   if (_actualIncludePath(value, data.file?.span.sourceUrl)
                       case var uri?)
-                    fromUri(uri): data.ruleData.node,
+                    _fileFromFileUri(uri).path: data.ruleData.node,
             },
           ),
         );
@@ -299,17 +304,20 @@ class LinterRuleOptionsValidator extends OptionsValidator {
         if (pathStr.path == uri?.path) {
           continue;
         }
-        file = resourceProvider.getFile(fromUri(pathStr));
+        file = _fileFromFileUri(pathStr);
       } catch (_) {
         // if files are invalid, we ignore them
         continue;
       }
-      var includedOptions = optionsProvider.getOptionsFromFile(file);
-      var linterNode = includedOptions.valueAt(linter);
+      var includedOptions = _optionsProvider.getOptionsFromFile(
+        file,
+        analysisOptionsCache: _analysisOptionsCache,
+      );
+      var linterNode = includedOptions.valueAt(_linter);
       if (linterNode is! YamlMap) {
         continue;
       }
-      var rulesNode = linterNode.valueAt(rulesKey);
+      var rulesNode = linterNode.valueAt(_rulesKey);
       var rules = _collectRules(rulesNode);
       Set<_IncompatibleRuleData> incompatible = {};
       for (var rule in rules.toList()) {
@@ -317,7 +325,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
         if (value is! String) {
           continue;
         }
-        var lintRule = getRegisteredLint(value);
+        var lintRule = _getRegisteredLint(value);
         if (lintRule == null || disabledRules.contains(lintRule)) {
           rules.remove(rule);
           continue;
@@ -339,19 +347,15 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       }
       if (incompatible.isNotEmpty) {
         reporter.report(
-          diagnosticFactory.incompatibleLintIncluded(
-            source: FileSource(
-              resourceProvider.getFile(
-                includeNode.span.sourceUrl!.toFilePath(),
-              ),
-            ),
+          _diagnosticFactory.incompatibleLintIncluded(
+            source: FileSource(_fileFromFileUri(includeNode.span.sourceUrl!)),
             reference: includeNode,
             incompatibleRules: {
               for (var data in incompatible)
                 if (data.file?.value case String value)
                   if (_actualIncludePath(value, data.file?.span.sourceUrl)
                       case var uri?)
-                    fromUri(uri): data.ruleData.node,
+                    _fileFromFileUri(uri).path: data.ruleData.node,
             },
             fileCount: incompatible.map((data) => data.file).toSet().length,
           ),
@@ -386,7 +390,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
       if (value is! String) return null;
       if (enabled == null) return null;
 
-      var rule = getRegisteredLint(value);
+      var rule = _getRegisteredLint(value);
       if (rule == null) {
         reporter.report(
           diag.undefinedLint
@@ -409,8 +413,8 @@ class LinterRuleOptionsValidator extends OptionsValidator {
         return null;
       }
 
-      if (ruleValue is String && validLintStringValues.contains(ruleValue)) {
-        enabledValue = ruleValue != ignoreValue;
+      if (ruleValue is String && _validLintStringValues.contains(ruleValue)) {
+        enabledValue = ruleValue != _ignoreValue;
       } else if (ruleValue is bool) {
         enabledValue = ruleValue;
       } else {
@@ -421,7 +425,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
               .withArguments(
                 optionName: value.toString(),
                 invalidValue: ruleValue.toString(),
-                legalValues: validLintValues.quotedAndCommaSeparatedWithOr,
+                legalValues: _validLintValues.quotedAndCommaSeparatedWithOr,
               )
               .atSourceSpan(warningNode.span),
         );
@@ -429,9 +433,9 @@ class LinterRuleOptionsValidator extends OptionsValidator {
 
       // Report removed or deprecated lint warnings defined directly (and not in
       // includes).
-      if (isPrimarySource) {
+      if (_isPrimarySource) {
         var state = rule.state;
-        if (state.isDeprecated && isDeprecatedInCurrentOrEarlierSdk(state)) {
+        if (state.isDeprecated && _isDeprecatedInCurrentOrEarlierSdk(state)) {
           var replacedBy = state.replacedBy;
           if (replacedBy != null) {
             reporter.report(
@@ -449,7 +453,7 @@ class LinterRuleOptionsValidator extends OptionsValidator {
                   .atSourceSpan(node.span),
             );
           }
-        } else if (isRemovedInCurrentOrEarlierSdk(state)) {
+        } else if (_isRemovedInCurrentOrEarlierSdk(state)) {
           var since = state.since.toString();
           var replacedBy = state.replacedBy;
           if (replacedBy != null) {

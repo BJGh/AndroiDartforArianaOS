@@ -1076,10 +1076,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
     PartDirective
       partKeyword: part
@@ -1100,10 +1099,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -1664,7 +1662,7 @@ CompilationUnit
           rightBracket: >
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: T
             name: t
@@ -1698,7 +1696,7 @@ CompilationUnit
           rightBracket: >
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               importPrefix: ImportPrefixReference
                 name: core
@@ -1748,7 +1746,7 @@ CompilationUnit
           rightBracket: >
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               importPrefix: ImportPrefixReference
                 name: core
@@ -1948,7 +1946,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: v
           rightParenthesis: )
         body: EmptyFunctionBody
@@ -1974,7 +1972,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
             name: v
@@ -1999,7 +1997,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: v
           rightParenthesis: )
         body: BlockFunctionBody
@@ -2026,7 +2024,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
             name: v
@@ -2272,14 +2270,14 @@ CompilationUnit
             functionKeyword: Function
             parameters: FormalParameterList
               leftParenthesis: (
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 type: NamedType
                   name: int
               rightParenthesis: )
           functionKeyword: Function
           parameters: FormalParameterList
             leftParenthesis: (
-            parameter: SimpleFormalParameter
+            parameter: RegularFormalParameter
               type: NamedType
                 name: String
             rightParenthesis: )
@@ -2305,10 +2303,10 @@ CompilationUnit
           functionKeyword: Function
           parameters: FormalParameterList
             leftParenthesis: (
-            parameter: SimpleFormalParameter
+            parameter: RegularFormalParameter
               type: NamedType
                 name: int
-            parameter: SimpleFormalParameter
+            parameter: RegularFormalParameter
               type: NamedType
                 name: String
             rightParenthesis: )
@@ -2457,10 +2455,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2476,10 +2473,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
+      name: DottedName
+        tokens
+          a
       semicolon: ;
 ''');
   }
@@ -2495,12 +2491,11 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
-          SimpleIdentifier
-            token: b
+      name: DottedName
+        tokens
+          a
+          .
+          b
       semicolon: ;
 ''');
   }
@@ -2516,14 +2511,13 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
-          SimpleIdentifier
-            token: b
-          SimpleIdentifier
-            token: c
+      name: DottedName
+        tokens
+          a
+          .
+          b
+          .
+          c
       semicolon: ;
 ''');
   }
@@ -2545,10 +2539,9 @@ CompilationUnit
           name: SimpleIdentifier
             token: A
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2570,10 +2563,9 @@ CompilationUnit
           name: SimpleIdentifier
             token: A
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2608,10 +2600,9 @@ CompilationUnit
         tokens
           /// Doc
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2645,10 +2636,9 @@ CompilationUnit
     PartOfDirective
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
+      libraryName: DottedName
+        tokens
+          a
       semicolon: ;
 ''');
   }
@@ -2665,12 +2655,11 @@ CompilationUnit
     PartOfDirective
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
-          SimpleIdentifier
-            token: b
+      libraryName: DottedName
+        tokens
+          a
+          .
+          b
       semicolon: ;
 ''');
   }
@@ -2687,14 +2676,13 @@ CompilationUnit
     PartOfDirective
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
-          SimpleIdentifier
-            token: b
-          SimpleIdentifier
-            token: c
+      libraryName: DottedName
+        tokens
+          a
+          .
+          b
+          .
+          c
       semicolon: ;
 ''');
   }
@@ -2715,10 +2703,9 @@ CompilationUnit
           /// Doc
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: a
+      libraryName: DottedName
+        tokens
+          a
       semicolon: ;
 ''');
   }
@@ -2756,10 +2743,9 @@ CompilationUnit
     PartOfDirective
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      libraryName: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2784,10 +2770,9 @@ CompilationUnit
           name: SimpleIdentifier
             token: A
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
     ImportDirective
       metadata
@@ -2819,10 +2804,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
   declarations
     ClassDeclaration
@@ -2857,10 +2841,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
     PartDirective
       partKeyword: part
@@ -2891,10 +2874,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
     PartDirective
       partKeyword: part
@@ -2928,10 +2910,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -2968,7 +2949,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -2990,7 +2971,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3012,7 +2993,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3040,7 +3021,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3065,7 +3046,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3094,7 +3075,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3129,9 +3110,8 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: a
+            tokens
+              a
           rightParenthesis: )
           uri: SimpleStringLiteral
             literal: 'b.dart'
@@ -3140,9 +3120,8 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: c
+            tokens
+              c
           rightParenthesis: )
           uri: SimpleStringLiteral
             literal: 'd.dart'
@@ -3169,11 +3148,10 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: a
-              SimpleIdentifier
-                token: b
+            tokens
+              a
+              .
+              b
           equalToken: ==
           value: SimpleStringLiteral
             literal: 'c.dart'
@@ -3413,14 +3391,14 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             metadata
               Annotation
                 atSign: @
                 name: SimpleIdentifier
                   token: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             metadata
               Annotation
                 atSign: @
@@ -3436,53 +3414,53 @@ CompilationUnit
               name: Foo
             name: b
           leftDelimiter: {
-          parameter: DefaultFormalParameter
-            parameter: SimpleFormalParameter
-              metadata
-                Annotation
-                  atSign: @
-                  name: PrefixedIdentifier
-                    prefix: SimpleIdentifier
-                      token: C
-                    period: .
-                    identifier: SimpleIdentifier
-                      token: foo
-                  arguments: ArgumentList
-                    leftParenthesis: (
-                    arguments
-                      IntegerLiteral
-                        literal: 3
-                    rightParenthesis: )
-              name: c
-            separator: :
-            defaultValue: IntegerLiteral
-              literal: 0
-          parameter: DefaultFormalParameter
-            parameter: SimpleFormalParameter
-              metadata
-                Annotation
-                  atSign: @
-                  name: PrefixedIdentifier
-                    prefix: SimpleIdentifier
-                      token: d
-                    period: .
-                    identifier: SimpleIdentifier
-                      token: E
+          parameter: RegularFormalParameter
+            metadata
+              Annotation
+                atSign: @
+                name: PrefixedIdentifier
+                  prefix: SimpleIdentifier
+                    token: C
                   period: .
-                  constructorName: SimpleIdentifier
-                    token: bar
-                  arguments: ArgumentList
-                    leftParenthesis: (
-                    arguments
-                      IntegerLiteral
-                        literal: 4
-                      IntegerLiteral
-                        literal: 5
-                    rightParenthesis: )
-              name: x
-            separator: :
-            defaultValue: IntegerLiteral
-              literal: 0
+                  identifier: SimpleIdentifier
+                    token: foo
+                arguments: ArgumentList
+                  leftParenthesis: (
+                  arguments
+                    IntegerLiteral
+                      literal: 3
+                  rightParenthesis: )
+            name: c
+            defaultClause: FormalParameterDefaultClause
+              separator: :
+              value: IntegerLiteral
+                literal: 0
+          parameter: RegularFormalParameter
+            metadata
+              Annotation
+                atSign: @
+                name: PrefixedIdentifier
+                  prefix: SimpleIdentifier
+                    token: d
+                  period: .
+                  identifier: SimpleIdentifier
+                    token: E
+                period: .
+                constructorName: SimpleIdentifier
+                  token: bar
+                arguments: ArgumentList
+                  leftParenthesis: (
+                  arguments
+                    IntegerLiteral
+                      literal: 4
+                    IntegerLiteral
+                      literal: 5
+                  rightParenthesis: )
+            name: x
+            defaultClause: FormalParameterDefaultClause
+              separator: :
+              value: IntegerLiteral
+                literal: 0
           rightDelimiter: }
           rightParenthesis: )
         body: BlockFunctionBody
@@ -3513,7 +3491,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: v
           rightParenthesis: )
         body: BlockFunctionBody
@@ -3542,7 +3520,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
           rightParenthesis: )
@@ -3575,7 +3553,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: T
           rightParenthesis: )
@@ -3608,7 +3586,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: T
           rightParenthesis: )
@@ -3643,15 +3621,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3687,15 +3665,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3740,15 +3718,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3797,15 +3775,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3854,15 +3832,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3907,15 +3885,15 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: A
             name: a
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: B
             name: b
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
             name: c
@@ -3949,7 +3927,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
           rightParenthesis: )
@@ -3982,7 +3960,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
           rightParenthesis: )
@@ -4015,7 +3993,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
           rightParenthesis: )
@@ -4041,9 +4019,8 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: a
+            tokens
+              a
           rightParenthesis: )
           uri: SimpleStringLiteral
             literal: 'b.dart'
@@ -4052,9 +4029,8 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: c
+            tokens
+              c
           rightParenthesis: )
           uri: SimpleStringLiteral
             literal: 'd.dart'
@@ -4081,11 +4057,10 @@ CompilationUnit
           ifKeyword: if
           leftParenthesis: (
           name: DottedName
-            components
-              SimpleIdentifier
-                token: a
-              SimpleIdentifier
-                token: b
+            tokens
+              a
+              .
+              b
           equalToken: ==
           value: SimpleStringLiteral
             literal: 'c.dart'
@@ -4278,10 +4253,9 @@ CompilationUnit
   directives
     LibraryDirective
       libraryKeyword: library
-      name: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      name: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -4510,7 +4484,7 @@ CompilationUnit
             name: s
             parameters: FormalParameterList
               leftParenthesis: (
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 type: NamedType
                   name: int
                 name: v
@@ -4534,7 +4508,7 @@ CompilationUnit
             name: add
             parameters: FormalParameterList
               leftParenthesis: (
-              parameter: SimpleFormalParameter
+              parameter: RegularFormalParameter
                 type: NamedType
                   name: int
                 name: v
@@ -4607,10 +4581,9 @@ CompilationUnit
     PartOfDirective
       partKeyword: part
       ofKeyword: of
-      libraryName: LibraryIdentifier
-        components
-          SimpleIdentifier
-            token: l
+      libraryName: DottedName
+        tokens
+          l
       semicolon: ;
 ''');
   }
@@ -4906,7 +4879,7 @@ CompilationUnit
       name: F
       parameters: FormalParameterList
         leftParenthesis: (
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: Object
           name: value
@@ -5058,7 +5031,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: Object
             name: value
@@ -5217,7 +5190,7 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: Object
             name: value

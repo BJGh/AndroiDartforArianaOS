@@ -284,7 +284,6 @@ class ParserTestListener implements Listener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -295,7 +294,6 @@ class ParserTestListener implements Listener {
   ) {
     seen(begin);
     seen(abstractToken);
-    seen(macroToken);
     seen(sealedToken);
     seen(baseToken);
     seen(interfaceToken);
@@ -307,7 +305,6 @@ class ParserTestListener implements Listener {
       'beginClassDeclaration('
       '$begin, '
       '$abstractToken, '
-      '$macroToken, '
       '$sealedToken, '
       '$baseToken, '
       '$interfaceToken, '
@@ -439,6 +436,15 @@ class ParserTestListener implements Listener {
   }
 
   @override
+  void handleNoMixinBody(Token semicolonToken) {
+    seen(semicolonToken);
+    doPrint(
+      'handleNoMixinBody('
+      '$semicolonToken)',
+    );
+  }
+
+  @override
   void endMixinDeclaration(Token beginToken, Token endToken) {
     indent--;
     seen(beginToken);
@@ -510,6 +516,15 @@ class ParserTestListener implements Listener {
   }
 
   @override
+  void handleNoExtensionBody(Token semicolonToken) {
+    seen(semicolonToken);
+    doPrint(
+      'handleNoExtensionBody('
+      '$semicolonToken)',
+    );
+  }
+
+  @override
   void beginExtensionTypeDeclaration(
     Token? augmentKeyword,
     Token extensionKeyword,
@@ -563,36 +578,39 @@ class ParserTestListener implements Listener {
 
   @override
   void endPrimaryConstructor(
+    DeclarationKind kind,
     Token beginToken,
+    Token endToken,
     Token? constKeyword,
     bool hasConstructorName,
-    bool forExtensionType,
   ) {
     indent--;
     seen(beginToken);
+    seen(endToken);
     seen(constKeyword);
     doPrint(
       'endPrimaryConstructor('
+      '$kind, '
       '$beginToken, '
+      '$endToken, '
       '$constKeyword, '
-      '$hasConstructorName, '
-      '$forExtensionType)',
+      '$hasConstructorName)',
     );
   }
 
   @override
   void handleNoPrimaryConstructor(
+    DeclarationKind kind,
     Token token,
     Token? constKeyword,
-    bool forExtensionType,
   ) {
     seen(token);
     seen(constKeyword);
     doPrint(
       'handleNoPrimaryConstructor('
+      '$kind, '
       '$token, '
-      '$constKeyword, '
-      '$forExtensionType)',
+      '$constKeyword)',
     );
   }
 
@@ -891,6 +909,15 @@ class ParserTestListener implements Listener {
   }
 
   @override
+  void handleNoEnumBody(Token semicolonToken) {
+    seen(semicolonToken);
+    doPrint(
+      'handleNoEnumBody('
+      '$semicolonToken)',
+    );
+  }
+
+  @override
   void handleEnumElement(Token beginToken, Token? augmentToken) {
     seen(beginToken);
     seen(augmentToken);
@@ -948,16 +975,19 @@ class ParserTestListener implements Listener {
   void beginFactory(
     DeclarationKind declarationKind,
     Token lastConsumed,
+    Token? augmentToken,
     Token? externalToken,
     Token? constToken,
   ) {
     seen(lastConsumed);
+    seen(augmentToken);
     seen(externalToken);
     seen(constToken);
     doPrint(
       'beginFactory('
       '$declarationKind, '
       '$lastConsumed, '
+      '$augmentToken, '
       '$externalToken, '
       '$constToken)',
     );
@@ -1486,7 +1516,6 @@ class ParserTestListener implements Listener {
   void beginNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -1497,7 +1526,6 @@ class ParserTestListener implements Listener {
   ) {
     seen(beginToken);
     seen(abstractToken);
-    seen(macroToken);
     seen(sealedToken);
     seen(baseToken);
     seen(interfaceToken);
@@ -1509,7 +1537,6 @@ class ParserTestListener implements Listener {
       'beginNamedMixinApplication('
       '$beginToken, '
       '$abstractToken, '
-      '$macroToken, '
       '$sealedToken, '
       '$baseToken, '
       '$interfaceToken, '
@@ -1691,15 +1718,13 @@ class ParserTestListener implements Listener {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     indent--;
     seen(importKeyword);
-    seen(augmentToken);
     seen(semicolon);
     doPrint(
       'endImport('
       '$importKeyword, '
-      '$augmentToken, '
       '$semicolon)',
     );
   }
@@ -2679,8 +2704,8 @@ class ParserTestListener implements Listener {
   @override
   void beginFields(
     DeclarationKind declarationKind,
-    Token? abstractToken,
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2688,8 +2713,8 @@ class ParserTestListener implements Listener {
     Token? varFinalOrConst,
     Token lastConsumed,
   ) {
-    seen(abstractToken);
     seen(augmentToken);
+    seen(abstractToken);
     seen(externalToken);
     seen(staticToken);
     seen(covariantToken);
@@ -2699,8 +2724,8 @@ class ParserTestListener implements Listener {
     doPrint(
       'beginFields('
       '$declarationKind, '
-      '$abstractToken, '
       '$augmentToken, '
+      '$abstractToken, '
       '$externalToken, '
       '$staticToken, '
       '$covariantToken, '
@@ -2714,6 +2739,7 @@ class ParserTestListener implements Listener {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2725,6 +2751,7 @@ class ParserTestListener implements Listener {
   ) {
     indent--;
     seen(augmentToken);
+    seen(abstractToken);
     seen(externalToken);
     seen(staticToken);
     seen(covariantToken);
@@ -2735,6 +2762,7 @@ class ParserTestListener implements Listener {
     doPrint(
       'endTopLevelFields('
       '$augmentToken, '
+      '$abstractToken, '
       '$externalToken, '
       '$staticToken, '
       '$covariantToken, '
@@ -3323,12 +3351,12 @@ class ParserTestListener implements Listener {
   }
 
   @override
-  void endBinaryPattern(Token token) {
+  void endBinaryPattern(Token operatorToken) {
     indent--;
-    seen(token);
+    seen(operatorToken);
     doPrint(
       'endBinaryPattern('
-      '$token)',
+      '$operatorToken)',
     );
   }
 
@@ -4169,22 +4197,6 @@ class ParserTestListener implements Listener {
     doPrint(
       'handleSuperExpression('
       '$token, '
-      '$context)',
-    );
-  }
-
-  @override
-  void handleAugmentSuperExpression(
-    Token augmentToken,
-    Token superToken,
-    IdentifierContext context,
-  ) {
-    seen(augmentToken);
-    seen(superToken);
-    doPrint(
-      'handleAugmentSuperExpression('
-      '$augmentToken, '
-      '$superToken, '
       '$context)',
     );
   }

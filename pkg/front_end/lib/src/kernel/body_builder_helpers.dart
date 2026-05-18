@@ -67,11 +67,7 @@ class JumpTarget {
     users.add(statement);
   }
 
-  void resolveBreaks(
-    Forest forest,
-    LabeledStatement target,
-    Statement targetStatement,
-  ) {
+  void resolveBreaks(LabeledStatement target, Statement targetStatement) {
     assert(isBreakTarget);
     for (Statement user in users) {
       BreakStatementImpl breakStatement = user as BreakStatementImpl;
@@ -81,10 +77,7 @@ class JumpTarget {
     users.clear();
   }
 
-  List<BreakStatementImpl>? resolveContinues(
-    Forest forest,
-    LabeledStatement target,
-  ) {
+  List<BreakStatementImpl>? resolveContinues(LabeledStatement target) {
     assert(isContinueTarget);
     List<BreakStatementImpl> statements = <BreakStatementImpl>[];
     for (Statement user in users) {
@@ -96,7 +89,7 @@ class JumpTarget {
     return statements;
   }
 
-  void resolveGotos(Forest forest, SwitchCase target) {
+  void resolveGotos(SwitchCase target) {
     assert(isGotoTarget);
     for (Statement user in users) {
       ContinueSwitchStatement continueSwitchStatement =
@@ -174,26 +167,19 @@ class LabelTarget implements JumpTarget {
 
   @override
   // Coverage-ignore(suite): Not run.
-  void resolveBreaks(
-    Forest forest,
-    LabeledStatement target,
-    Statement targetStatement,
-  ) {
-    breakTarget.resolveBreaks(forest, target, targetStatement);
+  void resolveBreaks(LabeledStatement target, Statement targetStatement) {
+    breakTarget.resolveBreaks(target, targetStatement);
   }
 
   @override
   // Coverage-ignore(suite): Not run.
-  List<BreakStatementImpl>? resolveContinues(
-    Forest forest,
-    LabeledStatement target,
-  ) {
-    return continueTarget.resolveContinues(forest, target);
+  List<BreakStatementImpl>? resolveContinues(LabeledStatement target) {
+    return continueTarget.resolveContinues(target);
   }
 
   @override
   // Coverage-ignore(suite): Not run.
-  void resolveGotos(Forest forest, SwitchCase target) {
+  void resolveGotos(SwitchCase target) {
     unsupported("resolveGotos", charOffset, fileUri);
   }
 }
@@ -298,7 +284,7 @@ class FormalParameters extends Parameters {
     SourceLibraryBuilder library,
     TypeBuilder? returnTypeBuilder,
     List<NominalParameterBuilder>? typeParameterBuilders,
-    AsyncMarker asyncModifier,
+    AsyncModifier asyncModifier,
     Statement body,
     int fileEndOffset,
   ) {
@@ -332,17 +318,17 @@ class FormalParameters extends Parameters {
         t.bound?.build(library, TypeUse.typeParameterBound);
       }
     }
-    return new FunctionNode(
-        body,
-        typeParameters: typeParameters,
-        positionalParameters: positionalParameters,
-        namedParameters: namedParameters,
-        requiredParameterCount: requiredParameterCount,
-        returnType: returnType,
-        asyncMarker: asyncModifier,
-      )
-      ..fileOffset = charOffset
-      ..fileEndOffset = fileEndOffset;
+    return extern.createFunctionNode(
+      body,
+      typeParameters: typeParameters,
+      positionalParameters: positionalParameters,
+      namedParameters: namedParameters,
+      requiredParameterCount: requiredParameterCount,
+      returnType: returnType,
+      asyncMarker: asyncModifier.kind,
+      fileOffset: charOffset,
+      fileEndOffset: fileEndOffset,
+    );
   }
 
   @override
@@ -376,32 +362,6 @@ class CatchParameters extends Parameters {
   }
 }
 
-/// Returns a block like this:
-///
-///     {
-///       statement;
-///       body;
-///     }
-///
-/// If [body] is a [Block], it's returned with [statement] prepended to it.
-Block combineStatements(Statement statement, Statement body) {
-  if (body is Block) {
-    if (statement is Block) {
-      body.statements.insertAll(0, statement.statements);
-      setParents(statement.statements, body);
-    } else {
-      body.statements.insert(0, statement);
-      statement.parent = body;
-    }
-    return body;
-  } else {
-    return new Block(<Statement>[
-      if (statement is Block) ...statement.statements else statement,
-      body,
-    ])..fileOffset = statement.fileOffset;
-  }
-}
-
 /// DartDocTest(
 ///   debugName("myClassName", "myName"),
 ///   "myClassName.myName"
@@ -428,17 +388,6 @@ class Label {
 
   @override
   String toString() => "label($name)";
-}
-
-class ForInElements {
-  ExpressionVariable? explicitVariableDeclaration;
-  ExpressionVariable? syntheticVariableDeclaration;
-  Expression? syntheticAssignment;
-  Expression? expressionProblem;
-  Statement? expressionEffects;
-
-  ExpressionVariable get variable =>
-      (explicitVariableDeclaration ?? syntheticVariableDeclaration)!;
 }
 
 class Condition {
@@ -563,13 +512,13 @@ class BuildPrimaryConstructorResult {
 }
 
 class BuildFunctionBodyResult {
-  final AsyncMarker asyncMarker;
+  final AsyncModifier asyncModifier;
   final Statement? body;
   final List<Initializer> initializers;
   final PendingAnnotations? annotations;
 
   BuildFunctionBodyResult({
-    required this.asyncMarker,
+    required this.asyncModifier,
     required this.body,
     required this.initializers,
     required this.annotations,
@@ -577,13 +526,13 @@ class BuildFunctionBodyResult {
 }
 
 class BuildPrimaryConstructorBodyResult {
-  final AsyncMarker asyncMarker;
+  final AsyncModifier asyncModifier;
   final Statement? body;
   final List<Initializer> initializers;
   final PendingAnnotations? annotations;
 
   BuildPrimaryConstructorBodyResult({
-    required this.asyncMarker,
+    required this.asyncModifier,
     required this.body,
     required this.initializers,
     required this.annotations,

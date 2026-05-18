@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:cfg/ir/constant_value.dart';
+import 'package:cfg/ir/field.dart';
 import 'package:cfg/ir/functions.dart';
 import 'package:cfg/ir/global_context.dart';
 import 'package:cfg/ir/instructions.dart';
@@ -57,11 +58,7 @@ final class Lowering extends Pass with DefaultInstructionVisitor<void> {
   );
 
   late final _emptyList = ConstantValue(
-    ast.InstanceConstant(
-      GlobalContext.instance.coreTypes.listClass.reference,
-      const <ast.DartType>[const ast.DynamicType()],
-      const {},
-    ),
+    ast.ListConstant(const ast.DynamicType(), const []),
   );
 
   @override
@@ -247,6 +244,26 @@ final class Lowering extends Pass with DefaultInstructionVisitor<void> {
     replacement.setInputAt(1, argument);
     replacement.insertBefore(instr);
     instr.replaceUsesWith(replacement);
+    instr.removeFromGraph();
+  }
+
+  @override
+  void visitAllocateRecordLiteral(AllocateRecordLiteral instr) {
+    final obj = AllocateRecord(graph, instr.sourcePosition, instr.type);
+    obj.insertBefore(instr);
+    for (int i = 0, n = instr.inputCount; i < n; ++i) {
+      final element = instr.elementAt(i);
+      // TODO: canonicalize record fields
+      final setElem = StoreInstanceField(
+        graph,
+        instr.sourcePosition,
+        CField(RecordField(instr.type.shape, i)),
+        obj,
+        element,
+      );
+      setElem.insertBefore(instr);
+    }
+    instr.replaceUsesWith(obj);
     instr.removeFromGraph();
   }
 

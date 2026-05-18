@@ -204,7 +204,7 @@ class BinaryMdDillReader {
     String? nameExtends = null;
     Match? extendsMatch = (new RegExp("extends (.+)[ \{]")).firstMatch(name);
     if (extendsMatch != null) {
-      nameExtends = extendsMatch.group(1);
+      nameExtends = extendsMatch[1];
     }
     name = _getType(name);
     if (name.contains("<")) {
@@ -235,7 +235,7 @@ class BinaryMdDillReader {
   /// * "Class extends Node {" into "Class"
   /// * "Byte tag = 97;" into "Byte"
   /// * "List<T> {" into "List<T>"
-  String _getType(final String inputString) {
+  String _getType(String inputString) {
     String? cached = _typeCache[inputString];
     if (cached != null) return cached;
     int end = math.max(

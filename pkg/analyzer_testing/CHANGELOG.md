@@ -1,3 +1,22 @@
+## 0.3.0-dev
+
+- Add `PackageConfigFileBuilder` to the public API.
+- Breaking change: `ResourceProviderMixin.newPackageConfigJsonFileFromBuilder`
+  now takes the `PackageConfigFileBuilder` from `package:analyzer_testing`.
+- Require version `13.1.0-dev` of the `analyzer` package.
+
+## 0.2.6
+
+- Require version `13.0.0` of the `analyzer` package.
+
+## 0.2.5
+
+- Require version `12.1.0` of the `analyzer` package.
+
+## 0.2.4
+
+- Require version `12.0.0` of the `analyzer` package.
+
 ## 0.2.3-dev
 
 - Require version `11.1.0-dev` of the `analyzer` package.

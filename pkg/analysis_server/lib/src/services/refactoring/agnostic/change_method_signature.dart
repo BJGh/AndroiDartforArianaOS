@@ -17,8 +17,8 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/dart/analysis/session_helper.dart';
-import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/utilities/extensions/collection.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
@@ -333,38 +333,43 @@ class _AvailabilityAnalyzer {
     required bool anyLocation,
     required List<FormalParameter> selected,
   }) {
-    bool hasGoodLocation(Token? name) {
-      return anyLocation || refactoringContext.selectionIsInToken(name);
+    bool hasGoodLocation(SourceRange range) {
+      return anyLocation || range.covers(refactoringContext.selectionRange);
     }
 
-    _Declaration? buildDeclaration(Declaration node) {
-      var element = node.declaredFragment?.element;
-      if (element is ExecutableElement) {
-        return _Declaration(element: element, node: node, selected: selected);
-      }
-      return null;
+    _Declaration? buildDeclaration(ExecutableElement? element, AstNode node) {
+      if (element == null) return null;
+
+      return _Declaration(element: element, node: node, selected: selected);
     }
 
     node = node?.declaration;
     switch (node) {
-      case ConstructorDeclaration():
+      case PrimaryConstructorDeclaration():
         var nameRange = range.startEnd(
-          // TODO(scheglov): support primary constructors
-          node.typeName!,
-          // TODO(scheglov): support primary constructors
-          node.name ?? node.typeName!,
+          node.typeName,
+          node.constructorName ?? node.typeName,
         );
-        var selectionRange = refactoringContext.selectionRange;
-        if (anyLocation || nameRange.covers(selectionRange)) {
-          return buildDeclaration(node);
+        if (hasGoodLocation(nameRange)) {
+          return buildDeclaration(node.declaredFragment?.element, node);
+        }
+      case ConstructorDeclaration():
+        var typeNameOrKeyword =
+            node.typeName ?? node.newKeyword ?? node.factoryKeyword!;
+        var nameRange = range.startEnd(
+          typeNameOrKeyword,
+          node.name ?? typeNameOrKeyword,
+        );
+        if (hasGoodLocation(nameRange)) {
+          return buildDeclaration(node.declaredFragment?.element, node);
         }
       case FunctionDeclaration():
-        if (hasGoodLocation(node.name)) {
-          return buildDeclaration(node);
+        if (hasGoodLocation(node.name.sourceRange)) {
+          return buildDeclaration(node.declaredFragment?.element, node);
         }
       case MethodDeclaration():
-        if (hasGoodLocation(node.name)) {
-          return buildDeclaration(node);
+        if (hasGoodLocation(node.name.sourceRange)) {
+          return buildDeclaration(node.declaredFragment?.element, node);
         }
     }
 
@@ -372,13 +377,7 @@ class _AvailabilityAnalyzer {
   }
 
   _Declaration? _declarationFormalParameter(FormalParameter node) {
-    FormalParameter formalParameter;
-    if (node.parent case DefaultFormalParameter result) {
-      formalParameter = result;
-    } else {
-      formalParameter = node;
-    }
-
+    var formalParameter = node;
     var formalParameterList = formalParameter.parent;
     if (formalParameterList is! FormalParameterList) {
       return null;
@@ -812,9 +811,18 @@ class _SignatureUpdater {
     String withoutRequired(
       FormalParameter existing, {
       required bool withSuper,
+      required bool withoutDefaultClause,
     }) {
-      var notDefault = existing.notDefault;
-      var requiredToken = notDefault.requiredKeyword;
+      var requiredToken = existing.requiredKeyword;
+      String textWithoutDefaultClause(FormalParameter parameter) {
+        if (parameter.defaultClause case var defaultClause?) {
+          return utils
+              .getRangeText(range.startStart(parameter, defaultClause))
+              .trimRight();
+        }
+        return utils.getNodeText(parameter);
+      }
+
       if (requiredToken != null) {
         var before = utils.getRangeText(
           range.startStart(existing, requiredToken),
@@ -825,25 +833,38 @@ class _SignatureUpdater {
         return '$before $after';
       } else {
         if (withSuper) {
-          var nameToken = notDefault.name!;
+          var nameToken = existing.name!;
           var before = utils.getRangeText(
             range.startStart(existing, nameToken),
           );
           var after = utils.getRangeText(range.startEnd(nameToken, existing));
+          if (withoutDefaultClause && existing.defaultClause != null) {
+            after = '';
+          }
           return '${before}super.$after';
         } else {
-          return utils.getNodeText(existing);
+          return withoutDefaultClause
+              ? textWithoutDefaultClause(existing)
+              : utils.getNodeText(existing);
         }
       }
     }
 
     /// Returns the code with the `required` modifier.
     String withRequired(FormalParameter existing, {required bool withSuper}) {
-      var notDefault = existing.notDefault;
-      var requiredToken = notDefault.requiredKeyword;
+      var requiredToken = existing.requiredKeyword;
+      String textWithoutDefaultClause(FormalParameter parameter) {
+        if (parameter.defaultClause case var defaultClause?) {
+          return utils
+              .getRangeText(range.startStart(parameter, defaultClause))
+              .trimRight();
+        }
+        return utils.getNodeText(parameter);
+      }
+
       if (requiredToken != null) {
         if (withSuper) {
-          var nameToken = notDefault.name!;
+          var nameToken = existing.name!;
           var before = utils.getRangeText(
             range.startStart(requiredToken.next!, nameToken),
           );
@@ -853,13 +874,16 @@ class _SignatureUpdater {
         }
       } else {
         if (withSuper) {
-          var nameToken = notDefault.name!;
+          var nameToken = existing.name!;
           var before = utils.getRangeText(
-            range.startStart(notDefault, nameToken),
+            range.startStart(existing, nameToken),
           );
           return 'required ${before}super.${nameToken.lexeme}';
         } else {
-          var after = utils.getNodeText(notDefault);
+          var after = utils.getNodeText(existing);
+          if (existing.defaultClause != null) {
+            after = textWithoutDefaultClause(existing);
+          }
           return 'required $after';
         }
       }
@@ -909,19 +933,31 @@ class _SignatureUpdater {
         }
       }
 
-      var notDefault = existing.notDefault;
+      var notDefault = existing;
       switch (update.kind) {
         case FormalParameterKind.requiredPositional:
-          var text = withoutRequired(notDefault, withSuper: update.withSuper);
+          var text = withoutRequired(
+            notDefault,
+            withSuper: update.withSuper,
+            withoutDefaultClause: true,
+          );
           requiredPositionalWrites.add(text);
         case FormalParameterKind.optionalPositional:
-          var text = withoutRequired(existing, withSuper: update.withSuper);
+          var text = withoutRequired(
+            existing,
+            withSuper: update.withSuper,
+            withoutDefaultClause: false,
+          );
           optionalPositionalWrites.add(text);
         case FormalParameterKind.requiredNamed:
           var text = withRequired(existing, withSuper: update.withSuper);
           namedWrites.add(text);
         case FormalParameterKind.optionalNamed:
-          var text = withoutRequired(existing, withSuper: update.withSuper);
+          var text = withoutRequired(
+            existing,
+            withSuper: update.withSuper,
+            withoutDefaultClause: false,
+          );
           namedWrites.add(text);
       }
     }
@@ -1287,29 +1323,34 @@ class _SignatureUpdater {
 }
 
 extension on AstNode {
+  /// Gets the AstNode that represents the declaration for this node.
+  ///
+  /// This is usually a [Declaration] but could be a
+  /// [PrimaryConstructorDeclaration].
   AstNode? get declaration {
     var self = this;
-    if (self is FunctionExpression) {
-      var functionDeclaration = self.parent;
-      if (functionDeclaration is FunctionDeclaration) {
-        return functionDeclaration;
-      }
+    var parent = self.parent;
+
+    if (self is PrimaryConstructorName &&
+        parent is PrimaryConstructorDeclaration) {
+      return parent;
     }
 
-    if (self is SimpleIdentifier) {
-      var constructorDeclaration = self.parent;
-      if (constructorDeclaration is ConstructorDeclaration) {
-        // TODO(scheglov): support primary constructors
-        if (constructorDeclaration.typeName! == self) {
-          return constructorDeclaration;
-        }
-      }
+    if (self is FunctionExpression && parent is FunctionDeclaration) {
+      return parent;
+    }
+
+    if (self is SimpleIdentifier &&
+        parent is ConstructorDeclaration &&
+        parent.typeName == self) {
+      return parent;
     }
 
     switch (self) {
       case ConstructorDeclaration():
       case FunctionDeclaration():
       case MethodDeclaration():
+      case PrimaryConstructorDeclaration():
         return self;
     }
 
@@ -1325,6 +1366,8 @@ extension on AstNode {
         return self.functionExpression.parameters;
       case MethodDeclaration():
         return self.parameters;
+      case PrimaryConstructorDeclaration():
+        return self.formalParameters;
     }
     return null;
   }

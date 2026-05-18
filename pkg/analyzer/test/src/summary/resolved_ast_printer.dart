@@ -164,6 +164,14 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
+  void visitBlockEnumBody(BlockEnumBody node) {
+    _sink.writeln('BlockEnumBody');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
+    });
+  }
+
+  @override
   void visitBlockFunctionBody(BlockFunctionBody node) {
     _sink.writeln('BlockFunctionBody');
     _sink.withIndent(() {
@@ -312,7 +320,7 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitCompilationUnit(CompilationUnit node) {
+  void visitCompilationUnit(covariant CompilationUnitImpl node) {
     _sink.writeln('CompilationUnit');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
@@ -427,16 +435,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitDefaultFormalParameter(DefaultFormalParameter node) {
-    _sink.writeln('DefaultFormalParameter');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-      _assertFormalParameterDeclaredElement(node);
-      _writeDeclaredFragment(node.declaredFragment);
-    });
-  }
-
-  @override
   void visitDoStatement(DoStatement node) {
     _sink.writeln('DoStatement');
     _sink.withIndent(() {
@@ -510,6 +508,14 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
+  void visitEmptyEnumBody(EmptyEnumBody node) {
+    _sink.writeln('EmptyEnumBody');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
+    });
+  }
+
+  @override
   void visitEmptyFunctionBody(EmptyFunctionBody node) {
     _sink.writeln('EmptyFunctionBody');
     _sink.withIndent(() {
@@ -520,14 +526,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   @override
   void visitEmptyStatement(EmptyStatement node) {
     _sink.writeln('EmptyStatement');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-    });
-  }
-
-  @override
-  void visitEnumBody(EnumBody node) {
-    _sink.writeln('EnumBody');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
     });
@@ -689,6 +687,14 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
+  void visitFormalParameterDefaultClause(FormalParameterDefaultClause node) {
+    _sink.writeln('FormalParameterDefaultClause');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
+    });
+  }
+
+  @override
   void visitFormalParameterList(FormalParameterList node) {
     _sink.writeln('FormalParameterList');
     _sink.withIndent(() {
@@ -789,12 +795,12 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitFunctionTypedFormalParameter(FunctionTypedFormalParameter node) {
-    _sink.writeln('FunctionTypedFormalParameter');
+  void visitFunctionTypedFormalParameterSuffix(
+    FunctionTypedFormalParameterSuffix node,
+  ) {
+    _sink.writeln('FunctionTypedFormalParameterSuffix');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
-      _assertFormalParameterDeclaredElement(node);
-      _writeDeclaredFragment(node.declaredFragment);
     });
   }
 
@@ -956,6 +962,7 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.writeln('Label');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
+      _writeDeclaredFragment(node.declaredFragment);
     });
   }
 
@@ -968,8 +975,8 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitLibraryDirective(LibraryDirective node) {
-    _sink.writeln('LibraryDirective');
+  void visitLabelReference(LabelReference node) {
+    _sink.writeln('LabelReference');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeElement('element', node.element);
@@ -977,12 +984,11 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitLibraryIdentifier(LibraryIdentifier node) {
-    _sink.writeln('LibraryIdentifier');
+  void visitLibraryDirective(LibraryDirective node) {
+    _sink.writeln('LibraryDirective');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeElement('element', node.element);
-      _writeType('staticType', node.staticType);
     });
   }
 
@@ -1089,21 +1095,11 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
-  void visitNamedExpression(NamedExpression node) {
-    _sink.writeln('NamedExpression');
+  void visitNamedArgument(NamedArgument node) {
+    _sink.writeln('NamedArgument');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeParameterElement(node);
-      // Types of the node and its expression must be the same.
-      if (node.expression.staticType != node.staticType) {
-        var nodeType = node.staticType;
-        var expressionType = node.expression.staticType;
-        fail(
-          'Must be the same:\n'
-          'nodeType: $nodeType\n'
-          'expressionType: $expressionType',
-        );
-      }
     });
   }
 
@@ -1354,6 +1350,14 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
   }
 
   @override
+  void visitRecordLiteralNamedField(RecordLiteralNamedField node) {
+    _sink.writeln('RecordLiteralNamedField');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
+    });
+  }
+
+  @override
   void visitRecordPattern(RecordPattern node) {
     _sink.writeln('RecordPattern');
     _sink.withIndent(() {
@@ -1409,6 +1413,15 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
       _writeElement('element', node.element);
+    });
+  }
+
+  @override
+  void visitRegularFormalParameter(RegularFormalParameter node) {
+    _sink.writeln('RegularFormalParameter');
+    _sink.withIndent(() {
+      _writeNamedChildEntities(node);
+      _writeDeclaredFragment(node.declaredFragment);
     });
   }
 
@@ -1472,15 +1485,6 @@ class ResolvedAstPrinter extends ThrowingAstVisitor<void> {
     _sink.writeln('ShowCombinator');
     _sink.withIndent(() {
       _writeNamedChildEntities(node);
-    });
-  }
-
-  @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    _sink.writeln('SimpleFormalParameter');
-    _sink.withIndent(() {
-      _writeNamedChildEntities(node);
-      _writeDeclaredFragment(node.declaredFragment);
     });
   }
 
@@ -2016,20 +2020,22 @@ Expected parent: (${parent.runtimeType}) $parent
     }
   }
 
-  void _writeOffset(String name, int offset) {
-    _sink.writelnWithIndent('$name: $offset');
-  }
-
   /// If [node] is at a position where it is an argument for an invocation,
   /// writes the corresponding parameter element.
-  void _writeParameterElement(Expression node) {
+  void _writeParameterElement(AstNode node) {
     if (configuration.withParameterElements) {
-      var parent = node.parent;
-      if (parent is ArgumentList ||
-          parent is AssignmentExpression && parent.rightHandSide == node ||
-          parent is BinaryExpression && parent.rightOperand == node ||
-          parent is IndexExpression && parent.index == node) {
+      if (node is Argument && node.parent is ArgumentList) {
         _writeElement('correspondingParameter', node.correspondingParameter);
+        return;
+      }
+
+      if (node is Expression) {
+        var parent = node.parent;
+        if (parent is AssignmentExpression && parent.rightHandSide == node ||
+            parent is BinaryExpression && parent.rightOperand == node ||
+            parent is IndexExpression && parent.index == node) {
+          _writeElement('correspondingParameter', node.correspondingParameter);
+        }
       }
     }
   }
@@ -2070,25 +2076,49 @@ Expected parent: (${parent.runtimeType}) $parent
 
     _sink.writeIndentedLine(() {
       _sink.write('$name: ');
-      if (configuration.withTokenPreviousNext) {
-        _sink.write(_getTokenId(token));
-        _sink.write(' ');
-      }
-      _sink.write(token.lexeme.ifNotEmptyOrElse('<empty>'));
-      if (_withOffsets) {
-        _sink.write(' @${token.offset}');
-      }
-      if (token.isSynthetic) {
-        _sink.write(' <synthetic>');
-      }
+      _writeTokenItem(token);
     });
 
+    _writeTokenPreviousNext(token);
+  }
+
+  void _writeTokenItem(Token token) {
+    if (configuration.withTokenPreviousNext) {
+      _sink.write(_getTokenId(token));
+      _sink.write(' ');
+    }
+    _sink.write(token.lexeme.ifNotEmptyOrElse('<empty>'));
+    if (_withOffsets) {
+      _sink.write(' @${token.offset}');
+    }
+    if (token.isSynthetic) {
+      _sink.write(' <synthetic>');
+    }
+  }
+
+  void _writeTokenList(String name, List<Token> tokens) {
+    if (tokens.isNotEmpty) {
+      _sink.writelnWithIndent(name);
+      _sink.withIndent(() {
+        for (var token in tokens) {
+          _sink.writeIndentedLine(() {
+            _writeTokenItem(token);
+          });
+          _writeTokenPreviousNext(token);
+        }
+      });
+    }
+  }
+
+  void _writeTokenPreviousNext(Token token) {
     if (configuration.withTokenPreviousNext) {
       _sink.withIndent(() {
         if (token.previous case var previous?) {
           if (!previous.isEof) {
             if (_tokenIdMap[previous] == null) {
-              _writeToken('previousX', previous);
+              _sink.withIndent(() {
+                _writeToken('previousX', previous);
+              });
             } else {
               _sink.writelnWithIndent(
                 'previous: ${_getTokenId(previous)} |${previous.lexeme}|',
@@ -2105,22 +2135,6 @@ Expected parent: (${parent.runtimeType}) $parent
           );
         } else {
           _sink.writelnWithIndent('next: <null>');
-        }
-      });
-    }
-  }
-
-  void _writeTokenList(String name, List<Token> tokens) {
-    if (tokens.isNotEmpty) {
-      _sink.writelnWithIndent(name);
-      _sink.withIndent(() {
-        for (var token in tokens) {
-          _sink.writelnWithIndent(token.lexeme);
-          if (_withOffsets) {
-            _sink.withIndent(() {
-              _writeOffset('offset', token.offset);
-            });
-          }
         }
       });
     }

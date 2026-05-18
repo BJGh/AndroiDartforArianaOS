@@ -21,7 +21,6 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
 
@@ -837,7 +836,7 @@ typedef Dart_Handle (*Dart_GetVMServiceAssetsArchive)(void);
  * The current version of the Dart_InitializeFlags. Should be incremented every
  * time Dart_InitializeFlags changes in a binary incompatible way.
  */
-#define DART_INITIALIZE_PARAMS_CURRENT_VERSION (0x00000009)
+#define DART_INITIALIZE_PARAMS_CURRENT_VERSION (0x0000000A)
 
 /** Forward declaration */
 struct Dart_CodeObserver;
@@ -942,15 +941,6 @@ typedef struct {
    * as early as during the Dart_Initialize() call.
    */
   Dart_CodeObserver* code_observer;
-
-#if defined(__Fuchsia__)
-  /**
-   * The resource needed to use zx_vmo_replace_as_executable. Can be
-   * ZX_HANDLE_INVALID if the process has ambient-replace-as-executable or if
-   * executable memory is not needed (e.g., this is an AOT runtime).
-   */
-  zx_handle_t vmex_resource;
-#endif
 } Dart_InitializeParams;
 
 /**
@@ -4248,6 +4238,9 @@ Dart_CreateAppAOTSnapshotAndRelocatableObject(
 DART_EXPORT DART_API_WARN_UNUSED_RESULT Dart_Handle
 Dart_CreateVMAOTSnapshotAsAssembly(Dart_StreamingWriteCallback callback,
                                    void* callback_data);
+DART_EXPORT DART_API_WARN_UNUSED_RESULT Dart_Handle
+Dart_WriteCallbackStub(Dart_StreamingWriteCallback callback,
+                       void* callback_data);
 
 /**
  * Sorts the class-ids in depth first traversal order of the inheritance

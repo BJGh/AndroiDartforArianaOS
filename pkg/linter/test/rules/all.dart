@@ -114,6 +114,7 @@ import 'do_not_use_environment_test.dart' as do_not_use_environment;
 import 'document_ignores_test.dart' as document_ignores;
 import 'empty_catches_test.dart' as empty_catches;
 import 'empty_constructor_bodies_test.dart' as empty_constructor_bodies;
+import 'empty_container_bodies_test.dart' as empty_container_bodies;
 import 'empty_statements_test.dart' as empty_statements;
 import 'eol_at_end_of_file_test.dart' as eol_at_end_of_file;
 import 'erase_dart_type_extension_types_test.dart'
@@ -125,6 +126,8 @@ import 'hash_and_equals_test.dart' as hash_and_equals;
 import 'implementation_imports_test.dart' as implementation_imports;
 import 'implicit_call_tearoffs_test.dart' as implicit_call_tearoffs;
 import 'implicit_reopen_test.dart' as implicit_reopen;
+import 'initialize_in_field_declaration_test.dart'
+    as initialize_in_field_declaration;
 import 'invalid_case_patterns_test.dart' as invalid_case_patterns;
 import 'invalid_runtime_check_with_js_interop_types_test.dart'
     as invalid_runtime_check_with_js_interop_types;
@@ -233,6 +236,7 @@ import 'remove_deprecations_in_breaking_test.dart'
     as remove_deprecations_in_breaking;
 import 'require_trailing_commas_test.dart' as require_trailing_commas;
 import 'secure_pubspec_urls_test.dart' as secure_pubspec_urls;
+import 'simple_directive_paths_test.dart' as simple_directive_paths;
 import 'simplify_variable_pattern_test.dart' as simplify_variable_pattern;
 import 'sized_box_for_whitespace_test.dart' as sized_box_for_whitespace;
 import 'sized_box_shrink_expand_test.dart' as sized_box_shrink_expand;
@@ -264,6 +268,8 @@ import 'unnecessary_await_in_return_test.dart' as unnecessary_await_in_return;
 import 'unnecessary_brace_in_string_interps_test.dart'
     as unnecessary_brace_in_string_interps;
 import 'unnecessary_breaks_test.dart' as unnecessary_breaks;
+import 'unnecessary_const_in_enum_constructor_test.dart'
+    as unnecessary_const_in_enum_constructor;
 import 'unnecessary_const_test.dart' as unnecessary_const;
 import 'unnecessary_constructor_name_test.dart' as unnecessary_constructor_name;
 import 'unnecessary_final_test.dart' as unnecessary_final;
@@ -294,6 +300,8 @@ import 'unnecessary_string_interpolations_test.dart'
 import 'unnecessary_this_test.dart' as unnecessary_this;
 import 'unnecessary_to_list_in_spreads_test.dart'
     as unnecessary_to_list_in_spreads;
+import 'unnecessary_type_name_in_constructor_test.dart'
+    as unnecessary_type_name_in_constructor;
 import 'unnecessary_unawaited_test.dart' as unnecessary_unawaited;
 import 'unnecessary_underscores_test.dart' as unnecessary_underscores;
 import 'unreachable_from_main_test.dart' as unreachable_from_main;
@@ -303,6 +311,7 @@ import 'unsafe_variance_test.dart' as unsafe_variance;
 import 'use_build_context_synchronously_test.dart'
     as use_build_context_synchronously;
 import 'use_colored_box_test.dart' as use_colored_box;
+import 'use_declaring_parameters_test.dart' as use_declaring_parameters;
 import 'use_decorated_box_test.dart' as use_decorated_box;
 import 'use_enums_test.dart' as use_enums;
 import 'use_full_hex_values_for_flutter_colors_test.dart'
@@ -319,6 +328,7 @@ import 'use_late_for_private_fields_and_variables_test.dart'
     as use_late_for_private_fields_and_variables;
 import 'use_named_constants_test.dart' as use_named_constants;
 import 'use_null_aware_elements_test.dart' as use_null_aware_elements;
+import 'use_primary_constructors_test.dart' as use_primary_constructors;
 import 'use_raw_strings_test.dart' as use_raw_strings;
 import 'use_rethrow_when_possible_test.dart' as use_rethrow_when_possible;
 import 'use_setters_to_change_properties_test.dart'
@@ -410,6 +420,7 @@ void main() {
   document_ignores.main();
   empty_catches.main();
   empty_constructor_bodies.main();
+  empty_container_bodies.main();
   empty_statements.main();
   eol_at_end_of_file.main();
   erase_dart_type_extension_types.main();
@@ -420,6 +431,7 @@ void main() {
   implementation_imports.main();
   implicit_call_tearoffs.main();
   implicit_reopen.main();
+  initialize_in_field_declaration.main();
   invalid_case_patterns.main();
   invalid_runtime_check_with_js_interop_types.main();
   join_return_with_assignment.main();
@@ -501,6 +513,7 @@ void main() {
   remove_deprecations_in_breaking.main();
   require_trailing_commas.main();
   secure_pubspec_urls.main();
+  simple_directive_paths.main();
   simplify_variable_pattern.main();
   sized_box_for_whitespace.main();
   sized_box_shrink_expand.main();
@@ -526,6 +539,7 @@ void main() {
   unnecessary_brace_in_string_interps.main();
   unnecessary_breaks.main();
   unnecessary_const.main();
+  unnecessary_const_in_enum_constructor.main();
   unnecessary_constructor_name.main();
   unnecessary_final.main();
   unnecessary_getters_setters.main();
@@ -548,6 +562,7 @@ void main() {
   unnecessary_string_interpolations.main();
   unnecessary_this.main();
   unnecessary_to_list_in_spreads.main();
+  unnecessary_type_name_in_constructor.main();
   unnecessary_unawaited.main();
   unnecessary_underscores.main();
   unreachable_from_main.main();
@@ -555,6 +570,7 @@ void main() {
   unsafe_variance.main();
   use_build_context_synchronously.main();
   use_colored_box.main();
+  use_declaring_parameters.main();
   use_decorated_box.main();
   use_enums.main();
   use_full_hex_values_for_flutter_colors.main();
@@ -565,6 +581,7 @@ void main() {
   use_late_for_private_fields_and_variables.main();
   use_named_constants.main();
   use_null_aware_elements.main();
+  use_primary_constructors.main();
   use_raw_strings.main();
   use_rethrow_when_possible.main();
   use_setters_to_change_properties.main();

@@ -15,6 +15,7 @@ intptr_t MethodRecognizer::NumArgsCheckedForStaticCall(
     const Function& function) {
   switch (function.recognized_kind()) {
     case MethodRecognizer::kDoubleFromInteger:
+      return 1;
     case MethodRecognizer::kMathMin:
     case MethodRecognizer::kMathMax:
       return 2;
@@ -274,7 +275,7 @@ static Token::Kind RecognizeTokenKindHelper(const String& name) {
     return Token::kNEGATE;
   } else if (name.ptr() == Symbols::EqualOperator().ptr()) {
     return Token::kEQ;
-  } else if (name.ptr() == Symbols::Token(Token::kNE).ptr()) {
+  } else if (name.ptr() == Symbols::NotEqualOperator().ptr()) {
     return Token::kNE;
   } else if (name.ptr() == Symbols::LAngleBracket().ptr()) {
     return Token::kLT;
@@ -314,7 +315,7 @@ static const struct {
   const uint32_t finger_print;
   const char* const name;
 } factory_recognizer_list[] = {RECOGNIZED_LIST_FACTORY_LIST(RECOGNIZE_FACTORY){
-    Symbols::kIllegal, -1, 0, nullptr}};
+    Symbols::kEmptyId, kIllegalCid, 0, nullptr}};
 
 #undef RECOGNIZE_FACTORY
 
@@ -326,7 +327,7 @@ intptr_t FactoryRecognizer::ResultCid(const Function& factory) {
          (lib.ptr() == Library::TypedDataLibrary()));
   const String& factory_name = String::Handle(factory.name());
   for (intptr_t i = 0;
-       factory_recognizer_list[i].symbol_id != Symbols::kIllegal; i++) {
+       factory_recognizer_list[i].symbol_id != Symbols::kEmptyId; i++) {
     if (String::EqualsIgnoringPrivateKey(
             factory_name,
             Symbols::Symbol(factory_recognizer_list[i].symbol_id))) {

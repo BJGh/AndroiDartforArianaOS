@@ -19,7 +19,6 @@ import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
-import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/resolver/applicable_extensions.dart';
 import 'package:analyzer/utilities/extensions/element.dart';
 import 'package:analyzer/utilities/extensions/uri.dart';
@@ -393,10 +392,7 @@ class ImportLibrary extends MultiCorrectionProducer {
       foundImport = true;
       extensionsInLibrary[import] = importedLibrary.exportedExtensions
           .havingMemberWithBaseName(memberName)
-          .applicableTo(
-            targetLibrary: libraryElement2,
-            targetType: targetType as TypeImpl,
-          );
+          .applicableTo(targetLibrary: libraryElement2, targetType: targetType);
     }
 
     // If the library at the URI is not already imported, we return a correction
@@ -405,10 +401,7 @@ class ImportLibrary extends MultiCorrectionProducer {
     if (!foundImport) {
       extensionsInLibrary[null] = libraryToImport.exportedExtensions
           .havingMemberWithBaseName(memberName)
-          .applicableTo(
-            targetLibrary: libraryElement2,
-            targetType: targetType as TypeImpl,
-          );
+          .applicableTo(targetLibrary: libraryElement2, targetType: targetType);
     }
     for (var entry in extensionsInLibrary.entries) {
       var extensionsInLibrary = entry.value;
@@ -784,9 +777,9 @@ class _ImportAbsoluteLibrary extends ResolvedCorrectionProducer {
     this._fixKind,
     this._library,
     this._prefix, {
-    String? show,
+    this._show,
     required super.context,
-  }) : _show = show;
+  });
 
   @override
   CorrectionApplicability get applicability =>
@@ -863,9 +856,9 @@ class _ImportLibraryCombinatorMultiple extends ResolvedCorrectionProducer {
     this._libraryName,
     this._combinators,
     this._updatedNames, {
-    bool removePrefix = false,
+    this._removePrefix = false,
     required super.context,
-  }) : _removePrefix = removePrefix;
+  });
 
   @override
   CorrectionApplicability get applicability =>
@@ -1023,9 +1016,9 @@ class _ImportRelativeLibrary extends ResolvedCorrectionProducer {
     this._fixKind,
     this._library,
     this._prefix, {
-    String? show,
+    this._show,
     required super.context,
-  }) : _show = show;
+  });
 
   @override
   CorrectionApplicability get applicability =>
@@ -1074,9 +1067,9 @@ class _PrefixedName {
   _PrefixedName({
     required this.name,
     this.prefix,
-    required _ProducersGenerators producerGenerators,
+    required this._producerGenerators,
     this.ignorePrefix = false,
-  }) : _producerGenerators = producerGenerators;
+  });
 
   Future<List<ResolvedCorrectionProducer>>? get producers =>
       _producerGenerators(prefix, name);

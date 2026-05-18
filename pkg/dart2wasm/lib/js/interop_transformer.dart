@@ -12,7 +12,6 @@ import 'package:kernel/type_environment.dart';
 import 'callback_specializer.dart';
 import 'inline_expander.dart';
 import 'interop_specializer.dart';
-import 'method_collector.dart';
 import 'util.dart';
 
 /// Lowers static interop to JS, generating specialized JS methods as required.
@@ -31,32 +30,30 @@ class InteropTransformer extends Transformer {
   final CallbackSpecializer _callbackSpecializer;
   final InlineExpander _inlineExpander;
   final InteropSpecializerFactory _interopSpecializerFactory;
-  final MethodCollector _methodCollector;
   final CoreTypesUtil _util;
 
-  InteropTransformer._(this._staticTypeContext, this._util,
-      this._methodCollector, extensionIndex)
-      : _callbackSpecializer =
-            CallbackSpecializer(_staticTypeContext, _util, _methodCollector),
-        _inlineExpander =
-            InlineExpander(_staticTypeContext, _util, _methodCollector),
-        _interopSpecializerFactory = InteropSpecializerFactory(
-            _staticTypeContext, _util, _methodCollector, extensionIndex);
+  InteropTransformer._(this._staticTypeContext, this._util, extensionIndex)
+    : _callbackSpecializer = CallbackSpecializer(_staticTypeContext, _util),
+      _inlineExpander = InlineExpander(_staticTypeContext, _util),
+      _interopSpecializerFactory = InteropSpecializerFactory(
+        _staticTypeContext,
+        _util,
+        extensionIndex,
+      );
 
   factory InteropTransformer(CoreTypes coreTypes, ClassHierarchy hierarchy) {
     final typeEnvironment = TypeEnvironment(coreTypes, hierarchy);
     final extensionIndex = ExtensionIndex(coreTypes, typeEnvironment);
     final util = CoreTypesUtil(coreTypes, extensionIndex);
     return InteropTransformer._(
-        StatefulStaticTypeContext.stacked(typeEnvironment),
-        util,
-        MethodCollector(util),
-        extensionIndex);
+      StatefulStaticTypeContext.stacked(typeEnvironment),
+      util,
+      extensionIndex,
+    );
   }
 
   @override
   Library visitLibrary(Library lib) {
-    _methodCollector.enterLibrary(lib);
     _staticTypeContext.enterLibrary(lib);
     lib.transformChildren(this);
     _staticTypeContext.leaveLibrary(lib);
@@ -83,7 +80,9 @@ class InteropTransformer extends Transformer {
       return _inlineExpander.expand(node);
     } else {
       return _interopSpecializerFactory.maybeSpecializeInvocation(
-              target, node) ??
+            target,
+            node,
+          ) ??
           node;
     }
   }
@@ -92,13 +91,9 @@ class InteropTransformer extends Transformer {
   Procedure visitProcedure(Procedure node) {
     if (!_interopSpecializerFactory.maybeSpecializeProcedure(node)) {
       _staticTypeContext.enterMember(node);
-      _inlineExpander.enterProcedure();
       node.transformChildren(this);
-      _inlineExpander.exitProcedure(node);
       _staticTypeContext.leaveMember(node);
     }
     return node;
   }
-
-  JSMethods get jsMethods => _methodCollector.jsMethods;
 }

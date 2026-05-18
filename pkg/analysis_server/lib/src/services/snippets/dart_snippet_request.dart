@@ -104,7 +104,7 @@ class DartSnippetRequest {
           tokenType == TokenType.STRING_INTERPOLATION_IDENTIFIER) {
         return SnippetContext.inString;
       }
-    } else if (entity is NamedExpression &&
+    } else if (entity is NamedArgument &&
         target.offset >= entity.name.offset &&
         target.offset <= entity.name.end) {
       return SnippetContext.inName;
@@ -192,7 +192,10 @@ class DartSnippetRequest {
       }
 
       if (node is EnumDeclaration) {
-        var semicolon = node.body.semicolon;
+        var semicolon = switch (node.body) {
+          BlockEnumBody body => body.semicolon,
+          EmptyEnumBody body => body.semicolon,
+        };
         return semicolon == null || target.offset <= semicolon.offset
             ? SnippetContext.inEnumConstants
             : SnippetContext.inEnumMembers;

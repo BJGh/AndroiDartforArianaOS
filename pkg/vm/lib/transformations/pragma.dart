@@ -34,7 +34,12 @@ const kDynModuleCanBeOverriddenImplicitlyPragmaName =
     "dyn-module:can-be-overridden-implicitly";
 const kDynModuleCallablePragmaName = "dyn-module:callable";
 const kDynModuleImplicitlyCallablePragmaName = "dyn-module:implicitly-callable";
+const kDynModuleCanBeUsedAsTypePragmaName = "dyn-module:can-be-used-as-type";
 const kDynModuleEntryPointPragmaName = "dyn-module:entry-point";
+const kDynModuleDynamicallyCallablePragmaName =
+    "dyn-module:dynamically-callable";
+const kDynModuleImplicitlyDynamicallyCallablePragmaName =
+    "dyn-module:implicitly-dynamically-callable";
 
 abstract class ParsedPragma {}
 
@@ -46,6 +51,8 @@ enum PragmaEntryPointType {
   GetterOnly,
   SetterOnly,
   CallOnly,
+  CanBeUsedAsType,
+  DynamicallyCallable,
 }
 
 enum PragmaRecognizedType { AsmIntrinsic, GraphIntrinsic, Other }
@@ -244,9 +251,18 @@ class ConstantPragmaAnnotationParser implements PragmaAnnotationParser {
         return const ParsedEntryPointPragma(
           PragmaEntryPointType.CanBeOverridden,
         );
+      case kDynModuleCanBeUsedAsTypePragmaName:
+        return const ParsedEntryPointPragma(
+          PragmaEntryPointType.CanBeUsedAsType,
+        );
       case kDynModuleCallablePragmaName:
       case kDynModuleImplicitlyCallablePragmaName:
         return getEntryPointTypeFromOptions(options, pragmaName);
+      case kDynModuleDynamicallyCallablePragmaName:
+      case kDynModuleImplicitlyDynamicallyCallablePragmaName:
+        return const ParsedEntryPointPragma(
+          PragmaEntryPointType.DynamicallyCallable,
+        );
       case kDynModuleEntryPointPragmaName:
         return const ParsedDynModuleEntryPointPragma();
       case kVmSharedPragmaName:

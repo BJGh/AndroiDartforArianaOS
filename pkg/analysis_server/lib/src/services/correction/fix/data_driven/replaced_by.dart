@@ -104,6 +104,12 @@ class ReplacedBy extends Change<_Data> {
         return result;
       }
     }
+    if (node is ImportDirective) {
+      var uri = node.uri as SimpleStringLiteral;
+      return _Data(
+        range.startOffsetEndOffset(uri.contentsOffset, uri.contentsEnd),
+      );
+    }
     var sourceRange = _rangeWithTarget(node, fix);
     if (sourceRange != null) {
       return _Data(sourceRange);
@@ -178,7 +184,9 @@ class ReplacedBy extends Change<_Data> {
     var elements = fix.element.components;
     if (elements.isEmpty) return null;
     var simpleName = elements[0];
-    if (node is SimpleIdentifier) {
+    if (node is SimpleStringLiteral && node.stringValue == simpleName) {
+      return range.startOffsetEndOffset(node.contentsOffset, node.contentsEnd);
+    } else if (node is SimpleIdentifier) {
       if (node.name != (simpleName.isNotEmpty ? simpleName : elements[1])) {
         return null;
       }

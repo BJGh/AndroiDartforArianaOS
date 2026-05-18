@@ -13,8 +13,8 @@ import '../../builder/type_builder.dart';
 import '../../kernel/body_builder_context.dart';
 import '../../source/source_constructor_builder.dart';
 import '../../source/source_property_builder.dart';
+import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../type_inference/context_allocation_strategy.dart';
-import '../../type_inference/inference_results.dart';
 import '../../type_inference/type_inferrer.dart';
 import '../../util/helpers.dart';
 import 'declaration.dart';
@@ -26,8 +26,15 @@ class ConstructorBodyBuilderContext extends BodyBuilderContext {
 
   final Member _member;
 
-  ConstructorBodyBuilderContext(this._builder, this._declaration, this._member)
-    : super(
+  @override
+  final ConstructorContext constructorContext;
+
+  ConstructorBodyBuilderContext(
+    this._builder,
+    this._declaration,
+    this._member,
+    this.constructorContext,
+  ) : super(
         _builder.libraryBuilder,
         _builder.declarationBuilder,
         isDeclarationInstanceMember: false,
@@ -99,15 +106,23 @@ class ConstructorBodyBuilderContext extends BodyBuilderContext {
   }
 
   @override
-  InitializerInferenceResult inferInitializer({
+  InferredConstructorInitializer inferInitializer({
     required TypeInferrer typeInferrer,
     required Uri fileUri,
     required Initializer initializer,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
+    required ContextAllocationStrategy contextAllocationStrategy,
   }) {
     return typeInferrer.inferInitializer(
       fileUri: fileUri,
-      constructorBuilder: _builder,
+      constructorContext: constructorContext,
       initializer: initializer,
+      parameters: parameters,
+      internalThisVariable: internalThisVariable,
+      scopeProviderInfo: scopeProviderInfo,
+      contextAllocationStrategy: contextAllocationStrategy,
     );
   }
 
@@ -143,15 +158,14 @@ class ConstructorBodyBuilderContext extends BodyBuilderContext {
   void registerFunctionBody({
     required Statement? body,
     required ScopeProviderInfo? scopeProviderInfo,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
   }) {
     // Constructors can only be sync.
     _declaration.registerFunctionBody(
       body,
-      scopeProviderInfo
-          // Coverage-ignore(suite): Not run.
-          ?.scope,
+      scopeProviderInfo?.scope,
+      scopeProviderInfo?.thisVariable,
     );
   }
 

@@ -502,12 +502,22 @@ Fragment StreamingFlowGraphBuilder::TypeArgumentsHandling(
     LocalVariable* closure = parsed_function()->ParameterVariable(0);
     LocalVariable* fn_type_args = parsed_function()->function_type_arguments();
     ASSERT(fn_type_args != nullptr && closure != nullptr);
+    ASSERT(Closure::HasFunctionTypeArgumentsField(dart_function));
+
+    const bool has_instantiator_type_args =
+        Closure::HasInstantiatorTypeArgumentsField(dart_function);
 
     if (dart_function.IsGeneric()) {
+      ASSERT(Closure::HasDelayedTypeArgumentsField(dart_function));
+      const intptr_t function_type_args_index =
+          UntaggedClosure::FunctionTypeArgumentsIndex(
+              /*has_delayed_type_args=*/true, has_instantiator_type_args);
       prologue += LoadLocal(fn_type_args);
 
       prologue += LoadLocal(closure);
-      prologue += LoadNativeField(Slot::Closure_function_type_arguments());
+      prologue += LoadNativeField(Slot::GetClosureElementSlot(
+          thread(),
+          compiler::target::Closure::element_offset(function_type_args_index)));
 
       prologue += IntConstant(dart_function.NumParentTypeArguments());
 
@@ -521,8 +531,14 @@ Fragment StreamingFlowGraphBuilder::TypeArgumentsHandling(
       prologue += StoreLocal(TokenPosition::kNoSource, fn_type_args);
       prologue += Drop();
     } else {
+      ASSERT(!Closure::HasDelayedTypeArgumentsField(dart_function));
+      const intptr_t function_type_args_index =
+          UntaggedClosure::FunctionTypeArgumentsIndex(
+              /*has_delayed_type_args=*/false, has_instantiator_type_args);
       prologue += LoadLocal(closure);
-      prologue += LoadNativeField(Slot::Closure_function_type_arguments());
+      prologue += LoadNativeField(Slot::GetClosureElementSlot(
+          thread(),
+          compiler::target::Closure::element_offset(function_type_args_index)));
       prologue += StoreLocal(TokenPosition::kNoSource, fn_type_args);
       prologue += Drop();
     }
@@ -3399,21 +3415,19 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
     return instructions;
   }
 
-  const Class& klass = Class::ZoneHandle(Z, target.Owner());
-  if (target.IsGenerativeConstructor() || target.IsFactory()) {
-    // The VM requires a TypeArguments object as first parameter for
-    // every factory constructor.
-    ++argument_count;
-  }
+  ASSERT(!target.IsGenerativeConstructor());
 
   if (target.IsCachableIdempotent()) {
     return BuildCachableIdempotentCall(position, target);
   }
 
+  if (target.IsExternalEffect()) {
+    // AOT kernels will already have external effect calls removed by TFA.
+    return BuildExternalEffect();
+  }
+
   const auto recognized_kind = target.recognized_kind();
   switch (recognized_kind) {
-    case MethodRecognizer::kNativeEffect:
-      return BuildNativeEffect();
     case MethodRecognizer::kReachabilityFence:
       return BuildReachabilityFence();
     case MethodRecognizer::kFfiCall:
@@ -3450,7 +3464,7 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
   }
 
   Fragment instructions;
-  LocalVariable* instance_variable = nullptr;
+  const Class& klass = Class::ZoneHandle(Z, target.Owner());
 
   const bool special_case_unchecked_cast =
       klass.IsTopLevel() && (klass.library() == Library::InternalLibrary()) &&
@@ -3463,38 +3477,8 @@ Fragment StreamingFlowGraphBuilder::BuildStaticInvocation(TokenPosition* p) {
   const bool special_case =
       special_case_identical || special_case_unchecked_cast;
 
-  // If we cross the Kernel -> VM core library boundary, a [StaticInvocation]
-  // can appear, but the thing we're calling is not a static method, but a
-  // factory constructor.
-  // The `H.LookupStaticmethodByKernelProcedure` will potentially resolve to the
-  // forwarded constructor.
-  // In that case we'll make an instance and pass it as first argument.
-  //
-  // TODO(27590): Get rid of this after we're using core libraries compiled
-  // into Kernel.
   intptr_t type_args_len = 0;
-  if (target.IsGenerativeConstructor()) {
-    if (klass.NumTypeArguments() > 0) {
-      const TypeArguments& type_arguments =
-          PeekArgumentsInstantiatedType(klass);
-      instructions += TranslateInstantiatedTypeArguments(type_arguments);
-      instructions += AllocateObject(position, klass, 1);
-    } else {
-      instructions += AllocateObject(position, klass, 0);
-    }
-
-    instance_variable = MakeTemporary();
-
-    instructions += LoadLocal(instance_variable);
-  } else if (target.IsFactory()) {
-    // The VM requires currently a TypeArguments object as first parameter for
-    // every factory constructor :-/ !
-    //
-    // TODO(27590): Get rid of this after we're using core libraries compiled
-    // into Kernel.
-    const TypeArguments& type_arguments = PeekArgumentsInstantiatedType(klass);
-    instructions += TranslateInstantiatedTypeArguments(type_arguments);
-  } else if (!special_case) {
+  if (!special_case) {
     AlternativeReadingScope alt(&reader_);
     ReadUInt();                               // read argument count.
     intptr_t list_length = ReadListLength();  // read types list length.
@@ -4142,7 +4126,10 @@ Fragment StreamingFlowGraphBuilder::BuildListLiteral(TokenPosition* p) {
                                   Symbols::_GrowableListLiteralFactory()));
   ASSERT(!factory_method.IsNull());
 
-  instructions += StaticCall(position, factory_method, 2, ICData::kStatic);
+  instructions += StaticCall(position, factory_method,
+                             /*argument_count=*/1, Array::null_array(),
+                             ICData::kStatic, /*result_type=*/nullptr,
+                             /*type_args_len=*/1);
   instructions += DropTempsPreserveTop(1);  // Instantiated type_arguments.
   return instructions;
 }
@@ -4192,8 +4179,10 @@ Fragment StreamingFlowGraphBuilder::BuildMapLiteral(TokenPosition* p) {
         Library::PrivateCoreLibName(Symbols::MapLiteralFactory()));
   }
 
-  return instructions +
-         StaticCall(position, factory_method, 2, ICData::kStatic);
+  return instructions + StaticCall(position, factory_method,
+                                   /*argument_count=*/1, Array::null_array(),
+                                   ICData::kStatic, /*result_type=*/nullptr,
+                                   /*type_args_len=*/2);
 }
 
 Fragment StreamingFlowGraphBuilder::BuildRecordLiteral(TokenPosition* p) {
@@ -4446,64 +4435,19 @@ Fragment StreamingFlowGraphBuilder::BuildPartialTearoffInstantiation(
   const TokenPosition position = ReadPosition();  // read position.
   if (p != nullptr) *p = position;
 
-  // Create a copy of the closure.
-
   Fragment instructions = BuildExpression();
-  LocalVariable* original_closure = MakeTemporary();
-
-  // Load the target function and context and allocate the closure.
-  instructions += LoadLocal(original_closure);
-  instructions +=
-      flow_graph_builder_->LoadNativeField(Slot::Closure_function());
-  instructions += LoadLocal(original_closure);
-  instructions += flow_graph_builder_->LoadNativeField(Slot::Closure_context());
-  instructions += LoadLocal(original_closure);
-  instructions += flow_graph_builder_->LoadNativeField(
-      Slot::Closure_instantiator_type_arguments());
-  instructions += flow_graph_builder_->AllocateClosure(
-      position, /*has_instantiator_type_args=*/true, /*is_generic=*/false,
-      /*is_tear_off=*/false);
-  LocalVariable* new_closure = MakeTemporary();
 
   intptr_t num_type_args = ReadListLength();
   const TypeArguments& type_args = T.BuildTypeArguments(num_type_args);
   instructions += TranslateInstantiatedTypeArguments(type_args);
-  LocalVariable* type_args_vec = MakeTemporary("type_args");
 
-  // Check the bounds.
-  //
-  // TODO(sjindel): We should be able to skip this check in many cases, e.g.
-  // when the closure is coming from a tearoff of a top-level method or from a
-  // local closure.
-  instructions += LoadLocal(original_closure);
-  instructions += LoadLocal(type_args_vec);
   const Library& dart_internal = Library::Handle(Z, Library::InternalLibrary());
-  const Function& bounds_check_function = Function::ZoneHandle(
-      Z, dart_internal.LookupFunctionAllowPrivate(
-             Symbols::BoundsCheckForPartialInstantiation()));
-  ASSERT(!bounds_check_function.IsNull());
-  instructions += StaticCall(TokenPosition::kNoSource, bounds_check_function, 2,
-                             ICData::kStatic);
-  instructions += Drop();
-
-  instructions += LoadLocal(new_closure);
-  instructions += LoadLocal(type_args_vec);
-  instructions += flow_graph_builder_->StoreNativeField(
-      Slot::Closure_delayed_type_arguments(),
-      StoreFieldInstr::Kind::kInitializing);
-  instructions += DropTemporary(&type_args_vec);
-
-  // Copy over the function type arguments.
-  instructions += LoadLocal(new_closure);
-  instructions += LoadLocal(original_closure);
-  instructions += flow_graph_builder_->LoadNativeField(
-      Slot::Closure_function_type_arguments());
-  instructions += flow_graph_builder_->StoreNativeField(
-      Slot::Closure_function_type_arguments(),
-      StoreFieldInstr::Kind::kInitializing);
-
-  instructions += DropTempsPreserveTop(1);  // Drop old closure.
-
+  const Function& instantiate_closure_function = Function::ZoneHandle(
+      Z,
+      dart_internal.LookupFunctionAllowPrivate(Symbols::_instantiateClosure()));
+  ASSERT(!instantiate_closure_function.IsNull());
+  instructions += StaticCall(TokenPosition::kNoSource,
+                             instantiate_closure_function, 2, ICData::kStatic);
   return instructions;
 }
 
@@ -5983,6 +5927,13 @@ Fragment StreamingFlowGraphBuilder::BuildFunctionNode(
   ASSERT(function.kernel_offset() == func_node_offset);
   SkipFunctionNode();
 
+  const bool has_delayed_type_args =
+      Closure::HasDelayedTypeArgumentsField(function);
+  const bool has_instantiator_type_args =
+      Closure::HasInstantiatorTypeArgumentsField(function);
+  const bool has_function_type_args =
+      Closure::HasFunctionTypeArgumentsField(function);
+
   Fragment instructions;
   instructions += Constant(function);
   if (scopes()->IsClosureWithEmptyContext(func_node_offset)) {
@@ -5990,29 +5941,42 @@ Fragment StreamingFlowGraphBuilder::BuildFunctionNode(
   } else {
     instructions += LoadLocal(parsed_function()->current_context_var());
   }
-  // The function signature can have uninstantiated class type parameters.
-  const bool has_instantiator_type_args =
-      !function.HasInstantiatedSignature(kCurrentClass);
-  if (has_instantiator_type_args) {
-    instructions += LoadInstantiatorTypeArguments();
-  }
   instructions += flow_graph_builder_->AllocateClosure(
-      function.token_pos(), has_instantiator_type_args, function.IsGeneric(),
+      function.token_pos(), has_delayed_type_args, has_instantiator_type_args,
+      has_function_type_args,
       /*is_tear_off=*/false);
   LocalVariable* closure = MakeTemporary();
 
-  // TODO(30455): We only need to save these if the closure uses any captured
-  // type parameters.
-  instructions += LoadLocal(closure);
-  instructions += LoadFunctionTypeArguments();
-  instructions += flow_graph_builder_->StoreNativeField(
-      Slot::Closure_function_type_arguments(),
-      StoreFieldInstr::Kind::kInitializing);
+  // The function signature can have uninstantiated class type parameters.
+  if (has_instantiator_type_args) {
+    instructions += LoadLocal(closure);
+    instructions += LoadInstantiatorTypeArguments();
+    instructions += flow_graph_builder_->StoreNativeField(
+        Slot::GetClosureElementSlot(
+            thread(), compiler::target::Closure::element_offset(
+                          UntaggedClosure::InstantiatorTypeArgumentsIndex(
+                              has_delayed_type_args))),
+        StoreFieldInstr::Kind::kInitializing);
+  }
+
+  if (has_function_type_args) {
+    // TODO(30455): We only need to save these if the closure uses any captured
+    // type parameters.
+    instructions += LoadLocal(closure);
+    instructions += LoadFunctionTypeArguments();
+    instructions += flow_graph_builder_->StoreNativeField(
+        Slot::GetClosureElementSlot(
+            thread(),
+            compiler::target::Closure::element_offset(
+                UntaggedClosure::FunctionTypeArgumentsIndex(
+                    has_delayed_type_args, has_instantiator_type_args))),
+        StoreFieldInstr::Kind::kInitializing);
+  }
 
   return instructions;
 }
 
-Fragment StreamingFlowGraphBuilder::BuildNativeEffect() {
+Fragment StreamingFlowGraphBuilder::BuildExternalEffect() {
   const intptr_t argc = ReadUInt();  // Read argument count.
   ASSERT(argc == 1);                 // Native side effect to ignore.
   const intptr_t list_length = ReadListLength();  // Read types list length.

@@ -23,8 +23,6 @@ class Symbols {
   }
 
   SymbolConstant symbolForNamedParameter(String name) {
-    // Named parameters cannot be private.
-    assert(!name.startsWith('_'));
     return SymbolConstant(name, null);
   }
 
@@ -32,7 +30,8 @@ class Symbols {
   String getMangledSymbolName(SymbolConstant symbol) {
     if (minify) {
       return intToBase64(
-          symbolOrdinals.putIfAbsent(symbol, () => symbolOrdinals.length));
+        symbolOrdinals.putIfAbsent(symbol, () => symbolOrdinals.length),
+      );
     }
 
     final libraryReference = symbol.libraryReference;

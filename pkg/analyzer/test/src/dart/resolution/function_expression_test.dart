@@ -2,21 +2,22 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(FunctionExpressionResolutionTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class FunctionExpressionResolutionTest extends PubPackageResolutionTest {
   test_genericFunctionExpression_fBoundedDefaultType() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f() {
   <T extends List<T>>() {};
 }
@@ -61,7 +62,7 @@ FunctionExpression
   }
 
   test_genericFunctionExpression_simpleDefaultType() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f() {
   <T extends num>() {};
 }
@@ -98,33 +99,29 @@ FunctionExpression
   }
 
   test_signatureScope_noFormalParameters() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 var f = ({int x = x}) {};
-''',
-      [error(diag.undefinedIdentifier, 18, 1)],
-    );
+//                ^
+// [diag.undefinedIdentifier] Undefined name 'x'.
+''');
 
     var node = findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
   leftParenthesis: (
   leftDelimiter: {
-  parameter: DefaultFormalParameter
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-        element: dart:core::@class::int
-        type: int
-      name: x
-      declaredFragment: <testLibraryFragment> x@14
-        element: isPublic
-          type: int
-    separator: =
-    defaultValue: SimpleIdentifier
-      token: x
-      element: <null>
-      staticType: InvalidType
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: int
+      element: dart:core::@class::int
+      type: int
+    name: x
+    defaultClause: FormalParameterDefaultClause
+      separator: =
+      value: SimpleIdentifier
+        token: x
+        element: <null>
+        staticType: InvalidType
     declaredFragment: <testLibraryFragment> x@14
       element: isPublic
         type: int

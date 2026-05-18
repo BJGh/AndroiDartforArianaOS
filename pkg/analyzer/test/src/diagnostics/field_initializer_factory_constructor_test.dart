@@ -16,20 +16,31 @@ main() {
 @reflectiveTest
 class FieldInitializerFactoryConstructorTest extends PubPackageResolutionTest {
   test_class_fieldFormalParameter() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int x = 0;
   factory A(this.x) => throw 0;
+//          ^^^^^^
+// [diag.fieldInitializerFactoryConstructor] Initializing formal parameters can't be used in factory constructors.
 }
-''',
-      [error(diag.fieldInitializerFactoryConstructor, 35, 6)],
-    );
+''');
   }
 
   test_class_fieldFormalParameter_functionTyped() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  int Function()? x;
+  factory A(int this.x());
+//          ^^^^^^^^^^^^
+// [diag.fieldInitializerFactoryConstructor] Initializing formal parameters can't be used in factory constructors.
+}
+''');
+  }
+
+  test_class_fieldFormalParameter_functionTyped_language305() async {
     await assertErrorsInCode(
       r'''
+// @dart = 3.5
 class A {
   int Function()? x;
   factory A(int this.x());
@@ -38,27 +49,26 @@ class A {
       [
         // TODO(srawlins): Only report one error. Theoretically change Fasta to
         // report "Field initializer in factory constructor" as a parse error.
-        error(diag.fieldInitializerFactoryConstructor, 43, 12),
-        error(diag.missingFunctionBody, 56, 1),
+        error(diag.fieldInitializerFactoryConstructor, 58, 12),
+        error(diag.missingFunctionBody, 71, 1),
       ],
     );
   }
 
   test_enum_fieldFormalParameter() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   final int x = 0;
   const E();
   factory E._(this.x) => throw 0;
+//            ^^^^^^
+// [diag.fieldInitializerFactoryConstructor] Initializing formal parameters can't be used in factory constructors.
 }
 
 void f() {
   E._(0);
 }
-''',
-      [error(diag.fieldInitializerFactoryConstructor, 60, 6)],
-    );
+''');
   }
 }

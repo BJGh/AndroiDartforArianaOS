@@ -6,7 +6,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/src/dart/analysis/file_analysis.dart';
 import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
-import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
@@ -72,7 +71,9 @@ class MemberDuplicateDefinitionVerifier {
         if (formalFragment is FieldFormalParameterFragmentImpl &&
             formalFragment.isDeclaring) {
           var fieldName = formalNode.name;
-          var fieldElement = formalFragment.element.field;
+          var fieldElement = formalFragment.element
+              .tryCast<FieldFormalParameterElementImpl>()
+              ?.field;
           if (fieldName != null && fieldElement != null) {
             _checkDuplicateIdentifier(
               instanceScope,
@@ -128,6 +129,9 @@ class MemberDuplicateDefinitionVerifier {
           for (var field in member.fields.variables) {
             var fieldFragment = field.declaredFragment!;
             fieldFragment as FieldFragmentImpl;
+            if (fieldFragment.isAugmentation) {
+              continue;
+            }
             var fieldElement = fieldFragment.element;
             _checkDuplicateIdentifier(
               member.isStatic ? staticScope : instanceScope,
@@ -483,7 +487,6 @@ class MemberDuplicateDefinitionVerifier {
 
     var elementContext = _getElementContext(firstFragment);
     var instanceScope = elementContext.instanceScope;
-
     for (var member in node.body.members) {
       if (member is FieldDeclarationImpl) {
         if (member.isStatic) {

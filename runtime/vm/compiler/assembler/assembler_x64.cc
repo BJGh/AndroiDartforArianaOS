@@ -2022,6 +2022,27 @@ void Assembler::PopRegisters(const RegisterSet& register_set) {
   }
 }
 
+void Assembler::PushRegistersAligned(const RegisterSet& register_set,
+                                     intptr_t space) {
+  PushRegisters(register_set);
+  intptr_t aligned_space = Utils::RoundUp(register_set.SpillSize() + space,
+                                          OS::ActivationFrameAlignment()) -
+                           register_set.SpillSize();
+  if (aligned_space != 0) {
+    subq(RSP, Immediate(aligned_space));
+  }
+}
+void Assembler::PopRegistersAligned(const RegisterSet& register_set,
+                                    intptr_t space) {
+  intptr_t aligned_space = Utils::RoundUp(register_set.SpillSize() + space,
+                                          OS::ActivationFrameAlignment()) -
+                           register_set.SpillSize();
+  if (aligned_space != 0) {
+    addq(RSP, Immediate(aligned_space));
+  }
+  PopRegisters(register_set);
+}
+
 void Assembler::PushRegistersInOrder(std::initializer_list<Register> regs) {
   for (Register reg : regs) {
     PushRegister(reg);
@@ -2747,6 +2768,17 @@ void Assembler::EmitGenericShift(bool wide,
   EmitRegisterREX(operand, wide ? REX_W : REX_NONE);
   EmitUint8(0xD3);
   EmitOperand(rm, Operand(operand));
+}
+
+void Assembler::ExtractBitField(Register dst,
+                                Register src,
+                                intptr_t low_bit,
+                                intptr_t width) {
+  MoveRegister(dst, src);
+  if (low_bit > 0) {
+    LsrImmediate(dst, low_bit);
+  }
+  AndImmediate(dst, Immediate((1 << width) - 1));
 }
 
 void Assembler::ExtractClassIdFromTags(Register result, Register tags) {

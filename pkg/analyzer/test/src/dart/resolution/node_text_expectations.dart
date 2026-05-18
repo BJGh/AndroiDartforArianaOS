@@ -187,6 +187,11 @@ class NodeTextExpectationsCollector {
       argument: _ArgumentIndex(1),
     ),
     _AssertMethod(
+      className: 'ResolutionTest',
+      methodName: 'resolveTestCodeWithDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
       className: 'SearchTest',
       methodName: 'assertDeclarationsText',
       argument: _ArgumentIndex(2),
@@ -267,8 +272,8 @@ class NodeTextExpectationsCollector {
           fail('Cannot parse: $invocationTraceLine');
         }
 
-        var path = Uri.parse(locationMatch.group(1)!).toFilePath();
-        var line = int.parse(locationMatch.group(2)!);
+        var path = Uri.parse(locationMatch[1]!).toFilePath();
+        var line = int.parse(locationMatch[2]!);
         var file = _getFile(path);
 
         var invocation = file.findInvocation(invocationLine: line);
@@ -329,9 +334,10 @@ final class _ArgumentIndex extends _Argument {
 
   @override
   Expression get(ArgumentList argumentList) {
-    return argumentList.arguments.whereNotType<NamedExpression>().elementAt(
-      index,
-    );
+    return argumentList.arguments
+        .whereNotType<NamedArgument>()
+        .elementAt(index)
+        .argumentExpression;
   }
 }
 
@@ -344,10 +350,10 @@ final class _ArgumentNamed extends _Argument {
   @override
   Expression get(ArgumentList argumentList) {
     return argumentList.arguments
-        .whereType<NamedExpression>()
-        .where((argument) => argument.name.label.name == name)
+        .whereType<NamedArgument>()
+        .where((argument) => argument.name.lexeme == name)
         .single
-        .expression;
+        .argumentExpression;
   }
 }
 

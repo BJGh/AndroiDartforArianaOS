@@ -65,7 +65,23 @@ var x = <M>[].contains(C());
   }
 
   test_contains_related_null() async {
-    await assertNoDiagnostics('var x = <num>[].contains(null);');
+    await assertNoDiagnostics('var x = <num?>[].contains(null);');
+  }
+
+  test_contains_related_null_genericNullable() async {
+    await assertNoDiagnostics('''
+bool f<T extends Object?>() {
+  return <T>[].contains(null);
+}
+''');
+  }
+
+  test_contains_related_null_genericNullable2() async {
+    await assertNoDiagnostics('''
+bool f<T extends Object>() {
+  return <T?>[].contains(null);
+}
+''');
   }
 
   test_contains_related_Object() async {
@@ -161,6 +177,21 @@ abstract class C implements List<num> {
 }
 ''',
       [lint(66, 3)],
+    );
+  }
+
+  test_contains_unrelated_null() async {
+    await assertDiagnostics('var x = <num>[].contains(null);', [lint(25, 4)]);
+  }
+
+  test_contains_unrelated_null_generic() async {
+    await assertDiagnostics(
+      '''
+bool f<T extends Object>() {
+  return <T>[].contains(null);
+}
+''',
+      [lint(53, 4)],
     );
   }
 
@@ -294,6 +325,47 @@ void f(Queue<num> queue) {
 class CollectionMethodsUnrelatedTypeSetTest extends LintRuleTest {
   @override
   String get lintRule => LintNames.collection_methods_unrelated_type;
+
+  test_contains_extensionType_different_sameRepresentationType() async {
+    await assertNoDiagnostics(r'''
+void m(Set<E1> s, E2 e) {
+  s.contains(e);
+}
+extension type E1(int value) {}
+extension type E2(int value) {}
+''');
+  }
+
+  test_contains_extensionType_different_unrelatedRepresentationType() async {
+    await assertDiagnostics(
+      r'''
+void m(Set<E1> s, E2 e) {
+  s.contains(e);
+}
+extension type E1(int value) {}
+extension type E2(String value) {}
+''',
+      [lint(39, 1)],
+    );
+  }
+
+  test_contains_extensionType_representationType() async {
+    await assertNoDiagnostics(r'''
+void m(Set<int> s, E e) {
+  s.contains(e);
+}
+extension type E(int value) {}
+''');
+  }
+
+  test_contains_extensionType_same() async {
+    await assertNoDiagnostics(r'''
+void m(Set<E> s, E e) {
+  s.contains(e);
+}
+extension type E(int value) {}
+''');
+  }
 
   test_lookup_related_subtype() async {
     await assertNoDiagnostics('var x = <num>{}.lookup(1);');

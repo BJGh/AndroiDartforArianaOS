@@ -239,6 +239,14 @@ abstract class FlowAnalysis<
 
   FlowAnalysisOperations<Variable> get operations;
 
+  /// Call this method before visiting an anonymous block body.
+  ///
+  /// Call [anonymousBlockBody_end] after visiting the statement.
+  void anonymousBlockBody_begin();
+
+  /// Call this method after visiting an anonymous block body.
+  void anonymousBlockBody_end();
+
   /// Call this method after visiting an "as" expression.
   ///
   /// [subExpressionInfo] should be the expression info for the expression to
@@ -634,6 +642,9 @@ abstract class FlowAnalysis<
   /// Should also be called if a subexpression's type is Never.
   void handleExit();
 
+  /// Call this method when visiting a return statement.
+  void handleReturn();
+
   /// Call this method after visiting the scrutinee expression of an if-case
   /// statement.
   ///
@@ -739,6 +750,7 @@ abstract class FlowAnalysis<
     required bool isFinal,
     required bool isLate,
     required bool isImplicitlyTyped,
+    bool inheritPromotableProperties = false,
   });
 
   /// Whether the [variable] is definitely assigned in the current state.
@@ -1184,6 +1196,12 @@ abstract class FlowAnalysis<
     SharedTypeView scrutineeType,
   );
 
+  /// Call this method just before changing the binding of `this`.
+  void thisBinding_begin(ExpressionInfo? targetInfo);
+
+  /// Call this method just after the end of a `this` binding.
+  void thisBinding_end();
+
   /// Call this method just after visiting the expression `this` (or the
   /// pseudo-expression `super`, in the case of the analyzer, which represents
   /// `super.x` as a property get whose target is `super`).
@@ -1453,6 +1471,22 @@ class FlowAnalysisDebug<
 
   @override
   FlowAnalysisOperations<Variable> get operations => _wrapped.operations;
+
+  @override
+  void anonymousBlockBody_begin() {
+    return _wrap(
+      'anonymousBlockBody_begin()',
+      () => _wrapped.anonymousBlockBody_begin(),
+    );
+  }
+
+  @override
+  void anonymousBlockBody_end() {
+    return _wrap(
+      'anonymousBlockBody_end()',
+      () => _wrapped.anonymousBlockBody_end(),
+    );
+  }
 
   @override
   void asExpression_end(
@@ -1839,6 +1873,11 @@ class FlowAnalysisDebug<
   }
 
   @override
+  void handleReturn() {
+    _wrap('handleReturn()', () => _wrapped.handleReturn());
+  }
+
+  @override
   void ifCaseStatement_afterExpression(
     ExpressionInfo? scrutineeInfo,
     SharedTypeView scrutineeType,
@@ -1924,11 +1963,13 @@ class FlowAnalysisDebug<
     required bool isFinal,
     required bool isLate,
     required bool isImplicitlyTyped,
+    bool inheritPromotableProperties = false,
   }) {
     _wrap(
       'initialize($variable, $matchedType, $initializerExpressionInfo, '
       'isFinal: $isFinal, isLate: $isLate, '
-      'isImplicitlyTyped: $isImplicitlyTyped)',
+      'isImplicitlyTyped: $isImplicitlyTyped, '
+      'inheritPromotableProperties: $inheritPromotableProperties)',
       () => _wrapped.initialize(
         variable,
         matchedType,
@@ -1936,6 +1977,7 @@ class FlowAnalysisDebug<
         isFinal: isFinal,
         isLate: isLate,
         isImplicitlyTyped: isImplicitlyTyped,
+        inheritPromotableProperties: inheritPromotableProperties,
       ),
     );
   }
@@ -2464,6 +2506,19 @@ class FlowAnalysisDebug<
         scrutineeType,
       ),
     );
+  }
+
+  @override
+  void thisBinding_begin(ExpressionInfo? targetInfo) {
+    _wrap(
+      'thisBinding_begin($targetInfo)',
+      () => _wrapped.thisBinding_begin(targetInfo),
+    );
+  }
+
+  @override
+  void thisBinding_end() {
+    _wrap('thisBinding_end()', () => _wrapped.thisBinding_end());
   }
 
   @override
@@ -4923,6 +4978,35 @@ class TrivialVariableReference extends _Reference {
 
 class WhyNotPromotedInfo {}
 
+/// [_FlowContext] representing a block-bodied anonymous method.
+class _AnonymousBlockContext extends _FlowContext {
+  /// Accumulated flow model for all `return` statements seen so far, or `null`
+  /// if no `return` statements have been seen yet.
+  FlowModel? _returnModel;
+
+  /// The reachability checkpoint associated with this block-bodied anonymous
+  /// method. When analyzing deeply nested `return` statements, their flow
+  /// models need to be unsplit to this point before joining them to
+  /// [_returnModel].
+  final Reachability _checkpoint;
+
+  /// The [_AnonymousBlockContext] for the immediately enclosing block-bodied
+  /// anonymous method, or `null` if there is no enclosing block-bodied
+  /// anonymous method.
+  final _AnonymousBlockContext? _previousAnonymousBlockContext;
+
+  _AnonymousBlockContext(this._checkpoint, this._previousAnonymousBlockContext);
+
+  @override
+  Map<String, Object?> get _debugFields => super._debugFields
+    ..['returnModel'] = _returnModel
+    ..['checkpoint'] = _checkpoint
+    ..['previousAnonymousBlockContext'] = _previousAnonymousBlockContext;
+
+  @override
+  String get _debugType => '_AnonymousBlockContext';
+}
+
 /// [_FlowContext] representing an assert statement or assert initializer.
 class _AssertContext extends _SimpleContext {
   /// Flow model if the condition being asserted is true.
@@ -5112,11 +5196,17 @@ class _FlowAnalysisImpl<
   @override
   late final SsaNode _superSsaNode = new SsaNode();
 
+  final List<SsaNode> _thisSsaNodes = [new SsaNode()];
+
   @override
-  late final SsaNode _thisSsaNode = new SsaNode();
+  SsaNode get _thisSsaNode => _thisSsaNodes.last;
 
   @override
   final List<_Reference> _cascadeTargetStack = [];
+
+  /// The [_AnonymousBlockContext] for the immediately enclosing block-bodied
+  /// anonymous method, if there is one. Otherwise `null`.
+  _AnonymousBlockContext? _anonymousBlockContext;
 
   _FlowAnalysisImpl(
     this.operations,
@@ -5136,6 +5226,25 @@ class _FlowAnalysisImpl<
 
   @override
   FlowAnalysisTypeOperations get typeOperations => operations;
+
+  @override
+  void anonymousBlockBody_begin() {
+    _current = _current.split();
+    _AnonymousBlockContext context = new _AnonymousBlockContext(
+      _current.reachable.parent!,
+      _anonymousBlockContext,
+    );
+    _stack.add(context);
+    _anonymousBlockContext = context;
+  }
+
+  @override
+  void anonymousBlockBody_end() {
+    _AnonymousBlockContext context =
+        _stack.removeLast() as _AnonymousBlockContext;
+    _current = _join(_current, context._returnModel).unsplit();
+    _anonymousBlockContext = context._previousAnonymousBlockContext;
+  }
 
   @override
   void asExpression_end(
@@ -5634,6 +5743,19 @@ class _FlowAnalysisImpl<
   }
 
   @override
+  void handleReturn() {
+    if (_anonymousBlockContext case var anonymousMethodContext?) {
+      // There is a control flow path from the current point to the
+      // exit of the anonymous method.
+      anonymousMethodContext._returnModel = _join(
+        anonymousMethodContext._returnModel,
+        _current.unsplitTo(anonymousMethodContext._checkpoint),
+      );
+    }
+    _current = _current.setUnreachable();
+  }
+
+  @override
   void ifCaseStatement_afterExpression(
     ExpressionInfo? scrutineeInfo,
     SharedTypeView scrutineeType,
@@ -5748,6 +5870,7 @@ class _FlowAnalysisImpl<
     required bool isFinal,
     required bool isLate,
     required bool isImplicitlyTyped,
+    bool inheritPromotableProperties = false,
   }) {
     SharedTypeView unpromotedType = operations.variableType(variable);
     int variableKey = promotionKeyStore.keyForVariable(variable);
@@ -5759,6 +5882,7 @@ class _FlowAnalysisImpl<
       isLate: isLate,
       isImplicitlyTyped: isImplicitlyTyped,
       unpromotedType: unpromotedType,
+      inheritPromotableProperties: inheritPromotableProperties,
     );
   }
 
@@ -6547,6 +6671,24 @@ class _FlowAnalysisImpl<
   }
 
   @override
+  void thisBinding_begin(ExpressionInfo? targetInfo) {
+    _Reference? expressionReference = _getExpressionReference(targetInfo);
+    SsaNode ssaNode =
+        expressionReference?.ssaNode ??
+        new SsaNode(
+          conditionVariableState: targetInfo != null && targetInfo.isNonTrivial
+              ? targetInfo
+              : null,
+        );
+    _thisSsaNodes.add(ssaNode);
+  }
+
+  @override
+  void thisBinding_end() {
+    _thisSsaNodes.removeLast();
+  }
+
+  @override
   ExpressionInfo thisOrSuper(
     SharedTypeView staticType, {
     required bool isSuper,
@@ -7072,7 +7214,10 @@ class _FlowAnalysisImpl<
   void _functionExpression_begin(Node node) {
     AssignedVariablesNodeInfo info = _assignedVariables.getInfoForNode(node);
     _current = _current.conservativeJoin(this, const [], info.written);
-    _stack.add(new _FunctionExpressionContext(_current));
+    _stack.add(
+      new _FunctionExpressionContext(_current, _anonymousBlockContext),
+    );
+    _anonymousBlockContext = null;
     _current = _current.conservativeJoin(
       this,
       _assignedVariables.anywhere.written,
@@ -7081,8 +7226,10 @@ class _FlowAnalysisImpl<
   }
 
   void _functionExpression_end() {
-    _SimpleContext context = _stack.removeLast() as _FunctionExpressionContext;
+    _FunctionExpressionContext context =
+        _stack.removeLast() as _FunctionExpressionContext;
     _current = context._previous;
+    _anonymousBlockContext = context._previousAnonymousBlockContext;
   }
 
   /// Gets the matched value type that should be used to type check the pattern
@@ -7343,6 +7490,7 @@ class _FlowAnalysisImpl<
     required bool isLate,
     required bool isImplicitlyTyped,
     required SharedTypeView unpromotedType,
+    bool inheritPromotableProperties = false,
   }) {
     if (isLate) {
       // Don't use expression info for late variables, since we don't know when
@@ -7356,12 +7504,15 @@ class _FlowAnalysisImpl<
       // https://github.com/dart-lang/language/issues/1785.
       expressionInfo = null;
     }
-    SsaNode newSsaNode = new SsaNode(
-      conditionVariableState:
-          expressionInfo != null && expressionInfo.isNonTrivial
-          ? expressionInfo
-          : null,
-    );
+    SsaNode newSsaNode =
+        inheritPromotableProperties && expressionInfo is _Reference
+        ? expressionInfo.ssaNode
+        : new SsaNode(
+            conditionVariableState:
+                expressionInfo != null && expressionInfo.isNonTrivial
+                ? expressionInfo
+                : null,
+          );
     _current = _current.write(
       this,
       null,
@@ -7629,16 +7780,23 @@ class _FlowAnalysisImpl<
     ).restoreConditionVariableState(scrutineeInfo, this, _current);
   }
 
-  TrivialVariableReference _thisOrSuperReference(
+  _Reference _thisOrSuperReference(
     SharedTypeView staticType, {
     required bool isSuper,
-  }) => new TrivialVariableReference(
-    promotionKey: promotionKeyStore.thisPromotionKey,
-    model: _current,
-    type: staticType,
-    isThisOrSuper: true,
-    ssaNode: isSuper ? _superSsaNode : _thisSsaNode,
-  );
+  }) {
+    SsaNode ssaNode = isSuper ? _superSsaNode : _thisSsaNode;
+    return new TrivialVariableReference(
+      promotionKey: promotionKeyStore.thisPromotionKey,
+      model: _current,
+      type: staticType,
+      isThisOrSuper: true,
+      ssaNode: ssaNode,
+    ).restoreConditionVariableState(
+      ssaNode.conditionVariableState,
+      this,
+      _current,
+    );
+  }
 
   TrivialVariableReference _variableReference(
     int variableKey,
@@ -7738,7 +7896,20 @@ abstract class _FlowContext {
 
 /// [_FlowContext] representing a function expression.
 class _FunctionExpressionContext extends _SimpleContext {
-  _FunctionExpressionContext(super.previous);
+  /// The [_AnonymousBlockContext] for the immediately enclosing block-bodied
+  /// anonymous method, or `null` if there is no enclosing block-bodied
+  /// anonymous method.
+  final _AnonymousBlockContext? _previousAnonymousBlockContext;
+
+  _FunctionExpressionContext(
+    super.previous,
+    this._previousAnonymousBlockContext,
+  );
+
+  @override
+  Map<String, Object?> get _debugFields =>
+      super._debugFields
+        ..['previousAnonymousBlockContext'] = _previousAnonymousBlockContext;
 
   @override
   String get _debugType => '_FunctionExpressionContext';

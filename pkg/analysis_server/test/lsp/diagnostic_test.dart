@@ -9,9 +9,9 @@ import 'package:analysis_server/src/services/correction/assist_internal.dart';
 import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
-import 'package:analyzer/utilities/package_config_file_builder.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' as plugin;
 import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
+import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:linter/src/rules.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -210,6 +210,37 @@ void f() {
     expect(diagnostic.relatedInformation, hasLength(1));
   }
 
+  Future<void> test_contextMessage_unnamedElement_issue62955() async {
+    var code = TestCode.parseNormalized('''
+void main() {
+  [].named;
+}
+
+/*[0*//*0]*/extension<T> on List<T> {
+  Iterable<T> get named => throw 0;
+}
+
+/*[1*//*1]*/extension<T> on List<T> {
+  T? named(String? name) => throw 0;
+}
+''');
+    newFile(mainFilePath, code.code);
+
+    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    await initialize();
+    var diagnostics = await diagnosticsUpdate;
+    var diagnostic = diagnostics!.singleWhere(
+      (diagnostic) => diagnostic.code == 'ambiguous_extension_member_access',
+    );
+
+    expect(diagnostic.relatedInformation, hasLength(2));
+    var [related1, related2] = diagnostic.relatedInformation!;
+    expect(related1.message, contains('<unnamed extension> is defined in'));
+    expect(related1.location.range, code.ranges[0].range);
+    expect(related2.message, contains('<unnamed extension> is defined in'));
+    expect(related2.location.range, code.ranges[1].range);
+  }
+
   Future<void> test_correction() async {
     newFile(mainFilePath, '''
 void f() {
@@ -269,7 +300,7 @@ void f() {
     var onePackagePath = convertPath('/home/one');
     writeTestPackageConfig(
       config: PackageConfigFileBuilder()
-        ..add(name: 'one', rootPath: onePackagePath),
+        ..add(name: 'one', rootFolder: getFolder(onePackagePath)),
     );
     newFile(convertPath('$onePackagePath/lib/one.dart'), '''
     @deprecated
@@ -293,7 +324,7 @@ void f() {
     var onePackagePath = convertPath('/home/one');
     writeTestPackageConfig(
       config: PackageConfigFileBuilder()
-        ..add(name: 'one', rootPath: onePackagePath),
+        ..add(name: 'one', rootFolder: getFolder(onePackagePath)),
     );
     newFile(convertPath('$onePackagePath/lib/one.dart'), '''
     @deprecated
@@ -615,7 +646,7 @@ linter:
     writePackageConfig(
       projectPackagePath,
       config: PackageConfigFileBuilder()
-        ..add(name: 'my_lints', rootPath: lintsPackagePath),
+        ..add(name: 'my_lints', rootFolder: getFolder(lintsPackagePath)),
     );
     newFile('$projectPackagePath/analysis_options.yaml', '''
 include: package:my_lints/analysis_options.yaml
@@ -820,8 +851,10 @@ analyzer:
     await initialAnalysis;
     expect(diagnostics[mainFileUri], isNull);
 
-    await updateConfig({'showTodos': true});
-    await waitForAnalysisComplete();
+    await Future.wait([
+      updateConfig({'showTodos': true}),
+      waitForAnalysisComplete(),
+    ]);
     expect(diagnostics[mainFileUri], hasLength(1));
   }
 

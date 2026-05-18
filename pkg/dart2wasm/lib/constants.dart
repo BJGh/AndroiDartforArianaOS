@@ -15,7 +15,6 @@ import 'package:wasm_builder/wasm_builder.dart' as w;
 import 'class_info.dart';
 import 'closures.dart';
 import 'code_generator.dart';
-import 'dynamic_modules.dart';
 import 'param_info.dart';
 import 'translator.dart';
 import 'types.dart';
@@ -60,7 +59,10 @@ final class TableBasedConstantDefinition extends ConstantDefinition {
   final Map<w.ModuleBuilder, w.BaseFunction> _initFunctionPerUsingModule;
 
   TableBasedConstantDefinition(
-      this.table, this.tableIndex, this._initFunctionPerUsingModule);
+    this.table,
+    this.tableIndex,
+    this._initFunctionPerUsingModule,
+  );
 
   @override
   bool get isLazy => true;
@@ -73,31 +75,10 @@ final class TableBasedConstantDefinition extends ConstantDefinition {
 
 class ConstantInfo {
   static const int canBeEagerBit = 1 << 0;
-  static const int needsRuntimeCanonicalizationBit = 1 << 1;
-  static const int exportByMainAppBit = 1 << 2;
 
   final Constant constant;
   final List<ConstantInfo> children;
   final ConstantCodeGeneratorLazy _forceLazy;
-  final int _bits;
-  final w.RefType type;
-  final ConstantCodeGenerator _codeGen;
-  ConstantDefinition? _definition;
-
-  ConstantInfo(
-      this.constant,
-      this.children,
-      this._forceLazy,
-      bool canBeEager,
-      bool needsRuntimeCanonicalization,
-      bool exportByMainApp,
-      this.type,
-      this._codeGen)
-      : _bits = (canBeEager ? canBeEagerBit : 0) |
-            (needsRuntimeCanonicalization
-                ? needsRuntimeCanonicalizationBit
-                : 0) |
-            (exportByMainApp ? exportByMainAppBit : 0);
 
   /// Whether the [constant] can be made eager (i.e. non lazy).
   ///
@@ -105,19 +86,24 @@ class ConstantInfo {
   /// transitive closure are placed in. If they are all e.g. placed in the main
   /// module then the constant will be non-lazy. If they are placed across
   /// modules the constant may still become lazy.
-  bool get canBeEager => (_bits & canBeEagerBit) != 0;
+  final bool canBeEager;
+  final w.RefType type;
+  final ConstantCodeGenerator _codeGen;
+  ConstantDefinition? _definition;
 
-  /// Whether this constant needs runtime canonicalization. If it does, the
-  /// constant definition will be lazy.
-  bool get needsRuntimeCanonicalization =>
-      (_bits & needsRuntimeCanonicalizationBit) != 0;
+  ConstantInfo(
+    this.constant,
+    this.children,
+    this._forceLazy,
+    this.canBeEager,
+    this.type,
+    this._codeGen,
+  );
 
-  /// Whether the main app was compiled with dynamic module support and exposes
-  /// this constant via an export.
-  bool get exportByMainApp => (_bits & exportByMainAppBit) != 0;
-
-  void printInitializer(void Function(w.BaseFunction) printFunction,
-      void Function(w.Global) printLazyInitializer) {
+  void printInitializer(
+    void Function(w.BaseFunction) printFunction,
+    void Function(w.Global) printLazyInitializer,
+  ) {
     final definition = _definition;
     if (definition != null) {
       switch (definition) {
@@ -145,10 +131,10 @@ class ConstantInfo {
   }
 }
 
-typedef ConstantCodeGenerator = void Function(
-    ConstantInfo, w.InstructionsBuilder, bool isLazy);
-typedef ConstantCodeGeneratorLazy = bool Function(
-    ConstantInfo, w.ModuleBuilder);
+typedef ConstantCodeGenerator =
+    void Function(ConstantInfo, w.InstructionsBuilder, bool isLazy);
+typedef ConstantCodeGeneratorLazy =
+    bool Function(ConstantInfo, w.ModuleBuilder);
 
 /// Handles the creation of Dart constants.
 ///
@@ -166,7 +152,7 @@ typedef ConstantCodeGeneratorLazy = bool Function(
 class Constants {
   final Translator translator;
   final Map<Constant, ConstantInfo> constantInfo = {};
-  w.DataSegmentBuilder? byteSegment;
+  final Map<w.ModuleBuilder, w.DataSegmentBuilder> _byteSegments = {};
   late final ClassInfo typeInfo = translator.classInfo[translator.typeClass]!;
 
   late final _constantAccessor = _ConstantAccessor(translator);
@@ -175,30 +161,39 @@ class Constants {
   final Map<DartType, InstanceConstant> _loweredTypeConstants = {};
   late final BoolConstant _cachedTrueConstant = BoolConstant(true);
   late final BoolConstant _cachedFalseConstant = BoolConstant(false);
-  late final InstanceConstant _cachedDynamicType =
-      _makeTopTypeConstant(const DynamicType());
-  late final InstanceConstant _cachedVoidType =
-      _makeTopTypeConstant(const VoidType());
-  late final InstanceConstant _cachedNeverType =
-      _makeBottomTypeConstant(const NeverType.nonNullable());
-  late final InstanceConstant _cachedNullType =
-      _makeBottomTypeConstant(const NullType());
-  late final InstanceConstant _cachedNullableObjectType =
-      _makeTopTypeConstant(coreTypes.objectRawType(Nullability.nullable));
+  late final InstanceConstant _cachedDynamicType = _makeTopTypeConstant(
+    const DynamicType(),
+  );
+  late final InstanceConstant _cachedVoidType = _makeTopTypeConstant(
+    const VoidType(),
+  );
+  late final InstanceConstant _cachedNeverType = _makeBottomTypeConstant(
+    const NeverType.nonNullable(),
+  );
+  late final InstanceConstant _cachedNullType = _makeBottomTypeConstant(
+    const NullType(),
+  );
+  late final InstanceConstant _cachedNullableObjectType = _makeTopTypeConstant(
+    coreTypes.objectRawType(Nullability.nullable),
+  );
   late final InstanceConstant _cachedNonNullableObjectType =
       _makeTopTypeConstant(coreTypes.objectRawType(Nullability.nonNullable));
   late final InstanceConstant _cachedNullableFunctionType =
       _makeAbstractFunctionTypeConstant(
-          coreTypes.functionRawType(Nullability.nullable));
+        coreTypes.functionRawType(Nullability.nullable),
+      );
   late final InstanceConstant _cachedNonNullableFunctionType =
       _makeAbstractFunctionTypeConstant(
-          coreTypes.functionRawType(Nullability.nonNullable));
+        coreTypes.functionRawType(Nullability.nonNullable),
+      );
   late final InstanceConstant _cachedNullableRecordType =
       _makeAbstractRecordTypeConstant(
-          coreTypes.recordRawType(Nullability.nullable));
+        coreTypes.recordRawType(Nullability.nullable),
+      );
   late final InstanceConstant _cachedNonNullableRecordType =
       _makeAbstractRecordTypeConstant(
-          coreTypes.recordRawType(Nullability.nonNullable));
+        coreTypes.recordRawType(Nullability.nonNullable),
+      );
 
   bool currentlyCreating = false;
 
@@ -208,58 +203,66 @@ class Constants {
   Types get types => translator.types;
   CoreTypes get coreTypes => translator.coreTypes;
 
-  Constant makeWasmI32(int value) {
-    return InstanceConstant(translator.wasmI32Class.reference, const [],
-        {translator.wasmI32Value.fieldReference: IntConstant(value)});
+  w.DataSegmentBuilder byteSegment(w.ModuleBuilder module) {
+    return _byteSegments.putIfAbsent(module, module.dataSegments.define);
   }
 
-  // Used as an indicator for interface types that the enclosed class ID must be
-  // globalized on instantiation. Resolves to a normal _InterfaceType.
-  static final Class _relativeInterfaceTypeIndicator =
-      Class(name: '', fileUri: Uri());
+  Constant makeWasmI32(int value) {
+    return InstanceConstant(translator.wasmI32Class.reference, const [], {
+      translator.wasmI32Value.fieldReference: IntConstant(value),
+    });
+  }
 
   /// Makes a `WasmArray<_Type>` [InstanceConstant].
   InstanceConstant makeTypeArray(Iterable<DartType> types) {
     return makeArrayOf(
-        translator.typeType, types.map(_lowerTypeToConstant).toList());
+      translator.typeType,
+      types.map(_lowerTypeToConstant).toList(),
+    );
   }
 
   /// Makes a `_NamedParameter` [InstanceConstant].
   InstanceConstant makeNamedParameterConstant(NamedType n) {
     return InstanceConstant(
-        translator.namedParameterClass.reference, const [], {
-      translator.namedParameterNameField.fieldReference:
-          translator.symbols.symbolForNamedParameter(n.name),
-      translator.namedParameterTypeField.fieldReference:
-          _lowerTypeToConstant(n.type),
-      translator.namedParameterIsRequiredField.fieldReference:
-          BoolConstant(n.isRequired),
-    });
+      translator.namedParameterClass.reference,
+      const [],
+      {
+        translator.namedParameterNameField.fieldReference: translator.symbols
+            .symbolForNamedParameter(n.name),
+        translator.namedParameterTypeField.fieldReference: _lowerTypeToConstant(
+          n.type,
+        ),
+        translator.namedParameterIsRequiredField.fieldReference: BoolConstant(
+          n.isRequired,
+        ),
+      },
+    );
   }
 
   /// Creates a `WasmArray<_NamedParameter>` to be used as field of
   /// `_FunctionType`.
   InstanceConstant makeNamedParametersArray(FunctionType type) => makeArrayOf(
-      translator.namedParameterType,
-      [for (final n in type.namedParameters) makeNamedParameterConstant(n)]);
+    translator.namedParameterType,
+    [for (final n in type.namedParameters) makeNamedParameterConstant(n)],
+  );
 
   /// Creates a `WasmArray<T>` with the given [Constant]s
   InstanceConstant makeArrayOf(
-          InterfaceType elementType, List<Constant> entries,
-          {bool mutable = true}) =>
-      InstanceConstant(
-          mutable
-              ? translator.wasmArrayClass.reference
-              : translator.immutableWasmArrayClass.reference,
-          [
-            elementType,
-          ],
-          {
-            mutable
-                    ? translator.wasmArrayValueField.fieldReference
-                    : translator.immutableWasmArrayValueField.fieldReference:
-                ListConstant(elementType, entries),
-          });
+    InterfaceType elementType,
+    List<Constant> entries, {
+    bool mutable = true,
+  }) => InstanceConstant(
+    mutable
+        ? translator.wasmArrayClass.reference
+        : translator.immutableWasmArrayClass.reference,
+    [elementType],
+    {
+      mutable
+              ? translator.wasmArrayValueField.fieldReference
+              : translator.immutableWasmArrayValueField.fieldReference:
+          ListConstant(elementType, entries),
+    },
+  );
 
   Constant get dummyStructConstant =>
       _getDummyValueConstant(w.HeapType.struct, name: '#DummyStruct');
@@ -268,17 +271,22 @@ class Constants {
     if (heapType == w.HeapType.eq || heapType == w.HeapType.any) {
       heapType = w.HeapType.struct;
     }
-    return _dummyValueConstants[heapType] ??=
-        DummyValueConstant(heapType, name ?? '$heapType');
+    return _dummyValueConstants[heapType] ??= DummyValueConstant(
+      heapType,
+      name ?? '$heapType',
+    );
   }
 
   void instantiateDummyValueConstant(
-      w.InstructionsBuilder b, w.ValueType type) {
+    w.InstructionsBuilder b,
+    w.ValueType type,
+  ) {
     instantiateDummyValue(
-        b,
-        type,
-        (ib, heapType) =>
-            instantiateConstant(b, _getDummyValueConstant(heapType), type));
+      b,
+      type,
+      (ib, heapType) =>
+          instantiateConstant(b, _getDummyValueConstant(heapType), type),
+    );
   }
 
   /// Ensure that the constant has a Wasm global assigned.
@@ -295,8 +303,11 @@ class Constants {
   ///
   /// If the constant can be eager then it'll be immediatly placed in the main
   /// module and return we return `true`. Otherwise we return `false`.
-  bool tryInstantiateEagerlyFrom(w.ModuleBuilder usingModule, Constant constant,
-      w.ValueType expectedType) {
+  bool tryInstantiateEagerlyFrom(
+    w.ModuleBuilder usingModule,
+    Constant constant,
+    w.ValueType expectedType,
+  ) {
     if (_constantAccessor.constantIsAlwaysEager(constant)) {
       return true;
     }
@@ -304,9 +315,7 @@ class Constants {
     final info = ensureConstant(constant);
     if (info == null) return false;
 
-    final baseModule = translator.isDynamicSubmodule
-        ? translator.dynamicSubmodule
-        : translator.mainModule;
+    final baseModule = translator.mainModule;
 
     var definition = info._definition;
     if (definition == null && info.canBeEager && usingModule == baseModule) {
@@ -316,8 +325,10 @@ class Constants {
       // If the usage is in a deferred module then we could guarantee it to be
       // eager by placing in the base module as well, but it would make it
       // bigger, so we don't do it.
-      definition =
-          _constantAccessor._defineConstantInModuleRecursive(baseModule, info);
+      definition = _constantAccessor._defineConstantInModuleRecursive(
+        baseModule,
+        info,
+      );
     }
 
     if (definition is GlobalBasedConstantDefinition && !definition.isLazy) {
@@ -330,54 +341,20 @@ class Constants {
     return false;
   }
 
-  /// Defines the constants from main application in the fake main application
-  /// module.
-  ///
-  /// NOTE: We do not recurse into the DAG of the given [constant]:
-  ///
-  ///   * a sub-constant (directly or indirectly) referred to by [constant] may
-  ///     also be exported, in which case the caller will call
-  ///     [defineMainAppConstant] for it.
-  ///
-  ///   * if the dynamic module creates a constant that is structurally equal to
-  ///     a non-exported constant from the main app, then it's going to be
-  ///     runtime canonicalized.
-  ///
-  void defineMainAppConstant(
-      Constant constant, String globalName, String? initializerName) {
-    assert(translator.isDynamicSubmodule);
-    final type = constant.accept(TypeOfConstantVisitor(translator));
-    final children = const <ConstantInfo>[];
-    final guaranteedNonLazy = initializerName == null;
-    final needsRuntimeCanonicalization = false;
-    final exportByMainApp = true;
-    final info = ConstantInfo(
-        constant,
-        children,
-        (_, __) {
-          throw StateError(
-              'Should not try to generate code for imported constant');
-        },
-        guaranteedNonLazy,
-        needsRuntimeCanonicalization,
-        exportByMainApp,
-        type,
-        (_, __, ___) {
-          throw StateError(
-              'Should not try to generate code for imported constant');
-        });
-    constantInfo[constant] = info;
-    _constantAccessor.defineMainAppDefinition(
-        info, globalName, initializerName);
-  }
-
   /// Emit code to push a constant onto the stack.
   void instantiateConstant(
-      w.InstructionsBuilder b, Constant constant, w.ValueType expectedType,
-      {w.ModuleBuilder? deferredModuleGuard}) {
+    w.InstructionsBuilder b,
+    Constant constant,
+    w.ValueType expectedType, {
+    w.ModuleBuilder? deferredModuleGuard,
+  }) {
     if (expectedType == translator.voidMarker) return;
-    ConstantInstantiator(this, b, expectedType, deferredModuleGuard)
-        .instantiate(constant);
+    ConstantInstantiator(
+      this,
+      b,
+      expectedType,
+      deferredModuleGuard,
+    ).instantiate(constant);
   }
 
   InstanceConstant _lowerTypeToConstant(DartType type) {
@@ -419,44 +396,44 @@ class Constants {
   }
 
   InstanceConstant _makeTypeParameterTypeConstant(TypeParameterType type) {
-    final int environmentIndex =
-        types.interfaceTypeEnvironment.lookup(type.parameter);
+    final int environmentIndex = types.interfaceTypeEnvironment.lookup(
+      type.parameter,
+    );
     return _makeTypeConstant(
-        translator.interfaceTypeParameterTypeClass, type.nullability, {
-      translator.interfaceTypeParameterTypeEnvironmentIndexField.fieldReference:
-          IntConstant(environmentIndex),
-    });
+      translator.interfaceTypeParameterTypeClass,
+      type.nullability,
+      {
+        translator
+            .interfaceTypeParameterTypeEnvironmentIndexField
+            .fieldReference: IntConstant(
+          environmentIndex,
+        ),
+      },
+    );
   }
 
   InstanceConstant _makeStructuralParameterTypeConstant(
-      StructuralParameterType type) {
+    StructuralParameterType type,
+  ) {
     final int index = types.getFunctionTypeParameterIndex(type.parameter);
     return _makeTypeConstant(
-        translator.functionTypeParameterTypeClass, type.nullability, {
-      translator.functionTypeParameterTypeIndexField.fieldReference:
-          IntConstant(index),
-    });
+      translator.functionTypeParameterTypeClass,
+      type.nullability,
+      {
+        translator.functionTypeParameterTypeIndexField.fieldReference:
+            IntConstant(index),
+      },
+    );
   }
 
   InstanceConstant _makeInterfaceTypeConstant(InterfaceType type) {
-    final wrappedClassId =
-        translator.classIdNumbering.classIds[type.classNode]!;
-    final (typeClass, classId) = switch (wrappedClassId) {
-      RelativeClassId() => (
-          _relativeInterfaceTypeIndicator,
-          wrappedClassId.relativeValue
-        ),
-      AbsoluteClassId() => (
-          translator.interfaceTypeClass,
-          wrappedClassId.value
-        ),
-    };
-    // If the class ID is relative we will detect that when the constant is
-    // emitted and adjust it accordingly.
-    return _makeTypeConstant(typeClass, type.nullability, {
+    final classId = translator.classIdNumbering.classIds[type.classNode]!;
+
+    return _makeTypeConstant(translator.interfaceTypeClass, type.nullability, {
       translator.interfaceTypeClassIdField.fieldReference: makeWasmI32(classId),
-      translator.interfaceTypeTypeArguments.fieldReference:
-          makeTypeArray(type.typeArguments),
+      translator.interfaceTypeTypeArguments.fieldReference: makeTypeArray(
+        type.typeArguments,
+      ),
     });
   }
 
@@ -472,9 +449,11 @@ class Constants {
       ...type.positional,
       ...type.named.map((named) => named.type),
     ]);
-    final names = makeArrayOf(coreTypes.stringNonNullableRawType,
-        type.named.map((t) => StringConstant(t.name)).toList(),
-        mutable: false);
+    final names = makeArrayOf(
+      coreTypes.stringNonNullableRawType,
+      type.named.map((t) => StringConstant(t.name)).toList(),
+      mutable: false,
+    );
     return _makeTypeConstant(translator.recordTypeClass, type.nullability, {
       translator.recordTypeFieldTypesField.fieldReference: fieldTypes,
       translator.recordTypeNamesField.fieldReference: names,
@@ -482,17 +461,22 @@ class Constants {
   }
 
   InstanceConstant _makeFunctionTypeConstant(FunctionType type) {
-    final typeParameterOffset =
-        IntConstant(types.computeFunctionTypeParameterOffset(type));
-    final typeParameterBoundsConstant =
-        makeTypeArray(type.typeParameters.map((p) => p.bound));
-    final typeParameterDefaultsConstant =
-        makeTypeArray(type.typeParameters.map((p) => p.defaultType));
+    final typeParameterOffset = IntConstant(
+      types.computeFunctionTypeParameterOffset(type),
+    );
+    final typeParameterBoundsConstant = makeTypeArray(
+      type.typeParameters.map((p) => p.bound),
+    );
+    final typeParameterDefaultsConstant = makeTypeArray(
+      type.typeParameters.map((p) => p.defaultType),
+    );
     final returnTypeConstant = _lowerTypeToConstant(type.returnType);
-    final positionalParametersConstant =
-        makeTypeArray(type.positionalParameters);
-    final requiredParameterCountConstant =
-        IntConstant(type.requiredParameterCount);
+    final positionalParametersConstant = makeTypeArray(
+      type.positionalParameters,
+    );
+    final requiredParameterCountConstant = IntConstant(
+      type.requiredParameterCount,
+    );
     final namedParametersConstant = makeNamedParametersArray(type);
     return _makeTypeConstant(translator.functionTypeClass, type.nullability, {
       translator.functionTypeTypeParameterOffsetField.fieldReference:
@@ -512,40 +496,54 @@ class Constants {
   }
 
   InstanceConstant _makeTopTypeConstant(DartType type) {
-    assert(type is VoidType ||
-        type is DynamicType ||
-        type is InterfaceType && type.classNode == coreTypes.objectClass);
+    assert(
+      type is VoidType ||
+          type is DynamicType ||
+          type is InterfaceType && type.classNode == coreTypes.objectClass,
+    );
     return _makeTypeConstant(translator.topTypeClass, type.nullability, {
-      translator.topTypeKindField.fieldReference:
-          IntConstant(types.topTypeKind(type)),
+      translator.topTypeKindField.fieldReference: IntConstant(
+        types.topTypeKind(type),
+      ),
     });
   }
 
   InstanceConstant _makeAbstractFunctionTypeConstant(InterfaceType type) {
     assert(coreTypes.functionClass == type.classNode);
     return _makeTypeConstant(
-        translator.abstractFunctionTypeClass, type.nullability, {});
+      translator.abstractFunctionTypeClass,
+      type.nullability,
+      {},
+    );
   }
 
   InstanceConstant _makeAbstractRecordTypeConstant(InterfaceType type) {
     assert(coreTypes.recordClass == type.classNode);
     return _makeTypeConstant(
-        translator.abstractRecordTypeClass, type.nullability, {});
+      translator.abstractRecordTypeClass,
+      type.nullability,
+      {},
+    );
   }
 
   InstanceConstant _makeBottomTypeConstant(DartType type) {
-    assert(type is NeverType ||
-        type is NullType ||
-        type is InterfaceType && types.isSpecializedClass(type.classNode));
+    assert(
+      type is NeverType ||
+          type is NullType ||
+          type is InterfaceType && types.isSpecializedClass(type.classNode),
+    );
     return _makeTypeConstant(translator.bottomTypeClass, type.nullability, {});
   }
 
-  InstanceConstant _makeTypeConstant(Class classNode, Nullability nullability,
-      Map<Reference, Constant> fieldValues) {
+  InstanceConstant _makeTypeConstant(
+    Class classNode,
+    Nullability nullability,
+    Map<Reference, Constant> fieldValues,
+  ) {
     fieldValues[translator.typeIsDeclaredNullableField.fieldReference] =
         nullability == Nullability.nullable
-            ? _cachedTrueConstant
-            : _cachedFalseConstant;
+        ? _cachedTrueConstant
+        : _cachedFalseConstant;
     return InstanceConstant(classNode.reference, const [], fieldValues);
   }
 }
@@ -558,7 +556,11 @@ class ConstantInstantiator extends ConstantVisitor<w.ValueType>
   final w.ModuleBuilder? deferredModuleGuard;
 
   ConstantInstantiator(
-      this.constants, this.b, this.expectedType, this.deferredModuleGuard);
+    this.constants,
+    this.b,
+    this.expectedType,
+    this.deferredModuleGuard,
+  );
 
   Translator get translator => constants.translator;
 
@@ -571,8 +573,10 @@ class ConstantInstantiator extends ConstantVisitor<w.ValueType>
       } else {
         // This only happens in invalid but unreachable code produced by the
         // TFA dead-code elimination.
-        b.comment("Constant in incompatible context (constant: $constant, "
-            "expectedType: $expectedType, resultType: $resultType)");
+        b.comment(
+          "Constant in incompatible context (constant: $constant, "
+          "expectedType: $expectedType, resultType: $resultType)",
+        );
         b.unreachable();
       }
     }
@@ -580,8 +584,11 @@ class ConstantInstantiator extends ConstantVisitor<w.ValueType>
 
   @override
   w.ValueType defaultConstant(Constant constant) {
-    return constants._constantAccessor
-        .loadConstant(b, constant, deferredModuleGuard);
+    return constants._constantAccessor.loadConstant(
+      b,
+      constant,
+      deferredModuleGuard,
+    );
   }
 
   @override
@@ -681,8 +688,9 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     if (info == null) {
       info = constant.accept(this);
       if (info != null) {
-        assert(info.constant.accept(TypeOfConstantVisitor(translator)) ==
-            info.type);
+        assert(
+          info.constant.accept(TypeOfConstantVisitor(translator)) == info.type,
+        );
         constants.constantInfo[constant] = info;
       }
     }
@@ -690,49 +698,25 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
   }
 
   ConstantInfo createConstant(
-      Constant constant,
-      List<ConstantInfo> childConstants,
-      w.RefType type,
-      ConstantCodeGenerator generator,
-      {required bool canBeEager,
-      ConstantCodeGeneratorLazy? forceLazyConstant}) {
+    Constant constant,
+    List<ConstantInfo> childConstants,
+    w.RefType type,
+    ConstantCodeGenerator generator, {
+    required bool canBeEager,
+    ConstantCodeGeneratorLazy? forceLazyConstant,
+  }) {
     assert(!type.nullable);
 
-    bool exportByMainApp = false;
-    // Dummy values always use runtime canonicalization.
-    bool needsRuntimeCanonicalization = constant is DummyValueConstant;
-    if (translator.dynamicModuleSupportEnabled) {
-      if (!translator.isDynamicSubmodule) {
-        // This is main app compilation which allows loading dynamic modules at
-        // runtime. We may have to export the constant.
-        exportByMainApp =
-            constant.accept(_ConstantDynamicModuleSharedChecker(translator)) &&
-                constant is! DummyValueConstant;
-      } else {
-        // This is a dynamic module compilation.
-        //
-        // If the constant isn't module specific, we need to canonicalize it at
-        // runtime.
-        assert(!(translator.dynamicModuleConstants?.constantNames
-                .containsKey(constant) ??
-            false));
-        needsRuntimeCanonicalization |=
-            constant.accept(_ConstantDynamicModuleSharedChecker(translator));
-      }
-    }
-    canBeEager = canBeEager &&
-        !needsRuntimeCanonicalization &&
-        childConstants.every((c) => c.canBeEager);
+    canBeEager = canBeEager && childConstants.every((c) => c.canBeEager);
 
     return ConstantInfo(
-        constant,
-        childConstants,
-        forceLazyConstant ?? (_, __) => false,
-        canBeEager,
-        needsRuntimeCanonicalization,
-        exportByMainApp,
-        type,
-        generator);
+      constant,
+      childConstants,
+      forceLazyConstant ?? (_, _) => false,
+      canBeEager,
+      type,
+      generator,
+    );
   }
 
   @override
@@ -741,54 +725,90 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
   @override
   ConstantInfo? visitBoolConstant(BoolConstant constant) {
     ClassInfo info = translator.classInfo[translator.boxedBoolClass]!;
-    return createConstant(constant, const [], info.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.i32_const((info.classId as AbsoluteClassId).value);
-      b.i32_const(constant.value ? 1 : 0);
-      b.struct_new(info.struct);
-    });
+    return createConstant(
+      constant,
+      const [],
+      info.nonNullableType,
+      canBeEager: true,
+      (_, b, _) {
+        b.i32_const(info.classId);
+        b.i32_const(constant.value ? 1 : 0);
+        b.struct_new(info.struct);
+      },
+    );
   }
 
   @override
   ConstantInfo? visitIntConstant(IntConstant constant) {
     ClassInfo info = translator.classInfo[translator.boxedIntClass]!;
-    return createConstant(constant, const [], info.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.i32_const((info.classId as AbsoluteClassId).value);
-      b.i64_const(constant.value);
-      b.struct_new(info.struct);
-    });
+    return createConstant(
+      constant,
+      const [],
+      info.nonNullableType,
+      canBeEager: true,
+      (_, b, _) {
+        b.i32_const(info.classId);
+        b.i64_const(constant.value);
+        b.struct_new(info.struct);
+      },
+    );
   }
 
   @override
   ConstantInfo? visitDoubleConstant(DoubleConstant constant) {
     ClassInfo info = translator.classInfo[translator.boxedDoubleClass]!;
-    return createConstant(constant, const [], info.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.i32_const((info.classId as AbsoluteClassId).value);
-      b.f64_const(constant.value);
-      b.struct_new(info.struct);
-    });
+    return createConstant(
+      constant,
+      const [],
+      info.nonNullableType,
+      canBeEager: true,
+      (_, b, _) {
+        b.i32_const(info.classId);
+        b.f64_const(constant.value);
+        b.struct_new(info.struct);
+      },
+    );
   }
 
   @override
   ConstantInfo? visitStringConstant(StringConstant constant) {
     ClassInfo info = translator.classInfo[translator.jsStringClass]!;
-    return createConstant(constant, const [], info.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.pushObjectHeaderFields(translator, info);
-      translator.globals.readGlobal(
-          b,
-          translator.getInternalizedStringGlobal(
-              b.moduleBuilder, constant.value));
-      b.struct_new(info.struct);
-    });
+    final standalone = translator.options.standalone;
+
+    return createConstant(
+      constant,
+      const [],
+      info.nonNullableType,
+      // The standalone build doesn't use js-string imports, so we have to call
+      // an imported function to turn a character array into a string. That call
+      // is not a WebAssembly const expression, so the constant can't be eager.
+      canBeEager: !standalone,
+      (_, b, _) {
+        b.pushObjectHeaderFields(translator, info);
+        if (standalone) {
+          translator.pushStandaloneStringConstant(
+            b,
+            constants.byteSegment(b.moduleBuilder),
+            constant.value,
+          );
+        } else {
+          translator.globals.readGlobal(
+            b,
+            translator.getInternalizedStringGlobal(
+              b.moduleBuilder,
+              constant.value,
+            ),
+          );
+        }
+
+        b.struct_new(info.struct);
+      },
+    );
   }
 
   @override
   ConstantInfo? visitInstanceConstant(InstanceConstant constant) {
     Class cls = constant.classNode;
-    bool isRelativeInterfaceType = false;
     if (cls == translator.wasmArrayClass) {
       return _makeWasmArrayLiteral(constant, mutable: true);
     }
@@ -799,13 +819,6 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
       return null;
     }
 
-    if (cls == Constants._relativeInterfaceTypeIndicator) {
-      cls = translator.interfaceTypeClass;
-      constant = InstanceConstant(
-          cls.reference, constant.typeArguments, constant.fieldValues);
-      isRelativeInterfaceType = true;
-    }
-
     ClassInfo info = translator.classInfo[cls]!;
     translator.functions.recordClassAllocation(info.classId);
     w.RefType type = info.nonNullableType;
@@ -813,10 +826,6 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     // Collect sub-constants for field values.
     int fieldCount = info.struct.fields.length;
     List<Constant?> subConstants = List.filled(fieldCount, null);
-    // Relative class IDs will get adjusted at runtime based on the local
-    // class ID base for the enclosing module. This must be done lazily
-    // since the global is not const.
-    bool lazy = isRelativeInterfaceType;
     final childConstants = <ConstantInfo>[];
     constant.fieldValues.forEach((reference, subConstant) {
       final field = reference.asField;
@@ -851,31 +860,32 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
       args = supertype.typeArguments;
     }
 
-    // If the class ID is relative then it needs to be globalized when
-    // initializing the object which is a non-const operation.
-    lazy |= info.classId is RelativeClassId;
-
-    return createConstant(constant, childConstants, type, canBeEager: !lazy,
-        (_, b, __) {
+    return createConstant(constant, childConstants, type, canBeEager: true, (
+      _,
+      b,
+      _,
+    ) {
       b.pushObjectHeaderFields(translator, info);
       for (int i = FieldIndex.objectFieldBase; i < fieldCount; i++) {
         Constant subConstant = subConstants[i]!;
         constants.instantiateConstant(
-            b, subConstant, info.struct.fields[i].type.unpacked);
-        if (isRelativeInterfaceType && i == FieldIndex.interfaceTypeClassId) {
-          assert(translator.isDynamicSubmodule);
-          translator.pushModuleId(b);
-          translator.callReference(translator.globalizeClassId.reference, b);
-        }
+          b,
+          subConstant,
+          info.struct.fields[i].type.unpacked,
+        );
       }
       b.struct_new(info.struct);
     });
   }
 
-  ConstantInfo? _makeWasmArrayLiteral(InstanceConstant constant,
-      {required bool mutable}) {
-    w.ArrayType arrayType = translator
-        .arrayTypeForDartType(constant.typeArguments.single, mutable: mutable);
+  ConstantInfo? _makeWasmArrayLiteral(
+    InstanceConstant constant, {
+    required bool mutable,
+  }) {
+    w.ArrayType arrayType = translator.arrayTypeForDartType(
+      constant.typeArguments.single,
+      mutable: mutable,
+    );
     w.ValueType elementType = arrayType.elementType.type.unpacked;
 
     List<Constant> elements =
@@ -890,135 +900,148 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     }
 
     if (tooLargeForArrayNewFixed && !mutable) {
-      throw Exception('Cannot allocate immutable wasm array of size '
-          '$tooLargeForArrayNewFixed');
+      throw Exception(
+        'Cannot allocate immutable wasm array of size '
+        '$tooLargeForArrayNewFixed',
+      );
     }
 
     return createConstant(
-        constant, childConstants, w.RefType.def(arrayType, nullable: false),
-        canBeEager: !tooLargeForArrayNewFixed, (_, b, __) {
-      if (tooLargeForArrayNewFixed) {
-        // We use WasmArray<WasmI32> for some RTT data structures. Those arrays
-        // can get rather large and cross the 10k limit.
-        //
-        // If so, we prefer to initialize the array from data section over
-        // emitting a *lot* of code to store individual array elements.
-        //
-        // This can be a little bit larger than individual array stores, but the
-        // data section will compress better, so for app.wasm.gz it'a a win and
-        // will cause much faster validation & faster initialization.
-        final fieldType = arrayType.elementType.type;
-        final isI32 = fieldType == w.NumType.i32;
-        final isI16 = fieldType == w.PackedType.i16;
-        if (isI32 || isI16) {
-          // Initialize array contents from passive data segment.
-          final w.DataSegmentBuilder segment =
-              constants.byteSegment ??= b.moduleBuilder.dataSegments.define();
-          final field = translator.wasmI32Value.fieldReference;
+      constant,
+      childConstants,
+      w.RefType.def(arrayType, nullable: false),
+      canBeEager: !tooLargeForArrayNewFixed,
+      (_, b, _) {
+        if (tooLargeForArrayNewFixed) {
+          // We use WasmArray<WasmI32> for some RTT data structures. Those arrays
+          // can get rather large and cross the 10k limit.
+          //
+          // If so, we prefer to initialize the array from data section over
+          // emitting a *lot* of code to store individual array elements.
+          //
+          // This can be a little bit larger than individual array stores, but the
+          // data section will compress better, so for app.wasm.gz it'a a win and
+          // will cause much faster validation & faster initialization.
+          final fieldType = arrayType.elementType.type;
+          final isI32 = fieldType == w.NumType.i32;
+          final isI16 = fieldType == w.PackedType.i16;
+          if (isI32 || isI16) {
+            // Initialize array contents from passive data segment.
+            final w.DataSegmentBuilder segment = constants.byteSegment(
+              b.moduleBuilder,
+            );
+            final field = translator.wasmI32Value.fieldReference;
 
-          Uint8List bytes;
-          if (isI16) {
-            final list = Uint16List(elements.length);
-            for (int i = 0; i < list.length; ++i) {
-              // The constant is a `const WasmI32 {WasmI32._value: <XXX>}`
-              final constant = elements[i] as InstanceConstant;
-              assert(constant.classNode == translator.wasmI32Class);
-              list[i] = (constant.fieldValues[field] as IntConstant).value;
+            Uint8List bytes;
+            if (isI16) {
+              final list = Uint16List(elements.length);
+              for (int i = 0; i < list.length; ++i) {
+                // The constant is a `const WasmI32 {WasmI32._value: <XXX>}`
+                final constant = elements[i] as InstanceConstant;
+                assert(constant.classNode == translator.wasmI32Class);
+                list[i] = (constant.fieldValues[field] as IntConstant).value;
+              }
+              bytes = list.buffer.asUint8List();
+            } else {
+              assert(isI32);
+              final list = Uint32List(elements.length);
+              for (int i = 0; i < list.length; ++i) {
+                // The constant is a `const WasmI32 {WasmI32._value: <XXX>}`
+                final constant = elements[i] as InstanceConstant;
+                assert(constant.classNode == translator.wasmI32Class);
+                list[i] = (constant.fieldValues[field] as IntConstant).value;
+              }
+              bytes = list.buffer.asUint8List();
             }
-            bytes = list.buffer.asUint8List();
-          } else {
-            assert(isI32);
-            final list = Uint32List(elements.length);
-            for (int i = 0; i < list.length; ++i) {
-              // The constant is a `const WasmI32 {WasmI32._value: <XXX>}`
-              final constant = elements[i] as InstanceConstant;
-              assert(constant.classNode == translator.wasmI32Class);
-              list[i] = (constant.fieldValues[field] as IntConstant).value;
-            }
-            bytes = list.buffer.asUint8List();
+            b.i32_const(segment.length);
+            b.i32_const(elements.length);
+            b.array_new_data(arrayType, segment);
+            segment.append(bytes);
+            return;
           }
-          b.i32_const(segment.length);
+
+          // We will initialize the array with one of the elements (using
+          // `array.new`) and update the fields.
+          //
+          // For the initial element pick the one that occurs the most to save
+          // some work when the array has duplicates.
+          final Map<Constant, int> occurrences = {};
+          for (final element in elements) {
+            occurrences.update(element, (i) => i + 1, ifAbsent: () => 1);
+          }
+
+          var initialElement = elements[0];
+          var initialElementOccurrences = 1;
+          for (final entry in occurrences.entries) {
+            if (entry.value > initialElementOccurrences) {
+              initialElementOccurrences = entry.value;
+              initialElement = entry.key;
+            }
+          }
+
+          w.Local arrayLocal = b.addLocal(
+            w.RefType.def(arrayType, nullable: false),
+          );
+          constants.instantiateConstant(b, initialElement, elementType);
           b.i32_const(elements.length);
-          b.array_new_data(arrayType, segment);
-          segment.append(bytes);
-          return;
-        }
+          b.array_new(arrayType);
+          b.local_set(arrayLocal);
 
-        // We will initialize the array with one of the elements (using
-        // `array.new`) and update the fields.
-        //
-        // For the initial element pick the one that occurs the most to save
-        // some work when the array has duplicates.
-        final Map<Constant, int> occurrences = {};
-        for (final element in elements) {
-          occurrences.update(element, (i) => i + 1, ifAbsent: () => 1);
-        }
+          for (int i = 0; i < elements.length;) {
+            // If it's the same as initial element, nothing to do.
+            final value = elements[i++];
+            if (value == initialElement) continue;
 
-        var initialElement = elements[0];
-        var initialElementOccurrences = 1;
-        for (final entry in occurrences.entries) {
-          if (entry.value > initialElementOccurrences) {
-            initialElementOccurrences = entry.value;
-            initialElement = entry.key;
+            // Find out how many times the current element repeats.
+            final int startInclusive = i - 1;
+            while (i < elements.length && elements[i] == value) {
+              i++;
+            }
+            final int endExclusive = i;
+            final int count = endExclusive - startInclusive;
+
+            b.local_get(arrayLocal);
+            b.i32_const(startInclusive);
+            constants.instantiateConstant(b, value, elementType);
+            if (count > 1) {
+              b.i32_const(count);
+              b.array_fill(arrayType);
+            } else {
+              b.array_set(arrayType);
+            }
           }
-        }
-
-        w.Local arrayLocal =
-            b.addLocal(w.RefType.def(arrayType, nullable: false));
-        constants.instantiateConstant(b, initialElement, elementType);
-        b.i32_const(elements.length);
-        b.array_new(arrayType);
-        b.local_set(arrayLocal);
-
-        for (int i = 0; i < elements.length;) {
-          // If it's the same as initial element, nothing to do.
-          final value = elements[i++];
-          if (value == initialElement) continue;
-
-          // Find out how many times the current element repeats.
-          final int startInclusive = i - 1;
-          while (i < elements.length && elements[i] == value) {
-            i++;
-          }
-          final int endExclusive = i;
-          final int count = endExclusive - startInclusive;
-
           b.local_get(arrayLocal);
-          b.i32_const(startInclusive);
-          constants.instantiateConstant(b, value, elementType);
-          if (count > 1) {
-            b.i32_const(count);
-            b.array_fill(arrayType);
-          } else {
-            b.array_set(arrayType);
+        } else {
+          for (Constant element in elements) {
+            constants.instantiateConstant(b, element, elementType);
           }
+          b.array_new_fixed(arrayType, elements.length);
         }
-        b.local_get(arrayLocal);
-      } else {
-        for (Constant element in elements) {
-          constants.instantiateConstant(b, element, elementType);
-        }
-        b.array_new_fixed(arrayType, elements.length);
-      }
-    });
+      },
+    );
   }
 
   @override
   ConstantInfo? visitListConstant(ListConstant constant) {
-    final instanceConstant =
-        InstanceConstant(translator.immutableListClass.reference, [
-      constant.typeArgument,
-    ], {
-      translator.listBaseLengthField.fieldReference:
-          IntConstant(constant.entries.length),
-      translator.listBaseDataField.fieldReference:
-          InstanceConstant(translator.wasmArrayClass.reference, [
-        translator.coreTypes.objectNullableRawType
-      ], {
-        translator.wasmArrayValueField.fieldReference: ListConstant(
-            translator.coreTypes.objectNullableRawType, constant.entries)
-      }),
-    });
+    final instanceConstant = InstanceConstant(
+      translator.immutableListClass.reference,
+      [constant.typeArgument],
+      {
+        translator.listBaseLengthField.fieldReference: IntConstant(
+          constant.entries.length,
+        ),
+        translator.listBaseDataField.fieldReference: InstanceConstant(
+          translator.wasmArrayClass.reference,
+          [translator.coreTypes.objectNullableRawType],
+          {
+            translator.wasmArrayValueField.fieldReference: ListConstant(
+              translator.coreTypes.objectNullableRawType,
+              constant.entries,
+            ),
+          },
+        ),
+      },
+    );
     return ensureConstant(instanceConstant);
   }
 
@@ -1029,67 +1052,76 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
       return i.isEven ? entry.key : entry.value;
     });
 
-    final instanceConstant =
-        InstanceConstant(translator.immutableMapClass.reference, [
-      constant.keyType,
-      constant.valueType
-    ], {
-      // _index = _uninitializedHashBaseIndex
-      translator.hashFieldBaseIndexField.fieldReference:
-          _uninitializedHashBaseIndexConstant,
+    final instanceConstant = InstanceConstant(
+      translator.immutableMapClass.reference,
+      [constant.keyType, constant.valueType],
+      {
+        // _index = _uninitializedHashBaseIndex
+        translator.hashFieldBaseIndexField.fieldReference:
+            _uninitializedHashBaseIndexConstant,
 
-      // _hashMask
-      translator.hashFieldBaseHashMaskField.fieldReference: IntConstant(0),
+        // _hashMask
+        translator.hashFieldBaseHashMaskField.fieldReference: IntConstant(0),
 
-      // _data
-      translator.hashFieldBaseDataField.fieldReference:
-          InstanceConstant(translator.wasmArrayClass.reference, [
-        translator.coreTypes.objectNullableRawType
-      ], {
-        translator.wasmArrayValueField.fieldReference: ListConstant(
-            translator.coreTypes.objectNullableRawType, listElements)
-      }),
+        // _data
+        translator.hashFieldBaseDataField.fieldReference: InstanceConstant(
+          translator.wasmArrayClass.reference,
+          [translator.coreTypes.objectNullableRawType],
+          {
+            translator.wasmArrayValueField.fieldReference: ListConstant(
+              translator.coreTypes.objectNullableRawType,
+              listElements,
+            ),
+          },
+        ),
 
-      // _usedData
-      translator.hashFieldBaseUsedDataField.fieldReference:
-          IntConstant(listElements.length),
+        // _usedData
+        translator.hashFieldBaseUsedDataField.fieldReference: IntConstant(
+          listElements.length,
+        ),
 
-      // _deletedKeys
-      translator.hashFieldBaseDeletedKeysField.fieldReference: IntConstant(0),
-    });
+        // _deletedKeys
+        translator.hashFieldBaseDeletedKeysField.fieldReference: IntConstant(0),
+      },
+    );
 
     return ensureConstant(instanceConstant);
   }
 
   @override
   ConstantInfo? visitSetConstant(SetConstant constant) {
-    final instanceConstant =
-        InstanceConstant(translator.immutableSetClass.reference, [
-      constant.typeArgument
-    ], {
-      // _index = _uninitializedHashBaseIndex
-      translator.hashFieldBaseIndexField.fieldReference:
-          _uninitializedHashBaseIndexConstant,
+    final instanceConstant = InstanceConstant(
+      translator.immutableSetClass.reference,
+      [constant.typeArgument],
+      {
+        // _index = _uninitializedHashBaseIndex
+        translator.hashFieldBaseIndexField.fieldReference:
+            _uninitializedHashBaseIndexConstant,
 
-      // _hashMask
-      translator.hashFieldBaseHashMaskField.fieldReference: IntConstant(0),
+        // _hashMask
+        translator.hashFieldBaseHashMaskField.fieldReference: IntConstant(0),
 
-      // _data
-      translator.hashFieldBaseDataField.fieldReference:
-          InstanceConstant(translator.wasmArrayClass.reference, [
-        translator.coreTypes.objectNullableRawType
-      ], {
-        translator.wasmArrayValueField.fieldReference: ListConstant(
-            translator.coreTypes.objectNullableRawType, constant.entries)
-      }),
+        // _data
+        translator.hashFieldBaseDataField.fieldReference: InstanceConstant(
+          translator.wasmArrayClass.reference,
+          [translator.coreTypes.objectNullableRawType],
+          {
+            translator.wasmArrayValueField.fieldReference: ListConstant(
+              translator.coreTypes.objectNullableRawType,
+              constant.entries,
+            ),
+          },
+        ),
 
-      // _usedData
-      translator.hashFieldBaseUsedDataField.fieldReference:
-          IntConstant(constant.entries.length),
+        // _usedData
+        translator.hashFieldBaseUsedDataField.fieldReference: IntConstant(
+          constant.entries.length,
+        ),
 
-      // _deletedKeys
-      translator.hashFieldBaseDeletedKeysField.fieldReference: IntConstant(0),
-    });
+        // _deletedKeys
+        translator.hashFieldBaseDeletedKeysField.fieldReference: IntConstant(0),
+      },
+    );
 
     return ensureConstant(instanceConstant);
   }
@@ -1098,8 +1130,9 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
   ConstantInfo? visitStaticTearOffConstant(StaticTearOffConstant constant) {
     Procedure member = constant.targetReference.asProcedure;
 
-    final functionTypeConstant =
-        constants._lowerTypeToConstant(translator.getTearOffType(member));
+    final functionTypeConstant = constants._lowerTypeToConstant(
+      translator.getTearOffType(member),
+    );
     final functionTypeInfo = ensureConstant(functionTypeConstant)!;
     final childConstants = [functionTypeInfo];
 
@@ -1108,9 +1141,9 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     // Once we define the constant in a certain module we may be in link phase
     // and have passed the codegen phase and we cannot codegen arbitrary
     // functions in link phase anymore.
-    final owningModule = translator.isDynamicSubmodule
-        ? translator.dynamicSubmodule
-        : translator.moduleForReference(constant.targetReference);
+    final owningModule = translator.moduleForReference(
+      constant.targetReference,
+    );
     final closure = translator.getTearOffClosure(member, owningModule);
     final closureClassInfo = translator.closureInfo;
     translator.functions.recordClassAllocation(closureClassInfo.classId);
@@ -1128,30 +1161,42 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     // main module instantiation time.
     //
     // So currently we only can guarantee it to be eager if the module owning
-    // the vtable is the main module - or we compile a dynamic module.
-    final canBeEager =
-        owningModule == translator.mainModule || translator.isDynamicSubmodule;
+    // the vtable is the main module.
+    final canBeEager = owningModule == translator.mainModule;
 
-    final closureType =
-        w.RefType.def(closure.representation.closureStruct, nullable: false);
+    final closureType = w.RefType.def(
+      closure.representation.closureStruct,
+      nullable: false,
+    );
 
-    return createConstant(constant, childConstants, closureType,
-        canBeEager: canBeEager, forceLazyConstant: (cinfo, m) {
-      final constantModule = m.module;
-      final vtableModule = closure.vtable.enclosingModule;
-      return constantModule != vtableModule &&
-          vtableModule != translator.mainModule.module;
-    }, (cinfo, b, __) {
-      b.pushObjectHeaderFields(translator, closureClassInfo);
-      translator
-          .getDummyValuesCollectorForModule(b.moduleBuilder)
-          .instantiateLocalDummyValue(
-              b, const w.RefType.struct(nullable: false));
-      translator.globals.readGlobal(b, closure.vtable);
-      constants.instantiateConstant(
-          b, functionTypeInfo.constant, types.nonNullableTypeType);
-      b.struct_new(closure.representation.closureStruct);
-    });
+    return createConstant(
+      constant,
+      childConstants,
+      closureType,
+      canBeEager: canBeEager,
+      forceLazyConstant: (cinfo, m) {
+        final constantModule = m.module;
+        final vtableModule = closure.vtable.enclosingModule;
+        return constantModule != vtableModule &&
+            vtableModule != translator.mainModule.module;
+      },
+      (cinfo, b, _) {
+        b.pushObjectHeaderFields(translator, closureClassInfo);
+        translator
+            .getDummyValuesCollectorForModule(b.moduleBuilder)
+            .instantiateLocalDummyValue(
+              b,
+              const w.RefType.struct(nullable: false),
+            );
+        translator.globals.readGlobal(b, closure.vtable);
+        constants.instantiateConstant(
+          b,
+          functionTypeInfo.constant,
+          types.nonNullableTypeType,
+        );
+        b.struct_new(closure.representation.closureStruct);
+      },
+    );
   }
 
   @override
@@ -1160,28 +1205,37 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     final tearOffProcedure = tearOffConstant.target as Procedure;
     final tearOffFunctionType = translator.getTearOffType(tearOffProcedure);
 
-    final functionTypeInfo = ensureConstant(constants._lowerTypeToConstant(
+    final functionTypeInfo = ensureConstant(
+      constants._lowerTypeToConstant(
         FunctionTypeInstantiator.instantiate(
-            tearOffFunctionType, constant.types)))!;
+          tearOffFunctionType,
+          constant.types,
+        ),
+      ),
+    )!;
     final tearOffConstantInfo = ensureConstant(tearOffConstant)!;
     final typeConstantInfos = <ConstantInfo>[];
     for (final type in constant.types) {
-      typeConstantInfos
-          .add(ensureConstant(constants._lowerTypeToConstant(type))!);
+      typeConstantInfos.add(
+        ensureConstant(constants._lowerTypeToConstant(type))!,
+      );
     }
-    final typeArgsArrayConstantInfo =
-        ensureConstant(constants.makeTypeArray(constant.types))!;
+    final typeArgsArrayConstantInfo = ensureConstant(
+      constants.makeTypeArray(constant.types),
+    )!;
 
     // Ensure we enqueue the closure body function for compilation.
     //
     // Once we define the constant in a certain module we may be in link phase
     // and have passed the codegen phase and we cannot codegen arbitrary
     // functions in link phase anymore.
-    final owningModule = translator.isDynamicSubmodule
-        ? translator.dynamicSubmodule
-        : translator.moduleForReference(tearOffProcedure.reference);
-    final tearOffClosure =
-        translator.getTearOffClosure(tearOffProcedure, owningModule);
+    final owningModule = translator.moduleForReference(
+      tearOffProcedure.reference,
+    );
+    final tearOffClosure = translator.getTearOffClosure(
+      tearOffProcedure,
+      owningModule,
+    );
     final closureClassInfo = translator.closureInfo;
     translator.functions.recordClassAllocation(closureClassInfo.classId);
 
@@ -1189,7 +1243,7 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
       functionTypeInfo,
       tearOffConstantInfo,
       typeArgsArrayConstantInfo,
-      ...typeConstantInfos
+      ...typeConstantInfos,
     ];
 
     final function = tearOffConstant.function;
@@ -1201,151 +1255,182 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     final closureStruct = instantiationOfTearOffRepresentation.closureStruct;
     final closureType = w.RefType.def(closureStruct, nullable: false);
 
-    return createConstant(constant, childConstants, closureType,
-        canBeEager: true, (info, b, isLazy) {
-      final targetModule = b.moduleBuilder;
+    return createConstant(
+      constant,
+      childConstants,
+      closureType,
+      canBeEager: true,
+      (info, b, isLazy) {
+        final targetModule = b.moduleBuilder;
 
-      w.BaseFunction makeDynamicCallEntry() {
-        final function = targetModule.functions.define(
+        w.BaseFunction makeDynamicCallEntry() {
+          final function = targetModule.functions.define(
             translator.dynamicCallVtableEntryFunctionType,
-            "dynamic call entry");
+            "dynamic call entry",
+          );
 
-        final b = function.body;
+          final b = function.body;
 
-        final typeArgsListLocal = function.locals[1]; // empty
-        final posArgsListLocal = function.locals[2];
-        final namedArgsListLocal = function.locals[3];
+          final typeArgsListLocal = function.locals[1]; // empty
+          final posArgsListLocal = function.locals[2];
+          final namedArgsListLocal = function.locals[3];
 
-        constants.instantiateConstant(
-            b, tearOffConstantInfo.constant, translator.topTypeNonNullable);
-        constants.instantiateConstant(
-            b, typeArgsArrayConstantInfo.constant, typeArgsListLocal.type);
-        b.local_get(posArgsListLocal);
-        b.local_get(namedArgsListLocal);
-        translator.callFunction(tearOffClosure.dynamicCallEntry!, b);
-        b.end();
-
-        return function;
-      }
-
-      void declareAndAddRefFunc(w.BaseFunction function) {
-        // If the constant is lazy the body will be in a function rather than a
-        // global. In order for a function to use a ref.func, the function must
-        // be declared in a global (or via the element section).
-        if (isLazy) {
-          final global = b.moduleBuilder.globals
-              .define(w.GlobalType(w.RefType(function.type, nullable: false)));
-          global.initializer
-            ..ref_func(function)
-            ..end();
-          b.global_get(global);
-        } else {
-          b.ref_func(function);
-        }
-      }
-
-      w.BaseFunction makeTrampoline(
-          w.FunctionType signature, w.BaseFunction tearOffFunction) {
-        assert(tearOffFunction.type.inputs.length ==
-            signature.inputs.length + typeConstantInfos.length);
-        final function = b.moduleBuilder.functions
-            .define(signature, "instantiation constant trampoline");
-        final b2 = function.body;
-        b2.local_get(function.locals[0]);
-        for (final type in typeConstantInfos) {
           constants.instantiateConstant(
-              b2, type.constant, translator.topTypeNonNullable);
-        }
-        for (int i = 1; i < signature.inputs.length; i++) {
-          b2.local_get(function.locals[i]);
-        }
-        translator.callFunction(tearOffFunction, b2);
-        b2.end();
-        return function;
-      }
+            b,
+            tearOffConstantInfo.constant,
+            translator.topTypeNonNullable,
+          );
+          constants.instantiateConstant(
+            b,
+            typeArgsArrayConstantInfo.constant,
+            typeArgsListLocal.type,
+          );
+          b.local_get(posArgsListLocal);
+          b.local_get(namedArgsListLocal);
+          translator.callFunction(tearOffClosure.dynamicCallEntry!, b);
+          b.end();
 
-      void fillVtableEntry(int posArgCount, NameCombination nameCombination) {
-        final fieldIndex = instantiationOfTearOffRepresentation
-            .fieldIndexForSignature(posArgCount, nameCombination.names);
-        final signature = instantiationOfTearOffRepresentation.vtableStruct
-            .getVtableEntryAt(fieldIndex);
+          return function;
+        }
 
-        w.BaseFunction function;
-        if (nameCombination.names.isNotEmpty &&
-            !tearOffRepresentation.nameCombinations.contains(nameCombination)) {
-          // This name combination only has
-          //   - non-generic closure / non-generic tear-off definitions
-          //   - non-generic callers
-          // => We make a dummy entry which is unreachable.
-          function = translator
-              .getDummyValuesCollectorForModule(b.moduleBuilder)
-              .getDummyFunction(signature);
-        } else {
-          final int tearOffFieldIndex = tearOffRepresentation
+        void declareAndAddRefFunc(w.BaseFunction function) {
+          // If the constant is lazy the body will be in a function rather than a
+          // global. In order for a function to use a ref.func, the function must
+          // be declared in a global (or via the element section).
+          if (isLazy) {
+            final global = b.moduleBuilder.globals.define(
+              w.GlobalType(w.RefType(function.type, nullable: false)),
+            );
+            global.initializer
+              ..ref_func(function)
+              ..end();
+            b.global_get(global);
+          } else {
+            b.ref_func(function);
+          }
+        }
+
+        w.BaseFunction makeTrampoline(
+          w.FunctionType signature,
+          w.BaseFunction tearOffFunction,
+        ) {
+          assert(
+            tearOffFunction.type.inputs.length ==
+                signature.inputs.length + typeConstantInfos.length,
+          );
+          final function = b.moduleBuilder.functions.define(
+            signature,
+            "instantiation constant trampoline",
+          );
+          final b2 = function.body;
+          b2.local_get(function.locals[0]);
+          for (final type in typeConstantInfos) {
+            constants.instantiateConstant(
+              b2,
+              type.constant,
+              translator.topTypeNonNullable,
+            );
+          }
+          for (int i = 1; i < signature.inputs.length; i++) {
+            b2.local_get(function.locals[i]);
+          }
+          translator.callFunction(tearOffFunction, b2);
+          b2.end();
+          return function;
+        }
+
+        void fillVtableEntry(int posArgCount, NameCombination nameCombination) {
+          final fieldIndex = instantiationOfTearOffRepresentation
               .fieldIndexForSignature(posArgCount, nameCombination.names);
-          w.BaseFunction tearOffFunction = tearOffClosure.functions[
-              tearOffFieldIndex - tearOffRepresentation.vtableBaseIndex];
-          if (translator
-              .getDummyValuesCollectorForModule(b.moduleBuilder)
-              .isDummyFunction(tearOffFunction)) {
-            // This name combination may not exist for the target, but got
-            // clustered together with other name combinations that do exist.
+          final signature = instantiationOfTearOffRepresentation.vtableStruct
+              .getVtableEntryAt(fieldIndex);
+
+          w.BaseFunction function;
+          if (nameCombination.names.isNotEmpty &&
+              !tearOffRepresentation.nameCombinations.contains(
+                nameCombination,
+              )) {
+            // This name combination only has
+            //   - non-generic closure / non-generic tear-off definitions
+            //   - non-generic callers
             // => We make a dummy entry which is unreachable.
             function = translator
                 .getDummyValuesCollectorForModule(b.moduleBuilder)
                 .getDummyFunction(signature);
           } else {
-            function = makeTrampoline(signature, tearOffFunction);
+            final int tearOffFieldIndex = tearOffRepresentation
+                .fieldIndexForSignature(posArgCount, nameCombination.names);
+            w.BaseFunction tearOffFunction =
+                tearOffClosure.functions[tearOffFieldIndex -
+                    tearOffRepresentation.vtableBaseIndex];
+            if (translator
+                .getDummyValuesCollectorForModule(b.moduleBuilder)
+                .isDummyFunction(tearOffFunction)) {
+              // This name combination may not exist for the target, but got
+              // clustered together with other name combinations that do exist.
+              // => We make a dummy entry which is unreachable.
+              function = translator
+                  .getDummyValuesCollectorForModule(b.moduleBuilder)
+                  .getDummyFunction(signature);
+            } else {
+              function = makeTrampoline(signature, tearOffFunction);
+            }
           }
-        }
-        declareAndAddRefFunc(function);
-      }
-
-      void makeVtable(w.BaseFunction? dynamicCallEntry) {
-        if (dynamicCallEntry != null) {
-          declareAndAddRefFunc(dynamicCallEntry);
-        }
-        assert(!instantiationOfTearOffRepresentation.isGeneric);
-
-        if (translator.dynamicModuleSupportEnabled) {
-          // Dynamic modules only use the dynamic call entry.
-          b.struct_new(instantiationOfTearOffRepresentation.vtableStruct);
-          return;
+          declareAndAddRefFunc(function);
         }
 
-        for (int posArgCount = 0;
+        void makeVtable(w.BaseFunction? dynamicCallEntry) {
+          if (dynamicCallEntry != null) {
+            declareAndAddRefFunc(dynamicCallEntry);
+          }
+          assert(!instantiationOfTearOffRepresentation.isGeneric);
+
+          for (
+            int posArgCount = 0;
             posArgCount <= positionalCount;
-            posArgCount++) {
-          fillVtableEntry(posArgCount, NameCombination(const []));
+            posArgCount++
+          ) {
+            fillVtableEntry(posArgCount, NameCombination(const []));
+          }
+          for (NameCombination combination
+              in instantiationOfTearOffRepresentation.nameCombinations) {
+            fillVtableEntry(positionalCount, combination);
+          }
+          b.struct_new(instantiationOfTearOffRepresentation.vtableStruct);
         }
-        for (NameCombination combination
-            in instantiationOfTearOffRepresentation.nameCombinations) {
-          fillVtableEntry(positionalCount, combination);
-        }
-        b.struct_new(instantiationOfTearOffRepresentation.vtableStruct);
-      }
 
-      b.pushObjectHeaderFields(translator, closureClassInfo);
+        b.pushObjectHeaderFields(translator, closureClassInfo);
 
-      // Context is not used by the vtable functions, but it's needed for
-      // closure equality checks to work (`_Closure._equals`).
-      constants.instantiateConstant(
-          b, tearOffConstantInfo.constant, translator.topTypeNonNullable);
-
-      for (final type in typeConstantInfos) {
+        // Context is not used by the vtable functions, but it's needed for
+        // closure equality checks to work (`_Closure._equals`).
         constants.instantiateConstant(
-            b, type.constant, translator.topTypeNonNullable);
-      }
-      b.struct_new(tearOffRepresentation.instantiationContextStruct!);
+          b,
+          tearOffConstantInfo.constant,
+          translator.topTypeNonNullable,
+        );
 
-      makeVtable((translator.dynamicModuleSupportEnabled ||
-              translator.closureLayouter.usesFunctionApplyWithNamedArguments)
-          ? makeDynamicCallEntry()
-          : null);
-      constants.instantiateConstant(
-          b, functionTypeInfo.constant, types.nonNullableTypeType);
-      b.struct_new(closureStruct);
-    });
+        for (final type in typeConstantInfos) {
+          constants.instantiateConstant(
+            b,
+            type.constant,
+            translator.topTypeNonNullable,
+          );
+        }
+        b.struct_new(tearOffRepresentation.instantiationContextStruct!);
+
+        makeVtable(
+          (translator.closureLayouter.usesFunctionApplyWithNamedArguments)
+              ? makeDynamicCallEntry()
+              : null,
+        );
+        constants.instantiateConstant(
+          b,
+          functionTypeInfo.constant,
+          types.nonNullableTypeType,
+        );
+        b.struct_new(closureStruct);
+      },
+    );
   }
 
   @override
@@ -1358,26 +1443,33 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     ClassInfo info = translator.classInfo[translator.symbolClass]!;
     translator.functions.recordClassAllocation(info.classId);
     w.RefType stringType = translator.stringType;
-    final nameConstant =
-        StringConstant(translator.symbols.getMangledSymbolName(constant));
+    final nameConstant = StringConstant(
+      translator.symbols.getMangledSymbolName(constant),
+    );
     final nameInfo = ensureConstant(nameConstant);
     final childConstants = <ConstantInfo>[];
     if (nameInfo != null) {
       childConstants.add(nameInfo);
     }
 
-    return createConstant(constant, childConstants, info.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.pushObjectHeaderFields(translator, info);
-      constants.instantiateConstant(b, nameConstant, stringType);
-      b.struct_new(info.struct);
-    });
+    return createConstant(
+      constant,
+      childConstants,
+      info.nonNullableType,
+      canBeEager: true,
+      (_, b, _) {
+        b.pushObjectHeaderFields(translator, info);
+        constants.instantiateConstant(b, nameConstant, stringType);
+        b.struct_new(info.struct);
+      },
+    );
   }
 
   @override
   ConstantInfo? visitRecordConstant(RecordConstant constant) {
-    final ClassInfo recordClassInfo =
-        translator.getRecordClassInfo(constant.recordType);
+    final ClassInfo recordClassInfo = translator.getRecordClassInfo(
+      constant.recordType,
+    );
     translator.functions.recordClassAllocation(recordClassInfo.classId);
 
     final List<Constant> arguments = constant.positional.toList();
@@ -1392,14 +1484,18 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
     }
 
     return createConstant(
-        constant, childConstants, recordClassInfo.nonNullableType,
-        canBeEager: true, (_, b, __) {
-      b.pushObjectHeaderFields(translator, recordClassInfo);
-      for (Constant argument in arguments) {
-        constants.instantiateConstant(b, argument, translator.topType);
-      }
-      b.struct_new(recordClassInfo.struct);
-    });
+      constant,
+      childConstants,
+      recordClassInfo.nonNullableType,
+      canBeEager: true,
+      (_, b, _) {
+        b.pushObjectHeaderFields(translator, recordClassInfo);
+        for (Constant argument in arguments) {
+          constants.instantiateConstant(b, argument, translator.topType);
+        }
+        b.struct_new(recordClassInfo.struct);
+      },
+    );
   }
 
   @override
@@ -1413,24 +1509,34 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
           for (w.FieldType field in type.fields) {
             final unpackedType = field.type.unpacked;
             if (unpackedType is w.RefType && !unpackedType.nullable) {
-              childConstants.add(ensureConstant(
-                  constants._getDummyValueConstant(unpackedType.heapType))!);
+              childConstants.add(
+                ensureConstant(
+                  constants._getDummyValueConstant(unpackedType.heapType),
+                )!,
+              );
             }
           }
         }
       }
 
       return createConstant(
-          constant, childConstants, w.RefType(type, nullable: false),
-          canBeEager: true, (_, b, __) {
-        translator.instantiateDummyValueHeapType(b, type, constant.name,
-            (ib, heapType) {
-          constants.instantiateConstant(
+        constant,
+        childConstants,
+        w.RefType(type, nullable: false),
+        canBeEager: true,
+        (_, b, _) {
+          translator.instantiateDummyValueHeapType(b, type, constant.name, (
+            ib,
+            heapType,
+          ) {
+            constants.instantiateConstant(
               ib,
               constants._getDummyValueConstant(heapType),
-              w.RefType(heapType, nullable: false));
-        });
-      });
+              w.RefType(heapType, nullable: false),
+            );
+          });
+        },
+      );
     }
 
     throw UnsupportedError("Unsupported auxiliary constant: $constant");
@@ -1535,11 +1641,14 @@ class TypeOfConstantVisitor extends ConstantVisitor<w.RefType>
 
   @override
   w.RefType visitInstanceConstant(InstanceConstant constant) {
-    w.RefType wasmArrayType(InstanceConstant constant,
-        {required bool mutable}) {
+    w.RefType wasmArrayType(
+      InstanceConstant constant, {
+      required bool mutable,
+    }) {
       final arrayType = translator.arrayTypeForDartType(
-          constant.typeArguments.single,
-          mutable: mutable);
+        constant.typeArguments.single,
+        mutable: mutable,
+      );
       return w.RefType.def(arrayType, nullable: false);
     }
 
@@ -1558,9 +1667,10 @@ class TypeOfConstantVisitor extends ConstantVisitor<w.RefType>
     final member = constant.targetReference.asProcedure;
     final function = member.function;
     final representation = translator.closureLayouter.getClosureRepresentation(
-        function.typeParameters.length,
-        function.positionalParameters.length,
-        function.namedParameters.map((p) => p.name!).toList())!;
+      function.typeParameters.length,
+      function.positionalParameters.length,
+      function.namedParameters.map((p) => p.name!).toList(),
+    )!;
     return w.RefType.def(representation.closureStruct, nullable: false);
   }
 
@@ -1569,48 +1679,15 @@ class TypeOfConstantVisitor extends ConstantVisitor<w.RefType>
     final tearOffConstant = constant.tearOffConstant as TearOffConstant;
     final function = tearOffConstant.function;
     final representation = translator.closureLayouter.getClosureRepresentation(
-        0,
-        function.positionalParameters.length,
-        function.namedParameters.map((p) => p.name!).toList())!;
+      0,
+      function.positionalParameters.length,
+      function.namedParameters.map((p) => p.name!).toList(),
+    )!;
     return w.RefType.def(representation.closureStruct, nullable: false);
   }
 
   w.RefType _typeOfClass(Class klass) =>
       translator.classInfo[klass]!.nonNullableType;
-}
-
-/// Resolves to true if the visited Constant is accessible from dynamic
-/// submodules.
-///
-/// Constants that are accessible from dynamic submodules should be:
-/// (1) Exported from the main module if they exist there and then imported
-/// into dynamic submodules.
-/// (2) Runtime canonicalized by dynamic submodules if they are not in the main
-/// module.
-class _ConstantDynamicModuleSharedChecker extends ConstantVisitor<bool>
-    with ConstantVisitorDefaultMixin<bool> {
-  final Translator translator;
-
-  _ConstantDynamicModuleSharedChecker(this.translator);
-
-  // TODO(natebiggs): Make this more precise by handling more specific
-  // constants.
-  @override
-  bool defaultConstant(Constant constant) => true;
-
-  @override
-  bool visitInstanceConstant(InstanceConstant constant) {
-    final cls = constant.classNode;
-    if (!cls.enclosingLibrary.isFromMainModule(translator.coreTypes)) {
-      return false;
-    }
-    if (cls == translator.wasmArrayClass ||
-        cls == translator.immutableWasmArrayClass) {
-      return true;
-    }
-    return constant.classNode.constructors.any(
-        (c) => c.isConst && c.isDynamicSubmoduleCallable(translator.coreTypes));
-  }
 }
 
 /// Responsible for reading constants and defining them.
@@ -1628,14 +1705,6 @@ class _ConstantAccessor {
   /// null initializer.
   final Map<w.RefType, w.TableBuilder> lazySlotTables = {};
   late final tableImporter = WasmTableImporter(translator, 'constant-table');
-
-  final Map<w.HeapType, w.Global> _dummyValueCanonicalizationCheckers = {};
-  late final w.FunctionType _dummyValueCheckerType =
-      translator.typesBuilder.defineFunction([
-    const w.RefType.any(nullable: false),
-  ], [
-    w.NumType.i32
-  ]);
 
   _ConstantAccessor(this.translator);
 
@@ -1659,8 +1728,11 @@ class _ConstantAccessor {
   ///    => Define the constant in that module.
   ///    => This happens after code generation when we know all constant uses.
   ///
-  w.ValueType loadConstant(w.InstructionsBuilder b, Constant c,
-      w.ModuleBuilder? deferredModuleGuard) {
+  w.ValueType loadConstant(
+    w.InstructionsBuilder b,
+    Constant c,
+    w.ModuleBuilder? deferredModuleGuard,
+  ) {
     final info = translator.constants.ensureConstant(c)!;
     final existingDefinition = info._definition;
 
@@ -1680,8 +1752,10 @@ class _ConstantAccessor {
     // be placed in the main module.
     if (!forceDelayedConstantDefinition &&
         usingModule == translator.mainModule) {
-      final definition =
-          _defineConstantInModuleRecursive(translator.mainModule, info);
+      final definition = _defineConstantInModuleRecursive(
+        translator.mainModule,
+        info,
+      );
       return _readDefinedConstant(b, translator.mainModule, info, definition);
     }
 
@@ -1732,10 +1806,11 @@ class _ConstantAccessor {
   /// module to be loaded by the time we read the constant, so it can use that
   /// deferred module's constant initializer.
   w.ValueType _readDefinedConstant(
-      w.InstructionsBuilder b,
-      w.ModuleBuilder usingModule,
-      ConstantInfo info,
-      ConstantDefinition definition) {
+    w.InstructionsBuilder b,
+    w.ModuleBuilder usingModule,
+    ConstantInfo info,
+    ConstantDefinition definition,
+  ) {
     // Eagerly initialized constant.
     if (definition is GlobalBasedConstantDefinition && !definition.isLazy) {
       translator.globals.readGlobal(b, definition.global);
@@ -1772,7 +1847,9 @@ class _ConstantAccessor {
   /// module. Otherwise takes into account the uses of a constant to determine
   /// where to place it.
   ConstantDefinition _defineConstantInModuleRecursive(
-      w.ModuleBuilder? assignedModule, ConstantInfo info) {
+    w.ModuleBuilder? assignedModule,
+    ConstantInfo info,
+  ) {
     assert(info._definition == null);
 
     for (final child in info.children) {
@@ -1807,14 +1884,17 @@ class _ConstantAccessor {
     return _defineConstantInModule(assignedModule, deferredUses, info);
   }
 
-  ConstantDefinition _defineConstantInModule(w.ModuleBuilder? targetModule,
-      Set<w.ModuleBuilder>? deferredUses, ConstantInfo info) {
+  ConstantDefinition _defineConstantInModule(
+    w.ModuleBuilder? targetModule,
+    Set<w.ModuleBuilder>? deferredUses,
+    ConstantInfo info,
+  ) {
     assert((targetModule != null) != (deferredUses != null));
-    assert(deferredUses == null ||
-        deferredUses.length > 1 &&
-            !deferredUses.contains(translator.mainModule));
-
-    final constant = info.constant;
+    assert(
+      deferredUses == null ||
+          deferredUses.length > 1 &&
+              !deferredUses.contains(translator.mainModule),
+    );
 
     // The constant itself may be forced to be lazy (e.g. array size too large).
     bool lazy = !info.canBeEager;
@@ -1841,12 +1921,8 @@ class _ConstantAccessor {
         // If we place the constant in a module that may be loaded before the
         // constants of children, it must get initialized lazily.
         final childModule = definition.global.enclosingModule;
-        final baseModule = translator.isDynamicSubmodule
-            ? translator.dynamicSubmodule
-            : translator.mainModule;
         if (childModule != targetModule?.module &&
-            childModule != translator.mainModule.module &&
-            childModule != baseModule.module) {
+            childModule != translator.mainModule.module) {
           lazy = true;
           break;
         }
@@ -1866,18 +1942,28 @@ class _ConstantAccessor {
     if (lazy) {
       if (targetModule == null) {
         final w.TableBuilder table = lazySlotTables.putIfAbsent(info.type, () {
-          return translator.mainModule.tables
-              .define(info.type.withNullability(true), 0);
+          return translator.mainModule.tables.define(
+            info.type.withNullability(true),
+            0,
+          );
         });
         final tableIndex = table.minSize++;
         final name = _constantName(info.constant);
         final initFunctions = {
           for (final usingModule in deferredUses!)
             usingModule: _createLazyTableInitializer(
-                usingModule, table, tableIndex, name, info),
+              usingModule,
+              table,
+              tableIndex,
+              name,
+              info,
+            ),
         };
-        definition =
-            TableBasedConstantDefinition(table, tableIndex, initFunctions);
+        definition = TableBasedConstantDefinition(
+          table,
+          tableIndex,
+          initFunctions,
+        );
       } else {
         final (global, initFunction) = _createLazyConstant(targetModule, info);
         definition = GlobalBasedConstantDefinition(global, initFunction);
@@ -1887,63 +1973,31 @@ class _ConstantAccessor {
       definition = GlobalBasedConstantDefinition(global, null);
     }
     info.setDefinition(definition);
-
-    if (info.exportByMainApp) {
-      assert(translator.dynamicModuleSupportEnabled &&
-          !translator.isDynamicSubmodule);
-      // Current dynamic module implementation requires main module to be
-      // monolitic.
-      definition as GlobalBasedConstantDefinition;
-      translator.exporter.exportDynamicConstant(
-          targetModule!, constant, definition.global,
-          initializer: definition._initFunction);
-    }
     return definition;
   }
 
-  void defineMainAppDefinition(
-      ConstantInfo info, String globalName, String? initializeName) {
-    assert(translator.isDynamicSubmodule);
-    final type = info.type;
-
-    final fakeMainApp = translator.mainModule;
-
-    // Make fake global in the fake main module.
-    final globalType = w.GlobalType(
-        initializeName != null ? type.withNullability(true) : type,
-        mutable: false);
-    final fakeGlobal =
-        fakeMainApp.globals.define(globalType, _constantName(info.constant));
-    translator.globals
-        .declareMainAppGlobalExportWithName(globalName, fakeGlobal);
-
-    // Make fake initializer function in the fake main module.
-    w.BaseFunction? fakeInitializer;
-    if (initializeName != null) {
-      final initFunctionType =
-          translator.typesBuilder.defineFunction(const [], [info.type]);
-      fakeInitializer = fakeMainApp.functions.define(initFunctionType);
-      translator.declareMainAppFunctionExportWithName(
-          globalName, fakeInitializer);
-    }
-
-    info._definition =
-        GlobalBasedConstantDefinition(fakeGlobal, fakeInitializer);
-  }
-
   (w.GlobalBuilder, w.FunctionBuilder) _createLazyConstant(
-      w.ModuleBuilder targetModule, ConstantInfo info) {
+    w.ModuleBuilder targetModule,
+    ConstantInfo info,
+  ) {
     final name = _constantName(info.constant);
 
     final definedGlobal = _createLazyGlobal(targetModule, name, info);
-    final initFunction =
-        _createLazyGlobalInitializer(targetModule, definedGlobal, name, info);
+    final initFunction = _createLazyGlobalInitializer(
+      targetModule,
+      definedGlobal,
+      name,
+      info,
+    );
 
     return (definedGlobal, initFunction);
   }
 
   w.GlobalBuilder _createLazyGlobal(
-      w.ModuleBuilder module, String name, ConstantInfo info) {
+    w.ModuleBuilder module,
+    String name,
+    ConstantInfo info,
+  ) {
     final globalType = w.GlobalType(info.type.withNullability(true));
     final definedGlobal = module.globals.define(globalType, name);
     definedGlobal.initializer.ref_null(w.HeapType.none);
@@ -1951,20 +2005,22 @@ class _ConstantAccessor {
     return definedGlobal;
   }
 
-  w.FunctionBuilder _createLazyGlobalInitializer(w.ModuleBuilder module,
-      w.GlobalBuilder definedGlobal, String name, ConstantInfo info) {
+  w.FunctionBuilder _createLazyGlobalInitializer(
+    w.ModuleBuilder module,
+    w.GlobalBuilder definedGlobal,
+    String name,
+    ConstantInfo info,
+  ) {
     final type = info.type;
-    final initFunctionType =
-        translator.typesBuilder.defineFunction(const [], [type]);
-    final initFunction =
-        module.functions.define(initFunctionType, '$name (lazy initializer)');
+    final initFunctionType = translator.typesBuilder.defineFunction(const [], [
+      type,
+    ]);
+    final initFunction = module.functions.define(
+      initFunctionType,
+      '$name (lazy initializer)',
+    );
     final b = initFunction.body;
     info._codeGen(info, b, true);
-    if (info.needsRuntimeCanonicalization) {
-      final valueLocal = b.addLocal(type);
-      info.constant.accept(ConstantCanonicalizer(translator, b, valueLocal,
-          _dummyValueCanonicalizationCheckers, _dummyValueCheckerType));
-    }
     w.Local temp = b.addLocal(type);
     b.local_tee(temp);
     translator.globals.writeGlobal(b, definedGlobal);
@@ -1974,21 +2030,24 @@ class _ConstantAccessor {
     return initFunction;
   }
 
-  w.FunctionBuilder _createLazyTableInitializer(w.ModuleBuilder module,
-      w.TableBuilder table, int tableIndex, String name, ConstantInfo info) {
+  w.FunctionBuilder _createLazyTableInitializer(
+    w.ModuleBuilder module,
+    w.TableBuilder table,
+    int tableIndex,
+    String name,
+    ConstantInfo info,
+  ) {
     final type = info.type;
-    final initFunctionType =
-        translator.typesBuilder.defineFunction(const [], [type]);
-    final initFunction =
-        module.functions.define(initFunctionType, '$name (lazy initializer)');
+    final initFunctionType = translator.typesBuilder.defineFunction(const [], [
+      type,
+    ]);
+    final initFunction = module.functions.define(
+      initFunctionType,
+      '$name (lazy initializer)',
+    );
     final b = initFunction.body;
     b.i32_const(tableIndex);
     info._codeGen(info, b, true);
-    if (info.needsRuntimeCanonicalization) {
-      final valueLocal = b.addLocal(type);
-      info.constant.accept(ConstantCanonicalizer(translator, b, valueLocal,
-          _dummyValueCanonicalizationCheckers, _dummyValueCheckerType));
-    }
     w.Local temp = b.addLocal(type);
     b.local_tee(temp);
     b.table_set(tableImporter.get(table, module));
@@ -1999,15 +2058,19 @@ class _ConstantAccessor {
   }
 
   w.GlobalBuilder _createNonLazyConstant(
-      w.ModuleBuilder targetModule, ConstantInfo info) {
+    w.ModuleBuilder targetModule,
+    ConstantInfo info,
+  ) {
     final constants = translator.constants;
 
     // Create global with the constant in its initializer.
     assert(!constants.currentlyCreating);
     final globalType = w.GlobalType(info.type, mutable: false);
     constants.currentlyCreating = true;
-    final definedGlobal =
-        targetModule.globals.define(globalType, _constantName(info.constant));
+    final definedGlobal = targetModule.globals.define(
+      globalType,
+      _constantName(info.constant),
+    );
     info._codeGen(info, definedGlobal.initializer, false);
     definedGlobal.initializer.end();
     constants.currentlyCreating = false;

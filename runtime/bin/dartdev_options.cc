@@ -220,6 +220,11 @@ bool Options::ParseDartDevArguments(int argc,
         skipVmOption = true;
       } else if (IsOption(argv[i], "enable-experiment")) {
         dart_options->AddArgument(argv[i]);
+      } else if (IsOption(argv[i], "resident")) {
+        resident_ = true;
+      } else if (IsOption(argv[i], "resident-compiler-info-file")) {
+        resident_compiler_info_file_path_ = OptionProcessor::ProcessOption(
+            argv[i], "--resident-compiler-info-file");
       }
     }
     if (!skipVmOption) {
@@ -346,6 +351,9 @@ void Options::PrintUsage() {
 }
 // clang-format on
 
+bool Options::resident_ = false;
+const char* Options::resident_compiler_info_file_path_ = nullptr;
+
 dart::SimpleHashMap* Options::environment_ = nullptr;
 bool Options::ProcessEnvironmentOption(const char* arg,
                                        CommandLineOptions* vm_options) {
@@ -369,7 +377,7 @@ void Options::DestroyEnvironment() {
   }
 }
 
-char** Options::GetEnvArguments(int* argc) {
+char** Options::GetEnvArguments(const char* executable_name, int* argc) {
   return nullptr;
 }
 

@@ -688,9 +688,9 @@ uword ImageWriter::GetMarkedTags(classid_t cid,
 }
 
 uword ImageWriter::GetMarkedTags(const Object& obj) {
-  uword tags =
-      GetMarkedTags(obj.ptr()->untag()->GetClassId(), SizeInSnapshot(obj),
-                    obj.IsCanonical(), obj.IsImmutable());
+  uword tags = GetMarkedTags(obj.ptr()->untag()->GetClassId(),
+                             SizeInSnapshot(obj), obj.IsCanonical(),
+                             obj.IsShallowImmutable(), obj.IsDeeplyImmutable());
 #if defined(HASH_IN_OBJECT_HEADER)
   tags = UntaggedObject::HashTag::update(obj.ptr()->untag()->GetHeaderHash(),
                                          tags);
@@ -2095,14 +2095,15 @@ ImageReader::ImageReader(const uint8_t* data_image,
     : data_image_(ASSERT_NOTNULL(data_image)),
       instructions_image_(ASSERT_NOTNULL(instructions_image)) {}
 
-ApiErrorPtr ImageReader::VerifyAlignment() const {
+char* ImageReader::VerifyAlignment() const {
+  // If this changes, bin_to_assembly.py and bin_to_coff.py must also change.
+  COMPILE_ASSERT(kObjectStartAlignment == 64);
+
   if (!Utils::IsAligned(data_image_, kObjectStartAlignment) ||
       !Utils::IsAligned(instructions_image_, kObjectStartAlignment)) {
-    return ApiError::New(
-        String::Handle(String::New("Snapshot is misaligned", Heap::kOld)),
-        Heap::kOld);
+    return Utils::StrDup("Snapshot is misaligned");
   }
-  return ApiError::null();
+  return nullptr;
 }
 
 #if defined(DART_PRECOMPILED_RUNTIME)

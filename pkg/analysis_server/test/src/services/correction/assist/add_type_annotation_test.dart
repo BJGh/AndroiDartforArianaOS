@@ -210,6 +210,15 @@ void f() {
     await assertNoAssist();
   }
 
+  Future<void> test_listLiteral_dynamicElement() async {
+    await resolveTestCode('''
+List<dynamic> list = ^[];
+''');
+    await assertHasAssist('''
+List<dynamic> list = <dynamic>[];
+''');
+  }
+
   Future<void> test_local_addImport_dartUri() async {
     newFile('$testPackageLibPath/my_lib.dart', r'''
 import 'dart:collection';
@@ -714,6 +723,15 @@ void f() {
     await assertNoAssist();
   }
 
+  Future<void> test_mapLiteral_dynamicKeyAndValue() async {
+    await resolveTestCode('''
+Map<dynamic, dynamic> map = ^{};
+''');
+    await assertHasAssist('''
+Map<dynamic, dynamic> map = <dynamic, dynamic>{};
+''');
+  }
+
   Future<void> test_mapLiteral_notype() async {
     await resolveTestCode('''
 var map = ^{};
@@ -834,6 +852,60 @@ void f() {
 ''');
   }
 
+  Future<void> test_primaryConstructor_namedConstructor_final() async {
+    await resolveTestCode('''
+class A.named({final ^f = 0}) {}
+''');
+    await assertHasAssist('''
+class A.named({final int f = 0}) {}
+''');
+  }
+
+  Future<void> test_primaryConstructor_namedConstructor_var() async {
+    await resolveTestCode('''
+class A.named({var ^f = 0}) {}
+''');
+    await assertHasAssist('''
+class A.named({var int f = 0}) {}
+''');
+  }
+
+  Future<void> test_primaryConstructor_namedParameter_final() async {
+    await resolveTestCode('''
+class A({final ^f = 0}) {}
+''');
+    await assertHasAssist('''
+class A({final int f = 0}) {}
+''');
+  }
+
+  Future<void> test_primaryConstructor_namedParameter_var() async {
+    await resolveTestCode('''
+class A({var ^f = 0}) {}
+''');
+    await assertHasAssist('''
+class A({var int f = 0}) {}
+''');
+  }
+
+  Future<void> test_primaryConstructor_positionalParameter_final() async {
+    await resolveTestCode('''
+class A([final ^f = 0]) {}
+''');
+    await assertHasAssist('''
+class A([final int f = 0]) {}
+''');
+  }
+
+  Future<void> test_primaryConstructor_positionalParameter_var() async {
+    await resolveTestCode('''
+class A([var ^f = 0]) {}
+''');
+    await assertHasAssist('''
+class A([var int f = 0]) {}
+''');
+  }
+
   Future<void> test_privateType_closureParameter() async {
     newFile('$testPackageLibPath/my_lib.dart', '''
 library my_lib;
@@ -939,6 +1011,15 @@ import 'my_lib.dart';
 void f() {
   A v = getValue();
 }
+''');
+  }
+
+  Future<void> test_setLiteral_dynamicElement() async {
+    await resolveTestCode('''
+Set<dynamic> set = ^{};
+''');
+    await assertHasAssist('''
+Set<dynamic> set = <dynamic>{};
 ''');
   }
 

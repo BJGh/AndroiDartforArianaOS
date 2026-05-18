@@ -18,7 +18,6 @@ void main() {
 
 @reflectiveTest
 class AugmentationTest extends AbstractLspAnalysisServerTest {
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_body_augmentationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {}
@@ -31,7 +30,6 @@ augment class [!A!] {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_body_declarationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {
@@ -42,7 +40,6 @@ augment class [!A!] {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_name_augmentationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {}
@@ -53,7 +50,6 @@ augment class [!A!] {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_class_name_declarationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A^ {}
@@ -62,7 +58,6 @@ augment class [!A!] {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_body_augmentationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {
@@ -81,7 +76,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_body_declarationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {
@@ -96,7 +90,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_name_augmentationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {
@@ -113,7 +106,6 @@ augment class A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_constructor_name_declarationToAugmentation() async {
     await verifyGoToAugmentation('''
 class A {
@@ -133,7 +125,7 @@ class A {
 }
 
 augment class A {
-  augment String get [!foo!] => '';
+  augment String get [!foo!];
 }
 ''');
   }
@@ -145,7 +137,7 @@ class A {
 }
 
 augment class A {
-  augment String get [!foo!] => '';
+  augment String get [!foo!];
 }
 ''');
   }
@@ -165,13 +157,11 @@ class A {
 }
 
 augment class A {
-  augment void foo() {
-    ^
-  }
+  augment void fo^o();
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 ''');
   }
@@ -185,7 +175,7 @@ class A {
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 ''');
   }
@@ -197,11 +187,11 @@ class A {
 }
 
 augment class A {
-  augment void fo^o() {}
+  augment void fo^o();
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 ''');
   }
@@ -213,7 +203,7 @@ class A {
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 ''');
   }
@@ -227,7 +217,7 @@ class A {
 }
 
 augment class A {
-  augment set [!foo!](String value) {}
+  augment set [!foo!](String value);
 }
 ''');
   }
@@ -239,7 +229,7 @@ class A {
 }
 
 augment class A {
-  augment set [!foo!](String value) {}
+  augment set [!foo!](String value);
 }
 ''');
   }

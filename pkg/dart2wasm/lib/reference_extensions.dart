@@ -18,8 +18,7 @@ extension GetterSetterReference on Reference {
       if (member.setterReference == this) return true;
       if (member.isInstanceMember) {
         return _isUncheckedEntrySetterReference ||
-            _isCheckedEntrySetterReference ||
-            isTypeCheckerReference;
+            _isCheckedEntrySetterReference;
       }
     }
     return false;
@@ -44,7 +43,6 @@ extension GetterSetterReference on Reference {
 // Use Expandos to avoid keeping the procedure alive.
 final Expando<Reference> _staticFieldInitializerReference = Expando();
 final Expando<Reference> _tearOffReference = Expando();
-final Expando<Reference> _typeCheckerReference = Expando();
 final Expando<Reference> _checkedEntryReferences = Expando();
 final Expando<Reference> _uncheckedEntryReferences = Expando();
 final Expando<Reference> _bodyReferences = Expando();
@@ -57,9 +55,6 @@ extension CustomReference on Member {
 
   Reference get tearOffReference =>
       _tearOffReference[this] ??= Reference()..node = this;
-
-  Reference get typeCheckerReference =>
-      _typeCheckerReference[this] ??= Reference()..node = this;
 
   Reference get checkedEntryReference {
     assert(_memberCanHaveMultipleEntryPoints(this));
@@ -88,8 +83,6 @@ extension IsCustomReference on Reference {
       _staticFieldInitializerReference[asMember] == this;
 
   bool get isTearOffReference => _tearOffReference[asMember] == this;
-
-  bool get isTypeCheckerReference => _typeCheckerReference[asMember] == this;
 
   bool get isCheckedEntryReference => _checkedEntryReferences[asMember] == this;
 
@@ -129,11 +122,11 @@ extension ReferenceAs on Member {
     Member member = this;
     return member is Field
         ? setter
-            ? member.setterReference!
-            : member.getterReference
+              ? member.setterReference!
+              : member.getterReference
         : getter && member is Procedure && member.kind == ProcedureKind.Method
-            ? member.tearOffReference
-            : member.reference;
+        ? member.tearOffReference
+        : member.reference;
   }
 }
 
@@ -145,8 +138,10 @@ bool _memberCanHaveMultipleEntryPoints(Member member) {
     return true;
   }
   if (member is Procedure &&
-      const [ProcedureKind.Method, ProcedureKind.Operator]
-          .contains(member.kind) &&
+      const [
+        ProcedureKind.Method,
+        ProcedureKind.Operator,
+      ].contains(member.kind) &&
       (member.function.positionalParameters.isNotEmpty ||
           member.function.namedParameters.isNotEmpty ||
           member.function.typeParameters.isNotEmpty)) {

@@ -10,7 +10,6 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:analyzer/src/error/listener.dart';
-import 'package:collection/collection.dart';
 
 /// Checks for missing arguments for required named parameters.
 class RequiredParametersVerifier extends SimpleAstVisitor<void> {
@@ -61,7 +60,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
   void visitEnumConstantDeclaration(EnumConstantDeclaration node) {
     _check(
       parameters: node.constructorElement?.formalParameters,
-      arguments: node.arguments?.argumentList.arguments ?? <Expression>[],
+      arguments: node.arguments?.argumentList.arguments ?? <Argument>[],
       errorEntity: node.name,
     );
   }
@@ -135,7 +134,7 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
   void _check({
     required List<FormalParameterElement>? parameters,
     ConstructorElement? enclosingConstructor,
-    required List<Expression> arguments,
+    required List<Argument> arguments,
     required SyntacticEntity errorEntity,
   }) {
     if (parameters == null) {
@@ -197,13 +196,13 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
 
   static bool _containsNamedExpression(
     ConstructorElement? enclosingConstructor,
-    List<Expression> arguments,
+    List<Argument> arguments,
     String name,
   ) {
     for (int i = arguments.length - 1; i >= 0; i--) {
-      Expression expression = arguments[i];
-      if (expression is NamedExpression) {
-        if (expression.name.label.name == name) {
+      var argument = arguments[i];
+      if (argument is NamedArgument) {
+        if (argument.name.lexeme == name) {
           return true;
         }
       }
@@ -229,9 +228,13 @@ class RequiredParametersVerifier extends SimpleAstVisitor<void> {
   static _RequiredAnnotation? _requiredAnnotation(
     FormalParameterElement element,
   ) {
-    var annotation =
-        element.metadata.annotations.firstWhereOrNull((e) => e.isRequired)
-            as ElementAnnotationImpl?;
+    ElementAnnotationImpl? annotation;
+    for (var a in element.metadata.annotations) {
+      if (a.isRequired) {
+        annotation = a as ElementAnnotationImpl;
+        break;
+      }
+    }
     if (annotation != null) {
       return _RequiredAnnotation(annotation);
     }

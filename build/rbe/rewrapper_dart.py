@@ -360,6 +360,9 @@ trace to find the place to insert the appropriate support.
             elif arg == 'gen/utils/bazel/kernel_worker.dart.dill':
                 self.extra_paths.add(self.rebase(arg))
                 return self.parse_kernel_worker()
+            elif arg == 'gen/utils/dart_runtime_service_vm/generate_dart_runtime_service_vm_snapshot.dart.dill':
+                self.extra_paths.add(self.rebase(arg))
+                return self.parse_generate_dart_runtime_service_vm_snapshot()
             elif arg == 'gen/utils/dartdev/generate_dartdev_snapshot.dart.dill':
                 self.extra_paths.add(self.rebase(arg))
                 return self.parse_generate_dartdev_snapshot()
@@ -677,6 +680,15 @@ trace to find the place to insert the appropriate support.
             else:
                 self.unsupported('kernel_worker', arg)
 
+    def parse_generate_dart_runtime_service_vm_snapshot(self):
+        while self.has_next_arg:
+            arg = self.next_arg()
+            if arg in ['--help']:
+                pass
+            else:
+                self.unsupported('generate_dart_runtime_service_vm_snapshot',
+                                 arg)
+
     def parse_generate_dartdev_snapshot(self):
         while self.has_next_arg:
             arg = self.next_arg()
@@ -696,6 +708,7 @@ trace to find the place to insert the appropriate support.
                     '--isolate_snapshot_data',
                     '--isolate_snapshot_instructions',
                     '--elf',
+                    '--ffi_callback_stub',
             ]):
                 self.outputs.append(self.rebase(self.optarg))
             elif self.get_option([

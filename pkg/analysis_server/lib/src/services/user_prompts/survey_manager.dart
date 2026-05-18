@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analyzer/instrumentation/service.dart';
+import 'package:analyzer/src/utilities/cancellation.dart';
 import 'package:unified_analytics/unified_analytics.dart';
 
 /// An interface for interacting with surveys via the unified_analytics package.
@@ -46,10 +47,9 @@ class SurveyManager {
     // Delay the first check slightly because there are other prompts that
     // may appear at startup (fetching packages, analytics, "dart fix") that
     // we aren't coordinated with.
-    Duration initialDelay = const Duration(minutes: 5),
-    Duration checkFrequency = const Duration(hours: 24),
-  }) : _initialDelay = initialDelay,
-       _checkFrequency = checkFrequency {
+    this._initialDelay = const Duration(minutes: 5),
+    this._checkFrequency = const Duration(hours: 24),
+  }) {
     _timer = Timer(_initialDelay, checkForSurveys);
   }
 
@@ -81,6 +81,7 @@ class SurveyManager {
         MessageType.info,
         survey.description,
         buttonMap.keys.toList(),
+        NotCancelableToken(), // Not user-cancellable
       );
       var clickedButton = buttonMap[clickedButtonText];
       if (clickedButton == null) return;

@@ -114,9 +114,6 @@ class AstBuilder extends StackListener {
   /// Whether the 'enhanced_parts' feature is enabled.
   final bool enableEnhancedParts;
 
-  /// Whether the 'macros' feature is enabled.
-  final bool enableMacros;
-
   /// `true` if records are enabled
   final bool enableRecords;
 
@@ -171,7 +168,6 @@ class AstBuilder extends StackListener {
        enableSuperParameters = _featureSet.isEnabled(Feature.super_parameters),
        enableEnhancedEnums = _featureSet.isEnabled(Feature.enhanced_enums),
        enableEnhancedParts = _featureSet.isEnabled(Feature.enhanced_parts),
-       enableMacros = _featureSet.isEnabled(Feature.macros),
        enableRecords = _featureSet.isEnabled(Feature.records),
        enableUnnamedLibraries = _featureSet.isEnabled(Feature.unnamedLibraries),
        enableInlineClass = _featureSet.isEnabled(Feature.inline_class),
@@ -231,7 +227,6 @@ class AstBuilder extends StackListener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -242,16 +237,6 @@ class AstBuilder extends StackListener {
   ) {
     assert(_classLikeBuilder == null);
     push(_Modifiers()..abstractKeyword = abstractToken);
-    if (!enableMacros) {
-      if (macroToken != null) {
-        _reportFeatureNotEnabled(
-          feature: ExperimentalFeatures.macros,
-          startToken: macroToken,
-        );
-        // Pretend that 'macro' didn't occur while this feature is incomplete.
-        macroToken = null;
-      }
-    }
     if (!enableSealedClass) {
       if (sealedToken != null) {
         _reportFeatureNotEnabled(
@@ -298,7 +283,6 @@ class AstBuilder extends StackListener {
         mixinToken = null;
       }
     }
-    push(macroToken ?? NullValues.Token);
     push(sealedToken ?? NullValues.Token);
     push(baseToken ?? NullValues.Token);
     push(interfaceToken ?? NullValues.Token);
@@ -408,11 +392,13 @@ class AstBuilder extends StackListener {
   void beginFactory(
     DeclarationKind declarationKind,
     Token lastConsumed,
+    Token? augmentToken,
     Token? externalToken,
     Token? constToken,
   ) {
     push(
       _Modifiers()
+        ..augmentKeyword = augmentToken
         ..externalKeyword = externalToken
         ..finalConstOrVarKeyword = constToken,
     );
@@ -514,7 +500,6 @@ class AstBuilder extends StackListener {
   void beginNamedMixinApplication(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -524,16 +509,6 @@ class AstBuilder extends StackListener {
     Token name,
   ) {
     push(_Modifiers()..abstractKeyword = abstractToken);
-    if (!enableMacros) {
-      if (macroToken != null) {
-        _reportFeatureNotEnabled(
-          feature: ExperimentalFeatures.macros,
-          startToken: macroToken,
-        );
-        // Pretend that 'macro' didn't occur while this feature is incomplete.
-        macroToken = null;
-      }
-    }
     if (!enableSealedClass) {
       if (sealedToken != null) {
         _reportFeatureNotEnabled(
@@ -579,7 +554,6 @@ class AstBuilder extends StackListener {
         mixinToken = null;
       }
     }
-    push(macroToken ?? NullValues.Token);
     push(sealedToken ?? NullValues.Token);
     push(baseToken ?? NullValues.Token);
     push(interfaceToken ?? NullValues.Token);
@@ -827,7 +801,6 @@ class AstBuilder extends StackListener {
       comment: null,
       metadata: null,
       abstractKeyword: null,
-      macroKeyword: null,
       sealedKeyword: null,
       baseKeyword: null,
       interfaceKeyword: null,
@@ -902,22 +875,26 @@ class AstBuilder extends StackListener {
 
   void doInvocation(
     TypeArgumentListImpl? typeArguments,
-    MethodInvocationImpl arguments,
+    ArgumentListImpl argumentList,
   ) {
     var receiver = pop() as ExpressionImpl;
     switch (receiver) {
       case SimpleIdentifierImpl():
-        arguments.methodName = receiver;
-        if (typeArguments != null) {
-          arguments.typeArguments = typeArguments;
-        }
-        push(arguments);
+        push(
+          MethodInvocationImpl(
+            target: null,
+            operator: null,
+            methodName: receiver,
+            typeArguments: typeArguments,
+            argumentList: argumentList,
+          ),
+        );
       default:
         push(
           FunctionExpressionInvocationImpl(
             function: receiver,
             typeArguments: typeArguments,
-            argumentList: arguments.argumentList,
+            argumentList: argumentList,
           ),
         );
     }
@@ -979,12 +956,12 @@ class AstBuilder extends StackListener {
     assert(optional(')', rightParenthesis));
     debugEvent("Arguments");
 
-    var expressions = popTypedList2<ExpressionImpl>(count);
-    for (var expression in expressions) {
-      reportErrorIfSuper(expression);
+    var expressions = popTypedList2<ArgumentImpl>(count);
+    for (var argument in expressions) {
+      reportErrorIfSuper(argument.argumentExpression);
     }
 
-    var arguments = ArgumentListImpl(
+    var argumentList = ArgumentListImpl(
       leftParenthesis: leftParenthesis,
       arguments: expressions,
       rightParenthesis: rightParenthesis,
@@ -993,7 +970,7 @@ class AstBuilder extends StackListener {
     if (!enableNamedArgumentsAnywhere) {
       bool hasSeenNamedArgument = false;
       for (var expression in expressions) {
-        if (expression is NamedExpressionImpl) {
+        if (expression is NamedArgumentImpl) {
           hasSeenNamedArgument = true;
         } else if (hasSeenNamedArgument) {
           // Positional argument after named argument.
@@ -1006,15 +983,7 @@ class AstBuilder extends StackListener {
       }
     }
 
-    push(
-      MethodInvocationImpl(
-        target: null,
-        operator: null,
-        methodName: _tmpSimpleIdentifier(),
-        typeArguments: null,
-        argumentList: arguments,
-      ),
-    );
+    push(argumentList);
   }
 
   @override
@@ -1413,7 +1382,7 @@ class AstBuilder extends StackListener {
           constructorName: dotShorthand.memberName,
           typeArguments: dotShorthand.typeArguments,
           argumentList: dotShorthand.argumentList,
-        )..isDotShorthand = dotShorthand.isDotShorthand,
+        ),
       );
     } else if (dotShorthand is DotShorthandPropertyAccessImpl) {
       push(
@@ -1423,7 +1392,7 @@ class AstBuilder extends StackListener {
           constructorName: dotShorthand.propertyName,
           typeArguments: null,
           argumentList: _syntheticArgumentList(dotShorthand.propertyName.token),
-        )..isDotShorthand = dotShorthand.isDotShorthand,
+        ),
       );
     }
   }
@@ -1544,7 +1513,7 @@ class AstBuilder extends StackListener {
     Token endToken,
   ) {
     assert(optional('enum', enumKeyword));
-    assert(optional('{', leftBrace));
+    assert(optional('{', leftBrace) || optional(';', leftBrace));
     debugEvent("Enum");
 
     var builder = _classLikeBuilder as _EnumDeclarationBuilder;
@@ -1593,6 +1562,9 @@ class AstBuilder extends StackListener {
         extendedType: extendedType,
       );
     }
+
+    pop(); // Error recovery: Primary constructor.
+    pop(); // Error recovery: Const token.
 
     declarations.add(builder.build(typeKeyword: null, onClause: onClause));
 
@@ -1819,157 +1791,121 @@ class AstBuilder extends StackListener {
       );
     }
 
-    var defaultValue = pop() as _ParameterDefaultValue?;
+    var defaultClause = pop() as FormalParameterDefaultClauseImpl?;
     var name = pop() as SimpleIdentifierImpl?;
-    var typeOrFunctionTypedParameter = pop() as AstNodeImpl?;
+    var typeOrFunctionTypedParameter = pop();
     var modifiers = pop() as _Modifiers?;
     var keyword = modifiers?.finalConstOrVarKeyword;
     var covariantKeyword = modifiers?.covariantKeyword;
     var requiredKeyword = modifiers?.requiredToken;
+
+    Token? typeOrFunctionTypedBeginToken;
+    switch (typeOrFunctionTypedParameter) {
+      case AstNodeImpl self:
+        typeOrFunctionTypedBeginToken = self.beginToken;
+      case _FunctionTypedFormalParameterData(
+        :var returnType,
+        :var functionTypedSuffix,
+      ):
+        typeOrFunctionTypedBeginToken =
+            returnType?.beginToken ?? functionTypedSuffix.beginToken;
+    }
 
     var metadata = pop() as List<AnnotationImpl>?;
     var comment = _findComment(
       metadata,
       modifiers?.beginToken ??
           thisKeyword ??
-          typeOrFunctionTypedParameter?.beginToken ??
+          typeOrFunctionTypedBeginToken ??
           nameToken,
     );
 
-    NormalFormalParameterImpl node;
-    if (typeOrFunctionTypedParameter is FunctionTypedFormalParameterImpl) {
-      // This is a temporary AST node that was constructed in
-      // [endFunctionTypedFormalParameter]. We now deconstruct it and create
-      // the final AST node.
-      if (superKeyword != null) {
-        assert(
-          thisKeyword == null,
-          "Can't have both 'this' and 'super' in a parameter.",
-        );
-        node = SuperFormalParameterImpl(
-          name: name!.token,
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          keyword: keyword,
-          requiredKeyword: requiredKeyword,
-          type: typeOrFunctionTypedParameter.returnType,
-          superKeyword: superKeyword,
-          period: periodAfterThisOrSuper!,
-          typeParameters: typeOrFunctionTypedParameter.typeParameters,
-          parameters: typeOrFunctionTypedParameter.parameters,
-          question: typeOrFunctionTypedParameter.question,
-        );
-      } else if (thisKeyword != null) {
-        assert(
-          superKeyword == null,
-          "Can't have both 'this' and 'super' in a parameter.",
-        );
-        node = FieldFormalParameterImpl(
-          name: name!.token,
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          keyword: keyword,
-          requiredKeyword: requiredKeyword,
-          type: typeOrFunctionTypedParameter.returnType,
-          thisKeyword: thisKeyword,
-          period: periodAfterThisOrSuper!,
-          typeParameters: typeOrFunctionTypedParameter.typeParameters,
-          parameters: typeOrFunctionTypedParameter.parameters,
-          question: typeOrFunctionTypedParameter.question,
-        );
-      } else {
-        node = FunctionTypedFormalParameterImpl(
-          name: name!.token,
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          requiredKeyword: requiredKeyword,
-          keyword: varOrFinal,
-          returnType: typeOrFunctionTypedParameter.returnType,
-          typeParameters: typeOrFunctionTypedParameter.typeParameters,
-          parameters: typeOrFunctionTypedParameter.parameters,
-          question: typeOrFunctionTypedParameter.question,
-        );
-      }
+    TypeAnnotationImpl? type;
+    FunctionTypedFormalParameterSuffixImpl? functionTypedSuffix;
+    if (typeOrFunctionTypedParameter is _FunctionTypedFormalParameterData) {
+      type = typeOrFunctionTypedParameter.returnType;
+      functionTypedSuffix = typeOrFunctionTypedParameter.functionTypedSuffix;
     } else {
-      var type = typeOrFunctionTypedParameter as TypeAnnotationImpl?;
-      if (superKeyword != null) {
-        assert(
-          thisKeyword == null,
-          "Can't have both 'this' and 'super' in a parameter.",
-        );
-        if (keyword is KeywordToken && keyword.keyword == Keyword.VAR) {
-          handleRecoverableError(
-            fe_diag.extraneousModifier.withArguments(lexeme: keyword),
-            keyword,
-            keyword,
-          );
-        }
-        node = SuperFormalParameterImpl(
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          requiredKeyword: requiredKeyword,
-          keyword: keyword,
-          type: type,
-          superKeyword: superKeyword,
-          period: periodAfterThisOrSuper!,
-          name: name!.token,
-          typeParameters: null,
-          parameters: null,
-          question: null,
-        );
-      } else if (thisKeyword != null) {
-        assert(
-          superKeyword == null,
-          "Can't have both 'this' and 'super' in a parameter.",
-        );
-        node = FieldFormalParameterImpl(
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          requiredKeyword: requiredKeyword,
-          keyword: keyword,
-          type: type,
-          thisKeyword: thisKeyword,
-          period: thisKeyword.next!,
-          name: name!.token,
-          typeParameters: null,
-          parameters: null,
-          question: null,
-        );
-      } else {
-        node = SimpleFormalParameterImpl(
-          comment: comment,
-          metadata: metadata,
-          covariantKeyword: covariantKeyword,
-          requiredKeyword: requiredKeyword,
-          keyword: keyword,
-          type: type,
-          name: name?.token,
+      type = typeOrFunctionTypedParameter as TypeAnnotationImpl?;
+    }
+
+    if (functionTypedSuffix != null &&
+        (thisKeyword != null || superKeyword != null) &&
+        keyword is KeywordToken) {
+      var keywordKind = keyword.keyword;
+      if (keywordKind == Keyword.CONST ||
+          keywordKind == Keyword.FINAL ||
+          keywordKind == Keyword.VAR) {
+        handleRecoverableError(
+          fe_diag.functionTypedParameterVar,
+          keyword,
+          keyword,
         );
       }
     }
 
     ParameterKind analyzerKind = _toAnalyzerParameterKind(kind);
-    FormalParameterImpl parameter = node;
-    if (analyzerKind != ParameterKind.REQUIRED) {
-      parameter = DefaultFormalParameterImpl(
-        parameter: node,
-        kind: analyzerKind,
-        separator: defaultValue?.separator,
-        defaultValue: defaultValue?.value,
+
+    FormalParameterImpl parameter;
+    if (superKeyword != null) {
+      assert(
+        thisKeyword == null,
+        "Can't have both 'this' and 'super' in a parameter.",
       );
-    } else if (defaultValue != null) {
-      // An error is reported if a required parameter has a default value.
-      // Record it as named parameter for recovery.
-      parameter = DefaultFormalParameterImpl(
-        parameter: node,
-        kind: ParameterKind.NAMED,
-        separator: defaultValue.separator,
-        defaultValue: defaultValue.value,
+      if (functionTypedSuffix == null &&
+          keyword is KeywordToken &&
+          keyword.keyword == Keyword.VAR) {
+        handleRecoverableError(
+          fe_diag.extraneousModifier.withArguments(lexeme: keyword),
+          keyword,
+          keyword,
+        );
+      }
+      parameter = SuperFormalParameterImpl(
+        comment: comment,
+        metadata: metadata,
+        kind: analyzerKind,
+        covariantKeyword: covariantKeyword,
+        requiredKeyword: requiredKeyword,
+        constFinalOrVarKeyword: keyword,
+        type: type,
+        superKeyword: superKeyword,
+        period: periodAfterThisOrSuper!,
+        name: name!.token,
+        functionTypedSuffix: functionTypedSuffix,
+        defaultClause: defaultClause,
+      );
+    } else if (thisKeyword != null) {
+      assert(
+        superKeyword == null,
+        "Can't have both 'this' and 'super' in a parameter.",
+      );
+      parameter = FieldFormalParameterImpl(
+        comment: comment,
+        metadata: metadata,
+        kind: analyzerKind,
+        covariantKeyword: covariantKeyword,
+        requiredKeyword: requiredKeyword,
+        constFinalOrVarKeyword: keyword,
+        type: type,
+        thisKeyword: thisKeyword,
+        period: periodAfterThisOrSuper!,
+        name: name!.token,
+        functionTypedSuffix: functionTypedSuffix,
+        defaultClause: defaultClause,
+      );
+    } else {
+      parameter = RegularFormalParameterImpl(
+        comment: comment,
+        metadata: metadata,
+        kind: analyzerKind,
+        covariantKeyword: covariantKeyword,
+        requiredKeyword: requiredKeyword,
+        constFinalOrVarKeyword: keyword,
+        type: type,
+        name: name?.token,
+        functionTypedSuffix: functionTypedSuffix,
+        defaultClause: defaultClause,
       );
     }
     push(parameter);
@@ -2096,20 +2032,16 @@ class AstBuilder extends StackListener {
     var returnType = pop() as TypeAnnotationImpl?;
     var typeParameters = pop() as TypeParameterListImpl?;
 
-    // Create a temporary formal parameter that will be dissected later in
+    // Create temporary data that will be attached to the concrete parameter in
     // [endFormalParameter].
     push(
-      FunctionTypedFormalParameterImpl(
-        comment: null,
-        metadata: null,
-        covariantKeyword: null,
-        requiredKeyword: null,
-        keyword: null,
-        name: StringToken(TokenType.IDENTIFIER, '', 0),
+      _FunctionTypedFormalParameterData(
         returnType: returnType,
-        typeParameters: typeParameters,
-        parameters: formalParameters,
-        question: question,
+        functionTypedSuffix: FunctionTypedFormalParameterSuffixImpl(
+          typeParameters: typeParameters,
+          formalParameters: formalParameters,
+          question: question,
+        ),
       ),
     );
   }
@@ -2193,7 +2125,7 @@ class AstBuilder extends StackListener {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     assert(optional('import', importKeyword));
     assert(optionalOrNull(';', semicolon));
     debugEvent("Import");
@@ -2206,17 +2138,6 @@ class AstBuilder extends StackListener {
     var uri = pop() as StringLiteralImpl;
     var metadata = pop() as List<AnnotationImpl>?;
     var comment = _findComment(metadata, importKeyword);
-
-    if (!enableMacros) {
-      if (augmentToken != null) {
-        _reportFeatureNotEnabled(
-          feature: ExperimentalFeatures.macros,
-          startToken: augmentToken,
-        );
-        // Pretend that 'augment' didn't occur while this feature is incomplete.
-        augmentToken = null;
-      }
-    }
 
     directives.add(
       ImportDirectiveImpl(
@@ -2348,7 +2269,7 @@ class AstBuilder extends StackListener {
     assert(optional(';', semicolon));
     debugEvent("LibraryName");
 
-    var libraryName = hasName ? pop() as List<SimpleIdentifierImpl>? : null;
+    var libraryName = hasName ? pop() as List<Token>? : null;
 
     if (!hasName && !enableUnnamedLibraries) {
       _reportFeatureNotEnabled(
@@ -2356,24 +2277,9 @@ class AstBuilder extends StackListener {
         startToken: libraryKeyword,
       );
     }
-    var name = libraryName == null
-        ? null
-        : (useDottedNameInLibraryDirective
-              ? null
-              : LibraryIdentifierImpl(components: libraryName));
-    DottedNameImpl? name2;
-    if (useDottedNameInLibraryDirective && libraryName != null) {
-      var tokens = <Token>[];
-      if (libraryName.isNotEmpty) {
-        var t = libraryName.first.beginToken;
-        var end = libraryName.last.endToken;
-        while (t != end) {
-          tokens.add(t);
-          t = t.next!;
-        }
-        tokens.add(end);
-      }
-      name2 = DottedNameImpl(components: libraryName, tokens: tokens);
+    DottedNameImpl? name;
+    if (libraryName != null) {
+      name = DottedNameImpl(tokens: libraryName);
     }
     var metadata = pop() as List<AnnotationImpl>?;
     var comment = _findComment(metadata, libraryKeyword);
@@ -2383,7 +2289,6 @@ class AstBuilder extends StackListener {
         metadata: metadata,
         libraryKeyword: libraryKeyword,
         name: name,
-        name2: name2,
         semicolon: semicolon,
       ),
     );
@@ -2502,7 +2407,7 @@ class AstBuilder extends StackListener {
     assert(optionalOrNull('.', periodBeforeName));
     debugEvent("Metadata");
 
-    var invocation = pop() as MethodInvocationImpl?;
+    var argumentList = pop() as ArgumentListImpl?;
     var constructorName = periodBeforeName != null
         ? pop() as SimpleIdentifierImpl
         : null;
@@ -2522,7 +2427,7 @@ class AstBuilder extends StackListener {
         typeArguments: typeArguments,
         period: periodBeforeName,
         constructorName: constructorName,
-        arguments: invocation?.argumentList,
+        arguments: argumentList,
       ),
     );
   }
@@ -2640,7 +2545,6 @@ class AstBuilder extends StackListener {
     var interfaceKeyword = pop(NullValues.Token) as Token?;
     var baseKeyword = pop(NullValues.Token) as Token?;
     var sealedKeyword = pop(NullValues.Token) as Token?;
-    pop(NullValues.Token) as Token?; // macroKeyword
     var modifiers = pop() as _Modifiers?;
     var typeParameters = pop() as TypeParameterListImpl?;
     var name = pop() as SimpleIdentifierImpl;
@@ -2749,37 +2653,15 @@ class AstBuilder extends StackListener {
     assert(optional(';', semicolon));
     debugEvent("PartOf");
     var libraryNameOrUri = pop();
-    LibraryIdentifierImpl? name;
-    DottedNameImpl? name2;
+    DottedNameImpl? name;
     StringLiteralImpl? uri;
     if (libraryNameOrUri is StringLiteralImpl) {
       uri = libraryNameOrUri;
     } else {
-      var components = libraryNameOrUri as List<SimpleIdentifierImpl>;
-      if (useDottedNameInLibraryDirective) {
-        var tokens = <Token>[];
-        if (components.isNotEmpty) {
-          var t = components.first.beginToken;
-          var end = components.last.endToken;
-          while (t != end) {
-            tokens.add(t);
-            t = t.next!;
-          }
-          tokens.add(end);
-        }
-        name2 = DottedNameImpl(components: components, tokens: tokens);
-        if (_featureSet.isEnabled(Feature.enhanced_parts)) {
-          diagnosticReporter.diagnosticReporter?.report(
-            diag.partOfName.at(name2),
-          );
-        }
-      } else {
-        name = LibraryIdentifierImpl(components: components);
-        if (_featureSet.isEnabled(Feature.enhanced_parts)) {
-          diagnosticReporter.diagnosticReporter?.report(
-            diag.partOfName.at(name),
-          );
-        }
+      var libraryName = libraryNameOrUri as List<Token>;
+      name = DottedNameImpl(tokens: libraryName);
+      if (_featureSet.isEnabled(Feature.enhanced_parts)) {
+        diagnosticReporter.diagnosticReporter?.report(diag.partOfName.at(name));
       }
     }
     var metadata = pop() as List<AnnotationImpl>?;
@@ -2792,7 +2674,6 @@ class AstBuilder extends StackListener {
         ofKeyword: ofKeyword,
         uri: uri,
         libraryName: name,
-        libraryName2: name2,
         semicolon: semicolon,
       ),
     );
@@ -2812,10 +2693,11 @@ class AstBuilder extends StackListener {
 
   @override
   void endPrimaryConstructor(
+    DeclarationKind kind,
     Token beginToken,
+    Token endToken,
     Token? constKeyword,
     bool hasConstructorName,
-    bool forExtensionType,
   ) {
     var formalParameterList = pop() as FormalParameterListImpl?;
     if (formalParameterList == null) {
@@ -2823,13 +2705,23 @@ class AstBuilder extends StackListener {
       formalParameterList = _syntheticFormalParameterList(extensionTypeName);
     }
 
-    if (!forExtensionType) {
-      if (!_featureSet.isEnabled(Feature.primary_constructors)) {
-        _reportFeatureNotEnabled(
-          feature: Feature.primary_constructors,
-          startToken: beginToken,
-        );
-      }
+    switch (kind) {
+      case DeclarationKind.TopLevel:
+      case DeclarationKind.Mixin:
+      case DeclarationKind.Extension:
+        // Invalid. Error reported in the parser.
+        break;
+      case DeclarationKind.ExtensionType:
+        // Always valid.
+        break;
+      case DeclarationKind.Class:
+      case DeclarationKind.Enum:
+        if (!_featureSet.isEnabled(Feature.primary_constructors)) {
+          _reportFeatureNotEnabled(
+            feature: Feature.primary_constructors,
+            startToken: beginToken,
+          );
+        }
     }
 
     PrimaryConstructorNameImpl? constructorName;
@@ -2882,7 +2774,7 @@ class AstBuilder extends StackListener {
   void endRecordLiteral(Token leftParenthesis, int count, Token? constKeyword) {
     debugEvent("RecordLiteral");
 
-    var fields = popTypedList<ExpressionImpl>(count) ?? const [];
+    var fields = popTypedList<RecordLiteralFieldImpl>(count) ?? const [];
     var rightParenthesis = leftParenthesis.endGroup!;
 
     if (enableRecords) {
@@ -2900,7 +2792,7 @@ class AstBuilder extends StackListener {
         startToken: leftParenthesis,
       );
 
-      var expression = fields.firstOrNull;
+      var expression = fields.firstOrNull?.fieldExpression;
       expression ??= SimpleIdentifierImpl(
         token: parser.rewriter.insertSyntheticIdentifier(leftParenthesis),
       );
@@ -3076,10 +2968,11 @@ class AstBuilder extends StackListener {
     Set<String> labels = <String>{};
     for (var member in members) {
       for (var label in member.labels) {
-        if (!labels.add(label.label.name)) {
+        var lexeme = label.name.lexeme;
+        if (!labels.add(lexeme)) {
           handleRecoverableError(
             fe_diag.duplicateLabelInSwitchStatement.withArguments(
-              labelName: label.label.name,
+              labelName: lexeme,
             ),
             label.beginToken,
             label.beginToken,
@@ -3298,6 +3191,7 @@ class AstBuilder extends StackListener {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -3336,6 +3230,7 @@ class AstBuilder extends StackListener {
       TopLevelVariableDeclarationImpl(
         comment: comment,
         metadata: metadata,
+        abstractKeyword: abstractToken,
         augmentKeyword: augmentToken,
         externalKeyword: externalToken,
         variables: variableList,
@@ -3779,18 +3674,6 @@ class AstBuilder extends StackListener {
   }
 
   @override
-  void handleAugmentSuperExpression(
-    Token augmentKeyword,
-    Token superKeyword,
-    IdentifierContext context,
-  ) {
-    assert(optional('augment', augmentKeyword));
-    assert(optional('super', superKeyword));
-    debugEvent("AugmentSuperExpression");
-    throw UnimplementedError('AstBuilder.handleAugmentSuperExpression');
-  }
-
-  @override
   void handleBreakStatement(
     bool hasTarget,
     Token breakKeyword,
@@ -3800,11 +3683,14 @@ class AstBuilder extends StackListener {
     assert(optional(';', semicolon));
     debugEvent("BreakStatement");
 
-    var label = hasTarget ? pop() as SimpleIdentifierImpl : null;
+    var labelIdentifier = hasTarget ? pop() as Token : null;
+    var labelReference = labelIdentifier != null
+        ? LabelReferenceImpl(name: labelIdentifier)
+        : null;
     push(
       BreakStatementImpl(
         breakKeyword: breakKeyword,
-        label: label,
+        label: labelReference,
         semicolon: semicolon,
       ),
     );
@@ -3932,7 +3818,6 @@ class AstBuilder extends StackListener {
     var interfaceKeyword = pop(NullValues.Token) as Token?;
     var baseKeyword = pop(NullValues.Token) as Token?;
     var sealedKeyword = pop(NullValues.Token) as Token?;
-    var macroKeyword = pop(NullValues.Token) as Token?;
     var modifiers = pop() as _Modifiers?;
     var typeParameters = pop() as TypeParameterListImpl?;
     var name = pop() as SimpleIdentifierImpl;
@@ -3945,7 +3830,6 @@ class AstBuilder extends StackListener {
       comment: comment,
       metadata: metadata,
       abstractKeyword: abstractKeyword,
-      macroKeyword: macroKeyword,
       sealedKeyword: sealedKeyword,
       baseKeyword: baseKeyword,
       interfaceKeyword: interfaceKeyword,
@@ -3995,11 +3879,14 @@ class AstBuilder extends StackListener {
     assert(optional(';', semicolon));
     debugEvent("ContinueStatement");
 
-    var label = hasTarget ? pop() as SimpleIdentifierImpl : null;
+    var labelIdentifier = hasTarget ? pop() as Token : null;
+    var labelReference = labelIdentifier != null
+        ? LabelReferenceImpl(name: labelIdentifier)
+        : null;
     push(
       ContinueStatementImpl(
         continueKeyword: continueKeyword,
-        label: label,
+        label: labelReference,
         semicolon: semicolon,
       ),
     );
@@ -4090,15 +3977,21 @@ class AstBuilder extends StackListener {
     assert(firstIdentifier.isIdentifier);
     debugEvent("DottedName");
 
-    var components = popTypedList2<SimpleIdentifierImpl>(count);
+    var identifiers = popTypedList2<Token>(count);
     var tokens = <Token>[];
-    for (var i = 0; i < count; i++) {
-      tokens.add(components[i].token);
-      if (i < count - 1) {
-        tokens.add(components[i].token.next!);
+    if (identifiers.isNotEmpty) {
+      // TODO(scheglov): The parser does not use [handleQualified] for
+      // [handleDottedName], so no periods in [identifiers].
+      // We must walk the token stream.
+      var t = identifiers.first;
+      var end = identifiers.last;
+      while (t != end) {
+        tokens.add(t);
+        t = t.next!;
       }
+      tokens.add(end);
     }
-    push(DottedNameImpl(components: components, tokens: tokens));
+    push(DottedNameImpl(tokens: tokens));
   }
 
   @override
@@ -4128,25 +4021,23 @@ class AstBuilder extends StackListener {
   @override
   void handleEnumElement(Token beginToken, Token? augmentToken) {
     debugEvent("EnumElement");
-    var tmpArguments = pop() as MethodInvocationImpl?;
+    var argumentList = pop() as ArgumentListImpl?;
     var tmpConstructor = pop() as ConstructorNameImpl?;
     var constant = pop() as EnumConstantDeclarationImpl;
 
     if (!enableEnhancedEnums &&
-        (tmpArguments != null ||
+        (argumentList != null ||
             tmpConstructor != null &&
                 (tmpConstructor.type.typeArguments != null ||
                     tmpConstructor.name != null))) {
-      Token token = tmpArguments != null
-          ? tmpArguments.argumentList.beginToken
+      Token token = argumentList != null
+          ? argumentList.beginToken
           : tmpConstructor!.beginToken;
       _reportFeatureNotEnabled(
         feature: ExperimentalFeatures.enhanced_enums,
         startToken: token,
       );
     }
-
-    var argumentList = tmpArguments?.argumentList;
 
     TypeArgumentListImpl? typeArguments;
     ConstructorSelectorImpl? constructorSelector;
@@ -4207,7 +4098,7 @@ class AstBuilder extends StackListener {
     Token leftBrace,
   ) {
     assert(optional('enum', enumKeyword));
-    assert(optional('{', leftBrace));
+    assert(optional('{', leftBrace) || optional(';', leftBrace));
     debugEvent("EnumHeader");
 
     var implementsClause =
@@ -4248,7 +4139,7 @@ class AstBuilder extends StackListener {
       implementsClause: implementsClause,
       leftBracket: leftBrace,
       semicolon: null,
-      rightBracket: leftBrace.endGroup!,
+      rightBracket: leftBrace.endGroup ?? leftBrace,
     );
   }
 
@@ -4503,7 +4394,11 @@ class AstBuilder extends StackListener {
     assert(token.isKeywordOrIdentifier);
     debugEvent("handleIdentifier");
 
-    if (context.inSymbol) {
+    if (context.inSymbol ||
+        context == IdentifierContext.dottedName ||
+        context == IdentifierContext.dottedNameContinuation ||
+        context == IdentifierContext.labelDeclaration ||
+        context == IdentifierContext.labelReference) {
       push(token);
       return;
     }
@@ -4511,9 +4406,9 @@ class AstBuilder extends StackListener {
     var identifier = SimpleIdentifierImpl(token: token);
     if (context.inLibraryOrPartOfDeclaration) {
       if (!context.isContinuation) {
-        push([identifier]);
+        push([token]);
       } else {
-        push(identifier);
+        push(token);
       }
     } else if (context == IdentifierContext.enumValueDeclaration) {
       var metadata = pop() as List<AnnotationImpl>?;
@@ -4731,8 +4626,8 @@ class AstBuilder extends StackListener {
     assert(optionalOrNull(':', colon));
     debugEvent("Label");
 
-    var name = pop() as SimpleIdentifierImpl;
-    push(LabelImpl(label: name, colon: colon));
+    var name = pop() as Token;
+    push(LabelImpl(name: name, colon: colon));
   }
 
   @override
@@ -4954,6 +4849,8 @@ class AstBuilder extends StackListener {
     var implementsClause =
         pop(NullValues.IdentifierList) as ImplementsClauseImpl?;
     var onClause = pop(NullValues.IdentifierList) as MixinOnClauseImpl?;
+    pop(); // Error recovery: Primary constructor.
+    pop(); // Error recovery: Const token.
     var baseKeyword = pop(NullValues.Token) as Token?;
     var augmentKeyword = pop(NullValues.Token) as Token?;
     var typeParameters = pop() as TypeParameterListImpl?;
@@ -5013,9 +4910,10 @@ class AstBuilder extends StackListener {
     var name = pop() as SimpleIdentifierImpl;
 
     push(
-      NamedExpressionImpl(
-        name: LabelImpl(label: name, colon: colon),
-        expression: expression,
+      NamedArgumentImpl(
+        name: name.token,
+        colon: colon,
+        argumentExpression: expression,
       ),
     );
   }
@@ -5030,7 +4928,20 @@ class AstBuilder extends StackListener {
   }
 
   @override
-  void handleNamedRecordField(Token colon) => handleNamedArgument(colon);
+  void handleNamedRecordField(Token colon) {
+    debugEvent("NamedRecordField");
+
+    var expression = pop() as ExpressionImpl;
+    var name = pop() as SimpleIdentifierImpl;
+
+    push(
+      RecordLiteralNamedFieldImpl(
+        name: name.token,
+        colon: colon,
+        fieldExpression: expression,
+      ),
+    );
+  }
 
   @override
   void handleNativeClause(Token nativeToken, bool hasName) {
@@ -5088,6 +4999,24 @@ class AstBuilder extends StackListener {
   }
 
   @override
+  void handleNoEnumBody(Token semicolonToken) {
+    debugEvent("NoEnumBody");
+    var builder = _classLikeBuilder;
+    if (builder != null) {
+      builder.emptyClassBodySemicolon = semicolonToken;
+    }
+  }
+
+  @override
+  void handleNoExtensionBody(Token semicolonToken) {
+    debugEvent("NoExtensionBody");
+    var builder = _classLikeBuilder;
+    if (builder != null) {
+      builder.emptyClassBodySemicolon = semicolonToken;
+    }
+  }
+
+  @override
   void handleNoExtensionTypeBody(Token semicolonToken) {
     debugEvent("NoExtensionTypeBody");
     var builder = _classLikeBuilder;
@@ -5128,6 +5057,15 @@ class AstBuilder extends StackListener {
   }
 
   @override
+  void handleNoMixinBody(Token semicolonToken) {
+    debugEvent("NoMixinBody");
+    var builder = _classLikeBuilder;
+    if (builder != null) {
+      builder.emptyClassBodySemicolon = semicolonToken;
+    }
+  }
+
+  @override
   void handleNonNullAssertExpression(Token bang) {
     debugEvent('NonNullAssertExpression');
 
@@ -5138,9 +5076,9 @@ class AstBuilder extends StackListener {
 
   @override
   void handleNoPrimaryConstructor(
+    DeclarationKind kind,
     Token token,
     Token? constKeyword,
-    bool forExtensionType,
   ) {
     push(constKeyword ?? const NullValue("Token"));
     push(NullValues.PrimaryConstructor);
@@ -5355,10 +5293,11 @@ class AstBuilder extends StackListener {
   void handleQualified(Token period) {
     assert(optional('.', period));
 
-    var identifier = pop() as SimpleIdentifierImpl;
+    var identifier = pop();
     var prefix = pop();
     if (prefix is List) {
       // We're just accumulating components into a list.
+      prefix.add(period);
       prefix.add(identifier);
       push(prefix);
     } else if (prefix is SimpleIdentifierImpl) {
@@ -5368,7 +5307,7 @@ class AstBuilder extends StackListener {
         PrefixedIdentifierImpl(
           prefix: prefix,
           period: period,
-          identifier: identifier,
+          identifier: identifier as SimpleIdentifierImpl,
         ),
       );
     } else {
@@ -5567,10 +5506,10 @@ class AstBuilder extends StackListener {
   void handleSend(Token beginToken, Token endToken) {
     debugEvent("Send");
 
-    var arguments = pop() as MethodInvocationImpl?;
+    var argumentList = pop() as ArgumentListImpl?;
     var typeArguments = pop() as TypeArgumentListImpl?;
-    if (arguments != null) {
-      doInvocation(typeArguments, arguments);
+    if (argumentList != null) {
+      doInvocation(typeArguments, argumentList);
     } else {
       doPropertyGet();
     }
@@ -5730,7 +5669,7 @@ class AstBuilder extends StackListener {
     debugEvent("ValuedFormalParameter");
 
     var value = pop() as ExpressionImpl;
-    push(_ParameterDefaultValue(equals, value));
+    push(FormalParameterDefaultClauseImpl(separator: equals, value: value));
   }
 
   @override
@@ -5820,14 +5759,8 @@ class AstBuilder extends StackListener {
     return tailList.nonNulls.toList();
   }
 
-  // TODO(scheglov): This is probably not optimal.
   List<T> popTypedList2<T>(int count) {
-    var result = <T>[];
-    for (var i = 0; i < count; i++) {
-      var element = stack.pop(null) as T;
-      result.add(element);
-    }
-    return result.reversed.toList();
+    return stack.popNonNullableNewList<T>(count);
   }
 
   void reportErrorIfNullableType(Token? questionMark) {
@@ -5966,11 +5899,10 @@ class AstBuilder extends StackListener {
 
     if (modifiers?.externalKeyword != null) {
       for (var formalParameter in parameters.parameters) {
-        var notDefault = formalParameter.notDefault;
-        if (notDefault is FieldFormalParameterImpl) {
+        if (formalParameter is FieldFormalParameterImpl) {
           diagnosticReporter.diagnosticReporter?.report(
             diag.externalConstructorWithFieldInitializers.at(
-              notDefault.thisKeyword,
+              formalParameter.thisKeyword,
             ),
           );
         }
@@ -6066,8 +5998,6 @@ class AstBuilder extends StackListener {
         typeNameIdentifier = preliminaryName.prefix;
         period = preliminaryName.period;
         constructorNameToken = preliminaryName.identifier.token;
-      default:
-        throw UnimplementedError();
     }
 
     var constructor = ConstructorDeclarationImpl(
@@ -6151,7 +6081,6 @@ class AstBuilder extends StackListener {
       type: type,
       variables: variables,
     );
-    var covariantKeyword = covariantToken;
     var metadata = pop() as List<AnnotationImpl>?;
     var comment = _findComment(metadata, beginToken);
     _classLikeBuilder?.members.add(
@@ -6160,7 +6089,7 @@ class AstBuilder extends StackListener {
         metadata: metadata,
         abstractKeyword: abstractToken,
         augmentKeyword: augmentToken,
-        covariantKeyword: covariantKeyword,
+        covariantKeyword: covariantToken,
         externalKeyword: externalToken,
         staticKeyword: staticToken,
         fields: variableList,
@@ -6291,14 +6220,17 @@ class AstBuilder extends StackListener {
       return FormalParameterListImpl(
         leftParenthesis: formalParameters.leftParenthesis,
         parameters: [
-          SimpleFormalParameterImpl(
+          RegularFormalParameterImpl(
             comment: null,
             metadata: null,
+            kind: ParameterKind.REQUIRED,
             covariantKeyword: null,
             requiredKeyword: null,
-            keyword: null,
+            constFinalOrVarKeyword: null,
             type: null,
             name: valueNameToken,
+            functionTypedSuffix: null,
+            defaultClause: null,
           ),
         ],
         leftDelimiter: null,
@@ -6317,7 +6249,7 @@ class AstBuilder extends StackListener {
     );
     return FormalParameterListImpl(
       leftParenthesis: formalParameters.leftParenthesis,
-      parameters: [valueFormalParameter.notDefault],
+      parameters: [valueFormalParameter],
       leftDelimiter: null,
       rightDelimiter: null,
       rightParenthesis: formalParameters.rightParenthesis,
@@ -6351,7 +6283,7 @@ class AstBuilder extends StackListener {
   }
 
   void _handleInstanceCreation(Token? token) {
-    var arguments = pop() as MethodInvocationImpl;
+    var argumentList = pop() as ArgumentListImpl;
     ConstructorNameImpl constructorName;
     TypeArgumentListImpl? typeArguments;
     var object = pop();
@@ -6365,7 +6297,7 @@ class AstBuilder extends StackListener {
       InstanceCreationExpressionImpl(
         keyword: token,
         constructorName: constructorName,
-        argumentList: arguments.argumentList,
+        argumentList: argumentList,
         typeArguments: typeArguments,
       ),
     );
@@ -6427,12 +6359,6 @@ class AstBuilder extends StackListener {
     );
   }
 
-  SimpleIdentifierImpl _tmpSimpleIdentifier() {
-    return SimpleIdentifierImpl(
-      token: StringToken(TokenType.STRING, '__tmp', -1),
-    );
-  }
-
   ParameterKind _toAnalyzerParameterKind(FormalParameterKind type) {
     switch (type) {
       case FormalParameterKind.requiredPositional:
@@ -6454,7 +6380,6 @@ class AstBuilder extends StackListener {
 class _ClassDeclarationBuilder extends _ClassLikeDeclarationBuilder {
   final Token? augmentKeyword;
   final Token? abstractKeyword;
-  final Token? macroKeyword;
   final Token? sealedKeyword;
   final Token? baseKeyword;
   final Token? interfaceKeyword;
@@ -6479,7 +6404,6 @@ class _ClassDeclarationBuilder extends _ClassLikeDeclarationBuilder {
     required super.rightBracket,
     required this.augmentKeyword,
     required this.abstractKeyword,
-    required this.macroKeyword,
     required this.sealedKeyword,
     required this.baseKeyword,
     required this.interfaceKeyword,
@@ -6601,13 +6525,18 @@ class _EnumDeclarationBuilder extends _ClassLikeDeclarationBuilder {
   });
 
   EnumDeclarationImpl build() {
-    var body = EnumBodyImpl(
-      leftBracket: leftBracket,
-      constants: constants,
-      semicolon: semicolon,
-      members: members,
-      rightBracket: rightBracket,
-    );
+    EnumBodyImpl body;
+    if (emptyClassBodySemicolon case var semicolon?) {
+      body = EmptyEnumBodyImpl(semicolon: semicolon);
+    } else {
+      body = BlockEnumBodyImpl(
+        leftBracket: leftBracket,
+        constants: constants,
+        semicolon: semicolon,
+        members: members,
+        rightBracket: rightBracket,
+      );
+    }
 
     return EnumDeclarationImpl(
       comment: comment,
@@ -6646,11 +6575,16 @@ class _ExtensionDeclarationBuilder extends _ClassLikeDeclarationBuilder {
     required Token? typeKeyword,
     required ExtensionOnClauseImpl? onClause,
   }) {
-    var body = BlockClassBodyImpl(
-      leftBracket: leftBracket,
-      members: members,
-      rightBracket: rightBracket,
-    );
+    ClassBodyImpl body;
+    if (emptyClassBodySemicolon case var semicolon?) {
+      body = EmptyClassBodyImpl(semicolon: semicolon);
+    } else {
+      body = BlockClassBodyImpl(
+        leftBracket: leftBracket,
+        members: members,
+        rightBracket: rightBracket,
+      );
+    }
 
     return ExtensionDeclarationImpl(
       comment: comment,
@@ -6719,6 +6653,18 @@ class _ExtensionTypeDeclarationBuilder extends _ClassLikeDeclarationBuilder {
   }
 }
 
+/// Data structure placed on the stack to carry function-typed parameter parts
+/// until the concrete formal parameter node is built.
+class _FunctionTypedFormalParameterData {
+  final TypeAnnotationImpl? returnType;
+  final FunctionTypedFormalParameterSuffixImpl functionTypedSuffix;
+
+  _FunctionTypedFormalParameterData({
+    required this.returnType,
+    required this.functionTypedSuffix,
+  });
+}
+
 class _MixinDeclarationBuilder extends _ClassLikeDeclarationBuilder {
   final Token? augmentKeyword;
   final Token? baseKeyword;
@@ -6745,11 +6691,16 @@ class _MixinDeclarationBuilder extends _ClassLikeDeclarationBuilder {
   });
 
   MixinDeclarationImpl build() {
-    var body = BlockClassBodyImpl(
-      leftBracket: leftBracket,
-      members: members,
-      rightBracket: rightBracket,
-    );
+    ClassBodyImpl body;
+    if (emptyClassBodySemicolon case var semicolon?) {
+      body = EmptyClassBodyImpl(semicolon: semicolon);
+    } else {
+      body = BlockClassBodyImpl(
+        leftBracket: leftBracket,
+        members: members,
+        rightBracket: rightBracket,
+      );
+    }
 
     return MixinDeclarationImpl(
       comment: comment,
@@ -6845,15 +6796,6 @@ class _OptionalFormalParameters {
     this.leftDelimiter,
     this.rightDelimiter,
   );
-}
-
-/// Data structure placed on the stack to represent the default parameter
-/// value with the separator token.
-class _ParameterDefaultValue {
-  final Token separator;
-  final ExpressionImpl value;
-
-  _ParameterDefaultValue(this.separator, this.value);
 }
 
 /// Data structure placed on the stack to represent the parenthesized condition

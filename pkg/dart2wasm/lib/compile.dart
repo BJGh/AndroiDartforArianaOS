@@ -4,8 +4,6 @@
 
 import 'dart:convert';
 
-import 'package:front_end/src/api_prototype/dynamic_module_validator.dart'
-    show DynamicInterfaceYamlFile;
 import 'package:front_end/src/api_prototype/file_system.dart' show FileSystem;
 import 'package:front_end/src/api_unstable/vm.dart'
     show
@@ -22,14 +20,16 @@ import 'package:kernel/type_environment.dart';
 import 'package:kernel/verifier.dart';
 import 'package:path/path.dart' as path;
 import 'package:pool/pool.dart' as pool;
-import 'package:record_use/record_use_internal.dart' as record_use;
+import 'package:record_use/record_use.dart' as record_use;
 import 'package:vm/kernel_front_end.dart' show writeDepfile;
 import 'package:vm/transformations/mixin_deduplication.dart'
-    as mixin_deduplication show transformLibraries;
+    as mixin_deduplication
+    show transformLibraries;
 import 'package:vm/transformations/record_use/record_use.dart' as record_use;
 import 'package:vm/transformations/to_string_transformer.dart'
     as to_string_transformer;
-import 'package:vm/transformations/type_flow/transformer.dart' as globalTypeFlow
+import 'package:vm/transformations/type_flow/transformer.dart'
+    as globalTypeFlow
     show transformComponent;
 import 'package:vm/transformations/type_flow/utils.dart' as tfa_utils;
 import 'package:vm/transformations/unreachable_code_elimination.dart'
@@ -40,10 +40,7 @@ import 'compiler_options.dart' as compiler;
 import 'constant_evaluator.dart';
 import 'deferred_loading.dart';
 import 'dry_run.dart';
-import 'dynamic_module_kernel_metadata.dart';
-import 'dynamic_modules.dart';
 import 'io_util.dart';
-import 'js/method_collector.dart' show JSMethods;
 import 'js/runtime_generator.dart' as js;
 import 'modules.dart';
 import 'record_class_generator.dart';
@@ -76,18 +73,15 @@ class TfaResult extends CompilationSuccess {
   final CoreTypes coreTypes;
   final LibraryIndex libraryIndex;
   final ModuleStrategy moduleStrategy;
-  final MainModuleMetadata mainModuleMetadata;
-  final JSMethods jsInteropMethods;
   final Map<RecordShape, Class> recordClasses;
 
   TfaResult(
-      this.component,
-      this.coreTypes,
-      this.libraryIndex,
-      this.moduleStrategy,
-      this.mainModuleMetadata,
-      this.jsInteropMethods,
-      this.recordClasses);
+    this.component,
+    this.coreTypes,
+    this.libraryIndex,
+    this.moduleStrategy,
+    this.recordClasses,
+  );
 }
 
 class CodegenResult extends CompilationSuccess {
@@ -140,23 +134,26 @@ class CFECompileTimeErrors extends CompilationError {
   CFECompileTimeErrors(this.component);
 }
 
-const List<String> _librariesToIndex = [
-  "dart:_boxed_bool",
-  "dart:_boxed_double",
-  "dart:_boxed_int",
-  "dart:_compact_hash",
-  "dart:_internal",
-  "dart:_js_helper",
-  "dart:_js_types",
-  "dart:_list",
-  "dart:_string",
-  "dart:_wasm",
-  "dart:async",
-  "dart:collection",
-  "dart:core",
-  "dart:ffi",
-  "dart:typed_data",
-];
+List<String> librariesToIndex(wasm.Mode mode) {
+  return [
+    "dart:_boxed_bool",
+    "dart:_boxed_double",
+    "dart:_boxed_int",
+    "dart:_compact_hash",
+    "dart:_internal",
+    "dart:_js_helper",
+    "dart:_js_types",
+    "dart:_list",
+    "dart:_string",
+    "dart:_wasm",
+    "dart:async",
+    "dart:collection",
+    "dart:core",
+    "dart:ffi",
+    "dart:typed_data",
+    if (mode == .standalone) "dart:_embedder",
+  ];
+}
 
 const List<String> _binaryenFlags = [
   '--enable-gc',
@@ -195,6 +192,7 @@ const List<String> _binaryenFlagsMultiModule = [
   '--no-inline=*<noInline>*',
   '--traps-never-happen',
   '-Os',
+  '-Os',
 ];
 
 /// Compile a Dart file into a Wasm module.
@@ -209,21 +207,25 @@ const List<String> _binaryenFlagsMultiModule = [
 /// When this argument is null the code generator does not generate source
 /// mappings.
 Future<CompilationResult> compile(
-    compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager,
-    void Function(CfeDiagnosticMessage) handleDiagnosticMessage) async {
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+  void Function(CfeDiagnosticMessage) handleDiagnosticMessage,
+) async {
   final wasm.Mode mode;
   if (options.translatorOptions.jsCompatibility) {
     mode = wasm.Mode.jsCompatibility;
+  } else if (options.translatorOptions.standalone) {
+    mode = wasm.Mode.standalone;
   } else {
     mode = wasm.Mode.regular;
   }
   final WasmTarget target = WasmTarget(
-      enableExperimentalFfi: options.translatorOptions.enableExperimentalFfi,
-      enableExperimentalWasmInterop:
-          options.translatorOptions.enableExperimentalWasmInterop,
-      removeAsserts: !options.translatorOptions.enableAsserts,
-      mode: mode);
+    enableExperimentalFfi: options.translatorOptions.enableExperimentalFfi,
+    enableExperimentalWasmInterop:
+        options.translatorOptions.enableExperimentalWasmInterop,
+    removeAsserts: !options.translatorOptions.enableAsserts,
+    mode: mode,
+  );
 
   CfeResult? cfeResult;
   TfaResult? tfaResult;
@@ -255,18 +257,20 @@ Future<CompilationResult> compile(
 
       case compiler.CompilerPhase.codegen:
         lastResult = await _runCodegenPhase(
-            tfaResult ?? await _loadTfaResult(options, target, ioManager),
-            options,
-            ioManager);
+          tfaResult ?? await _loadTfaResult(options, target, ioManager),
+          options,
+          ioManager,
+        );
 
         if (lastResult is! CodegenResult) return lastResult;
         codegenResult = lastResult;
 
       case compiler.CompilerPhase.opt:
         lastResult = await _runOptPhase(
-            codegenResult ?? await _loadCodegenResult(options, ioManager),
-            options,
-            ioManager);
+          codegenResult ?? await _loadCodegenResult(options, ioManager),
+          options,
+          ioManager,
+        );
 
         if (lastResult is! OptResult) return lastResult;
     }
@@ -275,8 +279,10 @@ Future<CompilationResult> compile(
   return lastResult!;
 }
 
-Future<CfeResult> _loadCfeResult(compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager) async {
+Future<CfeResult> _loadCfeResult(
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   final component = Component();
   await ioManager.readComponent(options.mainUri, component);
   final coreTypes = CoreTypes(component);
@@ -284,11 +290,12 @@ Future<CfeResult> _loadCfeResult(compiler.WasmCompilerOptions options,
 }
 
 Future<CompilationResult> _runCfePhase(
-    compiler.WasmCompilerOptions options,
-    WasmTarget target,
-    FileSystem fileSystem,
-    CompilerPhaseInputOutputManager ioManager,
-    void Function(CfeDiagnosticMessage) handleDiagnosticMessage) async {
+  compiler.WasmCompilerOptions options,
+  WasmTarget target,
+  FileSystem fileSystem,
+  CompilerPhaseInputOutputManager ioManager,
+  void Function(CfeDiagnosticMessage) handleDiagnosticMessage,
+) async {
   var hadCompileTimeError = false;
   void diagnosticMessageHandler(CfeDiagnosticMessage message) {
     if (message.severity == CfeSeverity.error) {
@@ -324,39 +331,9 @@ Future<CompilationResult> _runCfePhase(
     compilerOptions.compileSdk = true;
   }
 
-  List<Uri> additionalSources = const [];
-  final isDynamicMainModule =
-      options.dynamicModuleType == DynamicModuleType.main;
-  if (isDynamicMainModule) {
-    final dynamicInterfaceUri = options.dynamicInterfaceUri;
-    if (dynamicInterfaceUri != null) {
-      final contents = await ioManager.readString(dynamicInterfaceUri);
-      final dynamicInterfaceYamlFile = DynamicInterfaceYamlFile(contents);
-      additionalSources = dynamicInterfaceYamlFile
-          .getUserLibraryUris(dynamicInterfaceUri)
-          .toList();
-    }
-  }
-
-  final dynamicMainModuleUri =
-      await ioManager.resolveUri(options.dynamicMainModuleUri);
-  final isDynamicSubmodule =
-      options.dynamicModuleType == DynamicModuleType.submodule;
-  if (isDynamicSubmodule) {
-    compilerOptions.additionalDills.add(dynamicMainModuleUri!);
-
-    if (options.validateDynamicModules) {
-      // We must pass the unresolved URI here to be compatible with the CFE
-      // dynamic interface validator.
-      compilerOptions.dynamicInterfaceSpecificationUri =
-          options.dynamicInterfaceUri;
-    }
-  }
-
   CompilerResult? compilerResult;
   try {
-    compilerResult = await kernelForProgram(options.mainUri, compilerOptions,
-        requireMain: !isDynamicSubmodule, additionalSources: additionalSources);
+    compilerResult = await kernelForProgram(options.mainUri, compilerOptions);
   } catch (e, s) {
     return CFECrashError(e, s);
   }
@@ -365,8 +342,10 @@ Future<CompilationResult> _runCfePhase(
     if (component == null) {
       return CompilationDryRunError();
     }
-    final summarizer = DryRunSummarizer(component,
-        enableExperimentalFfi: options.translatorOptions.enableExperimentalFfi);
+    final summarizer = DryRunSummarizer(
+      component,
+      enableExperimentalFfi: options.translatorOptions.enableExperimentalFfi,
+    );
     final hasErrors = await summarizer.summarize();
     return hasErrors ? CompilationDryRunError() : CompilationDryRunSuccess();
   }
@@ -386,112 +365,92 @@ Future<CompilationResult> _runCfePhase(
   return CfeResult(component, compilerResult.coreTypes!);
 }
 
-Future<TfaResult> _loadTfaResult(compiler.WasmCompilerOptions options,
-    WasmTarget target, CompilerPhaseInputOutputManager ioManager) async {
+Future<TfaResult> _loadTfaResult(
+  compiler.WasmCompilerOptions options,
+  WasmTarget target,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   final component = createEmptyComponent();
   final recordClassesRepository = _RecordClassesRepository();
-  final interopMethodsRepository = _InteropMethodsRepository();
   component.addMetadataRepository(recordClassesRepository);
-  component.addMetadataRepository(interopMethodsRepository);
 
   await ioManager.readComponent(options.mainUri, component);
 
   final coreTypes = CoreTypes(component);
-  final libraryIndex = LibraryIndex(component, _librariesToIndex);
+  final libraryIndex = LibraryIndex(component, librariesToIndex(target.mode));
   final classHierarchy = ClassHierarchy(component, coreTypes);
-  final dynamicMainModuleUri =
-      await ioManager.resolveUri(options.dynamicMainModuleUri);
-  final dynamicInterfaceUri =
-      await ioManager.resolveUri(options.dynamicInterfaceUri);
 
   final moduleStrategy = await _createModuleStrategy(
-      options,
-      ioManager,
-      component,
-      coreTypes,
-      target,
-      classHierarchy,
-      dynamicMainModuleUri,
-      dynamicInterfaceUri);
+    options,
+    ioManager,
+    component,
+    coreTypes,
+    target,
+    classHierarchy,
+  );
 
   final recordClasses = <RecordShape, Class>{};
   recordClassesRepository.mapping.forEach((cls, shape) {
     recordClasses[shape] = cls;
   });
 
-  final isDynamicMainModule =
-      options.dynamicModuleType == DynamicModuleType.main;
-  final isDynamicSubmodule =
-      options.dynamicModuleType == DynamicModuleType.submodule;
-  MainModuleMetadata mainModuleMetadata =
-      MainModuleMetadata.empty(options.translatorOptions, options.environment);
-
-  if (isDynamicSubmodule) {
-    mainModuleMetadata =
-        await deserializeMainModuleMetadata(component, ioManager);
-    mainModuleMetadata.verifyDynamicSubmoduleOptions(options);
-  } else if (isDynamicMainModule) {
-    MainModuleMetadata.verifyMainModuleOptions(options);
-  }
-
-  return TfaResult(component, coreTypes, libraryIndex, moduleStrategy,
-      mainModuleMetadata, interopMethodsRepository.mapping, recordClasses);
+  return TfaResult(
+    component,
+    coreTypes,
+    libraryIndex,
+    moduleStrategy,
+    recordClasses,
+  );
 }
 
 Future<CompilationResult> _runTfaPhase(
-    CfeResult cfeResult,
-    compiler.WasmCompilerOptions options,
-    WasmTarget target,
-    CompilerPhaseInputOutputManager ioManager) async {
+  CfeResult cfeResult,
+  compiler.WasmCompilerOptions options,
+  WasmTarget target,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   var CfeResult(:component, :coreTypes) = cfeResult;
 
   ClosedWorldClassHierarchy classHierarchy =
       ClassHierarchy(component, coreTypes) as ClosedWorldClassHierarchy;
-  LibraryIndex libraryIndex = LibraryIndex(component, _librariesToIndex);
+  LibraryIndex libraryIndex = LibraryIndex(
+    component,
+    librariesToIndex(target.mode),
+  );
 
   if (options.deleteToStringPackageUri.isNotEmpty) {
     to_string_transformer.transformComponent(
-        component, options.deleteToStringPackageUri);
+      component,
+      options.deleteToStringPackageUri,
+    );
   }
 
-  var jsInteropMethods = js.performJSInteropTransformations(
-      component.getDynamicSubmoduleLibraries(coreTypes),
-      coreTypes,
-      classHierarchy);
+  js.performJSInteropTransformations(
+    component.libraries,
+    coreTypes,
+    classHierarchy,
+  );
 
-  final dynamicMainModuleUri =
-      await ioManager.resolveUri(options.dynamicMainModuleUri);
-  final dynamicInterfaceUri =
-      await ioManager.resolveUri(options.dynamicInterfaceUri);
-  final isDynamicMainModule =
-      options.dynamicModuleType == DynamicModuleType.main;
-  final isDynamicSubmodule =
-      options.dynamicModuleType == DynamicModuleType.submodule;
-
-  if (isDynamicSubmodule) {
-    // Join the submodule libraries with the TFAed component from the main
-    // module compilation. JS interop transformer must be run before this since
-    // some methods it uses may have been tree-shaken from the TFAed component.
-    (component, jsInteropMethods) = await generateDynamicSubmoduleComponent(
-        component, coreTypes, dynamicMainModuleUri!, jsInteropMethods);
-    coreTypes = CoreTypes(component);
-    classHierarchy =
-        ClassHierarchy(component, coreTypes) as ClosedWorldClassHierarchy;
-    libraryIndex = LibraryIndex(component, _librariesToIndex);
-  }
-
-  final librariesToTransform = isDynamicSubmodule
-      ? component.getDynamicSubmoduleLibraries(coreTypes)
-      : component.libraries;
+  final librariesToTransform = component.libraries;
   final constantEvaluator = ConstantEvaluator(
-      options, target, component, coreTypes, classHierarchy, libraryIndex);
-  unreachable_code_elimination.transformLibraries(target, librariesToTransform,
-      constantEvaluator, options.translatorOptions.enableAsserts);
+    options,
+    target,
+    component,
+    coreTypes,
+    classHierarchy,
+    libraryIndex,
+  );
+  unreachable_code_elimination.transformLibraries(
+    target,
+    librariesToTransform,
+    constantEvaluator,
+    options.translatorOptions.enableAsserts,
+  );
 
   final Map<RecordShape, Class> recordClasses = generateRecordClasses(
-      component, coreTypes,
-      isDynamicMainModule: isDynamicMainModule,
-      isDynamicSubmodule: isDynamicSubmodule);
+    component,
+    coreTypes,
+  );
   target.recordClasses = recordClasses;
 
   if (options.dumpKernelBeforeTfa != null) {
@@ -499,71 +458,64 @@ Future<CompilationResult> _runTfaPhase(
   }
 
   final moduleStrategy = await _createModuleStrategy(
-      options,
-      ioManager,
-      component,
-      coreTypes,
-      target,
-      classHierarchy,
-      dynamicMainModuleUri,
-      dynamicInterfaceUri);
+    options,
+    ioManager,
+    component,
+    coreTypes,
+    target,
+    classHierarchy,
+  );
 
   // Ensure we annotate AST nodes as entry points prior to other transformations
   // looking at pragmas (such as mixin_deduplication and TFA).
   moduleStrategy.addEntryPoints();
 
   mixin_deduplication.transformLibraries(
-      librariesToTransform, coreTypes, target,
-      // This puts each canonical mixin application in its own library so that
-      // the import graph does not need to add edges to a single library
-      // containing all mixin applications.
-      useUniqueDeduplicationLibrary:
-          options.translatorOptions.enableDeferredLoading);
+    librariesToTransform,
+    coreTypes,
+    target,
+    // This puts each canonical mixin application in its own library so that
+    // the import graph does not need to add edges to a single library
+    // containing all mixin applications.
+    useUniqueDeduplicationLibrary:
+        options.translatorOptions.enableDeferredLoading,
+  );
 
   // Ensure this happens after mixin deduplication so that all libraries and
   // classes are present.
   moduleStrategy.prepareComponent();
 
-  final hasDeferredImports = component.libraries
-      .any((lib) => lib.dependencies.any((d) => d.isDeferred));
+  final hasDeferredImports = component.libraries.any(
+    (lib) => lib.dependencies.any((d) => d.isDeferred),
+  );
   if (hasDeferredImports) {
     DeferredLoadingLowering.markRuntimeFunctionsAsEntrypoints(coreTypes);
   }
 
-  MainModuleMetadata mainModuleMetadata =
-      MainModuleMetadata.empty(options.translatorOptions, options.environment);
+  _patchMainTearOffs(coreTypes, component);
 
-  if (isDynamicSubmodule) {
-    mainModuleMetadata =
-        await deserializeMainModuleMetadata(component, ioManager);
-    mainModuleMetadata.verifyDynamicSubmoduleOptions(options);
-  } else if (isDynamicMainModule) {
-    MainModuleMetadata.verifyMainModuleOptions(options);
-    await serializeMainModuleComponent(
-        ioManager, component, dynamicMainModuleUri!,
-        optimized: false);
-  }
+  // We initialize the [printStats] to `false` to prevent it's field
+  // initializer to run (which only works on VM -- but we want our compiler
+  // to also run if compiled via dart2js/dart2wasm)
+  tfa_utils.printStats = false;
 
-  if (!isDynamicSubmodule) {
-    _patchMainTearOffs(coreTypes, component);
+  // Keep the flags in-sync with
+  // pkg/vm/test/transformations/type_flow/transformer_test.dart
+  globalTypeFlow.transformComponent(
+    target,
+    coreTypes,
+    component,
+    useRapidTypeAnalysis: true,
+    treeShakeProtobufs:
+        options.translatorOptions.enableProtobufTreeShaker ||
+        options.translatorOptions.enableProtobufMixinTreeShaker,
+    treeShakeProtobufMixins:
+        options.translatorOptions.enableProtobufMixinTreeShaker,
+  );
 
-    // We initialize the [printStats] to `false` to prevent it's field
-    // initializer to run (which only works on VM -- but we want our compiler
-    // to also run if compiled via dart2js/dart2wasm)
-    tfa_utils.printStats = false;
-
-    // Keep the flags in-sync with
-    // pkg/vm/test/transformations/type_flow/transformer_test.dart
-    globalTypeFlow.transformComponent(target, coreTypes, component,
-        useRapidTypeAnalysis: true,
-        treeShakeProtobufs: options.translatorOptions.enableProtobufTreeShaker,
-        treeShakeProtobufMixins:
-            options.translatorOptions.enableProtobufMixinTreeShaker);
-
-    // TFA may have tree shaken members that are in the library index cache.
-    // To avoid having dangling references in the index, we create a new one.
-    libraryIndex = LibraryIndex(component, _librariesToIndex);
-  }
+  // TFA may have tree shaken members that are in the library index cache.
+  // To avoid having dangling references in the index, we create a new one.
+  libraryIndex = LibraryIndex(component, librariesToIndex(target.mode));
 
   if (options.emitTfa) {
     // Store metadata needed for codegen so that it can be serialized.
@@ -572,17 +524,14 @@ Future<CompilationResult> _runTfaPhase(
       recordClassesRepo.mapping[cls] = shape;
     });
     component.addMetadataRepository(recordClassesRepo);
-
-    final interopMethodsRepo = _InteropMethodsRepository();
-    jsInteropMethods.forEach((method, info) {
-      interopMethodsRepo.mapping[method] = info;
-    });
-    component.addMetadataRepository(interopMethodsRepo);
   }
 
   assert(() {
     verifyComponent(
-        target, VerificationStage.afterGlobalTransformations, component);
+      target,
+      VerificationStage.afterGlobalTransformations,
+      component,
+    );
     return true;
   }());
 
@@ -594,28 +543,34 @@ Future<CompilationResult> _runTfaPhase(
     await ioManager.writeComponent(component, options.outputFile);
   }
 
-  return TfaResult(component, coreTypes, libraryIndex, moduleStrategy,
-      mainModuleMetadata, jsInteropMethods, recordClasses);
+  return TfaResult(
+    component,
+    coreTypes,
+    libraryIndex,
+    moduleStrategy,
+    recordClasses,
+  );
 }
 
-Future<CodegenResult> _loadCodegenResult(compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager) async {
+Future<CodegenResult> _loadCodegenResult(
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   final mainUri = (await ioManager.resolveUri(options.mainUri))!.toFilePath();
   return CodegenResult(mainUri, await ioManager.getModuleIds(mainUri));
 }
 
 Future<CompilationResult> _runCodegenPhase(
-    TfaResult tfaSuccess,
-    compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager) async {
+  TfaResult tfaSuccess,
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   final TfaResult(
     :component,
     :coreTypes,
     :moduleStrategy,
     :libraryIndex,
     :recordClasses,
-    :mainModuleMetadata,
-    :jsInteropMethods
   ) = tfaSuccess;
 
   final loadingMap = DeferredModuleLoadingMap.fromComponent(component);
@@ -626,15 +581,24 @@ Future<CompilationResult> _runCodegenPhase(
 
   final moduleOutputData = moduleStrategy.buildModuleOutputData();
 
-  final translator = Translator(component, coreTypes, libraryIndex,
-      recordClasses, loadingMap, moduleOutputData, options.translatorOptions,
-      mainModuleMetadata: mainModuleMetadata,
-      enableDynamicModules: options.enableDynamicModules);
+  final translator = Translator(
+    component,
+    coreTypes,
+    libraryIndex,
+    recordClasses,
+    loadingMap,
+    moduleOutputData,
+    options.translatorOptions,
+  );
 
   String? depFile = options.depFile;
   if (depFile != null) {
-    writeDepfile(ioManager.fileSystem, component.uriToSource.keys,
-        options.outputFile, depFile);
+    writeDepfile(
+      ioManager.fileSystem,
+      component.uriToSource.keys,
+      options.outputFile,
+      depFile,
+    );
   }
 
   final generateSourceMaps = options.translatorOptions.generateSourceMaps;
@@ -654,58 +618,52 @@ Future<CompilationResult> _runCodegenPhase(
     final serializer = Serializer();
     module.serialize(serializer);
     writeFutures.add(
-        ioManager.writeWasmModule(serializer.data, moduleMetadata.moduleName));
+      ioManager.writeWasmModule(serializer.data, moduleMetadata.moduleName),
+    );
     if (generateSourceMaps) {
       final sourceMapJson = serializer.sourceMapSerializer.serializeAsJson();
       if (moduleMetadata.isMain && classNames != null) {
         addMinifiedClassNames(sourceMapJson, classNames);
       }
-      writeFutures.add(ioManager.writeWasmSourceMap(
-          jsonEncode(sourceMapJson), moduleMetadata.moduleName));
+      writeFutures.add(
+        ioManager.writeWasmSourceMap(
+          jsonEncode(sourceMapJson),
+          moduleMetadata.moduleName,
+        ),
+      );
     }
   });
   await Future.wait(writeFutures);
 
-  final jsRuntimeFinalizer = js.RuntimeFinalizer(jsInteropMethods);
+  final jsRuntimeFinalizer = js.RuntimeFinalizer(
+    coreTypes,
+    translator.interopMemberNamer,
+  );
 
-  final dynamicMainModuleUri =
-      await ioManager.resolveUri(options.dynamicMainModuleUri);
-  final isDynamicMainModule =
-      options.dynamicModuleType == DynamicModuleType.main;
-  final isDynamicSubmodule =
-      options.dynamicModuleType == DynamicModuleType.submodule;
-
-  final jsRuntime = isDynamicSubmodule
-      ? jsRuntimeFinalizer.generateDynamicSubmodule(
-          translator.functions.translatedProcedures,
-          translator.options.requireJsStringBuiltin,
-          translator.internalizedStringsForJSRuntime)
-      : jsRuntimeFinalizer.generate(
-          moduleOutputData.mainModule.moduleImportName,
-          translator.functions.translatedProcedures,
-          translator.internalizedStringsForJSRuntime,
-          translator.options.requireJsStringBuiltin,
-          translator.options.enableDeferredLoading ||
-              translator.options.enableMultiModuleStressTestMode ||
-              translator.dynamicModuleSupportEnabled);
+  final jsRuntime = jsRuntimeFinalizer.generate(
+    moduleOutputData.mainModule.moduleImportName,
+    translator.functions.translatedProcedures,
+    translator.internalizedStringsForJSRuntime,
+    translator.options.requireJsStringBuiltin,
+    translator.options.enableDeferredLoading ||
+        translator.options.enableMultiModuleStressTestMode,
+  );
 
   final supportJs = _generateSupportJs(options.translatorOptions);
-  if (isDynamicMainModule) {
-    await serializeMainModuleMetadata(component, translator, ioManager);
-    await serializeMainModuleComponent(
-        ioManager, component, dynamicMainModuleUri!,
-        optimized: true);
-  }
 
-  final loadIdsFile = options.loadsIdsUri;
-  if (loadIdsFile != null) {
-    await writeLoadIdsFile(component, coreTypes, options, loadingMap);
+  final deferredMapFile = options.deferredMapUri;
+  if (deferredMapFile != null) {
+    await writeDeferredMapFile(component, coreTypes, options, loadingMap);
   }
 
   final wasmOutputFilename = path.basename(options.outputFile);
   final moduleIds = modules.keys
-      .map<int>((moduleMetadata) => options.idForModuleName(
-          wasmOutputFilename, moduleMetadata.moduleName)!)
+      .map<int>(
+        (moduleMetadata) => options.idForModuleName(
+          wasmOutputFilename,
+          moduleMetadata.moduleName,
+        )!,
+      )
       .toSet();
 
   await ioManager.writeJsRuntime(jsRuntime);
@@ -723,40 +681,48 @@ Future<CompilationResult> _runCodegenPhase(
         // This is an unassigned reference such as a constant class only
         // used for annotations. Assign it to the main module as a placeholder.
         return record_use.LoadingUnit(
-            moduleOutputData.mainModule.moduleImportName);
+          moduleOutputData.mainModule.moduleImportName,
+        );
       }
       return record_use.LoadingUnit(moduleOutput.moduleImportName);
     }
 
-    record_use.transformComponent(component, options.recordedUsesFile!,
-        loadingUnitLookup: loadingUnitForNode);
+    record_use.transformComponent(
+      component,
+      options.recordedUsesFile!,
+      loadingUnitLookup: loadingUnitForNode,
+    );
   }
 
   return CodegenResult(options.outputFile, moduleIds);
 }
 
 Future<CompilationResult> _runOptPhase(
-    CodegenResult codegenResult,
-    compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager) async {
+  CodegenResult codegenResult,
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+) async {
   final moduleIdsToOptimize = options.moduleIdsToOptimize.isEmpty
       ? codegenResult.moduleIds
       : options.moduleIdsToOptimize;
 
   final numModules = moduleIdsToOptimize.length;
-  final optPool = pool.Pool(options.maxActiveWasmOptProcesses == -1
-      ? numModules
-      : options.maxActiveWasmOptProcesses);
+  final optPool = pool.Pool(
+    options.maxActiveWasmOptProcesses == -1
+        ? numModules
+        : options.maxActiveWasmOptProcesses,
+  );
 
   await Future.wait([
     for (final moduleId in moduleIdsToOptimize)
       optPool.withResource(() async {
         await ioManager.runWasmOpt(
-            codegenResult.mainWasmFile,
-            moduleId,
-            options.useMultiModuleOpt
-                ? _binaryenFlagsMultiModule
-                : _binaryenFlags);
+          codegenResult.mainWasmFile,
+          moduleId,
+          options.useMultiModuleOpt
+              ? _binaryenFlagsMultiModule
+              : _binaryenFlags,
+        );
       }),
   ]);
   await optPool.close();
@@ -764,34 +730,29 @@ Future<CompilationResult> _runOptPhase(
 }
 
 Future<ModuleStrategy> _createModuleStrategy(
-    compiler.WasmCompilerOptions options,
-    CompilerPhaseInputOutputManager ioManager,
-    Component component,
-    CoreTypes coreTypes,
-    WasmTarget target,
-    ClassHierarchy classHierarchy,
-    Uri? dynamicMainModuleUri,
-    Uri? dynamicInterfaceUri) async {
-  final isDynamicMainModule =
-      options.dynamicModuleType == DynamicModuleType.main;
-  final isDynamicSubmodule =
-      options.dynamicModuleType == DynamicModuleType.submodule;
+  compiler.WasmCompilerOptions options,
+  CompilerPhaseInputOutputManager ioManager,
+  Component component,
+  CoreTypes coreTypes,
+  WasmTarget target,
+  ClassHierarchy classHierarchy,
+) async {
   if (options.translatorOptions.enableDeferredLoading) {
     return DeferredLoadingModuleStrategy(
-        component, options, target, coreTypes, ioManager);
+      component,
+      options,
+      target,
+      coreTypes,
+      ioManager,
+    );
   } else if (options.translatorOptions.enableMultiModuleStressTestMode) {
     return StressTestModuleStrategy(
-        component, coreTypes, options, target, classHierarchy);
-  } else if (isDynamicMainModule) {
-    return DynamicMainModuleStrategy(
-        component,
-        coreTypes,
-        options,
-        await ioManager.readString(dynamicInterfaceUri!),
-        options.dynamicInterfaceUri!);
-  } else if (isDynamicSubmodule) {
-    return DynamicSubmoduleStrategy(
-        component, options, target, coreTypes, dynamicMainModuleUri!);
+      component,
+      coreTypes,
+      options,
+      target,
+      classHierarchy,
+    );
   }
   return DefaultModuleStrategy(coreTypes, component, options);
 }
@@ -813,17 +774,21 @@ void _patchMainTearOffs(CoreTypes coreTypes, Component component) {
   void patchInvokeMainInternal(Procedure p) {
     final invoke = lookup('_invokeMainInternal');
     invoke.isExternal = false;
-    invoke.function.body = ReturnStatement(StaticInvocation(
+    invoke.function.body = ReturnStatement(
+      StaticInvocation(
         p,
         Arguments([
           VariableGet(invoke.function.positionalParameters.single),
           ConstantExpression(StaticTearOffConstant(mainMethod)),
-        ])))
-      ..parent = invoke.function;
+        ]),
+      ),
+    )..parent = invoke.function;
   }
 
-  final typeEnv =
-      TypeEnvironment(coreTypes, ClassHierarchy(component, coreTypes));
+  final typeEnv = TypeEnvironment(
+    coreTypes,
+    ClassHierarchy(component, coreTypes),
+  );
   bool mainHasType(DartType type) => typeEnv.isSubtypeOf(mainMethodType, type);
 
   final (mainInvoke0, mainArg0Type) = lookupWithType('_invokeMainArg0');
@@ -871,31 +836,6 @@ class _RecordClassesRepository extends MetadataRepository<RecordShape> {
   }
 }
 
-class _InteropMethodsRepository
-    extends MetadataRepository<({String importName, String jsCode})> {
-  static const String _tag = 'dart2wasm.interopMethods';
-  @override
-  final Map<Procedure, ({String importName, String jsCode})> mapping = {};
-
-  @override
-  ({String importName, String jsCode}) readFromBinary(
-      Node node, BinarySource source) {
-    final importName = source.readStringReference();
-    final jsCode = source.readStringReference();
-    return (importName: importName, jsCode: jsCode);
-  }
-
-  @override
-  String get tag => _tag;
-
-  @override
-  void writeToBinary(({String importName, String jsCode}) metadata, Node node,
-      BinarySink sink) {
-    sink.writeStringReference(metadata.importName);
-    sink.writeStringReference(metadata.jsCode);
-  }
-}
-
 String _generateSupportJs(TranslatorOptions options) {
   // Copied from
   // https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/main/src/detectors/gc/index.js
@@ -932,7 +872,7 @@ String _generateSupportJs(TranslatorOptions options) {
 
   final requiredFeatures = [
     supportsWasmGC,
-    if (options.requireJsStringBuiltin) supportsJsStringBuiltins
+    if (options.requireJsStringBuiltin) supportsJsStringBuiltins,
   ];
   return '(${requiredFeatures.join('&&')})';
 }

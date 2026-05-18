@@ -3007,12 +3007,12 @@ static void TestTypedDataDirectAccess1() {
       "    }\n"
       "  }\n"
       "}\n"
-      "void setMain(var a) {"
+      "void setMain(a) {"
       "  for (var i = 0; i < 10; i++) {"
       "    a[i] = i;"
       "  }"
       "}\n"
-      "bool testMain(var list) {"
+      "bool testMain(list) {"
       "  for (var i = 0; i < 10; i++) {"
       "    Expect.equals((10 + i), list[i]);"
       "  }\n"
@@ -3076,13 +3076,13 @@ static void TestTypedDataViewDirectAccess() {
       "    }\n"
       "  }\n"
       "}\n"
-      "void setMain(var list) {"
+      "void setMain(list) {"
       "  Expect.equals(10, list.length);"
       "  for (var i = 0; i < 10; i++) {"
       "    list[i] = i;"
       "  }"
       "}\n"
-      "bool testMain(var list) {"
+      "bool testMain(list) {"
       "  Expect.equals(10, list.length);"
       "  for (var i = 0; i < 10; i++) {"
       "    Expect.equals((10 + i), list[i]);"
@@ -3177,13 +3177,13 @@ static void TestByteDataDirectAccess() {
       "    }\n"
       "  }\n"
       "}\n"
-      "void setMain(var list) {"
+      "void setMain(list) {"
       "  Expect.equals(10, list.length);"
       "  for (var i = 0; i < 10; i++) {"
       "    list.setInt8(i, i);"
       "  }"
       "}\n"
-      "bool testMain(var list) {"
+      "bool testMain(list) {"
       "  Expect.equals(10, list.length);"
       "  for (var i = 0; i < 10; i++) {"
       "    Expect.equals((10 + i), list.getInt8(i));"
@@ -5601,16 +5601,16 @@ TEST_CASE(DartAPI_FieldAccess) {
       "  static const _const_static_fld = 'hidden const static';\n"
       "\n"
       "  get instance_getset_fld { return _gs_fld1; }\n"
-      "  void set instance_getset_fld(var value) { _gs_fld1 = value; }\n"
+      "  void set instance_getset_fld(value) { _gs_fld1 = value; }\n"
       "  get _instance_getset_fld { return _gs_fld2; }\n"
-      "  void set _instance_getset_fld(var value) { _gs_fld2 = value; }\n"
+      "  void set _instance_getset_fld(value) { _gs_fld2 = value; }\n"
       "  var _gs_fld1;\n"
       "  var _gs_fld2;\n"
       "\n"
       "  static get static_getset_fld { return _gs_fld3; }\n"
-      "  static void set static_getset_fld(var value) { _gs_fld3 = value; }\n"
+      "  static void set static_getset_fld(value) { _gs_fld3 = value; }\n"
       "  static get _static_getset_fld { return _gs_fld4; }\n"
-      "  static void set _static_getset_fld(var value) { _gs_fld4 = value; }\n"
+      "  static void set _static_getset_fld(value) { _gs_fld4 = value; }\n"
       "  static var _gs_fld3;\n"
       "  static var _gs_fld4;\n"
       "}\n"
@@ -5620,9 +5620,9 @@ TEST_CASE(DartAPI_FieldAccess) {
       "const _const_top_fld = 'hidden const top';\n"
       "\n"
       "get top_getset_fld { return _gs_fld5; }\n"
-      "void set top_getset_fld(var value) { _gs_fld5 = value; }\n"
+      "void set top_getset_fld(value) { _gs_fld5 = value; }\n"
       "get _top_getset_fld { return _gs_fld6; }\n"
-      "void set _top_getset_fld(var value) { _gs_fld6 = value; }\n"
+      "void set _top_getset_fld(value) { _gs_fld6 = value; }\n"
       "var _gs_fld5;\n"
       "var _gs_fld6;\n"
       "\n"
@@ -5639,9 +5639,9 @@ TEST_CASE(DartAPI_FieldAccess) {
       "var imported_fld = 'imported';\n"
       "var _imported_fld = 'hidden imported';\n"
       "get imported_getset_fld { return _gs_fld1; }\n"
-      "void set imported_getset_fld(var value) { _gs_fld1 = value; }\n"
+      "void set imported_getset_fld(value) { _gs_fld1 = value; }\n"
       "get _imported_getset_fld { return _gs_fld2; }\n"
-      "void set _imported_getset_fld(var value) { _gs_fld2 = value; }\n"
+      "void set _imported_getset_fld(value) { _gs_fld2 = value; }\n"
       "var _gs_fld1;\n"
       "var _gs_fld2;\n"
       "void test2() {\n"
@@ -10559,11 +10559,11 @@ TEST_CASE(DartAPI_InvokeImportedFunction) {
       "NoSuchMethodError: No top-level method 'getCurrentTag' declared.");
 }
 
-TEST_CASE(DartAPI_InvokeVMServiceMethod) {
+static void InvokeVMServiceMethodCommon() {
   char buffer[1024];
   Utils::SNPrint(buffer, sizeof(buffer),
                  R"({
-                  "jsonrpc": 2.0,
+                  "jsonrpc": "2.0",
                   "id": "foo",
                   "method": "getVM",
                   "params": { }
@@ -10618,6 +10618,16 @@ TEST_CASE(DartAPI_InvokeVMServiceMethod) {
   EXPECT(result == Dart_True());
 }
 
+TEST_CASE(DartAPI_InvokeVMServiceMethod) {
+  InvokeVMServiceMethodCommon();
+}
+
+#if defined(EXPERIMENTAL_VM_SERVICE)
+TEST_CASE(DartAPI_InvokeVMServiceMethod_Exp) {
+  InvokeVMServiceMethodCommon();
+}
+#endif  // defined(EXPERIMENTAL_VM_SERVICE)
+
 static Monitor* loop_test_lock = new Monitor();
 static bool loop_test_exit = false;
 static bool loop_reset_count = false;
@@ -10630,7 +10640,7 @@ static void InvokeServiceMessages(uword param) {
   char buffer[1024];
   Utils::SNPrint(buffer, sizeof(buffer),
                  R"({
-                  "jsonrpc": 2.0,
+                  "jsonrpc": "2.0",
                   "id": "foo",
                   "method": "getVM",
                   "params": { }
@@ -10661,7 +10671,7 @@ static void InvokeServiceMessages(uword param) {
   } while (count < 100);
 }
 
-TEST_CASE(DartAPI_InvokeVMServiceMethod_Loop) {
+static void InvokeVMServiceMethodLoopCommon() {
   {
     MonitorLocker ml(loop_test_lock);
     loop_test_exit = false;
@@ -10673,6 +10683,16 @@ TEST_CASE(DartAPI_InvokeVMServiceMethod_Loop) {
   }
   OSThread::Join(loop_test_join_id);
 }
+
+TEST_CASE(DartAPI_InvokeVMServiceMethod_Loop) {
+  InvokeVMServiceMethodLoopCommon();
+}
+
+#if defined(EXPERIMENTAL_VM_SERVICE)
+TEST_CASE(DartAPI_InvokeVMServiceMethod_Loop_Exp) {
+  InvokeVMServiceMethodLoopCommon();
+}
+#endif  // defined(EXPERIMENTAL_VM_SERVICE)
 #endif  // !defined(PRODUCT)
 
 static void HandleResponse(Dart_Port dest_port_id, Dart_CObject* message) {

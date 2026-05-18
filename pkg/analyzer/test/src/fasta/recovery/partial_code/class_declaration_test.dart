@@ -119,7 +119,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -351,7 +351,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -396,10 +396,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -541,7 +541,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -787,7 +787,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -831,10 +831,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -975,7 +975,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -1227,7 +1227,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -1271,10 +1271,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -1415,7 +1415,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -1657,7 +1657,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -1701,10 +1701,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -1845,7 +1845,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -2083,7 +2083,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -2127,10 +2127,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -2268,7 +2268,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -2495,7 +2495,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -2538,10 +2538,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -2669,7 +2669,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -2893,7 +2893,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -2933,10 +2933,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -3070,7 +3070,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3315,7 +3315,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -3358,10 +3358,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -3513,7 +3513,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -3775,7 +3775,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -3823,10 +3823,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -3974,7 +3974,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -4233,7 +4233,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -4278,10 +4278,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -4435,7 +4435,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -4694,7 +4694,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -4742,10 +4742,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -4893,7 +4893,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -5152,7 +5152,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -5197,10 +5197,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -5369,7 +5369,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -5666,7 +5666,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -5719,10 +5719,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -5890,7 +5890,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -6185,7 +6185,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -6235,10 +6235,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -6388,7 +6388,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -6647,7 +6647,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -6692,10 +6692,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -6837,7 +6837,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -7071,7 +7071,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -7115,10 +7115,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -7250,7 +7250,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -7481,7 +7481,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -7522,10 +7522,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -7669,7 +7669,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -7917,7 +7917,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -7963,10 +7963,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -8106,7 +8106,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -8351,7 +8351,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -8394,10 +8394,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -8521,7 +8521,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -8728,7 +8728,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -8767,10 +8767,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -8882,7 +8882,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -9078,7 +9078,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -9114,10 +9114,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )
@@ -9250,7 +9250,7 @@ CompilationUnit
       enumKeyword: enum
       namePart: NameWithTypeParameters
         typeName: E
-      body: EnumBody
+      body: BlockEnumBody
         leftBracket: {
         constants
           EnumConstantDeclaration
@@ -9488,7 +9488,7 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
         body: BlockFunctionBody
@@ -9532,10 +9532,10 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: C
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: D
           rightParenthesis: )

@@ -38,9 +38,6 @@ class AstResolver {
     strictCasts: analysisOptions.strictCasts,
     dataForTesting: null,
   );
-  late final _scopeResolverVisitor = ScopeResolverVisitor(
-    DiagnosticReporter(_diagnosticListener, _libraryFragment.source),
-  );
   late final _typeAnalyzerOptions = computeTypeAnalyzerOptions(_featureSet);
   late final _flowAnalysis = FlowAnalysisHelper(
     false,
@@ -74,12 +71,10 @@ class AstResolver {
   }) : _featureSet = _libraryFragment.library.featureSet;
 
   void resolveAnnotation(AnnotationImpl node) {
-    ElementBindingVisitor(
-      _libraryFragment,
-      null,
+    ElementBindingVisitor.forPartialResolution(
+      fragment: _libraryFragment,
     ).bindSubtree(_libraryFragment, node);
     node.accept(_resolutionVisitor);
-    node.accept(_scopeResolverVisitor);
     _prepareEnclosingDeclarations();
     _flowAnalysis.bodyOrInitializer_enter(node, null);
     node.accept(_resolverVisitor);
@@ -100,7 +95,6 @@ class AstResolver {
 
     _prepareEnclosingDeclarations();
     accept(_resolutionVisitor);
-    accept(_scopeResolverVisitor);
 
     _flowAnalysis.bodyOrInitializer_enter(
       node,
@@ -120,14 +114,12 @@ class AstResolver {
     List<FormalParameterElementImpl>? inScopePrimaryConstructorParameters,
   }) {
     ExpressionImpl node = getNode();
-    ElementBindingVisitor(
-      _libraryFragment,
-      null,
+    ElementBindingVisitor.forPartialResolution(
+      fragment: _libraryFragment,
     ).bindSubtree(_libraryFragment, node);
     node.accept(_resolutionVisitor);
     // Node may have been rewritten so get it again.
     node = getNode();
-    node.accept(_scopeResolverVisitor);
     _prepareEnclosingDeclarations();
     _flowAnalysis.bodyOrInitializer_enter(
       node.parent as AstNodeImpl,
@@ -149,14 +141,15 @@ class AstResolver {
       body.initializers.accept(visitor);
     }
 
-    var bindingVisitor = ElementBindingVisitor(_libraryFragment, null);
+    var bindingVisitor = ElementBindingVisitor.forPartialResolution(
+      fragment: _libraryFragment,
+    );
     for (var initializer in body.initializers) {
       bindingVisitor.bindSubtree(node.declaredFragment!, initializer);
     }
 
     _prepareEnclosingDeclarations();
     accept(_resolutionVisitor);
-    accept(_scopeResolverVisitor);
 
     _flowAnalysis.bodyOrInitializer_enter(
       node,

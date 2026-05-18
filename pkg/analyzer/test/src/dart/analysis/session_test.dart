@@ -326,6 +326,106 @@ class B {}
     expect(node.length, 10);
   }
 
+  test_getParsedLibrary_getElementDeclaration_constructor_factory() async {
+    newFile(testFile.path, r'''
+class A {}
+class B {
+  factory () => B._();
+  B._();
+}
+''');
+
+    var session = contextFor(testFile).currentSession;
+    var libraryResult = await session.getLibraryByUriValid(
+      'package:test/test.dart',
+    );
+    var parsedLibrary = session.getParsedLibraryValid(testFile);
+
+    var element = libraryResult.element.getClass('B')!.constructors.first;
+    var declaration = parsedLibrary.getFragmentDeclaration(
+      element.firstFragment,
+    )!;
+    var node = declaration.node as ConstructorDeclaration;
+    expect(node.typeName, isNull);
+    expect(node.factoryKeyword, isNotNull);
+    expect(node.newKeyword, isNull);
+    expect(node.offset, 23);
+    expect(node.length, 20);
+  }
+
+  test_getParsedLibrary_getElementDeclaration_constructor_new() async {
+    newFile(testFile.path, r'''
+class A {}
+class B {
+  new ();
+}
+''');
+
+    var session = contextFor(testFile).currentSession;
+    var libraryResult = await session.getLibraryByUriValid(
+      'package:test/test.dart',
+    );
+    var parsedLibrary = session.getParsedLibraryValid(testFile);
+
+    var element = libraryResult.element.getClass('B')!.constructors.first;
+    var declaration = parsedLibrary.getFragmentDeclaration(
+      element.firstFragment,
+    )!;
+    var node = declaration.node as ConstructorDeclaration;
+    expect(node.typeName, isNull);
+    expect(node.factoryKeyword, isNull);
+    expect(node.newKeyword, isNotNull);
+    expect(node.offset, 23);
+    expect(node.length, 7);
+  }
+
+  test_getParsedLibrary_getElementDeclaration_constructor_primary() async {
+    newFile(testFile.path, r'''
+class A {}
+class B() {}
+''');
+
+    var session = contextFor(testFile).currentSession;
+    var libraryResult = await session.getLibraryByUriValid(
+      'package:test/test.dart',
+    );
+    var parsedLibrary = session.getParsedLibraryValid(testFile);
+
+    var element = libraryResult.element.getClass('B')!.constructors.first;
+    var declaration = parsedLibrary.getFragmentDeclaration(
+      element.firstFragment,
+    )!;
+    var node = declaration.node as PrimaryConstructorDeclaration;
+    expect(node.constructorName, isNull);
+    expect(node.typeName.lexeme, 'B');
+    expect(node.offset, 17);
+    expect(node.length, 3);
+  }
+
+  test_getParsedLibrary_getElementDeclaration_constructor_secondary() async {
+    newFile(testFile.path, r'''
+class A {}
+class B {
+  B();
+}
+''');
+
+    var session = contextFor(testFile).currentSession;
+    var libraryResult = await session.getLibraryByUriValid(
+      'package:test/test.dart',
+    );
+    var parsedLibrary = session.getParsedLibraryValid(testFile);
+
+    var element = libraryResult.element.getClass('B')!.constructors.first;
+    var declaration = parsedLibrary.getFragmentDeclaration(
+      element.firstFragment,
+    )!;
+    var node = declaration.node as ConstructorDeclaration;
+    expect(node.typeName!.token.lexeme, 'B');
+    expect(node.offset, 23);
+    expect(node.length, 4);
+  }
+
   test_getParsedLibrary_getElementDeclaration_notThisLibrary() async {
     newFile(testFile.path, '');
 
@@ -725,7 +825,7 @@ part 'c.dart';
   test_getResolvedLibraryContaining_library() async {
     var a = newFile('$testPackageLibPath/a.dart', '');
     var currentSession = contextFor(a).currentSession;
-    var filePath = a.toUri().toFilePath();
+    var filePath = a.path;
     var result = await currentSession.getResolvedLibraryContaining(filePath);
     var units = (result as ResolvedLibraryResult).units;
     var paths = units.map((unit) => unit.path);
@@ -740,7 +840,7 @@ part 'part.dart';
 part of 'lib.dart';
 ''');
     var currentSession = contextFor(part).currentSession;
-    var filePath = part.toUri().toFilePath();
+    var filePath = part.path;
     var result = await currentSession.getResolvedLibraryContaining(filePath);
     var units = (result as ResolvedLibraryResult).units;
     var paths = units.map((unit) => unit.path);
@@ -759,7 +859,7 @@ part 'part_part.dart';
 part of 'part.dart';
 ''');
     var currentSession = contextFor(partPart).currentSession;
-    var filePath = partPart.toUri().toFilePath();
+    var filePath = partPart.path;
     var result = await currentSession.getResolvedLibraryContaining(filePath);
     var units = (result as ResolvedLibraryResult).units;
     var paths = units.map((unit) => unit.path);
@@ -814,7 +914,7 @@ unitElementResult
   path: /home/test/lib/test.dart
   uri: package:test/test.dart
   element
-    library: root::package:test/test.dart
+    library: package:test/test.dart
     classes: A, B
 ''');
   }
@@ -835,7 +935,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    library: root::package:test/test.dart
+    library: package:test/test.dart
     classes: A, B
 ''');
   }
@@ -852,7 +952,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    library: root::package:test/a.dart
+    library: package:test/a.dart
     classes: A, B
 ''');
   }
@@ -874,7 +974,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    library: root::package:test/test.dart
+    library: package:test/test.dart
     classes: A, B
 ''');
   }
@@ -891,7 +991,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    library: root::package:test/a.dart
+    library: package:test/a.dart
     classes: A, B
 ''');
   }
@@ -908,7 +1008,7 @@ unitElementResult
   path: /home/test/lib/a.dart
   uri: package:test/a.dart
   element
-    library: root::package:test/a.dart
+    library: package:test/a.dart
     classes: A, B
 ''');
   }

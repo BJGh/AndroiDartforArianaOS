@@ -12,12 +12,16 @@ import 'package:kernel/ast.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/core_types.dart';
 
+import '../namer.dart';
 import 'interop_transformer.dart';
-import 'method_collector.dart';
 import 'runtime_blob.dart';
+import 'util.dart';
 
-JSMethods _performJSInteropTransformations(CoreTypes coreTypes,
-    ClassHierarchy classHierarchy, Set<Library> interopDependentLibraries) {
+void _performJSInteropTransformations(
+  CoreTypes coreTypes,
+  ClassHierarchy classHierarchy,
+  Set<Library> interopDependentLibraries,
+) {
   // Transform kernel and generate JS methods.
   final transformer = InteropTransformer(coreTypes, classHierarchy);
   for (final library in interopDependentLibraries) {
@@ -27,48 +31,64 @@ JSMethods _performJSInteropTransformations(CoreTypes coreTypes,
   // We want static types to help us specialize methods based on receivers.
   // Therefore, erasure must come after the lowering.
   final jsValueClass = coreTypes.index.getClass('dart:_js_helper', 'JSValue');
-  final staticInteropClassEraser = StaticInteropClassEraser(coreTypes,
-      eraseStaticInteropType: (staticInteropType) =>
-          InterfaceType(jsValueClass, staticInteropType.declaredNullability),
-      additionalCoreLibraries: {
-        '_js_helper',
-        '_js_string_convert',
-        '_js_types',
-        '_string',
-        'convert',
-        'js_interop',
-        'js_interop_unsafe',
-      });
+  final staticInteropClassEraser = StaticInteropClassEraser(
+    coreTypes,
+    eraseStaticInteropType: (staticInteropType) =>
+        InterfaceType(jsValueClass, staticInteropType.declaredNullability),
+    additionalCoreLibraries: {
+      '_js_helper',
+      '_js_string_convert',
+      '_js_types',
+      '_string',
+      'convert',
+      'js_interop',
+      'js_interop_unsafe',
+    },
+  );
   for (Library library in interopDependentLibraries) {
     staticInteropClassEraser.visitLibrary(library);
   }
-  return transformer.jsMethods;
 }
 
 class RuntimeFinalizer {
   static String escape(String s) => json.encode(s);
+  final CoreTypes _coreTypes;
+  final InteropMemberNamer _interopMemberNamer;
 
-  final Map<Procedure, ({String importName, String jsCode})> allJSMethods;
-
-  RuntimeFinalizer(this.allJSMethods);
+  RuntimeFinalizer(this._coreTypes, this._interopMemberNamer);
 
   String generateJsMethods(Iterable<Procedure> translatedProcedures) {
     Set<Procedure> usedProcedures = {};
     final usedJSMethods = <({String importName, String jsCode})>[];
     for (Procedure p in translatedProcedures) {
-      if (usedProcedures.add(p) && allJSMethods.containsKey(p)) {
-        usedJSMethods.add(allJSMethods[p]!);
+      if (!usedProcedures.add(p)) continue;
+      final annotationInfo = JsInteropMemberData.fromMember(p, _coreTypes);
+      if (annotationInfo == null) continue;
+      switch (annotationInfo) {
+        case JsCodeData(:final jsCode):
+          final importName = _interopMemberNamer.getImportName(p)!.itemName;
+          usedJSMethods.add((importName: importName, jsCode: jsCode));
+        case JsTrampolineWrapperData(:final trampoline):
+          final importName = _interopMemberNamer.getImportName(p)!.itemName;
+          usedJSMethods.add((
+            importName: importName,
+            jsCode: annotationInfo.jsCode(
+              _interopMemberNamer.getExportName(trampoline)!,
+            ),
+          ));
+        case JsTrampolineData():
+        // do nothing
       }
     }
     // Sort so _9 comes before _11 (for example)
     usedJSMethods.sort((a, b) => compareNatural(a.importName, b.importName));
 
     final jsMethods = StringBuffer();
-    for (final jsMethod in usedJSMethods) {
+    for (final (:importName, :jsCode) in usedJSMethods) {
       jsMethods.write('      ');
-      jsMethods.write(jsMethod.importName);
+      jsMethods.write(importName);
       jsMethods.write(': ');
-      final lines = _unindentJsCode(jsMethod.jsCode);
+      final lines = _unindentJsCode(jsCode);
       for (int i = 0; i < lines.length; ++i) {
         if (i != 0) {
           jsMethods.write('      ');
@@ -86,7 +106,9 @@ class RuntimeFinalizer {
   }
 
   String _generateInternalizedStrings(
-      bool requireJsBuiltin, List<String> constantStrings) {
+    bool requireJsBuiltin,
+    List<String> constantStrings,
+  ) {
     final sb = StringBuffer();
     String indent = '';
     if (constantStrings.isNotEmpty) {
@@ -99,17 +121,19 @@ class RuntimeFinalizer {
     }
     if (!requireJsBuiltin) {
       sb.writeln(
-          '$indent"": new Proxy({}, { get(_, prop) { return prop; } }),');
+        '$indent"": new Proxy({}, { get(_, prop) { return prop; } }),',
+      );
     }
     return '$sb';
   }
 
   String generate(
-      String mainModuleName,
-      Iterable<Procedure> translatedProcedures,
-      List<String> constantStrings,
-      bool requireJsBuiltin,
-      bool supportsAdditionalModuleLoading) {
+    String mainModuleName,
+    Iterable<Procedure> translatedProcedures,
+    List<String> constantStrings,
+    bool requireJsBuiltin,
+    bool supportsAdditionalModuleLoading,
+  ) {
     final jsMethods = generateJsMethods(translatedProcedures);
 
     final builtins = [
@@ -117,12 +141,15 @@ class RuntimeFinalizer {
       if (requireJsBuiltin) 'importedStringConstants: \'\'',
     ];
 
-    String internalizedStrings =
-        _generateInternalizedStrings(requireJsBuiltin, constantStrings);
+    String internalizedStrings = _generateInternalizedStrings(
+      requireJsBuiltin,
+      constantStrings,
+    );
 
     final jsStringBuiltinPolyfillImportVars = {
-      'JS_POLYFILL_IMPORT':
-          requireJsBuiltin ? '' : '"wasm:js-string": jsStringPolyfill,',
+      'JS_POLYFILL_IMPORT': requireJsBuiltin
+          ? ''
+          : '"wasm:js-string": jsStringPolyfill,',
     };
     final moduleLoadingImportVars = {
       'MODULE_LOADING_IMPORT': supportsAdditionalModuleLoading
@@ -134,6 +161,7 @@ class RuntimeFinalizer {
         ? moduleLoadingHelperTemplate.instantiate({
             ...jsStringBuiltinPolyfillImportVars,
             'MAIN_MODULE_NAME': mainModuleName,
+            'THIS_MODULE_SETTER_NAME': _interopMemberNamer.thisModuleSetterName,
           })
         : '';
 
@@ -142,35 +170,37 @@ class RuntimeFinalizer {
       ...moduleLoadingImportVars,
       'BUILTINS_MAP_BODY': builtins.join(', '),
       'JS_METHODS': jsMethods,
+      'THIS_MODULE_SETTER_NAME': _interopMemberNamer.thisModuleSetterName,
+      'INTERNAL_IMPORTS_MODULE_NAME':
+          _interopMemberNamer.interopHelperModuleName,
       'IMPORTED_JS_STRINGS_IN_MJS': internalizedStrings,
       'JS_STRING_POLYFILL_METHODS': requireJsBuiltin ? '' : jsPolyFillMethods,
       'DEFERRED_LIBRARY_HELPER_METHODS': moduleLoadingHelperMethods,
     });
   }
-
-  String generateDynamicSubmodule(Iterable<Procedure> translatedProcedures,
-      bool requireJsStringBuiltin, List<String> constantStrings) {
-    final jsMethods = generateJsMethods(translatedProcedures);
-
-    return dynamicSubmoduleJsImportTemplate.instantiate({
-      'JS_METHODS': jsMethods,
-      'IMPORTED_JS_STRINGS_IN_MJS':
-          _generateInternalizedStrings(requireJsStringBuiltin, constantStrings),
-    });
-  }
 }
 
-JSMethods performJSInteropTransformations(List<Library> libraries,
-    CoreTypes coreTypes, ClassHierarchy classHierarchy) {
+void performJSInteropTransformations(
+  List<Library> libraries,
+  CoreTypes coreTypes,
+  ClassHierarchy classHierarchy,
+) {
   Set<Library> transitiveImportingJSInterop = {
     ...calculateTransitiveImportsOfJsInteropIfUsed(
-        libraries, Uri.parse("dart:_js_helper")),
+      libraries,
+      Uri.parse("dart:_js_helper"),
+    ),
     ...calculateTransitiveImportsOfJsInteropIfUsed(
-        libraries, Uri.parse("dart:js_interop")),
+      libraries,
+      Uri.parse("dart:js_interop"),
+    ),
   };
 
   return _performJSInteropTransformations(
-      coreTypes, classHierarchy, transitiveImportingJSInterop);
+    coreTypes,
+    classHierarchy,
+    transitiveImportingJSInterop,
+  );
 }
 
 // Removes indentation common among all lines of [block] (except for first one)

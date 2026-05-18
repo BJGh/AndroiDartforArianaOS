@@ -509,7 +509,7 @@ anonymousMethodWrongParameterType = DiagnosticWithArguments(
   name: 'anonymous_method_wrong_parameter_type',
   problemMessage:
       "The receiver type '{0}' must be assignable to the formal parameter type "
-      "'{1}' of an anonymous method.",
+      "'{1}' in an anonymous method.",
   correctionMessage:
       "Try removing the parameter type, or make it a supertype of the "
       "receiver type.",
@@ -941,6 +941,41 @@ augmentationOfDifferentDeclarationKind = DiagnosticWithArguments(
   uniqueName: 'augmentation_of_different_declaration_kind',
   withArguments: _withArgumentsAugmentationOfDifferentDeclarationKind,
   expectedTypes: [ExpectedType.string, ExpectedType.string],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments augmentationOfMixinApplicationClass =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'augmentation_of_mixin_application_class',
+      problemMessage: "Mixin application classes can't be augmented.",
+      correctionMessage:
+          "Try removing the 'augment' keyword, or making the target a normal "
+          "class.",
+      type: DiagnosticType.COMPILE_TIME_ERROR,
+      uniqueName: 'augmentation_of_mixin_application_class',
+      expectedTypes: [],
+    );
+
+/// Parameters:
+/// Type expectedType: the return type of the declaration
+/// Type actualType: the return type of the augmentation
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({
+    required DartType expectedType,
+    required DartType actualType,
+  })
+>
+augmentationReturnTypeMismatch = DiagnosticWithArguments(
+  name: 'augmentation_return_type_mismatch',
+  problemMessage:
+      "The augmentation's return type '{1}' must be the same as the introductory "
+      "declaration's return type '{0}'.",
+  correctionMessage:
+      "Try changing the augmentation's return type to match the declaration.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'augmentation_return_type_mismatch',
+  withArguments: _withArgumentsAugmentationReturnTypeMismatch,
+  expectedTypes: [ExpectedType.type, ExpectedType.type],
 );
 
 /// No parameters.
@@ -1570,6 +1605,22 @@ classUsedAsMixin = DiagnosticWithArguments(
   type: DiagnosticType.COMPILE_TIME_ERROR,
   uniqueName: 'class_used_as_mixin',
   withArguments: _withArgumentsClassUsedAsMixin,
+  expectedTypes: [ExpectedType.string],
+);
+
+/// Parameters:
+/// String className: the name of the class being used as a mixin
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String className})
+>
+classUsedAsMixinDeclaresGenerativeConstructor = DiagnosticWithArguments(
+  name: 'class_used_as_mixin_declares_generative_constructor',
+  problemMessage:
+      "The class '{0}' can't be used as a mixin because it declares a generative "
+      "constructor.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'class_used_as_mixin_declares_generative_constructor',
+  withArguments: _withArgumentsClassUsedAsMixinDeclaresGenerativeConstructor,
   expectedTypes: [ExpectedType.string],
 );
 
@@ -2721,6 +2772,53 @@ constNotInitialized = DiagnosticWithArguments(
 );
 
 /// No parameters.
+const DiagnosticWithoutArguments
+constPrimaryConstructorWithBlockBody = DiagnosticWithoutArgumentsImpl(
+  name: 'const_primary_constructor_with_body',
+  problemMessage:
+      "The body part of a constant primary constructor can't have a block body.",
+  correctionMessage:
+      "Try replacing the block body with a semicolon, or removing the "
+      "'const' modifier.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'const_primary_constructor_with_block_body',
+  expectedTypes: [],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments
+constPrimaryConstructorWithExpressionBody = DiagnosticWithoutArgumentsImpl(
+  name: 'const_primary_constructor_with_body',
+  problemMessage:
+      "The body part of a constant primary constructor can't have an expression "
+      "body.",
+  correctionMessage:
+      "Try replacing the expression body with a semicolon, or removing the "
+      "'const' modifier.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'const_primary_constructor_with_expression_body',
+  expectedTypes: [],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments
+constructorAlreadyComplete = DiagnosticWithoutArgumentsImpl(
+  name: 'declaration_already_complete',
+  problemMessage:
+      "The augmentation can't provide a body, initializers, or initializing "
+      "formal or super formal parameters because the constructor is already "
+      "complete.",
+  correctionMessage:
+      "Try removing the body, initializers, or initializing formal or super "
+      "formal parameters from the augmentation, or removing the body, "
+      "initializers, or initializing formal or super formal parameters from "
+      "the preceding declaration.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'constructor_already_complete',
+  expectedTypes: [],
+);
+
+/// No parameters.
 const DiagnosticWithoutArguments constructorWithReturnType =
     DiagnosticWithoutArgumentsImpl(
       name: 'constructor_with_return_type',
@@ -3214,10 +3312,12 @@ deferredAfterPrefix = DiagnosticWithoutArgumentsImpl(
 const DiagnosticWithoutArguments deferredImportOfExtension =
     DiagnosticWithoutArgumentsImpl(
       name: 'deferred_import_of_extension',
-      problemMessage: "Imports of deferred libraries must hide all extensions.",
+      problemMessage:
+          "Deferred library imports must hide all extension declarations.",
       correctionMessage:
           "Try adding either a show combinator listing the names you need to "
-          "reference or a hide combinator listing all of the extensions.",
+          "reference or a hide combinator listing all of the extension "
+          "declarations.",
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
       uniqueName: 'deferred_import_of_extension',
@@ -5180,6 +5280,19 @@ const DiagnosticWithoutArguments extensionOverrideWithoutAccess =
 
 /// No parameters.
 const DiagnosticWithoutArguments
+extensionPrimaryConstructor = DiagnosticWithoutArgumentsImpl(
+  name: 'extension_primary_constructor',
+  problemMessage: "Extensions can't have primary constructors.",
+  correctionMessage:
+      "Try removing the primary constructor or changing the extension to an "
+      "extension type.",
+  type: DiagnosticType.SYNTACTIC_ERROR,
+  uniqueName: 'extension_primary_constructor',
+  expectedTypes: [],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments
 extensionTypeConstructorWithSuperFormalParameter =
     DiagnosticWithoutArgumentsImpl(
       name: 'extension_type_constructor_with_super_formal_parameter',
@@ -5701,6 +5814,25 @@ const DiagnosticWithoutArguments factoryConstructorNewName =
       uniqueName: 'factory_constructor_new_name',
       expectedTypes: [],
     );
+
+/// Parameters:
+/// String name: the name of the factory constructor
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String name})
+>
+factoryNotCompleteAfterAugmentations = DiagnosticWithArguments(
+  name: 'factory_not_complete_after_augmentations',
+  problemMessage:
+      "The factory constructor '{0}' must have a body or redirection after all "
+      "augmentations are applied.",
+  correctionMessage:
+      "Try adding a body or redirection to the introductory declaration, or "
+      "providing an augmentation with a body or redirection.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'factory_not_complete_after_augmentations',
+  withArguments: _withArgumentsFactoryNotCompleteAfterAugmentations,
+  expectedTypes: [ExpectedType.string],
+);
 
 /// No parameters.
 const DiagnosticWithoutArguments factoryTopLevelDeclaration =
@@ -6348,6 +6480,40 @@ const DiagnosticWithoutArguments forInWithConstVariable =
 
 /// No parameters.
 const DiagnosticWithoutArguments
+functionAlreadyComplete = DiagnosticWithoutArgumentsImpl(
+  name: 'declaration_already_complete',
+  problemMessage:
+      "The augmentation can't provide a body because the function or member is "
+      "already complete.",
+  correctionMessage:
+      "Try removing the body from the augmentation, or removing the body "
+      "from the preceding declaration.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'function_already_complete',
+  expectedTypes: [],
+);
+
+/// Parameters:
+/// String name: the name of the function, method, getter, or setter
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String name})
+>
+functionNotCompleteAfterAugmentations = DiagnosticWithArguments(
+  name: 'function_not_complete_after_augmentations',
+  problemMessage:
+      "The function or member '{0}' must have a body after all augmentations are "
+      "applied.",
+  correctionMessage:
+      "Try adding a body to the introductory declaration, or providing an "
+      "augmentation with a body.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'function_not_complete_after_augmentations',
+  withArguments: _withArgumentsFunctionNotCompleteAfterAugmentations,
+  expectedTypes: [ExpectedType.string],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments
 functionTypedParameterVar = DiagnosticWithoutArgumentsImpl(
   name: 'function_typed_parameter_var',
   problemMessage:
@@ -6847,6 +7013,23 @@ implementsSuperClass = DiagnosticWithArguments(
   type: DiagnosticType.COMPILE_TIME_ERROR,
   uniqueName: 'implements_super_class',
   withArguments: _withArgumentsImplementsSuperClass,
+  expectedTypes: [ExpectedType.element],
+);
+
+/// Parameters:
+/// Element superElement: the class that appears in both the "on" and
+///                       "implements" clauses
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required Element superElement})
+>
+implementsSuperClassConstraint = DiagnosticWithArguments(
+  name: 'implements_super_class_constraint',
+  problemMessage:
+      "'{0}' can't be used in both the 'on' and 'implements' clauses.",
+  correctionMessage: "Try removing the type from the 'implements' clause.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'implements_super_class_constraint',
+  withArguments: _withArgumentsImplementsSuperClassConstraint,
   expectedTypes: [ExpectedType.element],
 );
 
@@ -10455,6 +10638,16 @@ mixedParameterGroups = DiagnosticWithoutArgumentsImpl(
   expectedTypes: [],
 );
 
+/// No parameters.
+const DiagnosticWithoutArguments mixinApplicationClassAugmentation =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'mixin_application_class_augmentation',
+      problemMessage: "A mixin application class can't be augmented.",
+      type: DiagnosticType.SYNTACTIC_ERROR,
+      uniqueName: 'mixin_application_class_augmentation',
+      expectedTypes: [],
+    );
+
 /// Parameters:
 /// String memberName: the name of the super-invoked member
 /// Type mixinMemberType: the display name of the type of the super-invoked
@@ -10560,19 +10753,36 @@ mixinClassDeclarationExtendsNotObject = DiagnosticWithArguments(
 );
 
 /// Parameters:
-/// String className: the name of the mixin that is invalid
+/// String name: the name of the mixin class
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String name})
+>
+mixinClassDeclarationWithClause = DiagnosticWithArguments(
+  name: 'mixin_class_declaration_with_clause',
+  problemMessage:
+      "The class '{0}' can't be declared a mixin because it has a 'with' clause.",
+  correctionMessage:
+      "Try removing the 'with' clause or removing the 'mixin' modifier from "
+      "the class.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'mixin_class_declaration_with_clause',
+  withArguments: _withArgumentsMixinClassDeclarationWithClause,
+  expectedTypes: [ExpectedType.string],
+);
+
+/// Parameters:
+/// String className: the name of the mixin class
 const DiagnosticWithArguments<
   LocatableDiagnostic Function({required String className})
 >
-mixinClassDeclaresConstructor = DiagnosticWithArguments(
-  name: 'mixin_class_declares_constructor',
+mixinClassDeclaresNonTrivialGenerativeConstructor = DiagnosticWithArguments(
+  name: 'mixin_class_declares_non_trivial_generative_constructor',
   problemMessage:
-      "The class '{0}' can't be used as a mixin because it declares a "
-      "constructor.",
-  hasPublishedDocs: true,
+      "The mixin class '{0}' can't declare a non-trivial generative constructor.",
   type: DiagnosticType.COMPILE_TIME_ERROR,
-  uniqueName: 'mixin_class_declares_constructor',
-  withArguments: _withArgumentsMixinClassDeclaresConstructor,
+  uniqueName: 'mixin_class_declares_non_trivial_generative_constructor',
+  withArguments:
+      _withArgumentsMixinClassDeclaresNonTrivialGenerativeConstructor,
   expectedTypes: [ExpectedType.string],
 );
 
@@ -10625,6 +10835,23 @@ const DiagnosticWithoutArguments mixinInstantiate =
       uniqueName: 'mixin_instantiate',
       expectedTypes: [],
     );
+
+/// Parameters:
+/// String name: the name of the mixin class
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String name})
+>
+mixinModifierMixinApplicationClassWithMultipleMixins = DiagnosticWithArguments(
+  name: 'mixin_modifier_mixin_application_class_with_multiple_mixins',
+  problemMessage:
+      "The mixin application class '{0}' can only have a single mixin.",
+  correctionMessage: "Try removing all but one mixin.",
+  type: DiagnosticType.COMPILE_TIME_ERROR,
+  uniqueName: 'mixin_modifier_mixin_application_class_with_multiple_mixins',
+  withArguments:
+      _withArgumentsMixinModifierMixinApplicationClassWithMultipleMixins,
+  expectedTypes: [ExpectedType.string],
+);
 
 /// Parameters:
 /// Type disallowedType: the name of the disallowed type
@@ -10701,6 +10928,19 @@ const DiagnosticWithoutArguments mixinOnTypeAliasExpandsToTypeParameter =
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
       uniqueName: 'mixin_on_type_alias_expands_to_type_parameter',
+      expectedTypes: [],
+    );
+
+/// No parameters.
+const DiagnosticWithoutArguments mixinPrimaryConstructor =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'mixin_primary_constructor',
+      problemMessage: "Mixins can't have primary constructors.",
+      correctionMessage:
+          "Try removing the primary constructor or changing the mixin to a "
+          "class.",
+      type: DiagnosticType.SYNTACTIC_ERROR,
+      uniqueName: 'mixin_primary_constructor',
       expectedTypes: [],
     );
 
@@ -12719,7 +12959,7 @@ nullableTypeInCatchClause = DiagnosticWithoutArgumentsImpl(
 const DiagnosticWithoutArguments nullableTypeInExtendsClause =
     DiagnosticWithoutArgumentsImpl(
       name: 'nullable_type_in_extends_clause',
-      problemMessage: "A class can't extend a nullable type.",
+      problemMessage: "Nullable types can't be extended.",
       correctionMessage: "Try removing the question mark.",
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
@@ -12731,8 +12971,7 @@ const DiagnosticWithoutArguments nullableTypeInExtendsClause =
 const DiagnosticWithoutArguments nullableTypeInImplementsClause =
     DiagnosticWithoutArgumentsImpl(
       name: 'nullable_type_in_implements_clause',
-      problemMessage:
-          "A class, mixin, or extension type can't implement a nullable type.",
+      problemMessage: "Nullable types can't be implemented.",
       correctionMessage: "Try removing the question mark.",
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
@@ -12745,7 +12984,7 @@ const DiagnosticWithoutArguments nullableTypeInOnClause =
     DiagnosticWithoutArgumentsImpl(
       name: 'nullable_type_in_on_clause',
       problemMessage:
-          "A mixin can't have a nullable type as a superclass constraint.",
+          "Nullable types can't be used as a superclass constraint.",
       correctionMessage: "Try removing the question mark.",
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
@@ -12757,7 +12996,7 @@ const DiagnosticWithoutArguments nullableTypeInOnClause =
 const DiagnosticWithoutArguments nullableTypeInWithClause =
     DiagnosticWithoutArgumentsImpl(
       name: 'nullable_type_in_with_clause',
-      problemMessage: "A class or mixin can't mix in a nullable type.",
+      problemMessage: "Nullable types can't be mixed in.",
       correctionMessage: "Try removing the question mark.",
       hasPublishedDocs: true,
       type: DiagnosticType.COMPILE_TIME_ERROR,
@@ -13474,6 +13713,32 @@ prefixShadowedByLocalDeclaration = DiagnosticWithArguments(
   type: DiagnosticType.COMPILE_TIME_ERROR,
   uniqueName: 'prefix_shadowed_by_local_declaration',
   withArguments: _withArgumentsPrefixShadowedByLocalDeclaration,
+  expectedTypes: [ExpectedType.string],
+);
+
+/// No parameters.
+const DiagnosticWithoutArguments primaryConstructorBodyWithExpressionBody =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'primary_constructor_body_with_expression_body',
+      problemMessage: "A primary constructor body can't use '=>'.",
+      correctionMessage: "Try using a block body.",
+      type: DiagnosticType.COMPILE_TIME_ERROR,
+      uniqueName: 'primary_constructor_body_with_expression_body',
+      expectedTypes: [],
+    );
+
+/// Parameters:
+/// String modifier: The modifier found.
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String modifier})
+>
+primaryConstructorBodyWithModifier = DiagnosticWithArguments(
+  name: 'primary_constructor_body_with_modifier',
+  problemMessage: "A primary constructor body can't have the modifier '{0}'.",
+  correctionMessage: "Try removing the modifier.",
+  type: DiagnosticType.SYNTACTIC_ERROR,
+  uniqueName: 'primary_constructor_body_with_modifier',
+  withArguments: _withArgumentsPrimaryConstructorBodyWithModifier,
   expectedTypes: [ExpectedType.string],
 );
 
@@ -14480,6 +14745,27 @@ returnOfInvalidTypeFromMethod = DiagnosticWithArguments(
 );
 
 /// Parameters:
+/// Type actualType: the return type as declared in the return statement
+/// Type expectedType: the expected return type as defined by the type of the
+///                    Future
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({
+    required DartType actualType,
+    required DartType expectedType,
+  })
+>
+returnOfInvalidTypeFromThen = DiagnosticWithArguments(
+  name: 'invalid_return_type_for_then',
+  problemMessage:
+      "A value of type '{0}' can't be returned by the 'onError' handler because "
+      "it must be assignable to '{1}', as required by 'Future.then'.",
+  type: DiagnosticType.STATIC_WARNING,
+  uniqueName: 'return_of_invalid_type_from_then',
+  withArguments: _withArgumentsReturnOfInvalidTypeFromThen,
+  expectedTypes: [ExpectedType.type, ExpectedType.type],
+);
+
+/// Parameters:
 /// Type actualType: the return type of the function
 /// Type expectedType: the expected return type as defined by the type of the
 ///                    Future
@@ -14498,6 +14784,27 @@ returnTypeInvalidForCatchError = DiagnosticWithArguments(
   type: DiagnosticType.STATIC_WARNING,
   uniqueName: 'return_type_invalid_for_catch_error',
   withArguments: _withArgumentsReturnTypeInvalidForCatchError,
+  expectedTypes: [ExpectedType.type, ExpectedType.type],
+);
+
+/// Parameters:
+/// Type actualType: the return type of the function
+/// Type expectedType: the expected return type as defined by the type of the
+///                    Future
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({
+    required DartType actualType,
+    required DartType expectedType,
+  })
+>
+returnTypeInvalidForThen = DiagnosticWithArguments(
+  name: 'invalid_return_type_for_then',
+  problemMessage:
+      "The return type '{0}' isn't assignable to '{1}', as required by "
+      "'Future.then'.",
+  type: DiagnosticType.STATIC_WARNING,
+  uniqueName: 'return_type_invalid_for_then',
+  withArguments: _withArgumentsReturnTypeInvalidForThen,
   expectedTypes: [ExpectedType.type, ExpectedType.type],
 );
 
@@ -15406,6 +15713,16 @@ const DiagnosticWithoutArguments typeCheckIsNull =
     );
 
 /// No parameters.
+const DiagnosticWithoutArguments typedefAugmentation =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'typedef_augmentation',
+      problemMessage: "Type aliases can't be augmented.",
+      type: DiagnosticType.SYNTACTIC_ERROR,
+      uniqueName: 'typedef_augmentation',
+      expectedTypes: [],
+    );
+
+/// No parameters.
 const DiagnosticWithoutArguments typedefInClass =
     DiagnosticWithoutArgumentsImpl(
       name: 'typedef_in_class',
@@ -15515,6 +15832,18 @@ typeTestWithUndefinedName = DiagnosticWithArguments(
   withArguments: _withArgumentsTypeTestWithUndefinedName,
   expectedTypes: [ExpectedType.string],
 );
+
+/// No parameters.
+const DiagnosticWithoutArguments unawaitedReturnInTryBlock =
+    DiagnosticWithoutArgumentsImpl(
+      name: 'unawaited_return_in_try_block',
+      problemMessage:
+          "Returning a 'Future' without 'await' inside a try block.",
+      correctionMessage: "Try adding an 'await'.",
+      type: DiagnosticType.STATIC_WARNING,
+      uniqueName: 'unawaited_return_in_try_block',
+      expectedTypes: [],
+    );
 
 /// No parameters.
 const DiagnosticWithoutArguments
@@ -18072,6 +18401,16 @@ LocatableDiagnostic _withArgumentsAugmentationOfDifferentDeclarationKind({
   ]);
 }
 
+LocatableDiagnostic _withArgumentsAugmentationReturnTypeMismatch({
+  required DartType expectedType,
+  required DartType actualType,
+}) {
+  return LocatableDiagnosticImpl(diag.augmentationReturnTypeMismatch, [
+    expectedType,
+    actualType,
+  ]);
+}
+
 LocatableDiagnostic _withArgumentsAugmentedExpressionNotOperator({
   required String operator,
 }) {
@@ -18232,6 +18571,16 @@ LocatableDiagnostic _withArgumentsClassInstantiationAccessToUnknownMember({
 
 LocatableDiagnostic _withArgumentsClassUsedAsMixin({required String name}) {
   return LocatableDiagnosticImpl(diag.classUsedAsMixin, [name]);
+}
+
+LocatableDiagnostic
+_withArgumentsClassUsedAsMixinDeclaresGenerativeConstructor({
+  required String className,
+}) {
+  return LocatableDiagnosticImpl(
+    diag.classUsedAsMixinDeclaresGenerativeConstructor,
+    [className],
+  );
 }
 
 LocatableDiagnostic _withArgumentsCompoundImplementsFinalizable({
@@ -19041,6 +19390,14 @@ LocatableDiagnostic _withArgumentsExtraPositionalArgumentsCouldBeNamed({
   ]);
 }
 
+LocatableDiagnostic _withArgumentsFactoryNotCompleteAfterAugmentations({
+  required String name,
+}) {
+  return LocatableDiagnosticImpl(diag.factoryNotCompleteAfterAugmentations, [
+    name,
+  ]);
+}
+
 LocatableDiagnostic _withArgumentsFfiNativeUnexpectedNumberOfParameters({
   required int expected,
   required int actual,
@@ -19183,6 +19540,14 @@ LocatableDiagnostic _withArgumentsForInOfInvalidType({
   ]);
 }
 
+LocatableDiagnostic _withArgumentsFunctionNotCompleteAfterAugmentations({
+  required String name,
+}) {
+  return LocatableDiagnosticImpl(diag.functionNotCompleteAfterAugmentations, [
+    name,
+  ]);
+}
+
 LocatableDiagnostic _withArgumentsGenericStructSubclass({
   required String className,
 }) {
@@ -19263,6 +19628,14 @@ LocatableDiagnostic _withArgumentsImplementsSuperClass({
   required Element superElement,
 }) {
   return LocatableDiagnosticImpl(diag.implementsSuperClass, [superElement]);
+}
+
+LocatableDiagnostic _withArgumentsImplementsSuperClassConstraint({
+  required Element superElement,
+}) {
+  return LocatableDiagnosticImpl(diag.implementsSuperClassConstraint, [
+    superElement,
+  ]);
 }
 
 LocatableDiagnostic _withArgumentsImplicitSuperInitializerMissingArguments({
@@ -20044,18 +20417,36 @@ LocatableDiagnostic _withArgumentsMixinClassDeclarationExtendsNotObject({
   ]);
 }
 
-LocatableDiagnostic _withArgumentsMixinClassDeclaresConstructor({
+LocatableDiagnostic _withArgumentsMixinClassDeclarationWithClause({
+  required String name,
+}) {
+  return LocatableDiagnosticImpl(diag.mixinClassDeclarationWithClause, [name]);
+}
+
+LocatableDiagnostic
+_withArgumentsMixinClassDeclaresNonTrivialGenerativeConstructor({
   required String className,
 }) {
-  return LocatableDiagnosticImpl(diag.mixinClassDeclaresConstructor, [
-    className,
-  ]);
+  return LocatableDiagnosticImpl(
+    diag.mixinClassDeclaresNonTrivialGenerativeConstructor,
+    [className],
+  );
 }
 
 LocatableDiagnostic _withArgumentsMixinInheritsFromNotObject({
   required String name,
 }) {
   return LocatableDiagnosticImpl(diag.mixinInheritsFromNotObject, [name]);
+}
+
+LocatableDiagnostic
+_withArgumentsMixinModifierMixinApplicationClassWithMultipleMixins({
+  required String name,
+}) {
+  return LocatableDiagnosticImpl(
+    diag.mixinModifierMixinApplicationClassWithMultipleMixins,
+    [name],
+  );
 }
 
 LocatableDiagnostic _withArgumentsMixinOfDisallowedClass({
@@ -20625,6 +21016,14 @@ LocatableDiagnostic _withArgumentsPrefixShadowedByLocalDeclaration({
   ]);
 }
 
+LocatableDiagnostic _withArgumentsPrimaryConstructorBodyWithModifier({
+  required String modifier,
+}) {
+  return LocatableDiagnosticImpl(diag.primaryConstructorBodyWithModifier, [
+    modifier,
+  ]);
+}
+
 LocatableDiagnostic _withArgumentsPrivateCollisionInMixinApplication({
   required String collidingName,
   required String mixin1,
@@ -20889,11 +21288,31 @@ LocatableDiagnostic _withArgumentsReturnOfInvalidTypeFromMethod({
   ]);
 }
 
+LocatableDiagnostic _withArgumentsReturnOfInvalidTypeFromThen({
+  required DartType actualType,
+  required DartType expectedType,
+}) {
+  return LocatableDiagnosticImpl(diag.returnOfInvalidTypeFromThen, [
+    actualType,
+    expectedType,
+  ]);
+}
+
 LocatableDiagnostic _withArgumentsReturnTypeInvalidForCatchError({
   required DartType actualType,
   required DartType expectedType,
 }) {
   return LocatableDiagnosticImpl(diag.returnTypeInvalidForCatchError, [
+    actualType,
+    expectedType,
+  ]);
+}
+
+LocatableDiagnostic _withArgumentsReturnTypeInvalidForThen({
+  required DartType actualType,
+  required DartType expectedType,
+}) {
+  return LocatableDiagnosticImpl(diag.returnTypeInvalidForThen, [
     actualType,
     expectedType,
   ]);

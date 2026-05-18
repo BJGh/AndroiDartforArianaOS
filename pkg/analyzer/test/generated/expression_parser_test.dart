@@ -307,19 +307,15 @@ MethodInvocation
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: a
-          colon: :
-        expression: IntegerLiteral
+      NamedArgument
+        name: a
+        colon: :
+        argumentExpression: IntegerLiteral
           literal: 1
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: b
-          colon: :
-        expression: IntegerLiteral
+      NamedArgument
+        name: b
+        colon: :
+        argumentExpression: IntegerLiteral
           literal: 2
     rightParenthesis: )
 ''');
@@ -1784,7 +1780,7 @@ FunctionExpressionInvocation
   function: FunctionExpression
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: a
       rightParenthesis: )
     body: BlockFunctionBody
@@ -2122,7 +2118,7 @@ var v = (int i) => i++;
 FunctionExpression
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: int
       name: i
@@ -2152,7 +2148,7 @@ FunctionExpression
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: E
       name: i
@@ -2208,7 +2204,7 @@ FunctionExpression
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: E
       name: i
@@ -3109,7 +3105,7 @@ var v = (int i) => i + 1;
 FunctionExpression
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: int
       name: i
@@ -3161,7 +3157,7 @@ FunctionExpression
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: Map
         typeArguments: TypeArgumentList
@@ -3173,7 +3169,7 @@ FunctionExpression
               name: Y
           rightBracket: >
       name: m
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: X
       name: x
@@ -3536,7 +3532,7 @@ AsExpression
     functionKeyword: Function
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
       rightParenthesis: )
@@ -3560,7 +3556,7 @@ AsExpression
     functionKeyword: Function
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
       rightParenthesis: )
@@ -3887,7 +3883,6 @@ var v = <html>$void</html>;
       error(diag.missingFunctionParameters, 14, 5),
       error(diag.missingIdentifier, 20, 1),
       error(diag.expectedToken, 21, 4),
-      error(diag.missingFunctionBody, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''

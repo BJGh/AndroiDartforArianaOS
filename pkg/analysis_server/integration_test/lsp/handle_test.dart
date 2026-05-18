@@ -32,6 +32,17 @@ void main() {
 /// functionality are in `test/lsp`.
 @reflectiveTest
 class LspOverLegacyRequestTest extends AbstractLspOverLegacyTest {
+  Future<void> test_diagnosticServer() async {
+    await standardAnalysisSetup();
+    await analysisFinished;
+
+    var server = await getDiagnosticServer();
+
+    expect(server.port, isNotNull);
+    expect(server.port, isNonZero);
+    expect(server.port, isPositive);
+  }
+
   Future<void> test_error_invalidLspRequest() async {
     await standardAnalysisSetup();
     await analysisFinished;
@@ -94,7 +105,7 @@ class [!A^aa!] {}
 ```dart
 class Aaa
 ```
-Declared in _package:test/main.dart_.
+Declared in *package:test/main.dart*.
 
 ---
 This is my class.
@@ -116,7 +127,7 @@ class [!A^aa!] {}
 ```dart
 class Aaa
 ```
-Declared in _package:test/main.dart_.
+Declared in *package:test/main.dart*.
 
 ---
 This is my class.''';

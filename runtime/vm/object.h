@@ -36,6 +36,7 @@
 #include "vm/raw_object.h"
 #include "vm/regexp/regexp-flags.h"
 #include "vm/report.h"
+#include "vm/roots.h"
 #include "vm/static_type_exactness_state.h"
 #include "vm/thread.h"
 #include "vm/token_position.h"
@@ -155,9 +156,6 @@ class BaseTextBuffer;
   DART_NOINLINE static object& ZoneHandle(Zone* zone, object##Ptr ptr) {       \
     return static_cast<object&>(ZoneHandleImpl(zone, ptr, kClassId));          \
   }                                                                            \
-  static object* ReadOnlyHandle() {                                            \
-    return static_cast<object*>(ReadOnlyHandleImpl(kClassId));                 \
-  }                                                                            \
   DART_NOINLINE static object& CheckedHandle(Zone* zone, ObjectPtr ptr) {      \
     object* obj = reinterpret_cast<object*>(VMHandles::AllocateHandle(zone));  \
     initializeHandle(obj, ptr);                                                \
@@ -249,6 +247,9 @@ class BaseTextBuffer;
   DART_NOINLINE void operator=(object##Ptr value) {                            \
     initializeHandle(this, value);                                             \
   }                                                                            \
+  DART_NOINLINE void initRO(object##Ptr value) const {                         \
+    initializeHandle(const_cast<object*>(this), value);                        \
+  }                                                                            \
   DART_NOINLINE void operator^=(ObjectPtr value) {                             \
     initializeHandle(this, value);                                             \
     ASSERT(IsNull() || Is##object());                                          \
@@ -279,6 +280,9 @@ extern "C" void DLRT_ExitSafepoint();
   void operator=(object##Ptr value) {                                          \
     ptr_ = value;                                                              \
     CHECK_HANDLE();                                                            \
+  }                                                                            \
+  DART_NOINLINE void initRO(object##Ptr value) const {                         \
+    initializeHandle(const_cast<object*>(this), value);                        \
   }                                                                            \
   void operator^=(ObjectPtr value) {                                           \
     ptr_ = value;                                                              \
@@ -349,6 +353,9 @@ class Object {
   }
   ObjectPtr ptr() const { return ptr_; }
   void operator=(ObjectPtr value) { initializeHandle(this, value); }
+  void initRO(ObjectPtr value) const {
+    initializeHandle(const_cast<Object*>(this), value);
+  }
 
   bool IsCanonical() const { return ptr()->untag()->IsCanonical(); }
   void SetCanonical() const { ptr()->untag()->SetCanonical(); }
@@ -418,7 +425,7 @@ class Object {
   CLASS_LIST_FOR_HANDLES(DEFINE_CLASS_TESTER);
 #undef DEFINE_CLASS_TESTER
 
-  bool IsNull() const { return ptr_ == null_; }
+  bool IsNull() const { return ptr_ == Roots::null_obj(); }
 
   // Matches Object.toString on instances (except String::ToCString, bug 20583).
   virtual const char* ToCString() const {
@@ -463,10 +470,10 @@ class Object {
 #endif
 
   static Object& Handle() {
-    return HandleImpl(Thread::Current()->zone(), null_, kObjectCid);
+    return HandleImpl(Thread::Current()->zone(), Roots::null_obj(), kObjectCid);
   }
   static Object& Handle(Zone* zone) {
-    return HandleImpl(zone, null_, kObjectCid);
+    return HandleImpl(zone, Roots::null_obj(), kObjectCid);
   }
   static Object& Handle(ObjectPtr ptr) {
     return HandleImpl(Thread::Current()->zone(), ptr, kObjectCid);
@@ -475,10 +482,11 @@ class Object {
     return HandleImpl(zone, ptr, kObjectCid);
   }
   static Object& ZoneHandle() {
-    return ZoneHandleImpl(Thread::Current()->zone(), null_, kObjectCid);
+    return ZoneHandleImpl(Thread::Current()->zone(), Roots::null_obj(),
+                          kObjectCid);
   }
   static Object& ZoneHandle(Zone* zone) {
-    return ZoneHandleImpl(zone, null_, kObjectCid);
+    return ZoneHandleImpl(zone, Roots::null_obj(), kObjectCid);
   }
   static Object& ZoneHandle(ObjectPtr ptr) {
     return ZoneHandleImpl(Thread::Current()->zone(), ptr, kObjectCid);
@@ -486,9 +494,8 @@ class Object {
   static Object& ZoneHandle(Zone* zone, ObjectPtr ptr) {
     return ZoneHandleImpl(zone, ptr, kObjectCid);
   }
-  static Object* ReadOnlyHandle() { return ReadOnlyHandleImpl(kObjectCid); }
 
-  static ObjectPtr null() { return null_; }
+  static ObjectPtr null() { return Roots::null_obj(); }
 
 #if defined(HASH_IN_OBJECT_HEADER)
   static uint32_t GetCachedHash(const ObjectPtr obj) {
@@ -541,7 +548,8 @@ class Object {
   V(Bytecode, implicit_shared_static_getter_bytecode)                          \
   V(Bytecode, implicit_static_setter_bytecode)                                 \
   V(Bytecode, implicit_shared_static_setter_bytecode)                          \
-  V(Bytecode, method_extractor_bytecode)                                       \
+  V(Bytecode, method_extractor_with_ita_bytecode)                              \
+  V(Bytecode, method_extractor_without_ita_bytecode)                           \
   V(Bytecode, invoke_closure_bytecode)                                         \
   V(Bytecode, invoke_field_bytecode)                                           \
   V(Bytecode, nsm_dispatcher_bytecode)                                         \
@@ -574,74 +582,11 @@ class Object {
   V(Array, uninitialized_data)
 
 #define DEFINE_SHARED_READONLY_HANDLE_GETTER(Type, name)                       \
-  static const Type& name() {                                                  \
-    ASSERT(name##_ != nullptr);                                                \
-    return *name##_;                                                           \
-  }
+  static const Type& name() { return Roots::name(); }
   SHARED_READONLY_HANDLES_LIST(DEFINE_SHARED_READONLY_HANDLE_GETTER)
 #undef DEFINE_SHARED_READONLY_HANDLE_GETTER
 
   static void set_vm_isolate_snapshot_object_table(const Array& table);
-
-  static ClassPtr class_class() { return class_class_; }
-  static ClassPtr dynamic_class() { return dynamic_class_; }
-  static ClassPtr void_class() { return void_class_; }
-  static ClassPtr type_parameters_class() { return type_parameters_class_; }
-  static ClassPtr type_arguments_class() { return type_arguments_class_; }
-  static ClassPtr patch_class_class() { return patch_class_class_; }
-  static ClassPtr function_class() { return function_class_; }
-  static ClassPtr closure_data_class() { return closure_data_class_; }
-  static ClassPtr ffi_trampoline_data_class() {
-    return ffi_trampoline_data_class_;
-  }
-  static ClassPtr field_class() { return field_class_; }
-  static ClassPtr script_class() { return script_class_; }
-  static ClassPtr library_class() { return library_class_; }
-  static ClassPtr namespace_class() { return namespace_class_; }
-  static ClassPtr kernel_program_info_class() {
-    return kernel_program_info_class_;
-  }
-  static ClassPtr code_class() { return code_class_; }
-  static ClassPtr instructions_class() { return instructions_class_; }
-  static ClassPtr instructions_section_class() {
-    return instructions_section_class_;
-  }
-  static ClassPtr instructions_table_class() {
-    return instructions_table_class_;
-  }
-  static ClassPtr object_pool_class() { return object_pool_class_; }
-  static ClassPtr pc_descriptors_class() { return pc_descriptors_class_; }
-  static ClassPtr code_source_map_class() { return code_source_map_class_; }
-  static ClassPtr compressed_stackmaps_class() {
-    return compressed_stackmaps_class_;
-  }
-  static ClassPtr var_descriptors_class() { return var_descriptors_class_; }
-  static ClassPtr exception_handlers_class() {
-    return exception_handlers_class_;
-  }
-  static ClassPtr context_class() { return context_class_; }
-  static ClassPtr context_scope_class() { return context_scope_class_; }
-  static ClassPtr bytecode_class() { return bytecode_class_; }
-  static ClassPtr sentinel_class() { return sentinel_class_; }
-  static ClassPtr api_error_class() { return api_error_class_; }
-  static ClassPtr language_error_class() { return language_error_class_; }
-  static ClassPtr unhandled_exception_class() {
-    return unhandled_exception_class_;
-  }
-  static ClassPtr unwind_error_class() { return unwind_error_class_; }
-  static ClassPtr singletargetcache_class() { return singletargetcache_class_; }
-  static ClassPtr unlinkedcall_class() { return unlinkedcall_class_; }
-  static ClassPtr monomorphicsmiablecall_class() {
-    return monomorphicsmiablecall_class_;
-  }
-  static ClassPtr icdata_class() { return icdata_class_; }
-  static ClassPtr megamorphic_cache_class() { return megamorphic_cache_class_; }
-  static ClassPtr subtypetestcache_class() { return subtypetestcache_class_; }
-  static ClassPtr loadingunit_class() { return loadingunit_class_; }
-  static ClassPtr weak_serialization_reference_class() {
-    return weak_serialization_reference_class_;
-  }
-  static ClassPtr weak_array_class() { return weak_array_class_; }
 
   // Initialize the VM isolate.
   static void InitNullAndBool(IsolateGroup* isolate_group);
@@ -742,7 +687,7 @@ class Object {
   friend ObjectPtr AllocateObject(intptr_t, intptr_t, intptr_t);
 
   // Used for extracting the C++ vtable during bringup.
-  Object() : ptr_(null_) {}
+  Object() : ptr_(Roots::null_obj()) {}
 
   uword raw_value() const { return static_cast<uword>(ptr()); }
 
@@ -762,11 +707,6 @@ class Object {
         reinterpret_cast<Object*>(VMHandles::AllocateZoneHandle(zone));
     obj->setPtr(ptr, default_cid);
     return *obj;
-  }
-  DART_NOINLINE static Object* ReadOnlyHandleImpl(intptr_t cid) {
-    Object* obj = reinterpret_cast<Object*>(Dart::AllocateReadOnlyHandle());
-    obj->setPtr(Object::null(), cid);
-    return obj;
   }
 
   // Memcpy to account for the strict aliasing rule.
@@ -1077,58 +1017,6 @@ class Object {
   }
 
   static cpp_vtable builtin_vtables_[kNumPredefinedCids];
-
-  // The static values below are singletons shared between the different
-  // isolates. They are all allocated in the non-GC'd Dart::vm_isolate_.
-  static ObjectPtr null_;
-  static BoolPtr true_;
-  static BoolPtr false_;
-
-  static ClassPtr class_class_;
-  static ClassPtr dynamic_class_;
-  static ClassPtr void_class_;
-  static ClassPtr type_parameters_class_;
-  static ClassPtr type_arguments_class_;
-  static ClassPtr patch_class_class_;
-  static ClassPtr function_class_;
-  static ClassPtr closure_data_class_;
-  static ClassPtr ffi_trampoline_data_class_;
-  static ClassPtr field_class_;
-  static ClassPtr script_class_;
-  static ClassPtr library_class_;
-  static ClassPtr namespace_class_;
-  static ClassPtr kernel_program_info_class_;
-  static ClassPtr code_class_;
-  static ClassPtr instructions_class_;
-  static ClassPtr instructions_section_class_;
-  static ClassPtr instructions_table_class_;
-  static ClassPtr object_pool_class_;
-  static ClassPtr pc_descriptors_class_;
-  static ClassPtr code_source_map_class_;
-  static ClassPtr compressed_stackmaps_class_;
-  static ClassPtr var_descriptors_class_;
-  static ClassPtr exception_handlers_class_;
-  static ClassPtr context_class_;
-  static ClassPtr context_scope_class_;
-  static ClassPtr bytecode_class_;
-  static ClassPtr sentinel_class_;
-  static ClassPtr singletargetcache_class_;
-  static ClassPtr unlinkedcall_class_;
-  static ClassPtr monomorphicsmiablecall_class_;
-  static ClassPtr icdata_class_;
-  static ClassPtr megamorphic_cache_class_;
-  static ClassPtr subtypetestcache_class_;
-  static ClassPtr loadingunit_class_;
-  static ClassPtr api_error_class_;
-  static ClassPtr language_error_class_;
-  static ClassPtr unhandled_exception_class_;
-  static ClassPtr unwind_error_class_;
-  static ClassPtr weak_serialization_reference_class_;
-  static ClassPtr weak_array_class_;
-
-#define DECLARE_SHARED_READONLY_HANDLE(Type, name) static Type* name##_;
-  SHARED_READONLY_HANDLES_LIST(DECLARE_SHARED_READONLY_HANDLE)
-#undef DECLARE_SHARED_READONLY_HANDLE
 
   friend void ClassTable::Register(const Class& cls);
   friend void UntaggedObject::Validate(IsolateGroup* isolate_group) const;
@@ -1942,10 +1830,12 @@ class Class : public Object {
   intptr_t FindInvocationDispatcherFunctionIndex(const Function& needle) const;
   FunctionPtr InvocationDispatcherFunctionFromIndex(intptr_t idx) const;
 
-  FunctionPtr GetInvocationDispatcher(const String& target_name,
-                                      const Array& args_desc,
-                                      UntaggedFunction::Kind kind,
-                                      bool create_if_absent) const;
+  FunctionPtr GetInvocationDispatcher(
+      const String& target_name,
+      const Array& args_desc,
+      UntaggedFunction::Kind kind,
+      bool create_if_absent,
+      bool is_dynamically_callable = false) const;
 
   FunctionPtr GetRecordFieldGetter(const String& getter_name) const;
 
@@ -2098,7 +1988,7 @@ class Class : public Object {
                                   const Field& field) const;
 
 #if !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
-  void SetUserVisibleNameInClassTable();
+  void SetUserVisibleNameInClassTable() const;
 #endif  // !defined(PRODUCT) || defined(FORCE_INCLUDE_SAMPLING_HEAP_PROFILER)
 
  private:
@@ -2206,7 +2096,8 @@ class Class : public Object {
 
   FunctionPtr CreateInvocationDispatcher(const String& target_name,
                                          const Array& args_desc,
-                                         UntaggedFunction::Kind kind) const;
+                                         UntaggedFunction::Kind kind,
+                                         bool is_dynamically_callable) const;
 
   FunctionPtr CreateRecordFieldGetter(const String& getter_name) const;
 
@@ -2951,9 +2842,6 @@ class ICData : public CallSiteData {
                             intptr_t test_entry_length,
                             const Object& back_ref);
 
-  // A cache of VM heap allocated preinitialized empty ic data entry arrays.
-  static ArrayPtr cached_icdata_arrays_[kCachedICDataArrayCount];
-
   FINAL_HEAP_OBJECT_IMPLEMENTATION(ICData, CallSiteData);
   friend class CallSiteResetter;
   friend class CallTargets;
@@ -3038,7 +2926,8 @@ enum class EntryPointPragma {
   kNever,
   kGetterOnly,
   kSetterOnly,
-  kCallOnly
+  kCallOnly,
+  kTypeOnly
 };
 
 struct EntryPointPragmaUtils : public AllStatic {
@@ -3057,10 +2946,16 @@ struct EntryPointPragmaUtils : public AllStatic {
            pragma == EntryPointPragma::kSetterOnly;
   }
 
+  static constexpr bool AllowsTypeAccess(EntryPointPragma pragma) {
+    return pragma == EntryPointPragma::kAlways ||
+           pragma == EntryPointPragma::kTypeOnly;
+  }
+
   static constexpr bool AllowsAccess(EntryPointPragma pragma) {
     // The CFE should ensure that non-kAlways annotations are appropriate
     // for the given member.
-    return pragma != EntryPointPragma::kNever;
+    return pragma != EntryPointPragma::kNever &&
+           pragma != EntryPointPragma::kTypeOnly;
   }
 };
 
@@ -3729,6 +3624,10 @@ class Function : public Object {
 
   bool IsCachableIdempotent() const;
 
+  // Whether this function represents an external effect and should be dropped
+  // from codegen.
+  bool IsExternalEffect() const;
+
   // Whether this function's |recognized_kind| requires optimization.
   bool RecognizedKindForceOptimize() const;
 
@@ -4222,7 +4121,8 @@ class Function : public Object {
   V(WasExecutedBit)                                                            \
   V(ProhibitsInstructionHoisting)                                              \
   V(ProhibitsBoundsCheckGeneralization)                                        \
-  V(IsDynamicallyOverridden)
+  V(IsDynamicallyOverridden)                                                   \
+  V(IsRedirectingFactory)
 
   enum StateBits {
 #define DECLARE_FLAG_POS(Name) k##Name##Pos,
@@ -4281,6 +4181,8 @@ class Function : public Object {
   // polymorphic_target: A polymorphic method.
   // has_pragma: Has a @pragma decoration.
   // no_such_method_forwarder: A stub method that just calls noSuchMethod.
+  // dynamically_callable: host function or dynamic forwarder that can be
+  //                       invoked dynamically from a dynamic module.
 
 // Bits that are set when function is created, don't have to worry about
 // concurrent updates.
@@ -4299,7 +4201,7 @@ class Function : public Object {
   V(IsSynthetic, is_synthetic)                                                 \
   V(IsExtensionMember, is_extension_member)                                    \
   V(IsExtensionTypeMember, is_extension_type_member)                           \
-  V(IsRedirectingFactory, is_redirecting_factory)
+  V(IsDynamicallyCallable, is_dynamically_callable)
 // Bit that is updated after function is constructed, has to be updated in
 // concurrent-safe manner.
 #define FOR_EACH_FUNCTION_VOLATILE_KIND_BIT(V) V(Inlinable, is_inlinable)
@@ -4604,6 +4506,13 @@ class Field : public Object {
   }
   bool has_deeply_immutable_type() const {
     return untag()->kind_bits_.Read<HasDeeplyImmutableTypeBit>();
+  }
+
+  void set_is_dynamically_callable(bool value) const {
+    untag()->kind_bits_.UpdateBool<IsDynamicallyCallableBit>(value);
+  }
+  bool is_dynamically_callable() const {
+    return untag()->kind_bits_.Read<IsDynamicallyCallableBit>();
   }
 
 #if defined(DART_DYNAMIC_MODULES)
@@ -5015,6 +4924,10 @@ class Field : public Object {
       BitField<decltype(UntaggedField::kind_bits_),
                bool,
                NoSanitizeThreadBit::kNextBit>;
+  using IsDynamicallyCallableBit =
+      BitField<decltype(UntaggedField::kind_bits_),
+               bool,
+               HasDeeplyImmutableTypeBit::kNextBit>;
 
   // Force this field's guard to be dynamic and deoptimize dependent code.
   void ForceDynamicGuardedCidAndLength() const;
@@ -6233,9 +6146,17 @@ class LocalVarDescriptors : public Object {
                UntaggedLocalVarDescriptors::VarInfo* info) const;
 
   static constexpr intptr_t kBytesPerElement =
-      sizeof(UntaggedLocalVarDescriptors::VarInfo);
+      sizeof(UntaggedLocalVarDescriptors::VarInfo) +
+      sizeof(CompressedStringPtr);
   static constexpr intptr_t kMaxElements =
       UntaggedLocalVarDescriptors::VarInfo::kMaxIndex;
+
+  struct ArrayTraits {
+    static intptr_t elements_start_offset() {
+      return sizeof(UntaggedLocalVarDescriptors);
+    }
+    static constexpr intptr_t kElementSize = kBytesPerElement;
+  };
 
   static intptr_t InstanceSize() {
     ASSERT(sizeof(UntaggedLocalVarDescriptors) ==
@@ -6244,10 +6165,8 @@ class LocalVarDescriptors : public Object {
   }
   static intptr_t InstanceSize(intptr_t len) {
     ASSERT(0 <= len && len <= kMaxElements);
-    return RoundedAllocationSize(
-        sizeof(UntaggedLocalVarDescriptors) +
-        (len * kWordSize)  // RawStrings for names.
-        + (len * sizeof(UntaggedLocalVarDescriptors::VarInfo)));
+    return RoundedAllocationSize(sizeof(UntaggedLocalVarDescriptors) +
+                                 len * kBytesPerElement);
   }
 
   static LocalVarDescriptorsPtr New(intptr_t num_variables);
@@ -7062,6 +6981,13 @@ class Code : public Object {
     return Instructions::EntryPoint(instr);
 #endif
   }
+  static uword StubEntryPointOf(const CodePtr code) {
+#if defined(DART_PRECOMPILED_RUNTIME)
+    return code->untag()->entry_point_;
+#else
+    return Instructions::EntryPoint(InstructionsOf(code));
+#endif
+  }
 
   static uword UncheckedEntryPointOf(const CodePtr code) {
     return code->untag()->unchecked_entry_point_;
@@ -7109,6 +7035,13 @@ class Code : public Object {
       return 0;
     }
     return Instructions::Size(instr);
+#endif
+  }
+  static uword StubPayloadSizeOf(const CodePtr code) {
+#if defined(DART_PRECOMPILED_RUNTIME)
+    return code->untag()->instructions_length_;
+#else
+    return Instructions::Size(InstructionsOf(code));
 #endif
   }
 
@@ -10872,7 +10805,8 @@ class OneByteString : public AllStatic {
   static constexpr intptr_t kBytesPerElement = 1;
   static constexpr intptr_t kMaxElements = String::kMaxElements;
   static constexpr intptr_t kMaxNewSpaceElements =
-      (kNewAllocatableSize - sizeof(UntaggedOneByteString)) / kBytesPerElement;
+      (Heap::kNewAllocatableSize - sizeof(UntaggedOneByteString)) /
+      kBytesPerElement;
 
   struct ArrayTraits {
     static intptr_t elements_start_offset() {
@@ -11013,7 +10947,8 @@ class TwoByteString : public AllStatic {
   static constexpr intptr_t kBytesPerElement = 2;
   static constexpr intptr_t kMaxElements = String::kMaxElements;
   static constexpr intptr_t kMaxNewSpaceElements =
-      (kNewAllocatableSize - sizeof(UntaggedTwoByteString)) / kBytesPerElement;
+      (Heap::kNewAllocatableSize - sizeof(UntaggedTwoByteString)) /
+      kBytesPerElement;
 
   struct ArrayTraits {
     static intptr_t elements_start_offset() {
@@ -11147,7 +11082,7 @@ class Array : public Instance {
   // Returns `true` if we use card marking for arrays of length [array_length].
   static constexpr bool UseCardMarkingForAllocation(
       const intptr_t array_length) {
-    return Array::InstanceSize(array_length) > kNewAllocatableSize;
+    return Array::InstanceSize(array_length) > Heap::kNewAllocatableSize;
   }
 
   // WB invariant restoration code only applies to arrives which have at most
@@ -11272,7 +11207,7 @@ class Array : public Instance {
   static constexpr intptr_t kBytesPerElement = ArrayTraits::kElementSize;
   static constexpr intptr_t kMaxElements = kSmiMax / kBytesPerElement;
   static constexpr intptr_t kMaxNewSpaceElements =
-      (kNewAllocatableSize - sizeof(UntaggedArray)) / kBytesPerElement;
+      (Heap::kNewAllocatableSize - sizeof(UntaggedArray)) / kBytesPerElement;
 
   static intptr_t type_arguments_offset() {
     return OFFSET_OF(UntaggedArray, type_arguments_);
@@ -12038,7 +11973,7 @@ class TypedData : public TypedDataBase {
 
   static intptr_t MaxNewSpaceElements(intptr_t class_id) {
     ASSERT(IsTypedDataClassId(class_id));
-    return (kNewAllocatableSize - sizeof(UntaggedTypedData)) /
+    return (Heap::kNewAllocatableSize - sizeof(UntaggedTypedData)) /
            ElementSizeInBytes(class_id);
   }
 
@@ -12332,6 +12267,7 @@ class LinkedHashBase : public Instance {
   static intptr_t InstanceSize() {
     return RoundedAllocationSize(sizeof(UntaggedLinkedHashBase));
   }
+  static intptr_t NextFieldOffset() { return sizeof(UntaggedLinkedHashBase); }
 
   static intptr_t type_arguments_offset() {
     return OFFSET_OF(UntaggedLinkedHashBase, type_arguments_);
@@ -12429,6 +12365,8 @@ class LinkedHashBase : public Instance {
   static constexpr intptr_t kInitialIndexBits = 2;
   static constexpr intptr_t kInitialIndexSize = 1 << (kInitialIndexBits + 1);
   static constexpr intptr_t kUninitializedIndexSize = 1;
+
+  static const ClassId kClassId = kLinkedHashBaseCid;
 
  private:
   LinkedHashBasePtr ptr() const { return static_cast<LinkedHashBasePtr>(ptr_); }
@@ -12667,35 +12605,17 @@ class Closure : public Instance {
   }
 #endif
 
-  TypeArgumentsPtr instantiator_type_arguments() const {
-    return untag()->instantiator_type_arguments();
+  static intptr_t LengthOf(ClosurePtr ptr) {
+    return UntaggedClosure::LengthBits::decode(
+        Smi::Value(ptr->untag()->length_and_flags()));
   }
-  void set_instantiator_type_arguments(const TypeArguments& args) const {
-    untag()->set_instantiator_type_arguments(args.ptr());
-  }
-  static intptr_t instantiator_type_arguments_offset() {
-    return OFFSET_OF(UntaggedClosure, instantiator_type_arguments_);
-  }
-
-  TypeArgumentsPtr function_type_arguments() const {
-    return untag()->function_type_arguments();
-  }
-  void set_function_type_arguments(const TypeArguments& args) const {
-    untag()->set_function_type_arguments(args.ptr());
-  }
-  static intptr_t function_type_arguments_offset() {
-    return OFFSET_OF(UntaggedClosure, function_type_arguments_);
+  intptr_t length() const { return LengthOf(ptr()); }
+  static intptr_t length_and_flags_offset() {
+    return OFFSET_OF(UntaggedClosure, length_and_flags_);
   }
 
-  TypeArgumentsPtr delayed_type_arguments() const {
-    return untag()->delayed_type_arguments();
-  }
-  void set_delayed_type_arguments(const TypeArguments& args) const {
-    untag()->set_delayed_type_arguments(args.ptr());
-  }
-  static intptr_t delayed_type_arguments_offset() {
-    return OFFSET_OF(UntaggedClosure, delayed_type_arguments_);
-  }
+  SmiPtr hash() const { return untag()->hash(); }
+  static intptr_t hash_offset() { return OFFSET_OF(UntaggedClosure, hash_); }
 
   FunctionPtr function() const { return untag()->function(); }
   static intptr_t function_offset() {
@@ -12704,8 +12624,149 @@ class Closure : public Instance {
   static FunctionPtr FunctionOf(ClosurePtr closure) {
     return closure.untag()->function();
   }
+  void set_function(const Function& function) const {
+    untag()->set_function(function.ptr());
+#if defined(DART_PRECOMPILED_RUNTIME)
+    untag()->entry_point_ = function.entry_point();
+#endif
+  }
 
-  ObjectPtr RawContext() const { return untag()->context(); }
+  ObjectPtr ElementAt(intptr_t index) const {
+    ASSERT((0 <= index) && (index < length()));
+    return untag()->element(index);
+  }
+  void SetElementAt(intptr_t index, const Object& value) const {
+    ASSERT((0 <= index) && (index < length()));
+    untag()->set_element(index, value.ptr());
+  }
+
+  static constexpr intptr_t kBytesPerElement = kCompressedWordSize;
+  static constexpr intptr_t kMaxElements =
+      UntaggedClosure::LengthBits::max() / kBytesPerElement;
+
+  static constexpr bool IsValidLength(intptr_t length) {
+    return 0 <= length && length <= kMaxElements;
+  }
+
+  struct ArrayTraits {
+    static intptr_t elements_start_offset() { return sizeof(UntaggedClosure); }
+    static constexpr intptr_t kElementSize = kBytesPerElement;
+  };
+
+  static intptr_t element_offset(intptr_t index) {
+    return OFFSET_OF_RETURNED_VALUE(UntaggedClosure, data) +
+           kBytesPerElement * index;
+  }
+  static intptr_t element_index_at_offset(intptr_t offset_in_bytes) {
+    const intptr_t index =
+        (offset_in_bytes - OFFSET_OF_RETURNED_VALUE(UntaggedClosure, data)) /
+        kBytesPerElement;
+    ASSERT(index >= 0);
+    return index;
+  }
+
+  static intptr_t InstanceSize() {
+    ASSERT(sizeof(UntaggedClosure) ==
+           OFFSET_OF_RETURNED_VALUE(UntaggedClosure, data));
+    return 0;
+  }
+
+  static intptr_t InstanceSize(intptr_t num_elements) {
+    return RoundedAllocationSize(sizeof(UntaggedClosure) +
+                                 (num_elements * kBytesPerElement));
+  }
+
+  bool has_delayed_type_arguments() const {
+    return UntaggedClosure::HasDelayedTypeArgumentsBit::decode(
+        Smi::Value(untag()->length_and_flags()));
+  }
+  bool has_instantiator_type_arguments() const {
+    return UntaggedClosure::HasInstantiatorTypeArgumentsBit::decode(
+        Smi::Value(untag()->length_and_flags()));
+  }
+  bool has_function_type_arguments() const {
+    return UntaggedClosure::HasFunctionTypeArgumentsBit::decode(
+        Smi::Value(untag()->length_and_flags()));
+  }
+
+  intptr_t delayed_type_arguments_index() const {
+    ASSERT(has_delayed_type_arguments());
+    return UntaggedClosure::kDelayedTypeArgumentsIndex;
+  }
+  intptr_t instantiator_type_arguments_index() const {
+    ASSERT(has_instantiator_type_arguments());
+    return UntaggedClosure::InstantiatorTypeArgumentsIndexBits::decode(
+        Smi::Value(untag()->length_and_flags()));
+  }
+  intptr_t function_type_arguments_index() const {
+    ASSERT(has_function_type_arguments());
+    return UntaggedClosure::FunctionTypeArgumentsIndexBits::decode(
+        Smi::Value(untag()->length_and_flags()));
+  }
+
+  TypeArgumentsPtr delayed_type_arguments() const {
+    return has_delayed_type_arguments() ? TypeArguments::RawCast(ElementAt(
+                                              delayed_type_arguments_index()))
+                                        : TypeArguments::null();
+  }
+  static TypeArgumentsPtr delayed_type_arguments(ClosurePtr ptr) {
+    return UntaggedClosure::HasDelayedTypeArgumentsBit::decode(
+               Smi::Value(ptr.untag()->length_and_flags()))
+               ? TypeArguments::RawCast(ptr.untag()->element(
+                     UntaggedClosure::kDelayedTypeArgumentsIndex))
+               : TypeArguments::null();
+  }
+  void set_delayed_type_arguments(const TypeArguments& args) const {
+    SetElementAt(delayed_type_arguments_index(), args);
+  }
+
+  TypeArgumentsPtr instantiator_type_arguments() const {
+    return has_instantiator_type_arguments()
+               ? TypeArguments::RawCast(
+                     ElementAt(instantiator_type_arguments_index()))
+               : TypeArguments::null();
+  }
+  static TypeArgumentsPtr instantiator_type_arguments(ClosurePtr ptr) {
+    const intptr_t length_and_flags =
+        Smi::Value(ptr.untag()->length_and_flags());
+    return UntaggedClosure::HasInstantiatorTypeArgumentsBit::decode(
+               length_and_flags)
+               ? TypeArguments::RawCast(ptr.untag()->element(
+                     UntaggedClosure::InstantiatorTypeArgumentsIndexBits::
+                         decode(length_and_flags)))
+               : TypeArguments::null();
+  }
+  void set_instantiator_type_arguments(const TypeArguments& args) const {
+    SetElementAt(instantiator_type_arguments_index(), args);
+  }
+
+  TypeArgumentsPtr function_type_arguments() const {
+    return has_function_type_arguments() ? TypeArguments::RawCast(ElementAt(
+                                               function_type_arguments_index()))
+                                         : TypeArguments::null();
+  }
+  static TypeArgumentsPtr function_type_arguments(ClosurePtr ptr) {
+    const intptr_t length_and_flags =
+        Smi::Value(ptr.untag()->length_and_flags());
+    return UntaggedClosure::HasFunctionTypeArgumentsBit::decode(
+               length_and_flags)
+               ? TypeArguments::RawCast(ptr.untag()->element(
+                     UntaggedClosure::FunctionTypeArgumentsIndexBits::decode(
+                         length_and_flags)))
+               : TypeArguments::null();
+  }
+  void set_function_type_arguments(const TypeArguments& args) const {
+    SetElementAt(function_type_arguments_index(), args);
+  }
+
+  static ObjectPtr RawContextOf(ClosurePtr ptr) {
+    return ptr->untag()->element(LengthOf(ptr) - 1);
+  }
+  ObjectPtr RawContext() const { return RawContextOf(ptr()); }
+
+  void SetRawContext(const Object& context) const {
+    SetElementAt(length() - 1, context);
+  }
 
   ContextPtr GetContext() const {
     ASSERT(!Function::IsImplicitClosureFunction(function()));
@@ -12717,21 +12778,11 @@ class Closure : public Instance {
     return Instance::RawCast(RawContext());
   }
 
-  static intptr_t context_offset() {
-    return OFFSET_OF(UntaggedClosure, context_);
-  }
-
   // Returns whether the closure is generic, that is, it has a generic closure
   // function and no delayed type arguments.
   bool IsGeneric() const {
-    return delayed_type_arguments() == Object::empty_type_arguments().ptr();
-  }
-
-  SmiPtr hash() const { return untag()->hash(); }
-  static intptr_t hash_offset() { return OFFSET_OF(UntaggedClosure, hash_); }
-
-  static intptr_t InstanceSize() {
-    return RoundedAllocationSize(sizeof(UntaggedClosure));
+    return has_delayed_type_arguments() &&
+           (delayed_type_arguments() == Object::empty_type_arguments().ptr());
   }
 
   virtual void CanonicalizeFieldsLocked(Thread* thread) const;
@@ -12740,6 +12791,24 @@ class Closure : public Instance {
     return Function::Handle(function()).Hash();
   }
   uword ComputeHash() const;
+
+  static bool HasDelayedTypeArgumentsField(const Function& function) {
+    ASSERT(function.IsClosureFunction());
+    return function.IsGeneric();
+  }
+
+  static bool HasInstantiatorTypeArgumentsField(const Function& function) {
+    ASSERT(function.IsClosureFunction());
+    return !function.HasInstantiatedSignature(kCurrentClass);
+  }
+
+  static bool HasFunctionTypeArgumentsField(const Function& function) {
+    ASSERT(function.IsClosureFunction());
+    return function.HasGenericParent();
+  }
+
+  static ClosurePtr New(intptr_t length_and_flags,
+                        Heap::Space space = Heap::kNew);
 
   static ClosurePtr New(const TypeArguments& instantiator_type_arguments,
                         const TypeArguments& function_type_arguments,

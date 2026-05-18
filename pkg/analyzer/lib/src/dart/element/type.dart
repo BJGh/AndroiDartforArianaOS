@@ -32,11 +32,18 @@ List<TypeImpl> fixedTypeList(TypeImpl e1, [TypeImpl? e2]) {
 /// The [Type] representing the type `dynamic`.
 class DynamicTypeImpl extends TypeImpl
     implements DynamicType, SharedDynamicType {
-  /// The unique instance of this class.
+  /// The instance of this class without an alias.
   static final DynamicTypeImpl instance = DynamicTypeImpl._();
 
+  factory DynamicTypeImpl({InstantiatedTypeAliasElementImpl? alias}) {
+    if (alias == null) {
+      return instance;
+    }
+    return DynamicTypeImpl._(alias: alias);
+  }
+
   /// Prevent the creation of instances of this class.
-  DynamicTypeImpl._();
+  DynamicTypeImpl._({super.alias});
 
   @override
   DynamicElementImpl get element => DynamicElementImpl.instance;
@@ -52,7 +59,12 @@ class DynamicTypeImpl extends TypeImpl
   NullabilitySuffix get nullabilitySuffix => NullabilitySuffix.none;
 
   @override
-  bool operator ==(Object other) => identical(other, this);
+  bool operator ==(Object other) {
+    if (identical(other, this)) {
+      return true;
+    }
+    return other is DynamicTypeImpl;
+  }
 
   @override
   R accept<R>(TypeVisitor<R> visitor) {
@@ -70,6 +82,11 @@ class DynamicTypeImpl extends TypeImpl
   @override
   void appendTo(ElementDisplayStringBuilder builder) {
     builder.writeDynamicType();
+  }
+
+  @override
+  DynamicTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return DynamicTypeImpl(alias: alias);
   }
 
   @override
@@ -122,7 +139,7 @@ class FunctionTypeImpl extends TypeImpl
 
   factory FunctionTypeImpl({
     required List<TypeParameterElementImpl> typeParameters,
-    required List<InternalFormalParameterElement> parameters,
+    required List<InternalFormalParameterElement> formalParameters,
     required TypeImpl returnType,
     required NullabilitySuffix nullabilitySuffix,
     InstantiatedTypeAliasElementImpl? alias,
@@ -135,8 +152,8 @@ class FunctionTypeImpl extends TypeImpl
     // Check if already sorted.
     var namedParametersAlreadySorted = true;
     var lastNamedParameterName = '';
-    for (var i = 0; i < parameters.length; ++i) {
-      var parameter = parameters[i];
+    for (var i = 0; i < formalParameters.length; ++i) {
+      var parameter = formalParameters[i];
       if (parameter.isNamed) {
         firstNamedParameterIndex ??= i;
         var name = parameter.name ?? '';
@@ -154,7 +171,10 @@ class FunctionTypeImpl extends TypeImpl
     }
     sortedNamedParameters = firstNamedParameterIndex == null
         ? const []
-        : parameters.sublist(firstNamedParameterIndex, parameters.length);
+        : formalParameters.sublist(
+            firstNamedParameterIndex,
+            formalParameters.length,
+          );
     if (!namedParametersAlreadySorted) {
       // Sort named parameters.
       sortedNamedParameters.sort(
@@ -162,37 +182,21 @@ class FunctionTypeImpl extends TypeImpl
       );
 
       // Combine into a new list, with sorted named parameters.
-      parameters = parameters.toList();
-      parameters.replaceRange(
+      formalParameters = formalParameters.toList();
+      formalParameters.replaceRange(
         firstNamedParameterIndex!,
-        parameters.length,
+        formalParameters.length,
         sortedNamedParameters,
       );
     }
     return FunctionTypeImpl._(
       typeParameters: typeParameters,
-      parameters: parameters,
+      parameters: formalParameters,
       returnType: returnType,
       nullabilitySuffix: nullabilitySuffix,
       positionalParameterTypes: positionalParameterTypes,
       requiredPositionalParameterCount: requiredPositionalParameterCount,
       sortedNamedParameters: sortedNamedParameters,
-      alias: alias,
-    );
-  }
-
-  factory FunctionTypeImpl.v2({
-    required List<TypeParameterElementImpl> typeParameters,
-    required List<InternalFormalParameterElement> formalParameters,
-    required TypeImpl returnType,
-    required NullabilitySuffix nullabilitySuffix,
-    InstantiatedTypeAliasElementImpl? alias,
-  }) {
-    return FunctionTypeImpl(
-      typeParameters: typeParameters,
-      parameters: formalParameters,
-      returnType: returnType,
-      nullabilitySuffix: nullabilitySuffix,
       alias: alias,
     );
   }
@@ -318,15 +322,12 @@ class FunctionTypeImpl extends TypeImpl
         ? const <InternalFormalParameterElement>[]
         : List.generate(
             length,
-            (index) => SubstitutedFormalParameterElementImpl.from(
-              parameters[index],
-              substitution,
-            ),
+            (index) => parameters[index].substitute(substitution),
           );
     return FunctionTypeImpl(
       returnType: substitution.substituteType(returnType),
       typeParameters: const [],
-      parameters: newParameters,
+      formalParameters: newParameters,
       nullabilitySuffix: nullabilitySuffix,
     );
   }
@@ -358,6 +359,17 @@ class FunctionTypeImpl extends TypeImpl
   }
 
   @override
+  FunctionTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return FunctionTypeImpl(
+      typeParameters: typeParameters,
+      formalParameters: parameters,
+      returnType: returnType,
+      nullabilitySuffix: nullabilitySuffix,
+      alias: alias,
+    );
+  }
+
+  @override
   TypeImpl withNullability(NullabilitySuffix nullabilitySuffix) {
     if (this.nullabilitySuffix == nullabilitySuffix) return this;
     return FunctionTypeImpl._(
@@ -385,7 +397,7 @@ class FunctionTypeImpl extends TypeImpl
       return instantiate([
         for (var i = 0; i < typeParameters.length; i++)
           TypeParameterTypeImpl(
-            element: TypeParameterFragmentImpl.synthetic(name: 'T$i').element,
+            element: TypeParameterElementImpl.synthetic(name: 'T$i'),
             nullabilitySuffix: NullabilitySuffix.none,
           ),
       ]).hashCode;
@@ -570,6 +582,10 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   @override
   final NullabilitySuffix nullabilitySuffix;
 
+  late final MapSubstitution _substitution = Substitution.fromInterfaceType(
+    this,
+  );
+
   /// Cached [InternalConstructorElement]s - members or raw elements.
   List<InternalConstructorElement>? _constructors;
 
@@ -655,13 +671,35 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   List<InternalGetterElement> get getters {
     element.getters; // record requirements
     return _getters ??= element.getters.map((e) {
-      return SubstitutedGetterElementImpl.forTargetType(e, this);
+      return e.substitute(_substitution);
     }).toFixedList();
   }
 
   @override
   int get hashCode {
     return element.hashCode;
+  }
+
+  @override
+  Map<Name, ExecutableElement> get inheritedConcreteMembers {
+    var substitution = Substitution.fromInterfaceType(this);
+    if (substitution.map.isEmpty) {
+      return element.inheritedConcreteMembers;
+    }
+    return element.inheritedConcreteMembers.mapValue((member) {
+      return member.substitute(substitution);
+    });
+  }
+
+  @override
+  Map<Name, ExecutableElement> get interfaceMembers {
+    var substitution = Substitution.fromInterfaceType(this);
+    if (substitution.map.isEmpty) {
+      return element.interfaceMembers;
+    }
+    return element.interfaceMembers.mapValue((member) {
+      return member.substitute(substitution);
+    });
   }
 
   @override
@@ -759,7 +797,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   List<InternalMethodElement> get methods {
     element.methods; // record requirements
     return _methods ??= element.methods.map((e) {
-      return SubstitutedMethodElementImpl.forTargetType(e, this);
+      return e.substitute(_substitution);
     }).toFixedList();
   }
 
@@ -786,7 +824,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   List<InternalSetterElement> get setters {
     element.setters; // record requirements
     return _setters ??= element.setters.map((e) {
-      return SubstitutedSetterElementImpl.forTargetType(e, this);
+      return e.substitute(_substitution);
     }).toFixedList();
   }
 
@@ -871,17 +909,13 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   @override
   InternalGetterElement? getGetter(String getterName) {
     var element = this.element.getGetter(getterName);
-    return element != null
-        ? SubstitutedGetterElementImpl.forTargetType(element, this)
-        : null;
+    return element?.substitute(_substitution);
   }
 
   @override
   InternalMethodElement? getMethod(String methodName) {
     var element = this.element.getMethod(methodName);
-    return element != null
-        ? SubstitutedMethodElementImpl.forTargetType(element, this)
-        : null;
+    return element?.substitute(_substitution);
   }
 
   InternalConstructorElement? getNamedConstructor(String name) {
@@ -894,9 +928,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   @override
   InternalSetterElement? getSetter(String setterName) {
     var element = this.element.getSetter(setterName);
-    return element != null
-        ? SubstitutedSetterElementImpl.forTargetType(element, this)
-        : null;
+    return element?.substitute(_substitution);
   }
 
   @override
@@ -940,7 +972,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
       } else {
         var rawElement = inheritance.getInherited(element, nameObj);
         if (rawElement is InternalGetterElement) {
-          return SubstitutedGetterElementImpl.forTargetType(rawElement, this);
+          return rawElement.substitute(_substitution);
         }
       }
       return null;
@@ -978,7 +1010,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
       } else {
         var rawElement = inheritance.getInherited(element, nameObj);
         if (rawElement is InternalMethodElement) {
-          return SubstitutedMethodElementImpl.forTargetType(rawElement, this);
+          return rawElement.substitute(_substitution);
         }
       }
       return null;
@@ -1016,7 +1048,7 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
       } else {
         var rawElement = inheritance.getInherited(element, nameObj);
         if (rawElement is InternalSetterElement) {
-          return SubstitutedSetterElementImpl.forTargetType(rawElement, this);
+          return rawElement.substitute(_substitution);
         }
       }
       return null;
@@ -1037,6 +1069,16 @@ class InterfaceTypeImpl extends TypeImpl implements InterfaceType {
   @override
   bool referencesAny(Set<TypeParameterElementImpl> parameters) {
     return typeArguments.any((argument) => argument.referencesAny(parameters));
+  }
+
+  @override
+  InterfaceTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return InterfaceTypeImpl(
+      element: element,
+      typeArguments: typeArguments,
+      nullabilitySuffix: nullabilitySuffix,
+      alias: alias,
+    );
   }
 
   @override
@@ -1117,6 +1159,11 @@ class InvalidTypeImpl extends TypeImpl
   }
 
   @override
+  InvalidTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return this;
+  }
+
+  @override
   TypeImpl withNullability(NullabilitySuffix nullabilitySuffix) {
     return this;
   }
@@ -1124,13 +1171,15 @@ class InvalidTypeImpl extends TypeImpl
 
 /// The type `Never` represents the uninhabited bottom type.
 class NeverTypeImpl extends TypeImpl implements NeverType {
-  /// The unique instance of this class, nullable.
+  /// The instance of this class without an alias, nullable.
   static final NeverTypeImpl instanceNullable = NeverTypeImpl._(
-    NullabilitySuffix.question,
+    nullabilitySuffix: NullabilitySuffix.question,
   );
 
-  /// The unique instance of this class, non-nullable.
-  static final NeverTypeImpl instance = NeverTypeImpl._(NullabilitySuffix.none);
+  /// The instance of this class without an alias, non-nullable.
+  static final NeverTypeImpl instance = NeverTypeImpl._(
+    nullabilitySuffix: NullabilitySuffix.none,
+  );
 
   @override
   final NeverElementImpl element = NeverElementImpl.instance;
@@ -1139,7 +1188,7 @@ class NeverTypeImpl extends TypeImpl implements NeverType {
   final NullabilitySuffix nullabilitySuffix;
 
   /// Prevent the creation of instances of this class.
-  NeverTypeImpl._(this.nullabilitySuffix);
+  NeverTypeImpl._({required this.nullabilitySuffix, super.alias});
 
   @override
   int get hashCode => 0;
@@ -1158,7 +1207,15 @@ class NeverTypeImpl extends TypeImpl implements NeverType {
   String get name => 'Never';
 
   @override
-  bool operator ==(Object other) => identical(other, this);
+  bool operator ==(Object other) {
+    if (identical(other, this)) {
+      return true;
+    }
+    if (other is NeverTypeImpl) {
+      return other.nullabilitySuffix == nullabilitySuffix;
+    }
+    return false;
+  }
 
   @override
   R accept<R>(TypeVisitor<R> visitor) {
@@ -1176,6 +1233,11 @@ class NeverTypeImpl extends TypeImpl implements NeverType {
   @override
   void appendTo(ElementDisplayStringBuilder builder) {
     builder.writeNeverType(this);
+  }
+
+  @override
+  NeverTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return NeverTypeImpl._(nullabilitySuffix: nullabilitySuffix, alias: alias);
   }
 
   @override
@@ -1330,6 +1392,16 @@ class RecordTypeImpl extends TypeImpl implements RecordType, SharedRecordType {
   @override
   void appendTo(ElementDisplayStringBuilder builder) {
     builder.writeRecordType(this);
+  }
+
+  @override
+  RecordTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return RecordTypeImpl(
+      positionalFields: positionalFields,
+      namedFields: namedFields,
+      nullabilitySuffix: nullabilitySuffix,
+      alias: alias,
+    );
   }
 
   @override
@@ -1506,6 +1578,9 @@ abstract class TypeImpl implements DartType, SharedType {
     return getDisplayString();
   }
 
+  /// Return the same type, but with the given [alias].
+  TypeImpl withAlias(InstantiatedTypeAliasElementImpl alias);
+
   /// Return the same type, but with the given [nullabilitySuffix].
   ///
   /// If the nullability of `this` already matches [nullabilitySuffix], `this`
@@ -1643,6 +1718,16 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
   }
 
   @override
+  TypeParameterTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return TypeParameterTypeImpl(
+      element: element,
+      nullabilitySuffix: nullabilitySuffix,
+      promotedBound: promotedBound,
+      alias: alias,
+    );
+  }
+
+  @override
   TypeImpl withNullability(NullabilitySuffix nullabilitySuffix) {
     if (this.nullabilitySuffix == nullabilitySuffix) return this;
     return TypeParameterTypeImpl(
@@ -1656,11 +1741,18 @@ class TypeParameterTypeImpl extends TypeImpl implements TypeParameterType {
 
 /// A concrete implementation of a [VoidType].
 class VoidTypeImpl extends TypeImpl implements VoidType, SharedVoidType {
-  /// The unique instance of this class, with indeterminate nullability.
+  /// The instance of this class without an alias.
   static final VoidTypeImpl instance = VoidTypeImpl._();
 
+  factory VoidTypeImpl({InstantiatedTypeAliasElementImpl? alias}) {
+    if (alias == null) {
+      return instance;
+    }
+    return VoidTypeImpl._(alias: alias);
+  }
+
   /// Prevent the creation of instances of this class.
-  VoidTypeImpl._();
+  VoidTypeImpl._({super.alias});
 
   @override
   Null get element => null;
@@ -1676,7 +1768,12 @@ class VoidTypeImpl extends TypeImpl implements VoidType, SharedVoidType {
   NullabilitySuffix get nullabilitySuffix => NullabilitySuffix.none;
 
   @override
-  bool operator ==(Object other) => identical(other, this);
+  bool operator ==(Object other) {
+    if (identical(other, this)) {
+      return true;
+    }
+    return other is VoidTypeImpl;
+  }
 
   @override
   R accept<R>(TypeVisitor<R> visitor) {
@@ -1694,6 +1791,11 @@ class VoidTypeImpl extends TypeImpl implements VoidType, SharedVoidType {
   @override
   void appendTo(ElementDisplayStringBuilder builder) {
     builder.writeVoidType();
+  }
+
+  @override
+  VoidTypeImpl withAlias(InstantiatedTypeAliasElementImpl alias) {
+    return VoidTypeImpl(alias: alias);
   }
 
   @override

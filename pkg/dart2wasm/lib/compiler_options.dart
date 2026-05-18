@@ -7,7 +7,6 @@ import 'dart:io';
 import 'package:front_end/src/api_unstable/vm.dart' as fe;
 import 'package:path/path.dart' as path;
 
-import 'dynamic_modules.dart' show DynamicModuleType;
 import 'translator.dart';
 
 /// Represents a discrete phase of dart2wasm's compilation process.
@@ -43,14 +42,9 @@ class WasmCompilerOptions {
   Uri mainUri;
   String outputFile;
   String? depFile;
-  DynamicModuleType? dynamicModuleType;
-  Uri? dynamicMainModuleUri;
-  Uri? dynamicInterfaceUri;
-  Uri? dynamicModuleMetadataFile;
-  Uri? loadsIdsUri;
+  Uri? deferredMapUri;
+  bool useLoadIds = false;
   Uri? programSplitConstraintsUri;
-  bool validateDynamicModules = true;
-  String? dynamicModuleLibraryPrefix;
   Map<String, String> environment = {};
   Map<fe.ExperimentalFlag, bool> feExperimentalFlags = const {};
   String? multiRootScheme;
@@ -69,7 +63,7 @@ class WasmCompilerOptions {
   List<CompilerPhase> phases = const [
     CompilerPhase.cfe,
     CompilerPhase.tfa,
-    CompilerPhase.codegen
+    CompilerPhase.codegen,
   ];
 
   factory WasmCompilerOptions.defaultOptions() =>
@@ -77,21 +71,20 @@ class WasmCompilerOptions {
 
   WasmCompilerOptions({required this.mainUri, required this.outputFile});
 
-  bool get enableDynamicModules => dynamicModuleType != null;
-
   bool get useMultiModuleOpt =>
       translatorOptions.enableDeferredLoading ||
-      translatorOptions.enableMultiModuleStressTestMode ||
-      enableDynamicModules;
+      translatorOptions.enableMultiModuleStressTestMode;
 
   String moduleNameForId(String filePath, int id, {bool emitAsMain = false}) =>
       emitAsMain || id == mainModuleId
-          ? path.basename(filePath)
-          : path.basename(path.setExtension(filePath, '_module$id.wasm'));
+      ? path.basename(filePath)
+      : path.basename(path.setExtension(filePath, '_module$id.wasm'));
 
   int? idForModuleName(String mainWasmFilename, String moduleFilename) {
-    assert(mainWasmFilename.endsWith('.wasm') &&
-        !mainWasmFilename.contains(path.separator));
+    assert(
+      mainWasmFilename.endsWith('.wasm') &&
+          !mainWasmFilename.contains(path.separator),
+    );
 
     if (mainWasmFilename == moduleFilename) return mainModuleId;
 
@@ -100,8 +93,12 @@ class WasmCompilerOptions {
         !moduleFilename.endsWith('.wasm')) {
       return null;
     }
-    return int.tryParse(moduleFilename.substring(
-        prefix.length, moduleFilename.length - '.wasm'.length));
+    return int.tryParse(
+      moduleFilename.substring(
+        prefix.length,
+        moduleFilename.length - '.wasm'.length,
+      ),
+    );
   }
 
   static int _defaultMaxActiveWasmOptProcesses() {
@@ -122,27 +119,40 @@ class WasmCompilerOptions {
   void validate() {
     if (translatorOptions.importSharedMemory &&
         translatorOptions.sharedMemoryMaxPages == null) {
-      throw ArgumentError("--shared-memory-max-pages must be specified if "
-          "--import-shared-memory is used.");
+      throw ArgumentError(
+        "--shared-memory-max-pages must be specified if "
+        "--import-shared-memory is used.",
+      );
     }
 
     if (!translatorOptions.enableDeferredLoading) {
-      if (loadsIdsUri != null) {
-        throw ArgumentError("--load-ids can only be used with "
-            "--enable-deferred-loading");
+      if (deferredMapUri != null) {
+        throw ArgumentError(
+          "--deferred-map can only be used with "
+          "--enable-deferred-loading",
+        );
       }
+      if (useLoadIds) {
+        throw ArgumentError(
+          "--use-load-ids can only be used with "
+          "--enable-deferred-loading",
+        );
+      }
+    } else if (useLoadIds && deferredMapUri == null) {
+      throw ArgumentError("--use-load-ids requires --deferred-map");
     }
 
-    if (enableDynamicModules) {
-      if (dynamicMainModuleUri == null) {
-        throw ArgumentError("--dynamic-module-main must be specified if "
-            "compiling dynamic modules.");
+    if (translatorOptions.standalone) {
+      void handleUnsupportedOption(bool enabled, String name) {
+        if (enabled) {
+          throw ArgumentError('$name is not supported with --standalone');
+        }
       }
 
-      if (dynamicInterfaceUri == null) {
-        throw ArgumentError("--dynamic-module-interface must be specified if "
-            "compiling dynamic modules.");
-      }
+      handleUnsupportedOption(
+        translatorOptions.enableDeferredLoading,
+        '--enable-deferred-loading',
+      );
     }
 
     _validatePhases();
@@ -197,7 +207,8 @@ class WasmCompilerOptions {
       case CompilerPhase.codegen:
         if (outputExtension != '.wasm') {
           throw ArgumentError(
-              'Output from codegen phase must be a .wasm file.');
+            'Output from codegen phase must be a .wasm file.',
+          );
         }
       case CompilerPhase.opt:
         if (outputExtension != '.wasm') {
@@ -208,7 +219,8 @@ class WasmCompilerOptions {
     if (phases.contains(CompilerPhase.opt) &&
         translatorOptions.optimizationLevel == 0) {
       throw ArgumentError(
-          'Cannot specify "opt" phase with optimization level 0');
+        'Cannot specify "opt" phase with optimization level 0',
+      );
     }
   }
 }

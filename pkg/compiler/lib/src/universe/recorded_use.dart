@@ -20,7 +20,7 @@ import 'package:compiler/src/elements/entities.dart';
 import 'package:compiler/src/io/source_information.dart';
 // ignore: implementation_imports
 import 'package:front_end/src/api_prototype/lowering_predicates.dart';
-import 'package:record_use/record_use_internal.dart' as record_use;
+import 'package:record_use/record_use.dart' as record_use;
 
 import '../common/elements.dart' show JCommonElements, JElementEnvironment;
 import '../js_backend/annotations.dart';
@@ -42,6 +42,9 @@ enum RecordedUseKind {
 sealed class RecordedUse {
   static const String tag = 'record-use';
 
+  // TODO(dcharkes): Remove this field if we decide to not support source
+  // information in the recorded uses output. Currently it is not used in the
+  // output, but it is mentioned in the documentation.
   final SourceInformation sourceInformation;
 
   RecordedUseKind get kind;
@@ -453,12 +456,8 @@ class RecordUseValueConverter {
       MapConstantValue() => _findMapValue(constant),
       ListConstantValue() => _findListValue(constant),
       ConstructedConstantValue() => findInstanceValue(constant),
-      DoubleConstantValue() => record_use.UnsupportedConstant(
-        'Double literals are not supported for recording.',
-      ),
-      SetConstantValue() => record_use.UnsupportedConstant(
-        'Set literals are not supported for recording.',
-      ),
+      DoubleConstantValue() => record_use.DoubleConstant(constant.doubleValue),
+      SetConstantValue() => _findSetValue(constant),
       RecordConstantValue() => _findRecordValue(constant),
       InstantiationConstantValue() => _findValue(constant.function),
       FunctionConstantValue() => record_use.UnsupportedConstant(
@@ -491,6 +490,14 @@ class RecordUseValueConverter {
       result.add(_findValue(constantValue));
     }
     return record_use.ListConstant(result);
+  }
+
+  record_use.SetConstant _findSetValue(SetConstantValue constant) {
+    final result = <record_use.Constant>[];
+    for (final constantValue in constant.values) {
+      result.add(_findValue(constantValue));
+    }
+    return record_use.SetConstant(result);
   }
 
   record_use.RecordConstant _findRecordValue(RecordConstantValue constant) {
@@ -556,9 +563,8 @@ class RecordUseValueConverter {
       });
 
       final libraryUri = cls.library.canonicalUri.toString();
-      final definition = record_use.Definition(libraryUri, [
-        record_use.Name(cls.name, kind: record_use.DefinitionKind.enumKind),
-      ]);
+      final library = record_use.Library(libraryUri);
+      final definition = record_use.Enum(cls.name, library);
 
       return record_use.EnumConstant(
         definition: definition,
@@ -576,9 +582,8 @@ class RecordUseValueConverter {
     });
 
     final libraryUri = cls.library.canonicalUri.toString();
-    final definition = record_use.Definition(libraryUri, [
-      record_use.Name(cls.name, kind: record_use.DefinitionKind.classKind),
-    ]);
+    final library = record_use.Library(libraryUri);
+    final definition = record_use.Class(cls.name, library);
     return record_use.InstanceConstant(
       definition: definition,
       fields: fieldValues,

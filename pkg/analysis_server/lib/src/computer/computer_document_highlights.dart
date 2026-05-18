@@ -2,10 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analysis_server/lsp_protocol/protocol.dart'
+    show DocumentHighlightKind;
+import 'package:analysis_server/src/utilities/extensions/element.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/src/dart/analysis/session.dart';
 import 'package:analyzer/src/dart/ast/element_locator.dart';
 import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/utilities/extensions/collection.dart';
@@ -16,7 +20,9 @@ class DartDocumentHighlightsComputer {
   DartDocumentHighlightsComputer(this._unit);
 
   /// Computes matching highlight tokens for the requested offset.
-  List<Token> compute(int requestedOffset) {
+  List<({Token token, DocumentHighlightKind kind})> compute(
+    int requestedOffset,
+  ) {
     var coveringNode = _unit.nodeCovering(offset: requestedOffset);
     coveringNode = _adjustNode(requestedOffset, coveringNode);
     if (coveringNode == null) return [];
@@ -68,19 +74,32 @@ class DartDocumentHighlightsComputer {
     }
 
     // Add the obvious target element.
-    var mainTarget = _canonicalizeElement(_getTargetElement(coveringNode));
-
-    // For pattern variables in implicit pattern fields (where the field name
-    // is inferred from the variable name), also include the field element.
+    var mainTarget = _getTargetElement(coveringNode)?.canonical;
 
     var additionalTarget = switch (coveringNode) {
+      FormalParameter(
+        declaredFragment: FormalParameterFragment(
+          :FieldFormalParameterElement element,
+        ),
+      ) =>
+        element.field,
+      // For pattern variables in implicit pattern fields (where the field name
+      // is inferred from the variable name), also include the field element.
       VariablePattern(parent: PatternField(:var element, :var name))
           when name?.name == null =>
-        _canonicalizeElement(element),
+        element?.canonical,
       _ => null,
     };
 
-    return _HighlightTargets.elements(mainTarget, additionalTarget);
+    // Include matching elements from superclasses as targets.
+    var allTargets = {
+      ?mainTarget,
+      ?additionalTarget,
+      ...?mainTarget?.supertypeMembers,
+      ...?additionalTarget?.supertypeMembers,
+    };
+
+    return _HighlightTargets.elements(allTargets);
   }
 
   /// Gets the target [AstNode] for [node] if it's a node-based highlight group
@@ -101,19 +120,6 @@ class DartDocumentHighlightsComputer {
       YieldStatement() => node.thisOrAncestorOfType<FunctionBody>(),
 
       _ => null,
-    };
-  }
-
-  /// Canonicalizes an element so that field formal parameters map to their
-  /// fields and property accessors map to their variables.
-  static Element? _canonicalizeElement(Element? element) {
-    if (element == null) return null;
-    return switch (element) {
-      FieldFormalParameterElement(:var field) => field?.baseElement,
-      PropertyAccessorElement(:var variable)
-          when variable.isOriginDeclaration =>
-        variable.baseElement,
-      _ => element.baseElement,
     };
   }
 
@@ -151,8 +157,8 @@ class DartDocumentHighlightsComputer {
 class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
   final _HighlightTargets _target;
 
-  /// Collected tokens matching the target.
-  final Set<Token> tokens = {};
+  /// Collected tokens matching the target along with the kind of reference.
+  final Set<({Token token, DocumentHighlightKind kind})> tokens = {};
 
   /// Stack to track the current function for return/yield keywords.
   final List<AstNode> _functionStack = [];
@@ -163,7 +169,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
   void visitAssignedVariablePattern(AssignedVariablePattern node) {
     var element = node.element;
     if (element != null) {
-      _addOccurrence(element, node.name);
+      _addOccurrence(element, node.name, .Write);
     }
 
     super.visitAssignedVariablePattern(node);
@@ -171,21 +177,25 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitBreakStatement(BreakStatement node) {
-    _addNodeOccurrence(node.target, node.breakKeyword);
+    _addNodeOccurrence(node.target, node.breakKeyword, .Text);
 
     super.visitBreakStatement(node);
   }
 
   @override
   void visitCatchClauseParameter(CatchClauseParameter node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitCatchClauseParameter(node);
   }
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.namePart.typeName);
+    _addOccurrence(
+      node.declaredFragment?.element,
+      node.namePart.typeName,
+      .Write,
+    );
 
     super.visitClassDeclaration(node);
   }
@@ -198,6 +208,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
           node.typeName?.beginToken ??
           node.newKeyword ??
           node.factoryKeyword,
+      .Write,
     );
 
     super.visitConstructorDeclaration(node);
@@ -210,7 +221,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
     if (node.name == null) {
       var element = node.element;
       if (element != null) {
-        _addOccurrence(element, node.type.name);
+        _addOccurrence(element, node.type.name, .Read);
       }
       // Still visit the import prefix if there is one.
       node.type.importPrefix?.accept(this);
@@ -222,14 +233,14 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitContinueStatement(ContinueStatement node) {
-    _addNodeOccurrence(node.target, node.continueKeyword);
+    _addNodeOccurrence(node.target, node.continueKeyword, .Text);
 
     super.visitContinueStatement(node);
   }
 
   @override
   void visitDeclaredIdentifier(DeclaredIdentifier node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitDeclaredIdentifier(node);
   }
@@ -237,42 +248,46 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
   @override
   void visitDeclaredVariablePattern(DeclaredVariablePattern node) {
     var declaredElement = node.declaredFragment?.element;
-    _addOccurrence(declaredElement?.join ?? declaredElement, node.name);
+    _addOccurrence(declaredElement?.join ?? declaredElement, node.name, .Write);
 
     super.visitDeclaredVariablePattern(node);
   }
 
   @override
   void visitDoStatement(DoStatement node) {
-    _addNodeOccurrence(node, node.doKeyword);
+    _addNodeOccurrence(node, node.doKeyword, .Text);
 
     super.visitDoStatement(node);
   }
 
   @override
   void visitEnumConstantDeclaration(EnumConstantDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitEnumConstantDeclaration(node);
   }
 
   @override
   void visitEnumDeclaration(EnumDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.namePart.typeName);
+    _addOccurrence(
+      node.declaredFragment?.element,
+      node.namePart.typeName,
+      .Write,
+    );
 
     super.visitEnumDeclaration(node);
   }
 
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitExtensionDeclaration(node);
   }
 
   @override
   void visitExtensionOverride(ExtensionOverride node) {
-    _addOccurrence(node.element, node.name);
+    _addOccurrence(node.element, node.name, .Write);
 
     super.visitExtensionOverride(node);
   }
@@ -282,6 +297,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
     _addOccurrence(
       node.declaredFragment?.element,
       node.primaryConstructor.typeName,
+      .Write,
     );
 
     super.visitExtensionTypeDeclaration(node);
@@ -289,14 +305,24 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitFormalParameter(FormalParameter node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    var element = node.declaredFragment?.element;
+    if (element is FieldFormalParameterElement) {
+      // These tests have to be separate because of
+      // `DocumentHighlightsTest.test_field_unresolved`
+      if (element.field != null) {
+        _addOccurrence(element, node.name, .Write);
+        _addOccurrence(element.field, node.name, .Write);
+      }
+    } else {
+      _addOccurrence(element, node.name, .Write);
+    }
 
     super.visitFormalParameter(node);
   }
 
   @override
   void visitForStatement(ForStatement node) {
-    _addNodeOccurrence(node, node.forKeyword);
+    _addNodeOccurrence(node, node.forKeyword, .Text);
 
     super.visitForStatement(node);
   }
@@ -310,35 +336,41 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitFunctionDeclaration(node);
   }
 
   @override
   void visitImportPrefixReference(ImportPrefixReference node) {
-    _addOccurrence(node.element, node.name);
+    _addOccurrence(node.element, node.name, .Read);
 
     super.visitImportPrefixReference(node);
   }
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitMethodDeclaration(node);
   }
 
   @override
   void visitMixinDeclaration(MixinDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitMixinDeclaration(node);
   }
 
   @override
+  void visitNamedArgument(NamedArgument node) {
+    _addOccurrence(node.correspondingParameter, node.name, .Write);
+    node.argumentExpression.accept(this);
+  }
+
+  @override
   void visitNamedType(NamedType node) {
-    _addOccurrence(node.element, node.name);
+    _addOccurrence(node.element, node.name, .Read);
 
     super.visitNamedType(node);
   }
@@ -352,7 +384,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
     if (name == null && pattern is VariablePattern) {
       name = pattern.name;
     }
-    _addOccurrence(node.element, name);
+    _addOccurrence(node.element, name, .Write);
 
     super.visitPatternField(node);
   }
@@ -360,7 +392,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
   @override
   void visitPrimaryConstructorName(PrimaryConstructorName node) {
     if (node.parent case PrimaryConstructorDeclaration primary) {
-      _addOccurrence(primary.declaredFragment?.element, node.name);
+      _addOccurrence(primary.declaredFragment?.element, node.name, .Write);
     }
 
     super.visitPrimaryConstructorName(node);
@@ -368,7 +400,7 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitReturnStatement(ReturnStatement node) {
-    _addNodeOccurrence(_functionStack.lastOrNull, node.returnKeyword);
+    _addNodeOccurrence(_functionStack.lastOrNull, node.returnKeyword, .Text);
 
     super.visitReturnStatement(node);
   }
@@ -385,70 +417,94 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
       return;
     }
 
-    _addOccurrence(node.writeOrReadElement, node.token);
+    _addOccurrence(
+      node.writeOrReadElement,
+      node.token,
+      node.writeElement != null ? .Write : .Read,
+    );
 
     return super.visitSimpleIdentifier(node);
   }
 
   @override
   void visitSwitchStatement(SwitchStatement node) {
-    _addNodeOccurrence(node, node.switchKeyword);
+    _addNodeOccurrence(node, node.switchKeyword, .Text);
 
     super.visitSwitchStatement(node);
   }
 
   @override
   void visitTypeAlias(TypeAlias node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitTypeAlias(node);
   }
 
   @override
   void visitTypeParameter(TypeParameter node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitTypeParameter(node);
   }
 
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
-    _addOccurrence(node.declaredFragment?.element, node.name);
+    _addOccurrence(node.declaredFragment?.element, node.name, .Write);
 
     super.visitVariableDeclaration(node);
   }
 
   @override
   void visitWhileStatement(WhileStatement node) {
-    _addNodeOccurrence(node, node.whileKeyword);
+    _addNodeOccurrence(node, node.whileKeyword, .Text);
 
     super.visitWhileStatement(node);
   }
 
   @override
   void visitYieldStatement(YieldStatement node) {
-    _addNodeOccurrence(_functionStack.lastOrNull, node.yieldKeyword);
+    _addNodeOccurrence(_functionStack.lastOrNull, node.yieldKeyword, .Text);
 
     super.visitYieldStatement(node);
   }
 
-  void _addNodeOccurrence(AstNode? node, Token token) {
+  void _addNodeOccurrence(
+    AstNode? node,
+    Token token,
+    DocumentHighlightKind kind,
+  ) {
     // Only add the occurrence if it matches our target node.
     if (node != null && _target.matchesNode(node)) {
-      tokens.add(token);
+      tokens.add((token: token, kind: kind));
     }
   }
 
-  void _addOccurrence(Element? element, Token? token) {
+  void _addOccurrence(
+    Element? element,
+    Token? token,
+    DocumentHighlightKind kind,
+  ) {
     if (element == null || token == null) return;
 
-    var canonicalElement = DartDocumentHighlightsComputer._canonicalizeElement(
-      element,
-    );
+    var canonicalElement = element.canonical;
+
+    if (canonicalElement == null) {
+      return;
+    }
+
+    // Do a cheap name check before looking at the hierarchy.
+    if (!_target.matchesElementName(canonicalElement)) {
+      return;
+    }
+
+    // This returns Iterable and will be lazily iterated by `any()` below if the
+    // canonical element doesn't match.
+    var supertypeMembers = canonicalElement.supertypeMembers;
 
     // Only add the occurrence if it's one of our target elements.
-    if (canonicalElement != null && _target.matchesElement(canonicalElement)) {
-      tokens.add(token);
+    if (_target.matchesElement(canonicalElement) ||
+        supertypeMembers.any(_target.matchesElement)) {
+      tokens.add((token: token, kind: kind));
     }
   }
 }
@@ -459,22 +515,52 @@ class _DartDocumentHighlightsVisitor extends GeneralizingAstVisitor<void> {
 /// cases (such as a variable pattern) there may be multiple target elements
 /// (such as a variable and the matched getter).
 class _HighlightTargets {
-  final Element? _targetElement1;
-  final Element? _targetElement2;
+  final Set<Element> _targetElements;
+  final Set<String> _targetElementNames;
   final AstNode? _targetNode;
 
-  _HighlightTargets.elements([this._targetElement1, this._targetElement2])
-    : _targetNode = null;
+  _HighlightTargets.elements(this._targetElements)
+    : _targetNode = null,
+      _targetElementNames = {
+        for (var element in _targetElements) ?element.name,
+      };
 
   _HighlightTargets.node(this._targetNode)
-    : _targetElement1 = null,
-      _targetElement2 = null;
+    : _targetElements = const {},
+      _targetElementNames = const {};
 
   bool matchesElement(Element element) {
-    return element == _targetElement1 || element == _targetElement2;
+    return _targetElements.contains(element);
+  }
+
+  bool matchesElementName(Element canonicalElement) {
+    return _targetElementNames.contains(canonicalElement.name);
   }
 
   bool matchesNode(AstNode node) {
     return node == _targetNode;
+  }
+}
+
+extension on Element {
+  /// All members in superclasses that this element overrides.
+  Iterable<Element> get supertypeMembers {
+    var enclosing = enclosingElement;
+    if (enclosing is! InterfaceElement) return const [];
+
+    var name = Name.forElement(this);
+    if (name == null) return const [];
+
+    var session = this.session;
+    if (session is! AnalysisSessionImpl) return const [];
+
+    // Get this member for all supertypes.
+    var inheritanceManager = session.inheritanceManager;
+    return enclosing.allSupertypes
+        .map(
+          (supertype) => inheritanceManager.getMember(supertype.element, name),
+        )
+        .map((element) => element?.canonical)
+        .nonNulls;
   }
 }

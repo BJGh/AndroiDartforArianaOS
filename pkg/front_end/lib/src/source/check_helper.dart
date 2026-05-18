@@ -30,6 +30,7 @@ import '../builder/formal_parameter_builder.dart';
 import '../builder/type_builder.dart';
 import '../kernel/internal_ast.dart';
 import 'source_library_builder.dart';
+import 'stack_listener_impl.dart';
 
 extension CheckHelper on ProblemReporting {
   InvalidExpression buildProblem({
@@ -283,7 +284,7 @@ extension CheckHelper on ProblemReporting {
   void checkAsyncReturnType({
     required SourceLibraryBuilder libraryBuilder,
     required TypeEnvironment typeEnvironment,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType returnType,
     required TypeBuilder returnTypeBuilder,
     required Uri fileUri,
@@ -297,7 +298,7 @@ extension CheckHelper on ProblemReporting {
 
     // We use [problem == null] to signal success.
     Message? problem;
-    switch (asyncMarker) {
+    switch (asyncModifier.kind) {
       case AsyncMarker.Async:
         DartType futureBottomType = libraryBuilder.loader.futureOfBottom;
         if (!typeEnvironment.isSubtypeOf(futureBottomType, returnType)) {
@@ -872,6 +873,7 @@ extension CheckHelper on ProblemReporting {
     // See [issue 29717](https://github.com/dart-lang/sdk/issues/29717)
     int offset = expression.fileOffset;
     if (offset == -1) {
+      // Coverage-ignore-block(suite): Not run.
       offset = message.charOffset;
     }
     return buildProblem(

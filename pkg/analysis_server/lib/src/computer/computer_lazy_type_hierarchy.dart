@@ -11,6 +11,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 
@@ -116,10 +117,7 @@ class DartLazyTypeHierarchyComputer {
       }
     }
 
-    var matches = await searchEngine.searchSubtypes(
-      target,
-      SearchEngineCache(),
-    );
+    var matches = await searchEngine.searchSubtypes(target);
     var seenElements = <Element>{};
     return matches
         .where((match) => seenElements.add(match.element))
@@ -184,6 +182,9 @@ class TypeHierarchyItem {
   /// The file that contains the declaration of this item.
   final String file;
 
+  /// The [LineInfo] for [file].
+  final LineInfo lineInfo;
+
   /// The range of the name at the declaration of this item.
   final SourceRange nameRange;
 
@@ -194,6 +195,7 @@ class TypeHierarchyItem {
     required this.displayName,
     required this.location,
     required this.file,
+    required this.lineInfo,
     required this.nameRange,
     required this.codeRange,
   });
@@ -204,7 +206,8 @@ class TypeHierarchyItem {
   }) : displayName = _displayNameForElement(element),
        nameRange = _nameRangeForElement(element),
        codeRange = _codeRangeForElement(element),
-       file = element.firstFragment.libraryFragment.source.fullName;
+       file = element.firstFragment.libraryFragment.source.fullName,
+       lineInfo = element.firstFragment.libraryFragment.lineInfo;
 
   static TypeHierarchyItem? forElement(InterfaceElement element) {
     var location = ElementLocation.forElement(element);

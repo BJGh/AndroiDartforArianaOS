@@ -9,6 +9,7 @@ import 'package:kernel/core_types.dart';
 import 'package:kernel/reference_from_index.dart';
 import 'package:kernel/target/changed_structure_notifier.dart';
 import 'package:kernel/target/targets.dart';
+import 'package:kernel/transformations/track_widget_constructor_locations.dart';
 
 import '../transformations/call_site_annotator.dart' as callSiteAnnotator;
 import '../transformations/deeply_immutable.dart' as deeply_immutable;
@@ -29,7 +30,7 @@ import '../transformations/ffi/native.dart'
     show transformLibraries;
 import '../transformations/ffi/use_sites.dart'
     as transformFfiUseSites
-    show transformLibraries;
+    show transformLibraries, transformProcedure;
 
 class VmTarget extends Target {
   final TargetFlags flags;
@@ -135,6 +136,8 @@ class VmTarget extends Target {
       ..parent = host;
   }
 
+  late final WidgetCreatorTracker _widgetTracker = WidgetCreatorTracker();
+
   @override
   void performPreConstantEvaluationTransformations(
     Component component,
@@ -153,6 +156,14 @@ class VmTarget extends Target {
       changedStructureNotifier: changedStructureNotifier,
     );
     _patchVmConstants(coreTypes);
+
+    if (flags.trackCreationLocations) {
+      _widgetTracker.transform(
+        libraries,
+        component.libraries,
+        changedStructureNotifier,
+      );
+    }
   }
 
   @override
@@ -267,7 +278,29 @@ class VmTarget extends Target {
     Procedure procedure,
     Map<String, String>? environmentDefines, {
     void Function(String msg)? logger,
+    required DiagnosticReporter diagnosticReporter,
   }) {
+    final TreeNode? component = procedure.enclosingLibrary.parent;
+    if (component is Component) {
+      final List<Library>? transitiveImportingDartFfi = ffiHelper
+          .calculateTransitiveImportsOfDartFfiIfUsed(component, [
+            procedure.enclosingLibrary,
+          ]);
+      if (transitiveImportingDartFfi != null) {
+        transformFfiUseSites.transformProcedure(
+          this,
+          component,
+          coreTypes,
+          hierarchy,
+          procedure,
+          diagnosticReporter,
+          null,
+          environmentDefines,
+        );
+        logger?.call("Transformed ffi use sites");
+      }
+    }
+
     bool productMode = environmentDefines!["dart.vm.product"] == "true";
     lowering.transformProcedure(
       procedure,
@@ -557,12 +590,12 @@ class VmTarget extends Target {
   }
 
   @override
-  ConstantsBackend get constantsBackend => switch (flags
-      .constKeepLocalsIndicator) {
-    null => const ConstantsBackend(/* keeps defaults */),
-    true => const ConstantsBackend(keepLocals: true),
-    false => const ConstantsBackend(keepLocals: false),
-  };
+  ConstantsBackend get constantsBackend =>
+      switch (flags.constKeepLocalsIndicator) {
+        null => const ConstantsBackend(/* keeps defaults */),
+        true => const ConstantsBackend(keepLocals: true),
+        false => const ConstantsBackend(keepLocals: false),
+      };
 
   @override
   Map<String, String> updateEnvironmentDefines(Map<String, String> map) {
@@ -573,10 +606,9 @@ class VmTarget extends Target {
   }
 
   @override
-  DartLibrarySupport get dartLibrarySupport =>
-      flags.supportMirrors
-          ? const DefaultDartLibrarySupport()
-          : const CustomizedDartLibrarySupport(unsupported: {'mirrors'});
+  DartLibrarySupport get dartLibrarySupport => flags.supportMirrors
+      ? const DefaultDartLibrarySupport()
+      : const CustomizedDartLibrarySupport(unsupported: {'mirrors'});
 
   @override
   bool isSupportedPragma(String pragmaName) =>

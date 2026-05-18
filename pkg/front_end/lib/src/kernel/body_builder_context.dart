@@ -22,15 +22,15 @@ import '../source/source_enum_builder.dart';
 import '../source/source_extension_builder.dart';
 import '../source/source_extension_type_declaration_builder.dart';
 import '../source/source_library_builder.dart';
-import '../source/source_member_builder.dart';
 import '../source/source_property_builder.dart';
 import '../source/source_type_alias_builder.dart';
+import '../source/stack_listener_impl.dart' show AsyncModifier;
 import '../type_inference/context_allocation_strategy.dart';
-import '../type_inference/inference_results.dart'
-    show InitializerInferenceResult;
-import '../type_inference/type_inferrer.dart' show TypeInferrer;
+import '../type_inference/type_inferrer.dart'
+    show InferredConstructorInitializer, TypeInferrer, ConstructorContext;
 import '../util/helpers.dart';
 import 'internal_ast.dart';
+import 'internal_ast_helper.dart' as intern;
 
 /// Interface that defines the interface between the [BodyBuilder] and the
 /// member/declaration whose AST is being built.
@@ -155,6 +155,10 @@ abstract class BodyBuilderContext {
   /// Returns `true` if the member whose body is being built is a non-factory
   /// constructor declaration.
   bool get isConstructor => false;
+
+  /// Returns the [ConstructorContext] used for inferring constructor
+  /// initializers and body.
+  ConstructorContext? get constructorContext => null;
 
   // Coverage-ignore(suite): Not run.
   /// Returns `true` if the member whose body is being built is a non-factory
@@ -327,6 +331,14 @@ abstract class BodyBuilderContext {
     );
   }
 
+  /// Returns `true` if the member being built is a non-late instance field
+  /// in a declaration with a primary constructor.
+  ///
+  /// Field initializers in this context have access to primary constructor
+  /// parameters and should be built as if they occur in a constructor
+  /// initializer.
+  bool get inPrimaryConstructorFieldInitializer => false;
+
   /// Returns the primary constructor parameters available in the initializer
   /// scope for instance field initializers.
   ///
@@ -365,26 +377,23 @@ abstract class BodyBuilderContext {
   }
 
   /// Infers the [initializer].
-  InitializerInferenceResult inferInitializer({
+  InferredConstructorInitializer inferInitializer({
     required TypeInferrer typeInferrer,
     required Uri fileUri,
     required Initializer initializer,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
+    required ContextAllocationStrategy contextAllocationStrategy,
   }) {
     throw new UnsupportedError('${runtimeType}.inferInitializer');
-  }
-
-  // Coverage-ignore(suite): Not run.
-  /// Returns the target for using the `augmented` expression in an augmenting
-  /// member.
-  AugmentSuperTarget? get augmentSuperTarget {
-    return null;
   }
 
   /// Registers [body] as the result of the body building.
   void registerFunctionBody({
     required Statement? body,
     required ScopeProviderInfo? scopeProviderInfo,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
   }) {
     throw new UnsupportedError("${runtimeType}.registerFunctionBody");
@@ -407,7 +416,12 @@ abstract class BodyBuilderContext {
   /// types, don't have an internal [ThisVariable] because `this` is desugared
   /// as a parameter in that case.
   ThisVariable? createInternalThisVariable() {
-    return thisType != null ? new ThisVariable(type: thisType!) : null;
+    return thisType != null && isDeclarationInstanceContext
+        ? intern.createThisVariable(
+            type: thisType!,
+            fileOffset: memberNameOffset,
+          )
+        : null;
   }
 }
 
@@ -823,11 +837,6 @@ class ExpressionCompilerProcedureBodyBuildContext extends BodyBuilderContext {
          declarationBuilder,
          isDeclarationInstanceMember: isDeclarationInstanceMember,
        );
-
-  @override
-  AugmentSuperTarget? get augmentSuperTarget {
-    return null;
-  }
 
   @override
   int get memberNameOffset => _procedure.fileOffset;

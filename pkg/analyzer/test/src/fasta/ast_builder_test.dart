@@ -5,6 +5,7 @@
 import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../../util/feature_sets.dart';
 import '../dart/resolution/node_text_expectations.dart';
 import '../diagnostics/parser_diagnostics.dart';
 
@@ -129,8 +130,7 @@ ClassDeclaration
         expression: SimpleIdentifier
           token: String @5
     tokens
-      /** [String] */
-        offset: 0
+      /** [String] */ @0
   abstractKeyword: abstract @16
   classKeyword: class @25
   namePart: NameWithTypeParameters
@@ -165,10 +165,8 @@ ClassDeclaration
         expression: SimpleIdentifier
           token: Object @36
     tokens
-      /// See [int] and [String]
-        offset: 0
-      /// and [Object].
-        offset: 27
+      /// See [int] and [String] @0
+      /// and [Object]. @27
   metadata
     Annotation
       atSign: @ @45
@@ -217,18 +215,12 @@ ClassDeclaration
         expression: SimpleIdentifier
           token: Object @240
     tokens
-      /// This dartdoc comment is [included].
-        offset: 57
-      /// See [int] and [String] but `not [a]`
-        offset: 134
-      /// ```
-        offset: 175
-      /// This [code] block should be ignored
-        offset: 183
-      /// ```
-        offset: 223
-      /// and [Object].
-        offset: 231
+      /// This dartdoc comment is [included]. @57
+      /// See [int] and [String] but `not [a]` @134
+      /// ``` @175
+      /// This [code] block should be ignored @183
+      /// ``` @223
+      /// and [Object]. @231
     codeBlocks
       MdCodeBlock
         infoString: <empty>
@@ -947,7 +939,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1132,7 +1124,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1153,7 +1145,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1174,7 +1166,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1197,7 +1189,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1220,7 +1212,7 @@ EnumDeclaration
   enumKeyword: enum
   namePart: NameWithTypeParameters
     typeName: E
-  body: EnumBody
+  body: BlockEnumBody
     leftBracket: {
     constants
       EnumConstantDeclaration
@@ -1290,14 +1282,13 @@ library name.and.dots;
     assertParsedNodeText(node, r'''
 LibraryDirective
   libraryKeyword: library
-  name: LibraryIdentifier
-    components
-      SimpleIdentifier
-        token: name
-      SimpleIdentifier
-        token: and
-      SimpleIdentifier
-        token: dots
+  name: DottedName
+    tokens
+      name
+      .
+      and
+      .
+      dots
   semicolon: ;
 ''');
   }
@@ -1456,13 +1447,26 @@ RecordLiteral
   fields
     IntegerLiteral
       literal: 0
-    NamedExpression
-      name: Label
-        label: SimpleIdentifier
-          token: a
-        colon: :
-      expression: IntegerLiteral
+    RecordLiteralNamedField
+      name: a
+      colon: :
+      fieldExpression: IntegerLiteral
         literal: 1
+  rightParenthesis: )
+''');
+  }
+
+  void test_recordLiteral_language219_namedFieldRecovery() {
+    var parseResult = parseStringWithErrors(r'''
+final x = (a: 0);
+''', featureSet: FeatureSets.language_2_19);
+
+    var node = parseResult.findNode.singleParenthesizedExpression;
+    assertParsedNodeText(node, r'''
+ParenthesizedExpression
+  leftParenthesis: (
+  expression: IntegerLiteral
+    literal: 0
   rightParenthesis: )
 ''');
   }
@@ -1480,12 +1484,10 @@ RecordLiteral
   fields
     IntegerLiteral
       literal: 0
-    NamedExpression
-      name: Label
-        label: SimpleIdentifier
-          token: a
-        colon: :
-      expression: IntegerLiteral
+    RecordLiteralNamedField
+      name: a
+      colon: :
+      fieldExpression: IntegerLiteral
         literal: 1
   rightParenthesis: )
 ''');

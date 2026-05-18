@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -18,7 +17,7 @@ main() {
 @reflectiveTest
 class ExtensionTypeResolutionTest extends PubPackageResolutionTest {
   test_constructor_factoryHead_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   factory named() => A(0);
 }
@@ -58,7 +57,7 @@ ConstructorDeclaration
   }
 
   test_constructor_factoryHead_named_const() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type const A(int it) {
   const factory named(int it) = A;
 }
@@ -72,7 +71,7 @@ ConstructorDeclaration
   name: named
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: int
         element: dart:core::@class::int
@@ -98,7 +97,7 @@ ConstructorDeclaration
   }
 
   test_constructor_factoryHead_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   factory () => A.named(0);
 }
@@ -142,7 +141,7 @@ ConstructorDeclaration
   }
 
   test_constructor_factoryHead_unnamed_const() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type const A.named(int it) {
   const factory A(int it) = A.named;
 }
@@ -159,7 +158,7 @@ ConstructorDeclaration
     staticType: null
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: int
         element: dart:core::@class::int
@@ -190,7 +189,7 @@ ConstructorDeclaration
   }
 
   test_constructor_newHead_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   new named() : this.it = 0;
 }
@@ -226,7 +225,7 @@ ConstructorDeclaration
   }
 
   test_constructor_newHead_named_const() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   const new named() : this.it = 0;
 }
@@ -263,7 +262,7 @@ ConstructorDeclaration
   }
 
   test_constructor_newHead_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   new () : this.it = 0;
 }
@@ -298,7 +297,7 @@ ConstructorDeclaration
   }
 
   test_constructor_newHead_unnamed_const() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   const new () : this.it = 0;
 }
@@ -334,7 +333,7 @@ ConstructorDeclaration
   }
 
   test_constructor_typeName_factory_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   factory A.named() => A(0);
 }
@@ -379,7 +378,7 @@ ConstructorDeclaration
   }
 
   test_constructor_typeName_factory_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   factory A() => A.named(0);
 }
@@ -427,7 +426,7 @@ ConstructorDeclaration
   }
 
   test_constructor_typeName_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   A.named() : this.it = 0;
 }
@@ -467,7 +466,7 @@ ConstructorDeclaration
   }
 
   test_constructor_typeName_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   A() : this.it = 0;
 }
@@ -505,14 +504,12 @@ ConstructorDeclaration
   }
 
   test_field_staticConst() async {
-    var code = r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(String it) {
   static const int foo = 0;
   static const int bar = 1;
 }
-''';
-
-    await assertNoErrorsInCode(code);
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -523,7 +520,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: String
           element: dart:core::@class::String
@@ -582,7 +579,7 @@ ExtensionTypeDeclaration
   }
 
   test_implementsClause() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) implements num {}
 ''');
 
@@ -595,7 +592,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -624,7 +621,7 @@ ExtensionTypeDeclaration
   }
 
   test_method_generic() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A<T>(int it) {
   void foo<U>(T t, U u) {
     T;
@@ -651,7 +648,7 @@ MethodDeclaration
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: T
         element: #E0 T
@@ -660,7 +657,7 @@ MethodDeclaration
       declaredFragment: <testLibraryFragment> t@46
         element: isPublic
           type: T
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: U
         element: #E1 U
@@ -698,7 +695,7 @@ MethodDeclaration
   }
 
   test_primaryConstructor_formalParameters_defaultValue_optionalNamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({int a = 0}) {}
 ''');
 
@@ -712,21 +709,17 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: a
-          declaredFragment: <testLibraryFragment> a@22
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::a
-        separator: =
-        defaultValue: IntegerLiteral
-          literal: 0
-          staticType: int
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: a
+        defaultClause: FormalParameterDefaultClause
+          separator: =
+          value: IntegerLiteral
+            literal: 0
+            staticType: int
         declaredFragment: <testLibraryFragment> a@22
           element: isFinal isPublic
             type: int
@@ -744,7 +737,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_defaultValue_optionalPositional() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A([int a = 0]) {}
 ''');
 
@@ -758,21 +751,17 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: [
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: a
-          declaredFragment: <testLibraryFragment> a@22
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::a
-        separator: =
-        defaultValue: IntegerLiteral
-          literal: 0
-          staticType: int
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: a
+        defaultClause: FormalParameterDefaultClause
+          separator: =
+          value: IntegerLiteral
+            literal: 0
+            staticType: int
         declaredFragment: <testLibraryFragment> a@22
           element: isFinal isPublic
             type: int
@@ -790,12 +779,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_fieldFormalParameter() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(this.it) {}
-''',
-      [error(diag.expectedRepresentationField, 17, 4)],
-    );
+//               ^^^^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -826,13 +814,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_fieldFormalParameter_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(this.it) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 4)],
-    );
+//               ^^^^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -863,7 +850,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_functionTypedFormalParameter() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it()) {}
 ''');
 
@@ -876,15 +863,16 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: FunctionTypedFormalParameter
-        returnType: NamedType
+      parameter: RegularFormalParameter
+        type: NamedType
           name: int
           element: dart:core::@class::int
           type: int
         name: it
-        parameters: FormalParameterList
-          leftParenthesis: (
-          rightParenthesis: )
+        functionTypedSuffix: FunctionTypedFormalParameterSuffix
+          formalParameters: FormalParameterList
+            leftParenthesis: (
+            rightParenthesis: )
         declaredFragment: <testLibraryFragment> it@21
           element: isFinal isPublic
             type: int Function()
@@ -901,13 +889,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_functionTypedFormalParameter_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int it()) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 3)],
-    );
+//               ^^^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -918,15 +905,16 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: FunctionTypedFormalParameter
-        returnType: NamedType
+      parameter: RegularFormalParameter
+        type: NamedType
           name: int
           element: dart:core::@class::int
           type: int
         name: it
-        parameters: FormalParameterList
-          leftParenthesis: (
-          rightParenthesis: )
+        functionTypedSuffix: FunctionTypedFormalParameterSuffix
+          formalParameters: FormalParameterList
+            leftParenthesis: (
+            rightParenthesis: )
         declaredFragment: <testLibraryFragment> it@37
           element: isFinal isPublic
             type: int Function()
@@ -943,12 +931,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_const() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(const int it) {}
-''',
-      [error(diag.extraneousModifier, 17, 5)],
-    );
+//               ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'const' here.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -959,8 +946,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: const
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: const
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -982,13 +969,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_const_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(const int it) {}
-''',
-      [error(diag.extraneousModifier, 33, 5)],
-    );
+//               ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'const' here.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -999,8 +985,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: const
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: const
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -1022,12 +1008,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_covariant() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(covariant int it) {}
-''',
-      [error(diag.invalidCovariantModifierInPrimaryConstructor, 17, 9)],
-    );
+//               ^^^^^^^^^
+// [diag.invalidCovariantModifierInPrimaryConstructor] The 'covariant' modifier can only be used on non-final declaring parameters.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1038,7 +1023,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         covariantKeyword: covariant
         type: NamedType
           name: int
@@ -1061,13 +1046,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_covariant_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(covariant int it) {}
-''',
-      [error(diag.extraneousModifierInPrimaryConstructor, 33, 9)],
-    );
+//               ^^^^^^^^^
+// [diag.extraneousModifierInPrimaryConstructor] Can't have modifier 'covariant' in a primary constructor.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1078,7 +1062,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         covariantKeyword: covariant
         type: NamedType
           name: int
@@ -1101,7 +1085,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_final_hasType() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(final int it) {}
 ''');
 
@@ -1114,8 +1098,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: final
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: final
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -1137,13 +1121,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_final_hasType_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(final int it) {}
-''',
-      [error(diag.representationFieldModifier, 33, 5)],
-    );
+//               ^^^^^
+// [diag.representationFieldModifier] Representation fields can't have the modifier 'var'.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1154,8 +1137,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: final
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: final
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -1177,7 +1160,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_final_noType() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(final it) {}
 ''');
 
@@ -1190,8 +1173,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: final
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: final
         name: it
         declaredFragment: <testLibraryFragment> it@23
           element: hasImplicitType isFinal isPublic
@@ -1209,16 +1192,14 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_final_noType_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(final it) {}
-''',
-      [
-        error(diag.representationFieldModifier, 33, 5),
-        error(diag.expectedRepresentationType, 39, 2),
-      ],
-    );
+//               ^^^^^
+// [diag.representationFieldModifier] Representation fields can't have the modifier 'var'.
+//                     ^^
+// [diag.expectedRepresentationType] Expected a representation type.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1229,8 +1210,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: final
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: final
         name: it
         declaredFragment: <testLibraryFragment> it@39
           element: hasImplicitType isFinal isPublic
@@ -1248,12 +1229,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_required() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(required int it) {}
-''',
-      [error(diag.extraneousModifier, 17, 8)],
-    );
+//               ^^^^^^^^
+// [diag.extraneousModifier] Can't have modifier 'required' here.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1264,7 +1244,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         requiredKeyword: required
         type: NamedType
           name: int
@@ -1287,12 +1267,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_static() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(static int it) {}
-''',
-      [error(diag.extraneousModifier, 17, 6)],
-    );
+//               ^^^^^^
+// [diag.extraneousModifier] Can't have modifier 'static' here.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1303,7 +1282,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -1325,12 +1304,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_var() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(var it) {}
-''',
-      [error(diag.representationFieldModifier, 17, 3)],
-    );
+//               ^^^
+// [diag.representationFieldModifier] Representation fields can't have the modifier 'var'.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1341,8 +1319,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: var
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: var
         name: it
         declaredFragment: <testLibraryFragment> it@21
           element: hasImplicitType isFinal isPublic
@@ -1360,16 +1338,14 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_keyword_var_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(var it) {}
-''',
-      [
-        error(diag.representationFieldModifier, 33, 3),
-        error(diag.expectedRepresentationType, 37, 2),
-      ],
-    );
+//               ^^^
+// [diag.representationFieldModifier] Representation fields can't have the modifier 'var'.
+//                   ^^
+// [diag.expectedRepresentationType] Expected a representation type.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1380,8 +1356,8 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
-        keyword: var
+      parameter: RegularFormalParameter
+        constFinalOrVarKeyword: var
         name: it
         declaredFragment: <testLibraryFragment> it@37
           element: hasImplicitType isFinal isPublic
@@ -1399,7 +1375,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalNamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({int? it}) {}
 ''');
 
@@ -1413,18 +1389,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: it
-          declaredFragment: <testLibraryFragment> it@23
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: it
         declaredFragment: <testLibraryFragment> it@23
           element: isFinal isPublic
             type: int?
@@ -1442,13 +1413,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalNamed_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A({int? it}) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 1)],
-    );
+//               ^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1460,18 +1430,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: it
-          declaredFragment: <testLibraryFragment> it@39
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: it
         declaredFragment: <testLibraryFragment> it@39
           element: isFinal isPublic
             type: int?
@@ -1489,12 +1454,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalNamed_optionalNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({int? a, int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 24, 1)],
-    );
+//                      ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1506,33 +1470,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: a
-          declaredFragment: <testLibraryFragment> a@23
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: a
         declaredFragment: <testLibraryFragment> a@23
           element: isFinal isPublic
             type: int?
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@31
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@31
           element: isPublic
             type: int?
@@ -1549,13 +1504,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalNamed_optionalNamed_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A({int? a, int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 40, 1)],
-    );
+//                      ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1567,33 +1521,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: a
-          declaredFragment: <testLibraryFragment> a@39
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: a
         declaredFragment: <testLibraryFragment> a@39
           element: isFinal isPublic
             type: int?
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@47
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@47
           element: isPublic
             type: int?
@@ -1610,12 +1555,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalNamed_requiredNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({int? a, required int b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 24, 1)],
-    );
+//                      ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1627,33 +1571,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: a
-          declaredFragment: <testLibraryFragment> a@23
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: a
         declaredFragment: <testLibraryFragment> a@23
           element: isFinal isPublic
             type: int?
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: b
-          declaredFragment: <testLibraryFragment> b@39
-            element: isPublic
-              type: int
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: b
         declaredFragment: <testLibraryFragment> b@39
           element: isPublic
             type: int
@@ -1670,7 +1605,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalPositional() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A([int? it]) {}
 ''');
 
@@ -1684,18 +1619,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: [
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: it
-          declaredFragment: <testLibraryFragment> it@23
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: it
         declaredFragment: <testLibraryFragment> it@23
           element: isFinal isPublic
             type: int?
@@ -1713,13 +1643,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalPositional_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A([int? it]) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 1)],
-    );
+//               ^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1731,18 +1660,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: [
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: it
-          declaredFragment: <testLibraryFragment> it@39
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: it
         declaredFragment: <testLibraryFragment> it@39
           element: isFinal isPublic
             type: int?
@@ -1760,12 +1684,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalPositional_optionalPositional() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A([int? a, int? b]) {}
-''',
-      [error(diag.multipleRepresentationFields, 24, 1)],
-    );
+//                      ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1777,33 +1700,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: [
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: a
-          declaredFragment: <testLibraryFragment> a@23
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: a
         declaredFragment: <testLibraryFragment> a@23
           element: isFinal isPublic
             type: int?
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@31
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@31
           element: isPublic
             type: int?
@@ -1820,13 +1734,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_optionalPositional_optionalPositional_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A([int? a, int? b]) {}
-''',
-      [error(diag.multipleRepresentationFields, 40, 1)],
-    );
+//                      ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1838,33 +1751,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: [
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: a
-          declaredFragment: <testLibraryFragment> a@39
-            element: isFinal isPublic
-              type: int?
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: a
         declaredFragment: <testLibraryFragment> a@39
           element: isFinal isPublic
             type: int?
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@47
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@47
           element: isPublic
             type: int?
@@ -1881,7 +1785,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredNamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({required int it}) {}
 ''');
 
@@ -1895,18 +1799,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: it
-          declaredFragment: <testLibraryFragment> it@31
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: it
         declaredFragment: <testLibraryFragment> it@31
           element: isFinal isPublic
             type: int
@@ -1924,13 +1823,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredNamed_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A({required int it}) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 1)],
-    );
+//               ^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1942,18 +1840,13 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: it
-          declaredFragment: <testLibraryFragment> it@47
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::it
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: it
         declaredFragment: <testLibraryFragment> it@47
           element: isFinal isPublic
             type: int
@@ -1971,12 +1864,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredNamed_optionalNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({required int a, int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 32, 1)],
-    );
+//                              ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -1988,33 +1880,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: a
-          declaredFragment: <testLibraryFragment> a@31
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: a
         declaredFragment: <testLibraryFragment> a@31
           element: isFinal isPublic
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@39
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@39
           element: isPublic
             type: int?
@@ -2031,12 +1914,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredNamed_requiredNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({required int a, required int b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 32, 1)],
-    );
+//                              ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2048,33 +1930,24 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: a
-          declaredFragment: <testLibraryFragment> a@31
-            element: isFinal isPublic
-              type: int
-              field: <testLibrary>::@extensionType::A::@field::a
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: a
         declaredFragment: <testLibraryFragment> a@31
           element: isFinal isPublic
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          requiredKeyword: required
-          type: NamedType
-            name: int
-            element: dart:core::@class::int
-            type: int
-          name: b
-          declaredFragment: <testLibraryFragment> b@47
-            element: isPublic
-              type: int
+      parameter: RegularFormalParameter
+        requiredKeyword: required
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: b
         declaredFragment: <testLibraryFragment> b@47
           element: isPublic
             type: int
@@ -2091,7 +1964,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 ''');
 
@@ -2104,7 +1977,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2126,7 +1999,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_language310() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int it) {}
 ''');
@@ -2140,7 +2013,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2162,12 +2035,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_optionalNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int a, {int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 22, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2178,7 +2050,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2189,17 +2061,13 @@ ExtensionTypeDeclaration
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@30
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@30
           element: isPublic
             type: int?
@@ -2216,13 +2084,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_optionalNamed_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int a, {int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 38, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2233,7 +2100,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2244,17 +2111,13 @@ ExtensionTypeDeclaration
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@46
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@46
           element: isPublic
             type: int?
@@ -2271,12 +2134,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_optionalPositional() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int a, {int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 22, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2287,7 +2149,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2298,17 +2160,13 @@ ExtensionTypeDeclaration
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@30
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@30
           element: isPublic
             type: int?
@@ -2325,13 +2183,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_optionalPositional_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int a, {int? b}) {}
-''',
-      [error(diag.multipleRepresentationFields, 38, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2342,7 +2199,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2353,17 +2210,13 @@ ExtensionTypeDeclaration
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: int
-            question: ?
-            element: dart:core::@class::int
-            type: int?
-          name: b
-          declaredFragment: <testLibraryFragment> b@46
-            element: isPublic
-              type: int?
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          question: ?
+          element: dart:core::@class::int
+          type: int?
+        name: b
         declaredFragment: <testLibraryFragment> b@46
           element: isPublic
             type: int?
@@ -2380,12 +2233,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_requiredPositional() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int a, int b) {}
-''',
-      [error(diag.multipleRepresentationFields, 22, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2396,7 +2248,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2406,7 +2258,7 @@ ExtensionTypeDeclaration
           element: isFinal isPublic
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2427,13 +2279,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_kind_requiredPositional_requiredPositional_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int a, int b) {}
-''',
-      [error(diag.multipleRepresentationFields, 38, 1)],
-    );
+//                    ^
+// [diag.multipleRepresentationFields] Each extension type should have exactly one representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2444,7 +2295,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2454,7 +2305,7 @@ ExtensionTypeDeclaration
           element: isFinal isPublic
             type: int
             field: <testLibrary>::@extensionType::A::@field::a
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2475,12 +2326,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_memberWithClassName() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int A) {}
-''',
-      [error(diag.memberWithClassName, 21, 1)],
-    );
+//                   ^
+// [diag.memberWithClassName] A class member can't have the same name as the enclosing class.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2491,7 +2341,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2513,13 +2363,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_memberWithClassName_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int A) {}
-''',
-      [error(diag.memberWithClassName, 37, 1)],
-    );
+//                   ^
+// [diag.memberWithClassName] A class member can't have the same name as the enclosing class.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2530,7 +2379,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2552,11 +2401,9 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_metadata() async {
-    var code = r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(@deprecated int it) {}
-''';
-
-    await assertNoErrorsInCode(code);
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2567,7 +2414,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         metadata
           Annotation
             atSign: @
@@ -2597,12 +2444,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noFormalParameters() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A() {}
-''',
-      [error(diag.expectedRepresentationField, 17, 1)],
-    );
+//               ^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.extensionTypeDeclaration('A');
     assertResolvedNodeText(node, r'''
@@ -2625,13 +2471,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noFormalParameters_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A() {}
-''',
-      [error(diag.expectedRepresentationField, 33, 1)],
-    );
+//               ^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2654,7 +2499,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noTypeAnnotation() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(it) {}
 ''');
 
@@ -2667,7 +2512,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: it
         declaredFragment: <testLibraryFragment> it@17
           element: hasImplicitType isFinal isPublic
@@ -2685,13 +2530,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noTypeAnnotation_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(it) {}
-''',
-      [error(diag.expectedRepresentationType, 33, 2)],
-    );
+//               ^^
+// [diag.expectedRepresentationType] Expected a representation type.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2702,7 +2546,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         name: it
         declaredFragment: <testLibraryFragment> it@33
           element: hasImplicitType isFinal isPublic
@@ -2720,7 +2564,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noTypeAnnotation_withMetadata() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(@deprecated it) {}
 ''');
 
@@ -2733,7 +2577,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         metadata
           Annotation
             atSign: @
@@ -2759,13 +2603,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_noTypeAnnotation_withMetadata_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(@deprecated it) {}
-''',
-      [error(diag.expectedRepresentationType, 45, 2)],
-    );
+//                           ^^
+// [diag.expectedRepresentationType] Expected a representation type.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2776,7 +2619,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         metadata
           Annotation
             atSign: @
@@ -2802,14 +2645,13 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_scope() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
+//               ^^^
+// [diag.notAType] int isn't a type.
   static const String int = 'not a type';
 }
-''',
-      [error(diag.notAType, 17, 3)],
-    );
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2820,7 +2662,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: <testLibrary>::@extensionType::A::@getter::int
@@ -2851,7 +2693,7 @@ ExtensionTypeDeclaration
               equals: =
               initializer: SimpleStringLiteral
                 literal: 'not a type'
-              declaredFragment: <testLibraryFragment> int@49
+              declaredFragment: <testLibraryFragment> int@107
         semicolon: ;
         declaredFragment: <null>
     rightBracket: }
@@ -2860,7 +2702,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_scope_language310() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int it) {
   static const String int = 'not a type';
@@ -2876,7 +2718,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -2916,12 +2758,11 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_superFormalParameter() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(super.it) {}
-''',
-      [error(diag.expectedRepresentationField, 17, 5)],
-    );
+//               ^^^^^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2951,13 +2792,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_superFormalParameter_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(super.it) {}
-''',
-      [error(diag.expectedRepresentationField, 33, 5)],
-    );
+//               ^^^^^
+// [diag.expectedRepresentationField] Expected a representation field.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -2987,7 +2827,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_trailingComma() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it,) {}
 ''');
 
@@ -3000,7 +2840,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -3022,13 +2862,12 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_formalParameters_trailingComma_language310() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 3.10
 extension type A(int it,) {}
-''',
-      [error(diag.representationFieldTrailingComma, 39, 1)],
-    );
+//                     ^
+// [diag.representationFieldTrailingComma] The representation field can't have a trailing comma.
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -3039,7 +2878,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -3061,17 +2900,15 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_missing() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type E {}
-''',
-      [
-        error(diag.missingPrimaryConstructor, 15, 1),
-        error(diag.expectedRepresentationField, 17, 0),
-      ],
-    );
+//             ^
+// [diag.missingPrimaryConstructor] An extension type declaration must have a primary constructor declaration.
+//               ^
+// [diag.expectedRepresentationField][column 18][length 0] Expected a representation field.
+''');
 
-    var node = findNode.extensionTypeDeclaration('E');
+    var node = findNode.extensionTypeDeclaration('extension type E');
     assertResolvedNodeText(node, r'''
 ExtensionTypeDeclaration
   extensionKeyword: extension
@@ -3092,11 +2929,9 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_named() async {
-    var code = r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {}
-''';
-
-    await assertNoErrorsInCode(code);
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -3110,7 +2945,7 @@ ExtensionTypeDeclaration
       name: named
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -3132,7 +2967,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructor_scopes() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const foo = 0;
 extension type E<@foo T>([@foo int it = foo]) {
   static const foo = 1;
@@ -3162,30 +2997,26 @@ PrimaryConstructorDeclaration
   formalParameters: FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
-    parameter: DefaultFormalParameter
-      parameter: SimpleFormalParameter
-        metadata
-          Annotation
-            atSign: @
-            name: SimpleIdentifier
-              token: foo
-              element: <testLibrary>::@extensionType::E::@getter::foo
-              staticType: null
+    parameter: RegularFormalParameter
+      metadata
+        Annotation
+          atSign: @
+          name: SimpleIdentifier
+            token: foo
             element: <testLibrary>::@extensionType::E::@getter::foo
-        type: NamedType
-          name: int
-          element: dart:core::@class::int
-          type: int
-        name: it
-        declaredFragment: <testLibraryFragment> it@50
-          element: isFinal isPublic
-            type: int
-            field: <testLibrary>::@extensionType::E::@field::it
-      separator: =
-      defaultValue: SimpleIdentifier
-        token: foo
-        element: <testLibrary>::@extensionType::E::@getter::foo
-        staticType: int
+            staticType: null
+          element: <testLibrary>::@extensionType::E::@getter::foo
+      type: NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+      name: it
+      defaultClause: FormalParameterDefaultClause
+        separator: =
+        value: SimpleIdentifier
+          token: foo
+          element: <testLibrary>::@extensionType::E::@getter::foo
+          staticType: int
       declaredFragment: <testLibraryFragment> it@50
         element: isFinal isPublic
           type: int
@@ -3199,7 +3030,7 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_typeParameters() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type E<T extends U, U extends num>(T it) {}
 ''');
 
@@ -3231,7 +3062,7 @@ PrimaryConstructorDeclaration
     rightBracket: >
   formalParameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: T
         element: #E1 T
@@ -3249,19 +3080,18 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructorBody_duplicate() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({bool it = false}) {
   this : assert(it) {
     it;
   }
   this : assert(!it) {
+//^^^^
+// [diag.multiplePrimaryConstructorBodyDeclarations] Only one primary constructor body declaration is allowed.
     it;
   }
 }
-''',
-      [error(diag.multiplePrimaryConstructorBodyDeclarations, 74, 4)],
-    );
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -3273,21 +3103,17 @@ ExtensionTypeDeclaration
     formalParameters: FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
-      parameter: DefaultFormalParameter
-        parameter: SimpleFormalParameter
-          type: NamedType
-            name: bool
-            element: dart:core::@class::bool
-            type: bool
-          name: it
-          declaredFragment: <testLibraryFragment> it@23
-            element: isFinal isPublic
-              type: bool
-              field: <testLibrary>::@extensionType::A::@field::it
-        separator: =
-        defaultValue: BooleanLiteral
-          literal: false
-          staticType: bool
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: bool
+          element: dart:core::@class::bool
+          type: bool
+        name: it
+        defaultClause: FormalParameterDefaultClause
+          separator: =
+          value: BooleanLiteral
+            literal: false
+            staticType: bool
         declaredFragment: <testLibraryFragment> it@23
           element: isFinal isPublic
             type: bool
@@ -3356,7 +3182,7 @@ ExtensionTypeDeclaration
   }
 
   test_primaryConstructorBody_metadata() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   @deprecated
   this;
@@ -3381,7 +3207,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_optionalNamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A({bool it = false}) {
   this : assert(it);
 }
@@ -3407,7 +3233,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_requiredPositional() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(bool it) {
   this : assert(it);
 }
@@ -3433,7 +3259,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryParameterScope() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   this {
     it;
@@ -3468,13 +3294,11 @@ PrimaryConstructorBody
   }
 
   test_secondaryConstructor_fieldFormalParameter() async {
-    var code = r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   A.named(this.it);
 }
-''';
-
-    await assertNoErrorsInCode(code);
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -3485,7 +3309,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int
@@ -3531,13 +3355,11 @@ ExtensionTypeDeclaration
   }
 
   test_secondaryConstructor_fieldInitializer() async {
-    var code = r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(num it) {
   const A.named(int a) : it = a;
 }
-''';
-
-    await assertNoErrorsInCode(code);
+''');
 
     var node = findNode.singleExtensionTypeDeclaration;
     assertResolvedNodeText(node, r'''
@@ -3548,7 +3370,7 @@ ExtensionTypeDeclaration
     typeName: A
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: num
           element: dart:core::@class::num
@@ -3575,7 +3397,7 @@ ExtensionTypeDeclaration
         name: named
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             type: NamedType
               name: int
               element: dart:core::@class::int
@@ -3608,25 +3430,23 @@ ExtensionTypeDeclaration
   }
 
   test_typeParameter_bound_undefined() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type E<T extends Unresolved>(int it) {}
-''',
-      [error(diag.undefinedClass, 27, 10)],
-    );
+//                         ^^^^^^^^^^
+// [diag.undefinedClass] Undefined class 'Unresolved'.
+''');
   }
 
   test_typeParameter_metadata_undefined() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type E<@Unresolved T>(int it) {}
-''',
-      [error(diag.undefinedAnnotation, 17, 11)],
-    );
+//               ^^^^^^^^^^^
+// [diag.undefinedAnnotation] Undefined name 'Unresolved' used as an annotation.
+''');
   }
 
   test_typeParameters() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A<T, U>(Map<T, U> it) {}
 ''');
 
@@ -3651,7 +3471,7 @@ ExtensionTypeDeclaration
       rightBracket: >
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: Map
           typeArguments: TypeArgumentList
@@ -3685,7 +3505,7 @@ ExtensionTypeDeclaration
   }
 
   test_typeParameters_wildcards() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type ET<_, _, _ extends num>(int _) {}
 ''');
 
@@ -3719,7 +3539,7 @@ ExtensionTypeDeclaration
       rightBracket: >
     formalParameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: int
           element: dart:core::@class::int

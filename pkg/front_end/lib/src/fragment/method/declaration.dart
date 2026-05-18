@@ -24,6 +24,7 @@ import '../../source/source_library_builder.dart';
 import '../../source/source_loader.dart';
 import '../../source/source_member_builder.dart';
 import '../../source/source_method_builder.dart';
+import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
 import '../../type_inference/type_schema.dart';
 import '../fragment.dart';
@@ -259,6 +260,13 @@ class MethodDeclarationImpl
         fileUri: fileUri,
         nameOffset: _fragment.nameOffset,
         nameLength: _fragment.name.length,
+        isClosureContextLoweringEnabled: enclosingClassBuilder
+            .libraryBuilder
+            .loader
+            .target
+            .backendTarget
+            .flags
+            .isClosureContextLoweringEnabled,
       );
     }
     _encoding.ensureTypes(
@@ -276,14 +284,16 @@ class MethodDeclarationImpl
   void registerFunctionBody({
     required Statement? body,
     required Scope? scope,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
+    required VariableDeclaration? thisVariable,
   }) {
     _encoding.registerFunctionBody(
       body: body,
       scope: scope,
-      asyncMarker: asyncMarker,
+      asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
+      thisVariable: thisVariable,
     );
   }
 
@@ -305,8 +315,9 @@ abstract class MethodFragmentDeclaration {
   void registerFunctionBody({
     required Statement? body,
     required Scope? scope,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
+    required VariableDeclaration? thisVariable,
   });
 
   DartType get returnTypeContext;

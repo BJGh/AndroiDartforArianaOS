@@ -12,6 +12,7 @@ import 'fix_processor.dart';
 void main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ConvertIntoBlockBodyMissingBodyTest);
+    defineReflectiveTests(ConvertIntoBlockBodyPrimaryConstructorTest);
     defineReflectiveTests(ConvertIntoBlockBodySetLiteralBulkTest);
     defineReflectiveTests(ConvertIntoBlockBodySetLiteralTest);
     defineReflectiveTests(ConvertIntoBlockBodySetLiteralMultiTest);
@@ -75,13 +76,15 @@ enum E {
 ''');
   }
 
-  test_extenstionTypeWithAbstractMember_getter() async {
+  test_extensionTypeWithAbstractMember_getter() async {
     await resolveTestCode('''
+// @dart = 3.5
 extension type A(int it) {
   int get g;
 }
 ''');
     await assertHasFix('''
+// @dart = 3.5
 extension type A(int it) {
   int get g {
     // TODO: implement g
@@ -91,13 +94,15 @@ extension type A(int it) {
 ''');
   }
 
-  test_extenstionTypeWithAbstractMember_method() async {
+  test_extensionTypeWithAbstractMember_method() async {
     await resolveTestCode('''
+// @dart = 3.5
 extension type A(int it) {
   void f();
 }
 ''');
     await assertHasFix('''
+// @dart = 3.5
 extension type A(int it) {
   void f() {
     // TODO: implement f
@@ -108,9 +113,11 @@ extension type A(int it) {
 
   Future<void> test_function() async {
     await resolveTestCode('''
+// @dart = 3.5
 void f();
 ''');
     await assertHasFix('''
+// @dart = 3.5
 void f() {
   // TODO: implement f
 }
@@ -166,11 +173,13 @@ class A {
 
   Future<void> test_static_getter() async {
     await resolveTestCode('''
+// @dart = 3.5
 class C {
   static int get g;
 }
 ''');
     await assertHasFix('''
+// @dart = 3.5
 class C {
   static int get g {
     // TODO: implement g
@@ -182,15 +191,38 @@ class C {
 
   Future<void> test_static_setter() async {
     await resolveTestCode('''
+// @dart = 3.5
 class C {
   static set(int i);
 }
 ''');
     await assertHasFix('''
+// @dart = 3.5
 class C {
   static set(int i) {
     // TODO: implement set
     throw UnimplementedError();
+  }
+}
+''');
+  }
+}
+
+@reflectiveTest
+class ConvertIntoBlockBodyPrimaryConstructorTest extends FixProcessorTest {
+  @override
+  FixKind get kind => DartFixKind.convertIntoBlockBody;
+
+  Future<void> test_primaryConstructorBody() async {
+    await resolveTestCode('''
+class C() {
+  this => print('c');
+}
+''');
+    await assertHasFix('''
+class C() {
+  this {
+    print('c');
   }
 }
 ''');

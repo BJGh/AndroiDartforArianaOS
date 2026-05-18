@@ -65,7 +65,7 @@ mixin ErrorDetectionHelpers {
   ///
   /// See [diag.argumentTypeNotAssignable].
   void checkForArgumentTypeNotAssignableForArgument(
-    ExpressionImpl argument, {
+    ArgumentImpl argument, {
     bool promoteParameterToNullable = false,
     Map<SharedTypeView, NonPromotionReason> Function()? whyNotPromoted,
   }) {
@@ -89,9 +89,7 @@ mixin ErrorDetectionHelpers {
 
     if (correspondingParameterType != null) {
       _checkForArgumentTypeNotAssignableForArgument(
-        argument: argument is NamedExpressionImpl
-            ? argument.expression
-            : argument,
+        argument: argument.argumentExpression,
         staticParameterType: correspondingParameterType,
         promoteParameterToNullable: promoteParameterToNullable,
         whyNotPromoted: whyNotPromoted,
@@ -245,7 +243,7 @@ mixin ErrorDetectionHelpers {
   ///
   /// See [diag.useOfVoidResult].
   bool checkForUseOfVoidResult(Expression expression) {
-    if (!identical(expression.staticType, VoidTypeImpl.instance)) {
+    if (expression.staticType is! VoidTypeImpl) {
       return false;
     }
 

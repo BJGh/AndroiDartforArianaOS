@@ -229,6 +229,8 @@ abstract final class LintNames {
 
   static const String empty_constructor_bodies = 'empty_constructor_bodies';
 
+  static const String empty_container_bodies = 'empty_container_bodies';
+
   static const String empty_statements = 'empty_statements';
 
   static const String enable_null_safety = 'enable_null_safety';
@@ -251,6 +253,9 @@ abstract final class LintNames {
   static const String implicit_call_tearoffs = 'implicit_call_tearoffs';
 
   static const String implicit_reopen = 'implicit_reopen';
+
+  static const String initialize_in_field_declaration =
+      'initialize_in_field_declaration';
 
   static const String invalid_case_patterns = 'invalid_case_patterns';
 
@@ -467,6 +472,8 @@ abstract final class LintNames {
 
   static const String secure_pubspec_urls = 'secure_pubspec_urls';
 
+  static const String simple_directive_paths = 'simple_directive_paths';
+
   static const String simplify_variable_pattern = 'simplify_variable_pattern';
 
   static const String sized_box_for_whitespace = 'sized_box_for_whitespace';
@@ -527,6 +534,9 @@ abstract final class LintNames {
 
   static const String unnecessary_const = 'unnecessary_const';
 
+  static const String unnecessary_const_in_enum_constructor =
+      'unnecessary_const_in_enum_constructor';
+
   static const String unnecessary_constructor_name =
       'unnecessary_constructor_name';
 
@@ -580,6 +590,9 @@ abstract final class LintNames {
   static const String unnecessary_to_list_in_spreads =
       'unnecessary_to_list_in_spreads';
 
+  static const String unnecessary_type_name_in_constructor =
+      'unnecessary_type_name_in_constructor';
+
   static const String unnecessary_unawaited = 'unnecessary_unawaited';
 
   static const String unnecessary_underscores = 'unnecessary_underscores';
@@ -597,6 +610,8 @@ abstract final class LintNames {
       'use_build_context_synchronously';
 
   static const String use_colored_box = 'use_colored_box';
+
+  static const String use_declaring_parameters = 'use_declaring_parameters';
 
   static const String use_decorated_box = 'use_decorated_box';
 
@@ -623,6 +638,8 @@ abstract final class LintNames {
   static const String use_named_constants = 'use_named_constants';
 
   static const String use_null_aware_elements = 'use_null_aware_elements';
+
+  static const String use_primary_constructors = 'use_primary_constructors';
 
   static const String use_raw_strings = 'use_raw_strings';
 

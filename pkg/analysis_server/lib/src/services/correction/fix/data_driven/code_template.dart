@@ -80,12 +80,15 @@ class TemplateContext {
 
   /// Return the invocation containing the given [node]. The invocation will be
   /// either an instance creation expression, function invocation, method
-  /// invocation, or an extension override.
+  /// invocation, or an extension override. For string literals in an import
+  /// directive, the invocation is the import directive.
   static AstNode? _getInvocation(AstNode node) {
     if (node is ArgumentList) {
       return node.parent;
     } else if (node.parent is ArgumentList) {
       return node.parent?.parent;
+    } else if (node is ImportDirective) {
+      return node;
     } else if (node is InstanceCreationExpression ||
         node is InvocationExpression) {
       return node;
@@ -97,6 +100,11 @@ class TemplateContext {
           return grandparent;
         }
       }
+    } else if (node is SimpleStringLiteral) {
+      var parent = node.parent;
+      if (parent is ImportDirective) {
+        return parent;
+      }
     } else if (node is SimpleIdentifier) {
       var parent = node.parent;
       if (parent is ConstructorName) {
@@ -104,8 +112,6 @@ class TemplateContext {
         if (grandparent is InstanceCreationExpression) {
           return grandparent;
         }
-      } else if (parent is Label && parent.parent is NamedExpression) {
-        return parent.parent?.parent?.parent;
       } else if (parent is MethodInvocation && parent.methodName == node) {
         return parent;
       } else if (parent is NamedType &&
@@ -124,7 +130,7 @@ class TemplateContext {
       }
     }
     var parent = node.parent;
-    if (parent is NamedExpression &&
+    if (parent is NamedArgument &&
         parent.parent?.parent is InstanceCreationExpression) {
       return parent.parent?.parent;
     }

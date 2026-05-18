@@ -264,8 +264,8 @@ class FfiNativeTransformer extends FfiTransformer {
   ) {
     final wrappedType =
         (_requiresPointerConversion(dartParameterType, ffiParameterType)
-            ? nativeFieldWrapperClass1Type
-            : dartParameterType);
+        ? nativeFieldWrapperClass1Type
+        : dartParameterType);
     return VariableDeclaration(
       variableDeclarationTemporaryName,
       initializer: initializer,
@@ -296,7 +296,7 @@ class FfiNativeTransformer extends FfiTransformer {
         );
         pointerAddress = BlockExpression(
           Block([
-            pointerAddressVar,
+            VariableStatement(pointerAddressVar),
             IfStatement(
               InstanceInvocation(
                 InstanceAccessKind.Instance,
@@ -363,7 +363,7 @@ class FfiNativeTransformer extends FfiTransformer {
     List<DartType> dartParameters = dartFunctionType.positionalParameters;
     // Create lists of temporary variables for arguments potentially being
     // wrapped, and the (potentially) wrapped arguments to be passed.
-    final temporariesForArguments = [];
+    final temporariesForArguments = <Statement>[];
     final callArguments = <Expression>[];
     final fencedArguments = [];
     for (int i = 0; i < invocation.arguments.positional.length; i++) {
@@ -374,7 +374,7 @@ class FfiNativeTransformer extends FfiTransformer {
       );
       // Note: We also evaluate, and assign temporaries for, non-wrapped
       // arguments as we need to preserve the original evaluation order.
-      temporariesForArguments.add(temporary);
+      temporariesForArguments.add(VariableStatement(temporary));
       callArguments.add(
         _getTemporary(
           temporary,
@@ -419,7 +419,7 @@ class FfiNativeTransformer extends FfiTransformer {
     final resultBlock = BlockExpression(
       Block(<Statement>[
         ...temporariesForArguments,
-        result,
+        VariableStatement(result),
         for (final argument in fencedArguments)
           ExpressionStatement(
             StaticInvocation(
@@ -486,10 +486,9 @@ class FfiNativeTransformer extends FfiTransformer {
 
     if (dartFunctionType.positionalParameters.length !=
         ffiFunctionType.positionalParameters.length) {
-      final template =
-          (node.isStatic
-              ? diag.ffiNativeUnexpectedNumberOfParameters
-              : diag.ffiNativeUnexpectedNumberOfParametersWithReceiver);
+      final template = (node.isStatic
+          ? diag.ffiNativeUnexpectedNumberOfParameters
+          : diag.ffiNativeUnexpectedNumberOfParametersWithReceiver);
       diagnosticReporter.report(
         template.withArguments(
           expectedCount: dartFunctionType.positionalParameters.length,
@@ -643,15 +642,14 @@ class FfiNativeTransformer extends FfiTransformer {
       Arguments(argumentList),
     )..fileOffset = node.fileOffset;
 
-    Expression result =
-        (wrappedDartFunctionType == dartFunctionType
-            ? nonWrappedInvocation
-            : _wrapArgumentsAndReturn(
-              invocation: nonWrappedInvocation,
-              dartFunctionType: dartFunctionType,
-              ffiFunctionType: ffiFunctionType,
-              checkReceiverForNullptr: checkReceiverForNullptr,
-            ));
+    Expression result = (wrappedDartFunctionType == dartFunctionType
+        ? nonWrappedInvocation
+        : _wrapArgumentsAndReturn(
+            invocation: nonWrappedInvocation,
+            dartFunctionType: dartFunctionType,
+            ffiFunctionType: ffiFunctionType,
+            checkReceiverForNullptr: checkReceiverForNullptr,
+          ));
     if (possibleCompoundReturn != null) {
       result = invokeCompoundConstructor(result, possibleCompoundReturn);
     }
@@ -1041,10 +1039,9 @@ class FfiNativeTransformer extends FfiTransformer {
       DartType dartType;
       NativeTypeCfe nativeTypeCfe;
       try {
-        dartType =
-            node.kind == ProcedureKind.Getter
-                ? node.function.returnType
-                : node.function.positionalParameters[0].type;
+        dartType = node.kind == ProcedureKind.Getter
+            ? node.function.returnType
+            : node.function.positionalParameters[0].type;
         (nativeType, nativeTypeCfe) = _validateOrInferNativeFieldType(
           node,
           nativeType,

@@ -20,8 +20,11 @@ void usage() {
 }
 
 void main(args) {
-  CommandLineHelper.requireExactlyOneArgument(args, usage,
-      requireFileExists: true);
+  CommandLineHelper.requireExactlyOneArgument(
+    args,
+    usage,
+    requireFileExists: true,
+  );
   List<int> bytes = new File(args[0]).readAsBytesSync();
   try {
     Component p = new Component();
@@ -35,7 +38,7 @@ void main(args) {
 }
 
 class WrappedBinaryBuilder extends BinaryBuilder {
-  WrappedBinaryBuilder(var _bytes) : super(_bytes, disableLazyReading: true);
+  WrappedBinaryBuilder(_bytes) : super(_bytes, disableLazyReading: true);
   int offsetsSize = 0;
   int stringTableSize = 0;
   int linkTableSize = 0;

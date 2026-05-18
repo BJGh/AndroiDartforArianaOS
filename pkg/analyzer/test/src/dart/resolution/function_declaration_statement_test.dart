@@ -2,14 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(FunctionDeclarationStatementResolutionTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -17,14 +18,13 @@ main() {
 class FunctionDeclarationStatementResolutionTest
     extends PubPackageResolutionTest {
   test_generic() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   T g<T, U>(T a, U b) => a;
+//  ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 15, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -50,7 +50,7 @@ FunctionDeclarationStatement
         rightBracket: >
       parameters: FormalParameterList
         leftParenthesis: (
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: T
             element: #E0 T
@@ -59,7 +59,7 @@ FunctionDeclarationStatement
           declaredFragment: <testLibraryFragment> a@25
             element: isPublic
               type: T
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: U
             element: #E1 U
@@ -87,14 +87,13 @@ FunctionDeclarationStatement
   }
 
   test_generic_fBounded() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T extends U, U, V extends U>(T x, U y, V z) {}
+//     ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 18, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -134,7 +133,7 @@ FunctionDeclarationStatement
         rightBracket: >
       parameters: FormalParameterList
         leftParenthesis: (
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: T
             element: #E1 T
@@ -143,7 +142,7 @@ FunctionDeclarationStatement
           declaredFragment: <testLibraryFragment> x@51
             element: isPublic
               type: T
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: U
             element: #E0 U
@@ -152,7 +151,7 @@ FunctionDeclarationStatement
           declaredFragment: <testLibraryFragment> y@56
             element: isPublic
               type: U
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: V
             element: #E2 V
@@ -177,14 +176,13 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_optionalNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>({T? a}) {}
+//     ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 18, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -207,17 +205,13 @@ FunctionDeclarationStatement
       parameters: FormalParameterList
         leftParenthesis: (
         leftDelimiter: {
-        parameter: DefaultFormalParameter
-          parameter: SimpleFormalParameter
-            type: NamedType
-              name: T
-              question: ?
-              element: #E0 T
-              type: T?
-            name: a
-            declaredFragment: <testLibraryFragment> a@27
-              element: isPublic
-                type: T?
+        parameter: RegularFormalParameter
+          type: NamedType
+            name: T
+            question: ?
+            element: #E0 T
+            type: T?
+          name: a
           declaredFragment: <testLibraryFragment> a@27
             element: isPublic
               type: T?
@@ -238,14 +232,13 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_optionalPositional() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>([T? a]) {}
+//     ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 18, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -268,17 +261,13 @@ FunctionDeclarationStatement
       parameters: FormalParameterList
         leftParenthesis: (
         leftDelimiter: [
-        parameter: DefaultFormalParameter
-          parameter: SimpleFormalParameter
-            type: NamedType
-              name: T
-              question: ?
-              element: #E0 T
-              type: T?
-            name: a
-            declaredFragment: <testLibraryFragment> a@27
-              element: isPublic
-                type: T?
+        parameter: RegularFormalParameter
+          type: NamedType
+            name: T
+            question: ?
+            element: #E0 T
+            type: T?
+          name: a
           declaredFragment: <testLibraryFragment> a@27
             element: isPublic
               type: T?
@@ -299,14 +288,13 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_requiredNamed() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>({required T? a}) {}
+//     ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 18, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -329,18 +317,14 @@ FunctionDeclarationStatement
       parameters: FormalParameterList
         leftParenthesis: (
         leftDelimiter: {
-        parameter: DefaultFormalParameter
-          parameter: SimpleFormalParameter
-            requiredKeyword: required
-            type: NamedType
-              name: T
-              question: ?
-              element: #E0 T
-              type: T?
-            name: a
-            declaredFragment: <testLibraryFragment> a@36
-              element: isPublic
-                type: T?
+        parameter: RegularFormalParameter
+          requiredKeyword: required
+          type: NamedType
+            name: T
+            question: ?
+            element: #E0 T
+            type: T?
+          name: a
           declaredFragment: <testLibraryFragment> a@36
             element: isPublic
               type: T?
@@ -361,14 +345,13 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_requiredPositional() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>(T a) {}
+//     ^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 18, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -390,7 +373,7 @@ FunctionDeclarationStatement
         rightBracket: >
       parameters: FormalParameterList
         leftParenthesis: (
-        parameter: SimpleFormalParameter
+        parameter: RegularFormalParameter
           type: NamedType
             name: T
             element: #E0 T
@@ -415,14 +398,13 @@ FunctionDeclarationStatement
   }
 
   test_returnType_implicit_blockBody() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   g() {}
+//^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 13, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
@@ -448,14 +430,13 @@ FunctionDeclarationStatement
   }
 
   test_returnType_implicit_expressionBody() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   g() => 0;
+//^
+// [diag.unusedElement] The declaration 'g' isn't referenced.
 }
-''',
-      [error(diag.unusedElement, 13, 1)],
-    );
+''');
 
     var node = findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''

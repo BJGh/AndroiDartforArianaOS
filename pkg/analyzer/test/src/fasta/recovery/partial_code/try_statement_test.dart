@@ -346,9 +346,9 @@ CompilationUnit
 f() { try {} catch (e assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 22, 6),
       error(diag.expectedCatchClauseBody, 22, 6),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -395,8 +395,8 @@ CompilationUnit
 f() { try {} catch (e {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 25, 1),
       error(diag.catchSyntax, 22, 1),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -436,10 +436,10 @@ CompilationUnit
 f() { try {} catch (e break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 29, 1),
       error(diag.catchSyntax, 22, 5),
       error(diag.expectedCatchClauseBody, 22, 5),
       error(diag.breakOutsideOfLoop, 22, 5),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -482,10 +482,10 @@ CompilationUnit
 f() { try {} catch (e continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.catchSyntax, 22, 8),
       error(diag.expectedCatchClauseBody, 22, 8),
       error(diag.continueOutsideOfLoop, 22, 8),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -528,9 +528,9 @@ CompilationUnit
 f() { try {} catch (e do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 22, 2),
       error(diag.expectedCatchClauseBody, 22, 2),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -622,9 +622,9 @@ CompilationUnit
 f() { try {} catch (e for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 22, 3),
       error(diag.expectedCatchClauseBody, 22, 3),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -678,9 +678,9 @@ CompilationUnit
 f() { try {} catch (e if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.catchSyntax, 22, 2),
       error(diag.expectedCatchClauseBody, 22, 2),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -729,9 +729,9 @@ CompilationUnit
 f() { try {} catch (e l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.catchSyntax, 22, 1),
       error(diag.expectedCatchClauseBody, 22, 1),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -765,8 +765,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -780,9 +779,9 @@ CompilationUnit
 f() { try {} catch (e int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntax, 22, 3),
       error(diag.expectedCatchClauseBody, 22, 3),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -835,9 +834,9 @@ CompilationUnit
 f() { try {} catch (e void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 22, 4),
       error(diag.expectedCatchClauseBody, 22, 4),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -890,9 +889,9 @@ CompilationUnit
 f() { try {} catch (e var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 29, 1),
       error(diag.catchSyntax, 22, 3),
       error(diag.expectedCatchClauseBody, 22, 3),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -939,9 +938,9 @@ CompilationUnit
 f() { try {} catch (e return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 30, 1),
       error(diag.catchSyntax, 22, 6),
       error(diag.expectedCatchClauseBody, 22, 6),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -984,9 +983,9 @@ CompilationUnit
 f() { try {} catch (e switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 22, 6),
       error(diag.expectedCatchClauseBody, 22, 6),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1034,9 +1033,9 @@ CompilationUnit
 f() { try {} catch (e try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntax, 22, 3),
       error(diag.expectedCatchClauseBody, 22, 3),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1085,9 +1084,9 @@ CompilationUnit
 f() { try {} catch (e while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntax, 22, 5),
       error(diag.expectedCatchClauseBody, 22, 5),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1136,9 +1135,9 @@ CompilationUnit
 f() { try {} catch (e,  assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntax, 24, 6),
       error(diag.expectedCatchClauseBody, 24, 6),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1234,10 +1233,10 @@ CompilationUnit
 f() { try {} catch (e,  break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.catchSyntax, 24, 5),
       error(diag.expectedCatchClauseBody, 24, 5),
       error(diag.breakOutsideOfLoop, 24, 5),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1283,10 +1282,10 @@ CompilationUnit
 f() { try {} catch (e,  continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 24, 8),
       error(diag.expectedCatchClauseBody, 24, 8),
       error(diag.continueOutsideOfLoop, 24, 8),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1332,9 +1331,9 @@ CompilationUnit
 f() { try {} catch (e,  do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 44, 1),
       error(diag.catchSyntax, 24, 2),
       error(diag.expectedCatchClauseBody, 24, 2),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1433,9 +1432,9 @@ CompilationUnit
 f() { try {} catch (e,  for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 44, 1),
       error(diag.catchSyntax, 24, 3),
       error(diag.expectedCatchClauseBody, 24, 3),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1492,9 +1491,9 @@ CompilationUnit
 f() { try {} catch (e,  if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 24, 2),
       error(diag.expectedCatchClauseBody, 24, 2),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1546,12 +1545,12 @@ CompilationUnit
 f() { try {} catch (e,  l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 30, 1),
+      error(diag.expectedToken, 24, 1),
       error(diag.catchSyntaxExtraParameters, 25, 1),
       error(diag.expectedCatchClauseBody, 25, 1),
       error(diag.missingIdentifier, 25, 1),
-      error(diag.expectedToken, 24, 1),
       error(diag.unexpectedToken, 25, 1),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1601,9 +1600,9 @@ CompilationUnit
 f() { try {} catch (e,  int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.catchSyntaxExtraParameters, 28, 1),
       error(diag.expectedCatchClauseBody, 28, 1),
+      error(diag.expectedToken, 28, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1657,9 +1656,9 @@ CompilationUnit
 f() { try {} catch (e,  void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 24, 4),
       error(diag.expectedCatchClauseBody, 24, 4),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1715,9 +1714,9 @@ CompilationUnit
 f() { try {} catch (e,  var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.catchSyntax, 24, 3),
       error(diag.expectedCatchClauseBody, 24, 3),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1767,9 +1766,9 @@ CompilationUnit
 f() { try {} catch (e,  return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.catchSyntax, 24, 6),
       error(diag.expectedCatchClauseBody, 24, 6),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1815,9 +1814,9 @@ CompilationUnit
 f() { try {} catch (e,  switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntax, 24, 6),
       error(diag.expectedCatchClauseBody, 24, 6),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1868,9 +1867,9 @@ CompilationUnit
 f() { try {} catch (e,  try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 24, 3),
       error(diag.expectedCatchClauseBody, 24, 3),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1922,9 +1921,9 @@ CompilationUnit
 f() { try {} catch (e,  while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntax, 24, 5),
       error(diag.expectedCatchClauseBody, 24, 5),
+      error(diag.expectedToken, 24, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -1976,9 +1975,9 @@ CompilationUnit
 f() { try {} catch (e, s assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntaxExtraParameters, 25, 6),
       error(diag.expectedCatchClauseBody, 25, 6),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2028,8 +2027,8 @@ CompilationUnit
 f() { try {} catch (e, s {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.catchSyntaxExtraParameters, 25, 1),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2072,10 +2071,10 @@ CompilationUnit
 f() { try {} catch (e, s break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.catchSyntaxExtraParameters, 25, 5),
       error(diag.expectedCatchClauseBody, 25, 5),
       error(diag.breakOutsideOfLoop, 25, 5),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2121,10 +2120,10 @@ CompilationUnit
 f() { try {} catch (e, s continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.catchSyntaxExtraParameters, 25, 8),
       error(diag.expectedCatchClauseBody, 25, 8),
       error(diag.continueOutsideOfLoop, 25, 8),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2170,9 +2169,9 @@ CompilationUnit
 f() { try {} catch (e, s do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 45, 1),
       error(diag.catchSyntaxExtraParameters, 25, 2),
       error(diag.expectedCatchClauseBody, 25, 2),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2270,9 +2269,9 @@ CompilationUnit
 f() { try {} catch (e, s for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 45, 1),
       error(diag.catchSyntaxExtraParameters, 25, 3),
       error(diag.expectedCatchClauseBody, 25, 3),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2329,9 +2328,9 @@ CompilationUnit
 f() { try {} catch (e, s if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntaxExtraParameters, 25, 2),
       error(diag.expectedCatchClauseBody, 25, 2),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2383,9 +2382,9 @@ CompilationUnit
 f() { try {} catch (e, s l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.catchSyntaxExtraParameters, 25, 1),
       error(diag.expectedCatchClauseBody, 25, 1),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2422,8 +2421,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -2438,9 +2436,9 @@ CompilationUnit
 f() { try {} catch (e, s int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntaxExtraParameters, 25, 3),
       error(diag.expectedCatchClauseBody, 25, 3),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2496,9 +2494,9 @@ CompilationUnit
 f() { try {} catch (e, s void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntaxExtraParameters, 25, 4),
       error(diag.expectedCatchClauseBody, 25, 4),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2554,9 +2552,9 @@ CompilationUnit
 f() { try {} catch (e, s var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.catchSyntaxExtraParameters, 25, 3),
       error(diag.expectedCatchClauseBody, 25, 3),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2606,9 +2604,9 @@ CompilationUnit
 f() { try {} catch (e, s return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntaxExtraParameters, 25, 6),
       error(diag.expectedCatchClauseBody, 25, 6),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2654,9 +2652,9 @@ CompilationUnit
 f() { try {} catch (e, s switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntaxExtraParameters, 25, 6),
       error(diag.expectedCatchClauseBody, 25, 6),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2707,9 +2705,9 @@ CompilationUnit
 f() { try {} catch (e, s try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 43, 1),
       error(diag.catchSyntaxExtraParameters, 25, 3),
       error(diag.expectedCatchClauseBody, 25, 3),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2761,9 +2759,9 @@ CompilationUnit
 f() { try {} catch (e, s while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntaxExtraParameters, 25, 5),
       error(diag.expectedCatchClauseBody, 25, 5),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -2900,8 +2898,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -2915,9 +2912,9 @@ CompilationUnit
 f() { try {} catch ( assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 21, 6),
       error(diag.expectedCatchClauseBody, 21, 6),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3007,10 +3004,10 @@ CompilationUnit
 f() { try {} catch ( break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.catchSyntax, 21, 5),
       error(diag.expectedCatchClauseBody, 21, 5),
       error(diag.breakOutsideOfLoop, 21, 5),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3053,10 +3050,10 @@ CompilationUnit
 f() { try {} catch ( continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 31, 1),
       error(diag.catchSyntax, 21, 8),
       error(diag.expectedCatchClauseBody, 21, 8),
       error(diag.continueOutsideOfLoop, 21, 8),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3099,9 +3096,9 @@ CompilationUnit
 f() { try {} catch ( do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntax, 21, 2),
       error(diag.expectedCatchClauseBody, 21, 2),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3194,9 +3191,9 @@ CompilationUnit
 f() { try {} catch ( for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntax, 21, 3),
       error(diag.expectedCatchClauseBody, 21, 3),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3250,9 +3247,9 @@ CompilationUnit
 f() { try {} catch ( if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 21, 2),
       error(diag.expectedCatchClauseBody, 21, 2),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3301,12 +3298,12 @@ CompilationUnit
 f() { try {} catch ( l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 27, 1),
+      error(diag.expectedToken, 21, 1),
       error(diag.catchSyntax, 22, 1),
       error(diag.expectedCatchClauseBody, 22, 1),
       error(diag.missingIdentifier, 22, 1),
-      error(diag.expectedToken, 21, 1),
       error(diag.unexpectedToken, 22, 1),
+      error(diag.expectedToken, 22, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3353,9 +3350,9 @@ CompilationUnit
 f() { try {} catch ( int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
       error(diag.catchSyntax, 25, 1),
       error(diag.expectedCatchClauseBody, 25, 1),
+      error(diag.expectedToken, 25, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3406,9 +3403,9 @@ CompilationUnit
 f() { try {} catch ( void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntax, 21, 4),
       error(diag.expectedCatchClauseBody, 21, 4),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3461,9 +3458,9 @@ CompilationUnit
 f() { try {} catch ( var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 28, 1),
       error(diag.catchSyntax, 21, 3),
       error(diag.expectedCatchClauseBody, 21, 3),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3510,9 +3507,9 @@ CompilationUnit
 f() { try {} catch ( return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 29, 1),
       error(diag.catchSyntax, 21, 6),
       error(diag.expectedCatchClauseBody, 21, 6),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3555,9 +3552,9 @@ CompilationUnit
 f() { try {} catch ( switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.catchSyntax, 21, 6),
       error(diag.expectedCatchClauseBody, 21, 6),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3605,9 +3602,9 @@ CompilationUnit
 f() { try {} catch ( try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntax, 21, 3),
       error(diag.expectedCatchClauseBody, 21, 3),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -3656,9 +3653,9 @@ CompilationUnit
 f() { try {} catch ( while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 21, 5),
       error(diag.expectedCatchClauseBody, 21, 5),
+      error(diag.expectedToken, 21, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -4323,8 +4320,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -5261,8 +5257,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -5967,8 +5962,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -6587,8 +6581,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -7183,8 +7176,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -7926,9 +7918,9 @@ CompilationUnit
 f() { try {} on A catch (e assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 27, 6),
       error(diag.expectedCatchClauseBody, 27, 6),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -7978,8 +7970,8 @@ CompilationUnit
 f() { try {} on A catch (e {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 30, 1),
       error(diag.catchSyntax, 27, 1),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8022,10 +8014,10 @@ CompilationUnit
 f() { try {} on A catch (e break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 27, 5),
       error(diag.expectedCatchClauseBody, 27, 5),
       error(diag.breakOutsideOfLoop, 27, 5),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8071,10 +8063,10 @@ CompilationUnit
 f() { try {} on A catch (e continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 27, 8),
       error(diag.expectedCatchClauseBody, 27, 8),
       error(diag.continueOutsideOfLoop, 27, 8),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8120,9 +8112,9 @@ CompilationUnit
 f() { try {} on A catch (e do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 47, 1),
       error(diag.catchSyntax, 27, 2),
       error(diag.expectedCatchClauseBody, 27, 2),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8220,9 +8212,9 @@ CompilationUnit
 f() { try {} on A catch (e for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 47, 1),
       error(diag.catchSyntax, 27, 3),
       error(diag.expectedCatchClauseBody, 27, 3),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8279,9 +8271,9 @@ CompilationUnit
 f() { try {} on A catch (e if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntax, 27, 2),
       error(diag.expectedCatchClauseBody, 27, 2),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8333,9 +8325,9 @@ CompilationUnit
 f() { try {} on A catch (e l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntax, 27, 1),
       error(diag.expectedCatchClauseBody, 27, 1),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8372,8 +8364,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -8387,9 +8378,9 @@ CompilationUnit
 f() { try {} on A catch (e int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntax, 27, 3),
       error(diag.expectedCatchClauseBody, 27, 3),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8445,9 +8436,9 @@ CompilationUnit
 f() { try {} on A catch (e void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntax, 27, 4),
       error(diag.expectedCatchClauseBody, 27, 4),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8503,9 +8494,9 @@ CompilationUnit
 f() { try {} on A catch (e var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 27, 3),
       error(diag.expectedCatchClauseBody, 27, 3),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8555,9 +8546,9 @@ CompilationUnit
 f() { try {} on A catch (e return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
       error(diag.catchSyntax, 27, 6),
       error(diag.expectedCatchClauseBody, 27, 6),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8603,9 +8594,9 @@ CompilationUnit
 f() { try {} on A catch (e switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntax, 27, 6),
       error(diag.expectedCatchClauseBody, 27, 6),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8656,9 +8647,9 @@ CompilationUnit
 f() { try {} on A catch (e try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 45, 1),
       error(diag.catchSyntax, 27, 3),
       error(diag.expectedCatchClauseBody, 27, 3),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8710,9 +8701,9 @@ CompilationUnit
 f() { try {} on A catch (e while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 43, 1),
       error(diag.catchSyntax, 27, 5),
       error(diag.expectedCatchClauseBody, 27, 5),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8764,9 +8755,9 @@ CompilationUnit
 f() { try {} on A catch (e,  assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 44, 1),
       error(diag.catchSyntax, 29, 6),
       error(diag.expectedCatchClauseBody, 29, 6),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8868,10 +8859,10 @@ CompilationUnit
 f() { try {} on A catch (e,  break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 29, 5),
       error(diag.expectedCatchClauseBody, 29, 5),
       error(diag.breakOutsideOfLoop, 29, 5),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8920,10 +8911,10 @@ CompilationUnit
 f() { try {} on A catch (e,  continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntax, 29, 8),
       error(diag.expectedCatchClauseBody, 29, 8),
       error(diag.continueOutsideOfLoop, 29, 8),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -8972,9 +8963,9 @@ CompilationUnit
 f() { try {} on A catch (e,  do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 49, 1),
       error(diag.catchSyntax, 29, 2),
       error(diag.expectedCatchClauseBody, 29, 2),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9079,9 +9070,9 @@ CompilationUnit
 f() { try {} on A catch (e,  for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 49, 1),
       error(diag.catchSyntax, 29, 3),
       error(diag.expectedCatchClauseBody, 29, 3),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9141,9 +9132,9 @@ CompilationUnit
 f() { try {} on A catch (e,  if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 29, 2),
       error(diag.expectedCatchClauseBody, 29, 2),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9198,12 +9189,12 @@ CompilationUnit
 f() { try {} on A catch (e,  l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 35, 1),
+      error(diag.expectedToken, 29, 1),
       error(diag.catchSyntaxExtraParameters, 30, 1),
       error(diag.expectedCatchClauseBody, 30, 1),
       error(diag.missingIdentifier, 30, 1),
-      error(diag.expectedToken, 29, 1),
       error(diag.unexpectedToken, 30, 1),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9256,9 +9247,9 @@ CompilationUnit
 f() { try {} on A catch (e,  int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntaxExtraParameters, 33, 1),
       error(diag.expectedCatchClauseBody, 33, 1),
+      error(diag.expectedToken, 33, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9315,9 +9306,9 @@ CompilationUnit
 f() { try {} on A catch (e,  void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntax, 29, 4),
       error(diag.expectedCatchClauseBody, 29, 4),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9376,9 +9367,9 @@ CompilationUnit
 f() { try {} on A catch (e,  var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 29, 3),
       error(diag.expectedCatchClauseBody, 29, 3),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9431,9 +9422,9 @@ CompilationUnit
 f() { try {} on A catch (e,  return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 29, 6),
       error(diag.expectedCatchClauseBody, 29, 6),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9482,9 +9473,9 @@ CompilationUnit
 f() { try {} on A catch (e,  switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 43, 1),
       error(diag.catchSyntax, 29, 6),
       error(diag.expectedCatchClauseBody, 29, 6),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9538,9 +9529,9 @@ CompilationUnit
 f() { try {} on A catch (e,  try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 47, 1),
       error(diag.catchSyntax, 29, 3),
       error(diag.expectedCatchClauseBody, 29, 3),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9595,9 +9586,9 @@ CompilationUnit
 f() { try {} on A catch (e,  while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 45, 1),
       error(diag.catchSyntax, 29, 5),
       error(diag.expectedCatchClauseBody, 29, 5),
+      error(diag.expectedToken, 29, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9652,9 +9643,9 @@ CompilationUnit
 f() { try {} on A catch (e, s assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 45, 1),
       error(diag.catchSyntaxExtraParameters, 30, 6),
       error(diag.expectedCatchClauseBody, 30, 6),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9707,8 +9698,8 @@ CompilationUnit
 f() { try {} on A catch (e, s {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntaxExtraParameters, 30, 1),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9754,10 +9745,10 @@ CompilationUnit
 f() { try {} on A catch (e, s break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntaxExtraParameters, 30, 5),
       error(diag.expectedCatchClauseBody, 30, 5),
       error(diag.breakOutsideOfLoop, 30, 5),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9806,10 +9797,10 @@ CompilationUnit
 f() { try {} on A catch (e, s continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntaxExtraParameters, 30, 8),
       error(diag.expectedCatchClauseBody, 30, 8),
       error(diag.continueOutsideOfLoop, 30, 8),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9858,9 +9849,9 @@ CompilationUnit
 f() { try {} on A catch (e, s do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 50, 1),
       error(diag.catchSyntaxExtraParameters, 30, 2),
       error(diag.expectedCatchClauseBody, 30, 2),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -9964,9 +9955,9 @@ CompilationUnit
 f() { try {} on A catch (e, s for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 50, 1),
       error(diag.catchSyntaxExtraParameters, 30, 3),
       error(diag.expectedCatchClauseBody, 30, 3),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10026,9 +10017,9 @@ CompilationUnit
 f() { try {} on A catch (e, s if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 43, 1),
       error(diag.catchSyntaxExtraParameters, 30, 2),
       error(diag.expectedCatchClauseBody, 30, 2),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10083,9 +10074,9 @@ CompilationUnit
 f() { try {} on A catch (e, s l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntaxExtraParameters, 30, 1),
       error(diag.expectedCatchClauseBody, 30, 1),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10125,8 +10116,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -10141,9 +10131,9 @@ CompilationUnit
 f() { try {} on A catch (e, s int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntaxExtraParameters, 30, 3),
       error(diag.expectedCatchClauseBody, 30, 3),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10203,9 +10193,9 @@ CompilationUnit
 f() { try {} on A catch (e, s void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntaxExtraParameters, 30, 4),
       error(diag.expectedCatchClauseBody, 30, 4),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10264,9 +10254,9 @@ CompilationUnit
 f() { try {} on A catch (e, s var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntaxExtraParameters, 30, 3),
       error(diag.expectedCatchClauseBody, 30, 3),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10319,9 +10309,9 @@ CompilationUnit
 f() { try {} on A catch (e, s return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntaxExtraParameters, 30, 6),
       error(diag.expectedCatchClauseBody, 30, 6),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10370,9 +10360,9 @@ CompilationUnit
 f() { try {} on A catch (e, s switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 44, 1),
       error(diag.catchSyntaxExtraParameters, 30, 6),
       error(diag.expectedCatchClauseBody, 30, 6),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10426,9 +10416,9 @@ CompilationUnit
 f() { try {} on A catch (e, s try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 48, 1),
       error(diag.catchSyntaxExtraParameters, 30, 3),
       error(diag.expectedCatchClauseBody, 30, 3),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10483,9 +10473,9 @@ CompilationUnit
 f() { try {} on A catch (e, s while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 46, 1),
       error(diag.catchSyntaxExtraParameters, 30, 5),
       error(diag.expectedCatchClauseBody, 30, 5),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10631,8 +10621,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -10646,9 +10635,9 @@ CompilationUnit
 f() { try {} on A catch ( assert (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 41, 1),
       error(diag.catchSyntax, 26, 6),
       error(diag.expectedCatchClauseBody, 26, 6),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10744,10 +10733,10 @@ CompilationUnit
 f() { try {} on A catch ( break; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntax, 26, 5),
       error(diag.expectedCatchClauseBody, 26, 5),
       error(diag.breakOutsideOfLoop, 26, 5),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10793,10 +10782,10 @@ CompilationUnit
 f() { try {} on A catch ( continue; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 36, 1),
       error(diag.catchSyntax, 26, 8),
       error(diag.expectedCatchClauseBody, 26, 8),
       error(diag.continueOutsideOfLoop, 26, 8),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10842,9 +10831,9 @@ CompilationUnit
 f() { try {} on A catch ( do {} while (true); }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 46, 1),
       error(diag.catchSyntax, 26, 2),
       error(diag.expectedCatchClauseBody, 26, 2),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -10943,9 +10932,9 @@ CompilationUnit
 f() { try {} on A catch ( for (var x in y) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 46, 1),
       error(diag.catchSyntax, 26, 3),
       error(diag.expectedCatchClauseBody, 26, 3),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11002,9 +10991,9 @@ CompilationUnit
 f() { try {} on A catch ( if (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 39, 1),
       error(diag.catchSyntax, 26, 2),
       error(diag.expectedCatchClauseBody, 26, 2),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11056,12 +11045,12 @@ CompilationUnit
 f() { try {} on A catch ( l: {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 32, 1),
+      error(diag.expectedToken, 26, 1),
       error(diag.catchSyntax, 27, 1),
       error(diag.expectedCatchClauseBody, 27, 1),
       error(diag.missingIdentifier, 27, 1),
-      error(diag.expectedToken, 26, 1),
       error(diag.unexpectedToken, 27, 1),
+      error(diag.expectedToken, 27, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11111,9 +11100,9 @@ CompilationUnit
 f() { try {} on A catch ( int f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 37, 1),
       error(diag.catchSyntax, 30, 1),
       error(diag.expectedCatchClauseBody, 30, 1),
+      error(diag.expectedToken, 30, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11167,9 +11156,9 @@ CompilationUnit
 f() { try {} on A catch ( void f() {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 38, 1),
       error(diag.catchSyntax, 26, 4),
       error(diag.expectedCatchClauseBody, 26, 4),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11225,9 +11214,9 @@ CompilationUnit
 f() { try {} on A catch ( var x; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 33, 1),
       error(diag.catchSyntax, 26, 3),
       error(diag.expectedCatchClauseBody, 26, 3),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11277,9 +11266,9 @@ CompilationUnit
 f() { try {} on A catch ( return; }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 34, 1),
       error(diag.catchSyntax, 26, 6),
       error(diag.expectedCatchClauseBody, 26, 6),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11325,9 +11314,9 @@ CompilationUnit
 f() { try {} on A catch ( switch (x) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 40, 1),
       error(diag.catchSyntax, 26, 6),
       error(diag.expectedCatchClauseBody, 26, 6),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11378,9 +11367,9 @@ CompilationUnit
 f() { try {} on A catch ( try {} finally {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 44, 1),
       error(diag.catchSyntax, 26, 3),
       error(diag.expectedCatchClauseBody, 26, 3),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -11432,9 +11421,9 @@ CompilationUnit
 f() { try {} on A catch ( while (true) {} }
 ''');
     parseResult.assertErrors([
-      error(diag.expectedToken, 42, 1),
       error(diag.catchSyntax, 26, 5),
       error(diag.expectedCatchClauseBody, 26, 5),
+      error(diag.expectedToken, 26, 1),
     ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
@@ -12141,8 +12130,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {
@@ -13240,8 +13228,7 @@ CompilationUnit
               LabeledStatement
                 labels
                   Label
-                    label: SimpleIdentifier
-                      token: l
+                    name: l
                     colon: :
                 statement: Block
                   leftBracket: {

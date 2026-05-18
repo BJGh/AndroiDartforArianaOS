@@ -17,8 +17,6 @@ import 'package:analyzer/dart/analysis/features.dart';
 List<String> experimentsForTests = List.unmodifiable([
   Feature.augmentations.enableString,
   Feature.enhanced_parts.enableString,
-  Feature.macros.enableString,
-  Feature.primary_constructors.enableString,
   Feature.static_extensions.enableString,
   Feature.variance.enableString,
 ]);

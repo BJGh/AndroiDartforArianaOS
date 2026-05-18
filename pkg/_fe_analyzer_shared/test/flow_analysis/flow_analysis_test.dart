@@ -12745,6 +12745,249 @@ main() {
       });
     });
   });
+
+  group('Anonymous methods:', () {
+    test('Nested return targets', () {
+      var branch1 = Var('branch1');
+      var branch2 = Var('branch2');
+      var branch3 = Var('branch3');
+      h.run([
+        declare(branch1),
+        declare(branch2),
+        declare(branch3),
+        expr('int').invokeAnonymousMethod([
+          if_(expr('bool'), [branch1.write(expr('int')), return_()]), // (1)
+          expr('int').invokeAnonymousMethod([
+            if_(expr('bool'), [branch2.write(expr('int')), return_()]), // (2)
+          ], returnType: 'void'),
+          // (2) jumps to here, but not (1) or (3)
+          checkUnassigned(branch1, true),
+          checkUnassigned(branch2, false),
+          checkUnassigned(branch3, true),
+          if_(expr('bool'), [branch3.write(expr('int')), return_()]), // (3)
+        ], returnType: 'void'),
+        // (1) and (3) jump to here
+        checkUnassigned(branch1, false),
+        checkUnassigned(branch2, false),
+        checkUnassigned(branch3, false),
+      ]);
+    });
+
+    test('Function expression inside an anonymous method', () {
+      var branch1 = Var('branch1');
+      var branch2 = Var('branch2');
+      var branch3 = Var('branch3');
+      h.run([
+        declare(branch1),
+        declare(branch2),
+        declare(branch3),
+        expr('int').invokeAnonymousMethod([
+          if_(expr('bool'), [branch1.write(expr('int')), return_()]), // (1)
+          localFunction([]),
+          if_(expr('bool'), [branch2.write(expr('int')), return_()]), // (2)
+        ], returnType: 'void'),
+        // (1) and (2) jump to here
+        checkUnassigned(branch1, false),
+        checkUnassigned(branch2, false),
+        expr('int').invokeAnonymousMethod([
+          localFunction([
+            if_(expr('bool'), [
+              branch3.write(expr('int')),
+              checkReachable(true),
+              return_(),
+            ]), // (3)
+          ]),
+          throw_(expr('int')),
+        ], returnType: 'void'),
+        // (3) does not jump to here
+        checkReachable(false),
+      ]);
+    });
+
+    test('Null-aware anonymous method invocation', () {
+      var branch1 = Var('branch1');
+      h.run([
+        declare(branch1),
+        expr('int?')
+            .invokeAnonymousMethod(isNullAware: true, [
+              branch1.write(expr('int')),
+              checkUnassigned(branch1, false),
+              checkAssigned(branch1, true),
+              return_(),
+            ], returnType: 'int')
+            .invokeAnonymousMethod([
+              // Null shorting has not terminated yet, so `branch1` is still
+              // known to be assigned.
+              checkUnassigned(branch1, false),
+              checkAssigned(branch1, true),
+            ], returnType: 'int'),
+        // Null shorting has now terminated, so `branch1` is now neither
+        // definitely assigned nor definitely unassigned.
+        checkUnassigned(branch1, false),
+        checkAssigned(branch1, false),
+      ]);
+    });
+
+    test('Anonymous method with target having no ExpressionInfo', () {
+      h.run([
+        expr(
+          'A',
+        ).invokeAnonymousMethod([checkReachable(true)], returnType: 'void'),
+      ]);
+    });
+
+    test('Anonymous method has a different notion of this', () {
+      h.addMember('C', '_field', 'Object', promotable: true);
+      h.thisType = 'C';
+      h.run([
+        this_.as_('C'),
+        this_.property('_field').as_('num'),
+        checkPromoted(this_.property('_field'), 'num'),
+        expr('C').invokeAnonymousMethod([
+          checkNotPromoted(this_.property('_field')),
+          this_.property('_field').as_('int'),
+          checkPromoted(this_.property('_field'), 'int'),
+        ], returnType: 'void'),
+        checkPromoted(this_.property('_field'), 'num'),
+      ]);
+    });
+
+    test(
+      'Anonymous method with target having ExpressionInfo but not a Reference',
+      () {
+        h.addMember('C', '_field', 'Object', promotable: true);
+        h.thisType = 'C';
+        h.run([
+          this_.as_('C'),
+          this_.property('_field').as_('num'),
+          checkPromoted(this_.property('_field'), 'num'),
+          expr('bool').conditional(expr('C'), expr('C')).invokeAnonymousMethod([
+            checkNotPromoted(this_.property('_field')),
+            this_.property('_field').as_('int'),
+            checkPromoted(this_.property('_field'), 'int'),
+          ], returnType: 'void'),
+          checkPromoted(this_.property('_field'), 'num'),
+        ]);
+      },
+    );
+
+    test('Anonymous method promotes this._field '
+        'from localVariable._field and vice versa', () {
+      var x = Var('x');
+      h.addMember('A', '_field', 'Object', promotable: true);
+      h.run([
+        declare(x, type: 'A', initializer: expr('A')),
+        x.property('_field').as_('num'),
+        x.invokeAnonymousMethod([
+          checkPromoted(this_.property('_field'), 'num'),
+          this_.property('_field').as_('int'),
+        ], returnType: 'void'),
+        checkPromoted(x.property('_field'), 'int'),
+      ]);
+    });
+
+    test('Anonymous method promotes this._field '
+        'from instanceVariable._field and vice versa', () {
+      h.addMember('A', '_field', 'Object', promotable: true);
+      h.addMember('B', '_subField', 'Object', promotable: true);
+      h.thisType = 'A';
+      h.run([
+        this_.as_('A'),
+        this_.property('_field').as_('B'),
+        this_.property('_field').property('_subField').as_('num'),
+        this_.property('_field').invokeAnonymousMethod([
+          checkPromoted(this_.property('_subField'), 'num'),
+          this_.property('_subField').as_('int'),
+        ], returnType: 'void'),
+        checkPromoted(this_.property('_field').property('_subField'), 'int'),
+      ]);
+    });
+
+    test('Parameterized anonymous method has the same notion of this', () {
+      h.addMember('C', '_field', 'Object', promotable: true);
+      h.thisType = 'C';
+      h.run([
+        this_.as_('C'),
+        this_.property('_field').as_('num'),
+        checkPromoted(this_.property('_field'), 'num'),
+        expr('C').invokeAnonymousMethod(isParameterless: false, [
+          checkPromoted(this_.property('_field'), 'num'),
+          this_.property('_field').as_('int'),
+          checkPromoted(this_.property('_field'), 'int'),
+        ], returnType: 'void'),
+        checkPromoted(this_.property('_field'), 'int'),
+      ]);
+    });
+
+    test('Parameterized anonymous method with target having ExpressionInfo '
+        'but not a Reference', () {
+      h.addMember('C', '_field', 'Object', promotable: true);
+      h.thisType = 'C';
+      h.run([
+        this_.as_('C'),
+        this_.property('_field').as_('num'),
+        checkPromoted(this_.property('_field'), 'num'),
+        expr('bool')
+            .conditional(expr('C'), expr('C'))
+            .invokeAnonymousMethod(isParameterless: false, [
+              checkPromoted(this_.property('_field'), 'num'),
+              this_.property('_field').as_('int'),
+              checkPromoted(this_.property('_field'), 'int'),
+            ], returnType: 'void'),
+        checkPromoted(this_.property('_field'), 'int'),
+      ]);
+    });
+
+    test('Parameterized anonymous method parameter '
+        'does not inherit promotion', () {
+      var x = Var('x');
+      var p = Var('p');
+      h.addMember('A', '_field', 'Object', promotable: true);
+      h.thisType = 'A';
+      h.run([
+        declare(x, type: 'A', initializer: expr('A')),
+        x.property('_field').as_('num'),
+        x.invokeAnonymousMethod(isParameterless: false, parameter: p, [
+          checkNotPromoted(p.property('_field')),
+          p.property('_field').as_('int'),
+        ], returnType: 'void'),
+        checkPromoted(x.property('_field'), 'num'),
+      ]);
+    });
+
+    test('Parameterized anonymous method does not promote parameter._field '
+        'from instanceVariable._field or vice versa', () {
+      var p = Var('p');
+      h.addMember('A', '_field', 'B', promotable: true);
+      h.addMember('B', '_subField', 'Object', promotable: true);
+      h.thisType = 'A';
+      h.run([
+        this_.as_('A'),
+        this_.property('_field').as_('B'),
+        this_.property('_field').property('_subField').as_('num'),
+        this_
+            .property('_field')
+            .invokeAnonymousMethod(isParameterless: false, parameter: p, [
+              checkNotPromoted(p.property('_subField')),
+              p.property('_subField').as_('int'),
+        ], returnType: 'void'),
+        checkPromoted(this_.property('_field').property('_subField'), 'num'),
+      ]);
+    });
+
+    test('Anonymous method this serves as condition variable', () {
+      var x = Var('x');
+      h.run([
+        declare(x, type: 'int?', initializer: expr('int?')),
+        x.eq(nullLiteral).not.invokeAnonymousMethod(isParameterless: true, [
+          this_.conditional(
+            checkPromoted(x, 'int'),
+            expr('bool'),
+          ),
+        ], returnType: 'bool'),
+      ]);
+    });
+  });
 }
 
 /// Returns the appropriate matcher for expecting an assertion error to be

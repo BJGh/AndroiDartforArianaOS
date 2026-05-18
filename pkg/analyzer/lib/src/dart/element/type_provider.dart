@@ -7,6 +7,8 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type_provider.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
+import 'package:analyzer/src/exception/exception.dart';
+import 'package:collection/collection.dart';
 
 const Map<String, Set<String>> _nonSubtypableClassMap = {
   'dart:async': _nonSubtypableDartAsyncClassNames,
@@ -596,11 +598,20 @@ class TypeProviderImpl extends TypeProviderBase {
   }
 
   /// Return the class with the given [name] from the given [library], or
-  /// throw a [StateError] if there is no class with the given name.
+  /// throw a [MissingRequiredSdkClassException] if there is no class with the
+  /// given name.
   ClassElementImpl _getClassElement(LibraryElementImpl library, String name) {
     var element = library.getClass(name);
     if (element == null) {
-      throw StateError('No definition of type $name');
+      throw MissingRequiredSdkClassException(
+        libraryUri: library.source.uri,
+        libraryPath: library.source.fullName,
+        className: name,
+        declaredClassNames: library.classes
+            .map((class_) => class_.name)
+            .nonNulls
+            .sorted(),
+      );
     }
     return element;
   }

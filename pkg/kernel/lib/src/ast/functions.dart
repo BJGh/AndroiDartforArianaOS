@@ -41,6 +41,7 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
   int requiredParameterCount;
   List<VariableDeclaration> positionalParameters;
   List<VariableDeclaration> namedParameters;
+  VariableDeclaration? thisVariable;
   DartType returnType; // Not null.
   Statement? _body;
 
@@ -48,7 +49,7 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
   Scope? scope;
 
   @override
-  List<VariableContext>? contexts;
+  List<VariableContext>? capturedContexts;
 
   /// The emitted value of non-sync functions
   ///
@@ -100,22 +101,24 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
     _body = body;
   }
 
-  FunctionNode(this._body,
-      {List<TypeParameter>? typeParameters,
-      List<VariableDeclaration>? positionalParameters,
-      List<VariableDeclaration>? namedParameters,
-      int? requiredParameterCount,
-      this.returnType = const DynamicType(),
-      this.asyncMarker = AsyncMarker.Sync,
-      AsyncMarker? dartAsyncMarker,
-      this.emittedValueType})
-      : this.positionalParameters =
-            positionalParameters ?? <VariableDeclaration>[],
-        this.requiredParameterCount =
-            requiredParameterCount ?? positionalParameters?.length ?? 0,
-        this.namedParameters = namedParameters ?? <VariableDeclaration>[],
-        this.typeParameters = typeParameters ?? <TypeParameter>[],
-        this.dartAsyncMarker = dartAsyncMarker ?? asyncMarker {
+  FunctionNode(
+    this._body, {
+    List<TypeParameter>? typeParameters,
+    List<VariableDeclaration>? positionalParameters,
+    List<VariableDeclaration>? namedParameters,
+    int? requiredParameterCount,
+    this.returnType = const DynamicType(),
+    this.asyncMarker = AsyncMarker.Sync,
+    AsyncMarker? dartAsyncMarker,
+    this.emittedValueType,
+    this.thisVariable,
+  }) : this.positionalParameters =
+           positionalParameters ?? <VariableDeclaration>[],
+       this.requiredParameterCount =
+           requiredParameterCount ?? positionalParameters?.length ?? 0,
+       this.namedParameters = namedParameters ?? <VariableDeclaration>[],
+       this.typeParameters = typeParameters ?? <TypeParameter>[],
+       this.dartAsyncMarker = dartAsyncMarker ?? asyncMarker {
     setParents(this.typeParameters, this);
     setParents(this.positionalParameters, this);
     setParents(this.namedParameters, this);
@@ -124,14 +127,15 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
 
   static DartType _getTypeOfVariable(VariableDeclaration node) => node.type;
 
-  static NamedType _getNamedTypeOfVariable(VariableDeclaration node,
-      [Substitution? substitution]) {
+  static NamedType _getNamedTypeOfVariable(
+    VariableDeclaration node, [
+    Substitution? substitution,
+  ]) {
     return new NamedType(
-        node.name!,
-        substitution != null
-            ? substitution.substituteType(node.type)
-            : node.type,
-        isRequired: node.isRequired);
+      node.name!,
+      substitution != null ? substitution.substituteType(node.type) : node.type,
+      isRequired: node.isRequired,
+    );
   }
 
   /// Returns the function type of the node reusing its type parameters.
@@ -142,8 +146,10 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
   /// is useful in some contexts, especially when reasoning about the function
   /// type of the enclosing generic function and in combination with
   /// [FunctionType.withoutTypeParameters].
-  FunctionType computeThisFunctionType(Nullability nullability,
-      {bool reuseTypeParameters = false}) {
+  FunctionType computeThisFunctionType(
+    Nullability nullability, {
+    bool reuseTypeParameters = false,
+  }) {
     TreeNode? parent = this.parent;
 
     List<StructuralParameter> structuralParameters;
@@ -157,17 +163,21 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
       structuralParameters = const <StructuralParameter>[];
       returnType = this.returnType;
       List<VariableDeclaration> thisPositionals = this.positionalParameters;
-      positionalParameters = List.generate(thisPositionals.length,
-          (index) => _getTypeOfVariable(thisPositionals[index]),
-          growable: false);
+      positionalParameters = List.generate(
+        thisPositionals.length,
+        (index) => _getTypeOfVariable(thisPositionals[index]),
+        growable: false,
+      );
 
       List<VariableDeclaration> thisNamed = this.namedParameters;
       if (thisNamed.isEmpty) {
         namedParameters = const <NamedType>[];
       } else {
-        namedParameters = List.generate(thisNamed.length,
-            (index) => _getNamedTypeOfVariable(thisNamed[index]),
-            growable: false);
+        namedParameters = List.generate(
+          thisNamed.length,
+          (index) => _getNamedTypeOfVariable(thisNamed[index]),
+          growable: false,
+        );
         namedParameters.sort();
       }
     } else {
@@ -181,26 +191,34 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
 
       List<VariableDeclaration> thisPositionals = this.positionalParameters;
       positionalParameters = List.generate(
-          thisPositionals.length,
-          (index) => substitution
-              .substituteType(_getTypeOfVariable(thisPositionals[index])),
-          growable: false);
+        thisPositionals.length,
+        (index) => substitution.substituteType(
+          _getTypeOfVariable(thisPositionals[index]),
+        ),
+        growable: false,
+      );
       List<VariableDeclaration> thisNamed = this.namedParameters;
       if (thisNamed.isEmpty) {
         namedParameters = const <NamedType>[];
       } else {
-        namedParameters = List.generate(thisNamed.length,
-            (index) => _getNamedTypeOfVariable(thisNamed[index], substitution),
-            growable: false);
+        namedParameters = List.generate(
+          thisNamed.length,
+          (index) => _getNamedTypeOfVariable(thisNamed[index], substitution),
+          growable: false,
+        );
         namedParameters.sort();
       }
     }
     // TODO(johnniwinther,cstefantsova): Cache the function type here and use
     // [DartType.withDeclaredNullability] to handle the variants.
-    return new FunctionType(positionalParameters, returnType, nullability,
-        namedParameters: namedParameters,
-        typeParameters: structuralParameters,
-        requiredParameterCount: requiredParameterCount);
+    return new FunctionType(
+      positionalParameters,
+      returnType,
+      nullability,
+      namedParameters: namedParameters,
+      typeParameters: structuralParameters,
+      requiredParameterCount: requiredParameterCount,
+    );
   }
 
   /// Returns the function type of the function node.
@@ -262,8 +280,10 @@ class FunctionNode extends TreeNode implements ScopeProvider, ContextConsumer {
     v.transformVariableDeclarationList(namedParameters, this);
     returnType = v.visitDartType(returnType, cannotRemoveSentinel);
     if (emittedValueType != null) {
-      emittedValueType =
-          v.visitDartType(emittedValueType!, cannotRemoveSentinel);
+      emittedValueType = v.visitDartType(
+        emittedValueType!,
+        cannotRemoveSentinel,
+      );
     }
     if (redirectingFactoryTarget?.typeArguments != null) {
       v.transformDartTypeList(redirectingFactoryTarget!.typeArguments!);

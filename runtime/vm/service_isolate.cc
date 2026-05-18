@@ -70,15 +70,25 @@ bool ServiceIsolate::SendServiceControlMessage(Thread* thread,
   cname.type = Dart_CObject_kString;
   cname.value.as_string = const_cast<char*>(name);
 
-  Dart_CObject* values[4];
+  Dart_CObject cis_system;
+  bool is_startup = (code == VM_SERVICE_ISOLATE_STARTUP_MESSAGE_ID);
+  if (is_startup) {
+    cis_system.type = Dart_CObject_kBool;
+    cis_system.value.as_bool = Isolate::IsSystemIsolate(thread->isolate());
+  }
+
+  Dart_CObject* values[5];
   values[0] = &ccode;
   values[1] = &port_int;
   values[2] = &send_port;
   values[3] = &cname;
+  if (is_startup) {
+    values[4] = &cis_system;
+  }
 
   Dart_CObject message;
   message.type = Dart_CObject_kArray;
-  message.value.as_array.length = 4;
+  message.value.as_array.length = is_startup ? 5 : 4;
   message.value.as_array.values = values;
 
   return PortMap::PostMessage(WriteApiMessage(thread->zone(), &message, port_,
@@ -400,9 +410,8 @@ class RunServiceTask : public ThreadPool::Task {
       return;
     }
 
-    ServiceIsolate::FinishedInitializing();
     isolate->message_handler()->Run(
-        isolate->group()->thread_pool(), nullptr,
+        isolate->group()->thread_pool(),
         [](uword parameter) {
           ShutdownIsolate(reinterpret_cast<Dart_Isolate>(parameter));
           ServiceIsolate::FinishedExiting();
@@ -420,7 +429,6 @@ class RunServiceTask : public ThreadPool::Task {
       auto T = Thread::Current();
       TransitionNativeToVM transition(T);
       StackZone zone(T);
-      HandleScope handle_scope(T);
 
       auto I = T->isolate();
       ASSERT(I->is_service_isolate());
@@ -464,20 +472,44 @@ class RunServiceTask : public ThreadPool::Task {
     ASSERT(!root_library.IsNull());
     const String& entry_name = Symbols::main();
     ASSERT(!entry_name.IsNull());
-    const Function& entry = Function::Handle(
-        Z, root_library.LookupFunctionAllowPrivate(entry_name));
-    if (entry.IsNull()) {
-      // Service isolate is not supported by embedder.
+    const Object& main_closure = Object::Handle(
+        Z, root_library.InvokeGetter(entry_name, /*check_is_entrypoint=*/true,
+                                     /*respect_reflectable=*/false));
+    if (!main_closure.IsClosure()) {
       if (FLAG_trace_service) {
         OS::PrintErr(DART_VM_SERVICE_ISOLATE_NAME
                      ": Embedder did not provide a main function.\n");
       }
       return Utils::StrDup(
-          "Embedder did not provide main function for service isolate.");
+          "Embedder did not provide a main function for service isolate.");
     }
-    ASSERT(!entry.IsNull());
-    const Object& result = Object::Handle(
-        Z, DartEntry::InvokeFunction(entry, Object::empty_array()));
+
+    const Library& isolate_library =
+        Library::Handle(Z, I->group()->object_store()->isolate_library());
+    const String& start_main_isolate_str =
+        String::Handle(Z, String::New("_startMainIsolate"));
+    const Function& start_main_isolate = Function::Handle(
+        Z, isolate_library.LookupFunctionAllowPrivate(start_main_isolate_str));
+
+    const Array& args = Array::Handle(Z, Array::New(3));
+
+    // First argument is the receiver, which is null for top-level functions.
+    const Object& receiver = Object::Handle(Z, Object::null());
+    args.SetAt(0, receiver);
+
+    // Second argument is the first argument passed to _startMainIsolate, which
+    // is a closure of the service's main method.
+    args.SetAt(1, main_closure);
+
+    // The last argument is the args to be passed to the service's main, which
+    // is an empty List<String>.
+    const Type& args_type = Type::Handle(Z, Type::StringType());
+    const Array& isolate_args = Array::Handle(Z, Array::New(0, args_type));
+    args.SetAt(2, isolate_args);
+
+    const Object& result =
+        Object::Handle(Z, DartEntry::InvokeFunction(start_main_isolate, args));
+
     if (result.IsError()) {
       // Service isolate did not initialize properly.
       const char* error_cstr = Error::Cast(result).ToErrorCString();
@@ -578,12 +610,18 @@ void ServiceIsolate::Shutdown() {
 
 void ServiceIsolate::BootVmServiceLibrary() {
   Thread* thread = Thread::Current();
-  const Library& vmservice_library =
-      Library::Handle(Library::LookupLibrary(thread, Symbols::DartVMService()));
-  ASSERT(!vmservice_library.IsNull());
+  Library& lib =
+      Library::Handle(thread->isolate_group()->object_store()->root_library());
   const String& boot_function_name = String::Handle(String::New("boot"));
-  const Function& boot_function = Function::Handle(
-      vmservice_library.LookupFunctionAllowPrivate(boot_function_name));
+  Function& boot_function =
+      Function::Handle(lib.LookupFunctionAllowPrivate(boot_function_name));
+
+  if (boot_function.IsNull()) {
+    lib ^= Library::LookupLibrary(thread, Symbols::DartVMService());
+    ASSERT(!lib.IsNull());
+    boot_function ^= lib.LookupFunctionAllowPrivate(boot_function_name);
+  }
+
   ASSERT(!boot_function.IsNull());
   const Object& result = Object::Handle(
       DartEntry::InvokeFunction(boot_function, Object::empty_array()));
@@ -597,35 +635,40 @@ void ServiceIsolate::BootVmServiceLibrary() {
   }
   ASSERT(port != ILLEGAL_PORT);
   ServiceIsolate::SetServicePort(port);
+  ServiceIsolate::FinishedInitializing();
 }
 
 void ServiceIsolate::RegisterRunningIsolates(
     const GrowableArray<Dart_Port>& isolate_ports,
-    const GrowableArray<const String*>& isolate_names) {
+    const GrowableArray<const String*>& isolate_names,
+    const GrowableArray<bool>& isolate_is_system) {
   auto thread = Thread::Current();
   auto zone = thread->zone();
 
   ASSERT(thread->isolate()->is_service_isolate());
 
   // Obtain "_registerIsolate" function to call.
-  const String& library_url = Symbols::DartVMService();
-  ASSERT(!library_url.IsNull());
-  const Library& library =
-      Library::Handle(zone, Library::LookupLibrary(thread, library_url));
-  ASSERT(!library.IsNull());
-  const String& function_name =
-      String::Handle(zone, String::New("_registerIsolate"));
-  ASSERT(!function_name.IsNull());
-  const Function& register_function_ =
-      Function::Handle(zone, library.LookupFunctionAllowPrivate(function_name));
+  Library& lib =
+      Library::Handle(thread->isolate_group()->object_store()->root_library());
+  const String& function_name = String::Handle(String::New("_registerIsolate"));
+  Function& register_function_ =
+      Function::Handle(lib.LookupFunctionAllowPrivate(function_name));
+
+  if (register_function_.IsNull()) {
+    lib ^= Library::LookupLibrary(thread, Symbols::DartVMService());
+    ASSERT(!lib.IsNull());
+    register_function_ ^= lib.LookupFunctionAllowPrivate(function_name);
+  }
+
   ASSERT(!register_function_.IsNull());
 
   Integer& port_int = Integer::Handle(zone);
   SendPort& send_port = SendPort::Handle(zone);
-  Array& args = Array::Handle(zone, Array::New(3));
+  Array& args = Array::Handle(zone, Array::New(4));
   Object& result = Object::Handle(zone);
 
   ASSERT(isolate_ports.length() == isolate_names.length());
+  ASSERT(isolate_ports.length() == isolate_is_system.length());
   for (intptr_t i = 0; i < isolate_ports.length(); ++i) {
     const Dart_Port port_id = isolate_ports[i];
     const String& name = *isolate_names[i];
@@ -635,6 +678,7 @@ void ServiceIsolate::RegisterRunningIsolates(
     args.SetAt(0, port_int);
     args.SetAt(1, send_port);
     args.SetAt(2, name);
+    args.SetAt(3, Bool::Get(isolate_is_system[i]));
     result = DartEntry::InvokeFunction(register_function_, args);
     if (FLAG_trace_service) {
       OS::PrintErr("vm-service: Isolate %s %" Pd64 " registered.\n",

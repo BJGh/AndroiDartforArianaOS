@@ -38,6 +38,7 @@ enum TypeKind {
   doubleType,
   boolType,
   stringType,
+  recordType,
   objectType,
   nullType,
   neverType,
@@ -45,8 +46,10 @@ enum TypeKind {
   otherDartType,
   // Extended (non-Dart) types.
   nothing,
+  lateValue,
   typeParameters,
   typeArguments,
+  context,
 }
 
 /// Base class for types used in the CFG IR.
@@ -73,6 +76,12 @@ sealed class CType {
 
   /// Return non-nullable variant of this type (if possible).
   CType get toNonNullableType;
+
+  /// Returns true if value of this type can be `int`.
+  bool get canBeInt;
+
+  /// Returns true if value of this type can be `Future`.
+  bool get canBeFuture;
 
   @override
   bool operator ==(Object other) =>
@@ -104,6 +113,12 @@ final class IntType extends CType {
   CType get toNonNullableType => this;
 
   @override
+  bool get canBeInt => true;
+
+  @override
+  bool get canBeFuture => false;
+
+  @override
   String toString() => 'int';
 }
 
@@ -125,6 +140,12 @@ final class DoubleType extends CType {
 
   @override
   CType get toNonNullableType => this;
+
+  @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
 
   @override
   String toString() => 'double';
@@ -150,6 +171,12 @@ final class BoolType extends CType {
   CType get toNonNullableType => this;
 
   @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
+
+  @override
   String toString() => 'bool';
 }
 
@@ -173,7 +200,70 @@ final class StringType extends CType {
   CType get toNonNullableType => this;
 
   @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
+
+  @override
   String toString() => 'String';
+}
+
+/// Shape of the Dart record.
+/// Records with the same shape are compatible wrt field access.
+final class RecordShape {
+  // Number of positional fields.
+  final int positional;
+  // Named fields (sorted lexicographically).
+  final List<String> named;
+
+  const RecordShape(this.positional, this.named);
+
+  @override
+  String toString() =>
+      'Record[$positional${named.isNotEmpty ? ', named: $named' : ''}]';
+
+  @override
+  bool operator ==(Object other) =>
+      other is RecordShape &&
+      this.positional == other.positional &&
+      listEquals(this.named, other.named);
+
+  @override
+  int get hashCode =>
+      finalizeHash(combineHash(positional.hashCode, listHashCode(named)));
+}
+
+/// Non-nullable Dart record type.
+final class RecordType extends CType {
+  @override
+  TypeKind get kind => TypeKind.recordType;
+
+  @override
+  final ast.RecordType dartType;
+
+  late final shape = RecordShape(dartType.positional.length, [
+    for (final namedType in dartType.named) namedType.name,
+  ]);
+
+  RecordType(this.dartType) : assert(dartType.nullability == .nonNullable);
+
+  int get numFields => dartType.positional.length + dartType.named.length;
+
+  @override
+  bool get isNullable => false;
+
+  @override
+  CType get toNonNullableType => this;
+
+  @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
+
+  @override
+  String toString() => dartType.getDisplayString();
 }
 
 /// Dart `Object` type.
@@ -196,6 +286,12 @@ final class ObjectType extends CType {
   CType get toNonNullableType => this;
 
   @override
+  bool get canBeInt => true;
+
+  @override
+  bool get canBeFuture => true;
+
+  @override
   String toString() => 'Object';
 }
 
@@ -216,6 +312,12 @@ final class NullType extends CType {
   CType get toNonNullableType => const NeverType();
 
   @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
+
+  @override
   String toString() => 'Null';
 }
 
@@ -234,6 +336,12 @@ final class NeverType extends CType {
 
   @override
   CType get toNonNullableType => this;
+
+  @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
 
   @override
   String toString() => 'Never';
@@ -258,6 +366,12 @@ final class TopType extends CType {
   CType get toNonNullableType => const ObjectType();
 
   @override
+  bool get canBeInt => true;
+
+  @override
+  bool get canBeFuture => true;
+
+  @override
   String toString() => '<top>';
 }
 
@@ -276,6 +390,55 @@ final class StaticType extends CType {
 
   @override
   CType get toNonNullableType => CType.fromStaticType(dartType.toNonNull());
+
+  @override
+  bool get canBeInt {
+    ast.DartType type = dartType;
+    for (;;) {
+      switch (type) {
+        case ast.InterfaceType():
+          return GlobalContext.instance.typeEnvironment.isSubtypeOf(
+            GlobalContext.instance.coreTypes.intNonNullableRawType,
+            type,
+          );
+        case ast.RecordType() ||
+            ast.FunctionType() ||
+            ast.NeverType() ||
+            ast.NullType():
+          return false;
+        case ast.DynamicType() || ast.VoidType():
+          return true;
+        case ast.ClassTypeParameterType():
+          type = type.parameter.bound;
+          break;
+        case ast.FunctionTypeParameterType():
+          type = type.parameter.bound;
+          break;
+        case ast.FutureOrType():
+          type = type.typeArgument;
+          break;
+        case ast.ExtensionType():
+          type = type.extensionTypeErasure;
+          break;
+        case ast.TypedefType():
+          type = type.unalias;
+          break;
+        case ast.IntersectionType():
+          type = type.left;
+          break;
+        case ast.TypeParameterType():
+          type = type.parameter.bound;
+          break;
+        case ast.AuxiliaryType() ||
+            ast.InvalidType() ||
+            ast.StructuralParameterType():
+          throw 'Unexpected type ${type.runtimeType} $type';
+      }
+    }
+  }
+
+  @override
+  bool get canBeFuture => true;
 
   @override
   String toString() => dartType.getDisplayString();
@@ -299,6 +462,12 @@ sealed class ExtendedType extends CType {
 
   @override
   CType get toNonNullableType => this;
+
+  @override
+  bool get canBeInt => false;
+
+  @override
+  bool get canBeFuture => false;
 
   @override
   bool operator ==(Object other) =>
@@ -327,6 +496,20 @@ final class NothingType extends ExtendedType {
   String toString() => '<nothing>';
 }
 
+/// Type of a late variable which can have an uninitialized state
+/// (represented with [SentinelConstant] value).
+///
+/// After checking, it can be casted to a regular Dart type.
+final class LateValueType extends ExtendedType {
+  const LateValueType();
+
+  @override
+  TypeKind get kind => TypeKind.lateValue;
+
+  @override
+  String toString() => '<late-value>';
+}
+
 /// Type of [TypeParameters] instruction.
 final class TypeParametersType extends ExtendedType {
   const TypeParametersType();
@@ -347,4 +530,15 @@ final class TypeArgumentsType extends ExtendedType {
 
   @override
   String toString() => '<type-arguments>';
+}
+
+/// Type of [AllocateContext] instruction.
+final class ContextType extends ExtendedType {
+  const ContextType();
+
+  @override
+  TypeKind get kind => TypeKind.context;
+
+  @override
+  String toString() => '<context>';
 }

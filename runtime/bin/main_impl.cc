@@ -1236,11 +1236,12 @@ void main(int argc, char** argv) {
 
       // Parse DART_VM_OPTIONS options.
       int env_argc = 0;
-      char** env_argv = Options::GetEnvArguments(&env_argc);
+      char** env_argv = Options::GetEnvArguments(argv[0], &env_argc);
       if (env_argv != nullptr) {
         // Any Dart options that are generated based on parsing DART_VM_OPTIONS
         // are useless, so we'll throw them away rather than passing them along.
         CommandLineOptions tmp_options(env_argc + EXTRA_VM_ARGUMENTS);
+        vm_options.EnsureCapacity(env_argc + EXTRA_VM_ARGUMENTS);
         parse_arguments(env_argc, env_argv, &vm_options, &tmp_options,
                         /*parsing_dart_vm_options=*/true);
       }
@@ -1384,13 +1385,6 @@ void main(int argc, char** argv) {
 #else
   init_params.start_kernel_isolate = false;
 #endif
-#if defined(DART_HOST_OS_FUCHSIA)
-#if defined(DART_PRECOMPILED_RUNTIME)
-  init_params.vmex_resource = ZX_HANDLE_INVALID;
-#else
-  init_params.vmex_resource = Platform::GetVMEXResource();
-#endif
-#endif
 
   error = Dart_Initialize(&init_params);
   if (error != nullptr) {
@@ -1442,14 +1436,15 @@ void main(int argc, char** argv) {
     }
   }
 
-  // Terminate process exit-code handler.
-  Process::TerminateExitCodeHandler();
-
   error = Dart_Cleanup();
   if (error != nullptr) {
     Syslog::PrintErr("VM cleanup failed: %s\n", error);
     free(error);
   }
+
+  // Terminate process exit-code handler.
+  Process::TerminateExitCodeHandler();
+
   const intptr_t global_exit_code = Process::GlobalExitCode();
   dart::embedder::Cleanup();
 

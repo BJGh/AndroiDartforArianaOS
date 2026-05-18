@@ -16,6 +16,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/dart/analysis/session_helper.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/generated/java_core.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 /// [InlineLocalRefactoring] implementation.
@@ -42,6 +43,57 @@ class InlineLocalRefactoringImpl extends RefactoringImpl
   @override
   String? get variableName {
     return _initialState?.element.name;
+  }
+
+  Future<void> buildChange({required ChangeBuilder builder}) async {
+    var libraryFragment = resolveResult.unit.declaredFragment!;
+    var state = _initialState!;
+    await builder.addDartFileEdit(libraryFragment.source.fullName, (builder) {
+      // Remove the declaration.
+      builder.addDeletion(
+        utils.getLinesRangeStatements([state.declarationStatement]),
+      );
+
+      // Prepare the initializer.
+      var initializer = state.initializer;
+      var initializerCode = utils.getNodeText(initializer);
+
+      // Replace each of the references.
+      for (var reference in state.references) {
+        var editRange = reference.sourceRange;
+        var offset = editRange.offset;
+        var node = utils.findNode(offset)!;
+        var parent = node.parent;
+
+        // Prepare the replacement code.
+        String codeForReference;
+        if (parent is InterpolationExpression) {
+          var target = parent.parent;
+          if (target is StringInterpolation &&
+              initializer is SingleStringLiteral &&
+              !initializer.isRaw &&
+              initializer.isSingleQuoted == target.isSingleQuoted &&
+              (!initializer.isMultiline || target.isMultiline)) {
+            editRange = range.node(parent);
+            // unwrap the literal being inlined
+            var initOffset = initializer.contentsOffset;
+            var initLength = initializer.contentsEnd - initOffset;
+            codeForReference = utils.getText(initOffset, initLength);
+          } else if (_shouldBeExpressionInterpolation(parent, initializer)) {
+            codeForReference = '{$initializerCode}';
+          } else {
+            codeForReference = initializerCode;
+          }
+        } else if (_shouldUseParenthesis(initializer, node)) {
+          codeForReference = '($initializerCode)';
+        } else {
+          codeForReference = initializerCode;
+        }
+
+        // Replace the reference.
+        builder.addSimpleReplacement(editRange, codeForReference);
+      }
+    });
   }
 
   @override
@@ -113,62 +165,15 @@ class InlineLocalRefactoringImpl extends RefactoringImpl
   }
 
   @override
-  Future<SourceChange> createChange() {
-    var change = SourceChange(refactoringName);
-    var libraryFragment = resolveResult.unit.declaredFragment!;
-    var state = _initialState!;
-    // remove declaration
-    {
-      var range = utils.getLinesRangeStatements([state.declarationStatement]);
-      doSourceChange_addFragmentEdit(
-        change,
-        libraryFragment,
-        newSourceEdit_range(range, ''),
-      );
-    }
-    // prepare initializer
-    var initializer = state.initializer;
-    var initializerCode = utils.getNodeText(initializer);
-    // replace references
-    for (var reference in state.references) {
-      var editRange = reference.sourceRange;
-      // prepare context
-      var offset = editRange.offset;
-      var node = utils.findNode(offset)!;
-      var parent = node.parent;
-      // prepare code
-      String codeForReference;
-      if (parent is InterpolationExpression) {
-        var target = parent.parent;
-        if (target is StringInterpolation &&
-            initializer is SingleStringLiteral &&
-            !initializer.isRaw &&
-            initializer.isSingleQuoted == target.isSingleQuoted &&
-            (!initializer.isMultiline || target.isMultiline)) {
-          editRange = range.node(parent);
-          // unwrap the literal being inlined
-          var initOffset = initializer.contentsOffset;
-          var initLength = initializer.contentsEnd - initOffset;
-          codeForReference = utils.getText(initOffset, initLength);
-        } else if (_shouldBeExpressionInterpolation(parent, initializer)) {
-          codeForReference = '{$initializerCode}';
-        } else {
-          codeForReference = initializerCode;
-        }
-      } else if (_shouldUseParenthesis(initializer, node)) {
-        codeForReference = '($initializerCode)';
-      } else {
-        codeForReference = initializerCode;
-      }
-      // do replace
-      doSourceChange_addFragmentEdit(
-        change,
-        libraryFragment,
-        newSourceEdit_range(editRange, codeForReference),
-      );
-    }
-    // done
-    return Future.value(change);
+  Future<SourceChange> createChange({ChangeBuilder? builder}) async {
+    builder ??= ChangeBuilder(
+      session: resolveResult.session,
+      defaultEol: utils.endOfLine,
+    );
+    await buildChange(builder: builder);
+    var sourceChange = builder.sourceChange;
+    sourceChange.message = refactoringName;
+    return sourceChange;
   }
 
   @override

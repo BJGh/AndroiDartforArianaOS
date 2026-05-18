@@ -32,24 +32,7 @@ class C {}
     );
   }
 
-  test_class_constructor_block_to_empty() {
-    _assertSameSignature(
-      r'''
-class C {
-  C() {
-    var v = 1;
-  }
-}
-''',
-      r'''
-class C {
-  C();
-}
-''',
-    );
-  }
-
-  test_class_constructor_body() {
+  test_class_constructor_block_to_block_differentStatement() {
     _assertSameSignature(
       r'''
 class C {
@@ -68,7 +51,73 @@ class C {
     );
   }
 
+  test_class_constructor_block_to_block_identical() {
+    _assertSameSignature(
+      r'''
+class C {
+  C() {
+    var v = 1;
+  }
+}
+''',
+      r'''
+class C {
+  C() {
+    var v = 1;
+  }
+}
+''',
+    );
+  }
+
+  test_class_constructor_block_to_empty() {
+    _assertNotSameSignature(
+      r'''
+class C {
+  C() {
+    var v = 1;
+  }
+}
+''',
+      r'''
+class C {
+  C();
+}
+''',
+    );
+  }
+
+  test_class_constructor_block_to_external() {
+    _assertNotSameSignature(
+      r'''
+class C {
+  C() {}
+}
+''',
+      r'''
+class C {
+  external C();
+}
+''',
+    );
+  }
+
   test_class_constructor_empty_to_block() {
+    _assertNotSameSignature(
+      r'''
+class C {
+  C();
+}
+''',
+      r'''
+class C {
+  C() {}
+}
+''',
+    );
+  }
+
+  test_class_constructor_empty_to_empty() {
     _assertSameSignature(
       r'''
 class C {
@@ -77,9 +126,22 @@ class C {
 ''',
       r'''
 class C {
-  C() {
-    var v = 1;
+  C();
+}
+''',
+    );
   }
+
+  test_class_constructor_external_to_block() {
+    _assertNotSameSignature(
+      r'''
+class C {
+  external C();
+}
+''',
+      r'''
+class C {
+  C() {}
 }
 ''',
     );
@@ -280,6 +342,17 @@ class C {}
     );
   }
 
+  test_class_emptyBody() {
+    _assertSameSignature(
+      r'''
+class C;
+''',
+      r'''
+class C;
+''',
+    );
+  }
+
   test_class_extends() {
     _assertNotSameSignature(
       r'''
@@ -307,6 +380,89 @@ class A {
       r'''
 class A {
   factory A() =;
+}
+''',
+    );
+  }
+
+  test_class_factoryConstructor_block_to_block_differentStatement() {
+    _assertSameSignature(
+      r'''
+class A {
+  factory A() {
+    var v = 1;
+  }
+}
+''',
+      r'''
+class A {
+  factory A() {
+    var v = 2;
+  }
+}
+''',
+    );
+  }
+
+  test_class_factoryConstructor_block_to_block_identical() {
+    _assertSameSignature(
+      r'''
+class A {
+  factory A() {
+    var v = 1;
+  }
+}
+''',
+      r'''
+class A {
+  factory A() {
+    var v = 1;
+  }
+}
+''',
+    );
+  }
+
+  test_class_factoryConstructor_block_to_empty() {
+    _assertNotSameSignature(
+      r'''
+class A {
+  factory A() {}
+}
+''',
+      r'''
+class A {
+  factory A();
+}
+''',
+    );
+  }
+
+  test_class_factoryConstructor_empty_to_block() {
+    _assertNotSameSignature(
+      r'''
+class A {
+  factory A();
+}
+''',
+      r'''
+class A {
+  factory A() {}
+}
+''',
+    );
+  }
+
+  test_class_factoryConstructor_empty_to_empty() {
+    _assertSameSignature(
+      r'''
+class A {
+  factory A();
+}
+''',
+      r'''
+class A {
+  factory A();
 }
 ''',
     );
@@ -792,6 +948,17 @@ void foo() => 0;
     );
   }
 
+  test_classLike_method_external_to_block() {
+    _assertNotSameSignature_classLike(
+      r'''
+external void foo();
+''',
+      r'''
+void foo() {}
+''',
+    );
+  }
+
   test_classLike_method_getter_body_block_to_empty() {
     _assertNotSameSignature_classLike(
       r'''
@@ -965,6 +1132,17 @@ class A {}
 ''',
       r'''
 class A {}
+''',
+    );
+  }
+
+  test_enum_emptyBody() {
+    _assertSameSignature(
+      r'''
+enum E;
+''',
+      r'''
+enum E;
 ''',
     );
   }
@@ -1350,6 +1528,17 @@ int foo() => 2;
     );
   }
 
+  test_executable_body_block_to_external() {
+    _assertNotSameSignature_executable(
+      r'''
+void foo() {}
+''',
+      r'''
+external void foo();
+''',
+    );
+  }
+
   test_executable_body_block_to_native() {
     _assertNotSameSignature_executable(
       r'''
@@ -1394,6 +1583,17 @@ int foo() => 0;
 ''',
       r'''
 int foo() native;
+''',
+    );
+  }
+
+  test_executable_body_external_to_block() {
+    _assertNotSameSignature_executable(
+      r'''
+external void foo();
+''',
+      r'''
+void foo() {}
 ''',
     );
   }
@@ -1569,6 +1769,17 @@ void foo<U>() {}
     );
   }
 
+  test_extension_emptyBody() {
+    _assertSameSignature(
+      r'''
+extension E on int;
+''',
+      r'''
+extension E on int;
+''',
+    );
+  }
+
   test_extension_on() {
     _assertNotSameSignature(
       r'''
@@ -1659,6 +1870,17 @@ Future<List<int>> bar() {}
       r'''
 foo
 Future<List<int>> bar(int x) {}
+''',
+    );
+  }
+
+  test_mixin_emptyBody() {
+    _assertSameSignature(
+      r'''
+mixin M;
+''',
+      r'''
+mixin M;
 ''',
     );
   }
@@ -1884,6 +2106,32 @@ mixin M {
     );
   }
 
+  test_topLevelFunction_body_block_to_empty() {
+    _assertNotSameSignature(
+      r'''
+int foo() {
+  return 0;
+}
+''',
+      r'''
+int foo();
+''',
+    );
+  }
+
+  test_topLevelFunction_body_empty_to_block() {
+    _assertNotSameSignature(
+      r'''
+int foo();
+''',
+      r'''
+int foo() {
+  return 0;
+}
+''',
+    );
+  }
+
   test_topLevelVariable_augment_add() {
     _assertNotSameSignature(
       r'''
@@ -2043,8 +2291,8 @@ typedef F = void Function(double);
     _assertSignature(oldCode, newCode, same: true);
   }
 
-  void _assertSameSignature_classLike(String oldCode, String newCode) {
-    _assertSignature_classLike(oldCode, newCode, same: true);
+  void _assertSameSignature_classLike(String code1, String code2) {
+    _assertSignature_classLike(code1, code2, same: true);
   }
 
   void _assertSameSignature_executable(String oldCode, String newCode) {

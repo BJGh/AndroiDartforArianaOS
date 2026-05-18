@@ -31,6 +31,7 @@ import '../builder/declaration_builders.dart';
 import '../builder/member_builder.dart';
 import '../kernel/assigned_variables_impl.dart';
 import '../kernel/constructor_tearoff_lowering.dart';
+import '../kernel/external_ast_helper.dart';
 import '../kernel/hierarchy/class_member.dart';
 import '../kernel/internal_ast.dart';
 import '../kernel/kernel_helper.dart';
@@ -41,9 +42,8 @@ import '../source/source_library_builder.dart'
 import '../source/source_member_builder.dart';
 import '../testing/id_extractor.dart';
 import '../util/helpers.dart';
-import 'closure_context.dart';
+import 'body_inference_context.dart';
 import 'context_allocation_strategy.dart';
-import 'external_ast_helper.dart';
 import 'inference_results.dart';
 import 'inference_visitor.dart';
 import 'object_access_target.dart';
@@ -72,14 +72,14 @@ Set<Object> _computeExplicitlyTypedParameterSet(
   for (VariableDeclaration positionalParameter
       in functionExpression.function.positionalParameters) {
     int key = unnamedParameterIndex++;
-    if (!(positionalParameter as VariableDeclarationImpl).isImplicitlyTyped) {
+    if (!(positionalParameter as InternalVariable).isImplicitlyTyped) {
       result.add(key);
     }
   }
   for (VariableDeclaration namedParameter
       in functionExpression.function.namedParameters) {
     String key = namedParameter.name!;
-    if (!(namedParameter as VariableDeclarationImpl).isImplicitlyTyped) {
+    if (!(namedParameter as InternalVariable).isImplicitlyTyped) {
       result.add(key);
     }
   }
@@ -111,6 +111,21 @@ enum MethodContravarianceCheckKind {
   checkGetterReturn,
 }
 
+Expression _hoist(
+  Expression expression,
+  DartType type,
+  List<VariableDeclaration>? hoistedExpressions,
+) {
+  if (hoistedExpressions != null &&
+      !isThisExpression(expression) &&
+      expression is! FunctionExpression) {
+    VariableDeclaration variable = createVariable(expression, type);
+    hoistedExpressions.add(variable);
+    return createVariableGet(variable);
+  }
+  return expression;
+}
+
 abstract class InferenceVisitorBase implements InferenceVisitor {
   final TypeInferrerImpl _inferrer;
 
@@ -125,6 +140,10 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     this.fileUri,
     this.expressionEvaluationHelper,
   );
+
+  static ContextAllocationStrategy createContextAllocationStrategy() {
+    return new LoopDepthAllocationStrategy();
+  }
 
   ThisVariable get internalThisVariable;
 
@@ -148,7 +167,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
 
   InferenceDataForTesting? get dataForTesting => _inferrer.dataForTesting;
 
-  FlowAnalysis<TreeNode, Statement, Expression, ExpressionVariable>
+  FlowAnalysis<TreeNode, Statement, Expression, VariableDeclaration>
   get flowAnalysis => _inferrer.flowAnalysis;
 
   /// Provides access to the [OperationsCfe] object.  This is needed by
@@ -252,13 +271,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
           }
           TreeNode origNode = node;
           while (origNode is VariableGet &&
-              origNode.expressionVariable.cosmeticName == null &&
-              origNode.expressionVariable.initializer != null) {
+              origNode.variable.cosmeticName == null &&
+              origNode.variable.initializer != null) {
             // This is a read of a synthetic variable, presumably from a "let".
             // Find the original expression.
             // TODO(johnniwinther): add a general solution for getting the
             // original node for testing.
-            origNode = origNode.expressionVariable.initializer!;
+            origNode = origNode.variable.initializer!;
           }
           dataForTesting!.flowAnalysisResult.nonPromotionReasons[origNode] =
               nonPromotionReasonText;
@@ -566,7 +585,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
         break;
       case AssignabilityKind.unassignable:
         // Error: not assignable.  Perform error recovery.
-        result = _wrapUnassignableExpression(
+        result = wrapUnassignableExpression(
           expression,
           expressionType,
           contextType,
@@ -614,7 +633,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
           whyNotPromoted ??= flowAnalysis.whyNotPromoted(
             flowAnalysis.getExpressionInfo(expression),
           );
-          result = _wrapUnassignableExpression(
+          result = wrapUnassignableExpression(
             expression,
             expressionType,
             contextType,
@@ -630,7 +649,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
             ),
           );
         } else {
-          result = _wrapUnassignableExpression(
+          result = wrapUnassignableExpression(
             expression,
             expressionType,
             contextType,
@@ -742,12 +761,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     return errorNode;
   }
 
-  Expression _wrapUnassignableExpression(
+  Expression wrapUnassignableExpression(
     Expression expression,
     DartType expressionType,
     DartType contextType,
     Message message, {
     List<LocatedMessage>? context,
+    int? fileOffset,
   }) {
     Expression errorNode =
         new AsExpression(
@@ -762,7 +782,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
                 : contextType,
           )
           ..isTypeError = true
-          ..fileOffset = expression.fileOffset;
+          ..fileOffset = fileOffset ?? expression.fileOffset;
     if (contextType is! InvalidType && expressionType is! InvalidType) {
       errorNode = problemReporting.wrapInProblem(
         compilerContext: compilerContext,
@@ -996,6 +1016,28 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     );
   }
 
+  /// Computes [ExtensionSetData] used for explicit writes to extension setter
+  /// as an expression or as a for-in element.
+  ExtensionSetData computeExtensionSetData({
+    required Extension extension,
+    required List<DartType>? knownTypeArguments,
+    required Expression receiver,
+    required int? extensionTypeArgumentOffset,
+    required Procedure setter,
+    required bool isNullAware,
+    required int fileOffset,
+    TreeNode? nodeForTesting,
+  });
+
+  /// Infers a write to an extension setter using the [ExtensionSetData]
+  /// computed in [computeExtensionSetData] with the inferred [valueResult].
+  ExpressionInferenceResult inferExtensionSet({
+    required ExtensionSetData data,
+    required ExpressionInferenceResult valueResult,
+    required bool forEffect,
+    required int fileOffset,
+  });
+
   /// Computes the type arguments for an access to an extension instance member
   /// on [extension] with the static [receiverType]. If [explicitTypeArguments]
   /// are provided, these are returned, otherwise type arguments are inferred
@@ -1033,7 +1075,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     Extension extension,
     List<DartType>? explicitTypeArguments,
     DartType receiverType, {
-    required TreeNode treeNodeForTesting,
+    required TreeNode? treeNodeForTesting,
   }) {
     if (explicitTypeArguments != null) {
       assert(explicitTypeArguments.length == extension.typeParameters.length);
@@ -1506,35 +1548,6 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     }
   }
 
-  /// If target is missing on a non-dynamic receiver, an error is reported
-  /// using [diag.undefinedSetter] and an invalid expression is returned.
-  Expression? reportMissingInterfaceMember(
-    ObjectAccessTarget target,
-    DartType receiverType,
-    Name name,
-    int fileOffset,
-  ) {
-    assert(isKnown(receiverType));
-    if (target.isMissing) {
-      int length = name.text.length;
-      if (identical(name.text, callName.text) ||
-          identical(name.text, unaryMinusName.text)) {
-        length = 1;
-      }
-      return problemReporting.buildProblem(
-        compilerContext: compilerContext,
-        message: diag.undefinedSetter.withArguments(
-          name: name.text,
-          type: receiverType.nonTypeParameterBound,
-        ),
-        fileUri: fileUri,
-        fileOffset: fileOffset,
-        length: length,
-      );
-    }
-    return null;
-  }
-
   /// Returns the getter type of [interfaceMember] on a receiver of type
   /// [receiverType].
   ///
@@ -1788,6 +1801,22 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     FunctionTypeInstantiator? instantiator;
 
     List<VariableDeclaration>? localHoistedExpressions;
+    int hoistingEndIndex;
+    if (isConst) {
+      // Hoisting is never needed for constant expressions.
+      hoistingEndIndex = 0;
+    } else if (hoistedExpressions != null) {
+      // The caller requires all arguments to be hoisted.
+      hoistingEndIndex = actualArguments.argumentList.length;
+    } else if (actualArguments.hasNamedBeforePositional) {
+      // Compute how many arguments need to be hoisted to preserve evaluation
+      // order when named arguments are separated from positional ones.
+      hoistingEndIndex = actualArguments
+          .computeHoistingEndIndexForNamedArgumentsAnywhere();
+    } else {
+      // No hoisting is needed.
+      hoistingEndIndex = 0;
+    }
     if (actualArguments.hasNamedBeforePositional &&
         hoistedExpressions == null &&
         !isConst) {
@@ -1849,35 +1878,6 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     // TODO(paulberry): if we are doing top level inference and type arguments
     // were omitted, report an error.
     List<Argument> arguments = actualArguments.argumentList;
-
-    // The following loop determines how many argument expressions should be
-    // hoisted to preserve the evaluation order. The computation is based on the
-    // following observation: the largest suffix of the argument vector, such
-    // that every positional argument in that suffix comes before any named
-    // argument, retains the evaluation order after the rest of the arguments
-    // are hoisted, and therefore doesn't need to be hoisted itself. The loop
-    // below finds the starting position of such suffix and stores it in the
-    // [hoistingEndIndex] variable. In case all positional arguments come
-    // before all named arguments, the suffix coincides with the entire argument
-    // vector, and none of the arguments is hoisted. That way the legacy
-    // behavior is preserved.
-    int hoistingEndIndex;
-    if (actualArguments.hasNamedBeforePositional) {
-      hoistingEndIndex = arguments.length - 1;
-      for (
-        int i = arguments.length - 2;
-        i >= 0 && hoistingEndIndex == i + 1;
-        i--
-      ) {
-        int previousWeight = arguments[i + 1] is NamedArgument ? 1 : 0;
-        int currentWeight = arguments[i] is NamedArgument ? 1 : 0;
-        if (currentWeight <= previousWeight) {
-          --hoistingEndIndex;
-        }
-      }
-    } else {
-      hoistingEndIndex = 0;
-    }
 
     ExpressionInferenceResult inferArgument(_ArgumentInfo argumentInfo) {
       DartType inferredFormalType = argumentInfo.computeInferredFormalType(
@@ -1945,20 +1945,12 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
         undeferredArguments.add(argumentInfo);
         ExpressionInferenceResult result = inferArgument(argumentInfo);
         DartType inferredType = result.inferredType;
-        if (localHoistedExpressions != null && index >= hoistingEndIndex) {
-          hoistedExpressions = null;
-        }
-        Expression expression = _hoist(
-          result.expression,
-          inferredType,
-          hoistedExpressions,
-        );
         if (isIdenticalCall) {
           argumentInfo.identicalInfo = flowAnalysis.getExpressionInfo(
-            expression,
+            result.expression,
           );
         }
-        argument.expression = expression;
+        argument.expression = result.expression;
         gatherer?.tryConstrainLower(
           formalType,
           inferredType,
@@ -2038,8 +2030,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
         fileOffset: offset,
       );
       if (argMessage != null) {
-        var (List<Expression> positional, List<NamedExpression> named) =
-            argumentsInfo.computeArguments();
+        var (
+          List<Expression> positional,
+          List<NamedExpression> named,
+        ) = argumentsInfo.computeArguments(
+          hoistedExpressions: hoistedExpressions,
+          hoistingEndIndex: hoistingEndIndex,
+        );
         return new WrapInProblemInferenceResult(
           message: argMessage,
           problemReporting: problemReporting,
@@ -2103,6 +2100,8 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
 
     // Before choosing the final types, we perform coercion and feed the
     // resulting types back into the type inference via constraint generation.
+    // See https://github.com/dart-lang/sdk/issues/33298 and
+    // https://github.com/dart-lang/sdk/issues/56666 for why this is necessary.
     for (_ArgumentInfo paramInfo in argumentsInfo) {
       ExpressionInferenceResult argumentResult = new ExpressionInferenceResult(
         paramInfo.actualType,
@@ -2176,8 +2175,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       fileOffset: offset,
     );
     if (argMessage != null) {
-      var (List<Expression> positional, List<NamedExpression> named) =
-          argumentsInfo.computeArguments();
+      var (
+        List<Expression> positional,
+        List<NamedExpression> named,
+      ) = argumentsInfo.computeArguments(
+        hoistedExpressions: hoistedExpressions,
+        hoistingEndIndex: hoistingEndIndex,
+      );
       return new WrapInProblemInferenceResult(
         message: argMessage,
         problemReporting: problemReporting,
@@ -2219,8 +2223,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       "Inferred function type: $calleeType.",
     );
 
-    var (List<Expression> positional, List<NamedExpression> named) =
-        argumentsInfo.computeArguments();
+    var (
+      List<Expression> positional,
+      List<NamedExpression> named,
+    ) = argumentsInfo.computeArguments(
+      hoistedExpressions: hoistedExpressions,
+      hoistingEndIndex: hoistingEndIndex,
+    );
     return new SuccessfulInferenceResult(
       inferredType: inferredType,
       functionType: calleeType,
@@ -2311,8 +2320,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     // Otherwise, if `Qi` is not `_`, let `Ri` be the greatest closure of
     // `Qi[T/S]` with respect to `?`.  Otherwise, let `Ri` be `dynamic`.
     for (int i = 0; i < formals.length; i++) {
-      InternalExpressionVariable formal =
-          formals[i] as InternalExpressionVariable;
+      InternalVariable formal = formals[i] as InternalVariable;
       if (formal.isImplicitlyTyped) {
         DartType inferredType;
         if (formalTypesFromContext[i] != null) {
@@ -2367,8 +2375,8 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       VariableDeclaration parameter = positionalParameters[i];
       // TODO(62401): Remove the cast when the flow analysis uses
       // [InternalExpressionVariable]s.
-      ExpressionVariable parameterAstVariable =
-          (parameter as InternalExpressionVariable).astVariable;
+      VariableDeclaration parameterAstVariable =
+          (parameter as InternalVariable).astVariable;
       flowAnalysis.declare(
         parameterAstVariable,
         new SharedTypeView(parameterAstVariable.type),
@@ -2387,8 +2395,8 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     for (VariableDeclaration parameter in function.namedParameters) {
       // TODO(62401): Remove the cast when the flow analysis uses
       // [InternalExpressionVariable]s.
-      ExpressionVariable parameterAstVariable =
-          (parameter as InternalExpressionVariable).astVariable;
+      VariableDeclaration parameterAstVariable =
+          (parameter as InternalVariable).astVariable;
       flowAnalysis.declare(
         parameterAstVariable,
         new SharedTypeView(parameterAstVariable.type),
@@ -2406,8 +2414,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     }
 
     for (VariableDeclaration parameter in function.namedParameters) {
-      InternalExpressionVariable formal =
-          parameter as InternalExpressionVariable;
+      InternalVariable formal = parameter as InternalVariable;
       // Required named parameters shouldn't have initializers.
       if (formal.isRequired && formal.hasDeclaredInitializer) {
         libraryBuilder.addProblem(
@@ -2421,7 +2428,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       }
     }
 
-    // Let `N'` be `N[T/S]`.  The [ClosureContext] constructor will adjust
+    // Let `N'` be `N[T/S]`.  The [BodyInferenceContext] constructor will adjust
     // accordingly if the closure is declared with `async`, `async*`, or
     // `sync*`.
     if (returnContext is! UnknownType) {
@@ -2431,15 +2438,16 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     // Apply type inference to `B` in return context `N’`, with any references
     // to `xi` in `B` having type `Pi`.  This produces `B’`.
     bool needToSetReturnType = hasImplicitReturnType;
-    ClosureContext closureContext = new ClosureContext(
+    BodyInferenceContext bodyContext = new BodyInferenceContext(
       this,
       function.asyncMarker,
       returnContext,
-      needToSetReturnType,
+      needToInferReturnType: needToSetReturnType,
+      isRoot: false,
     );
     StatementInferenceResult bodyResult = visitor.inferStatement(
       function.body!,
-      closureContext,
+      bodyContext,
     );
 
     // If the closure is declared with `async*` or `sync*`, let `M` be the
@@ -2448,7 +2456,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     // the least upper bound of the types of the `return` expressions in `B’`,
     // or `void` if `B’` contains no `return` expressions.
     if (needToSetReturnType) {
-      DartType inferredReturnType = closureContext.inferReturnType(
+      DartType inferredReturnType = bodyContext.inferReturnType(
         this,
         hasImplicitReturn: flowAnalysis.isReachable,
       );
@@ -2458,13 +2466,13 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       // `xi` denoted as optional or named parameters, if appropriate).
       function.returnType = inferredReturnType;
     }
-    bodyResult = closureContext.handleImplicitReturn(
+    bodyResult = bodyContext.handleImplicitReturn(
       this,
       function.body!,
       bodyResult,
       fileOffset,
     );
-    function.emittedValueType = closureContext.emittedValueType;
+    function.emittedValueType = bodyContext.emittedValueType;
 
     if (bodyResult.hasChanged) {
       function.body = bodyResult.statement..parent = function;
@@ -2879,7 +2887,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
         functionType: null,
       )..fileOffset = fileOffset;
     } else if (receiver is VariableGet) {
-      ExpressionVariable variable = receiver.expressionVariable;
+      VariableDeclaration variable = receiver.variable;
       TreeNode? parent = variable.parent;
       if (parent is FunctionDeclaration) {
         assert(
@@ -2888,7 +2896,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
         );
         localName = variable.cosmeticName!;
         expression = new LocalFunctionInvocation(
-          variable as VariableDeclaration,
+          variable,
           createArgumentsFromInternalNode(
             result.typeArguments,
             result.positional,
@@ -3470,21 +3478,6 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       hoistedExpressions: hoistedExpressions,
       isExpressionInvocation: isExpressionInvocation,
     );
-  }
-
-  Expression _hoist(
-    Expression expression,
-    DartType type,
-    List<VariableDeclaration>? hoistedExpressions,
-  ) {
-    if (hoistedExpressions != null &&
-        expression is! ThisExpression &&
-        expression is! FunctionExpression) {
-      VariableDeclaration variable = createVariable(expression, type);
-      hoistedExpressions.add(variable);
-      return createVariableGet(variable);
-    }
-    return expression;
   }
 
   ExpressionInferenceResult _insertHoistedExpression(
@@ -4226,12 +4219,12 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
   /// If [node] is provided, it is used as the basis for the resulting
   /// expression, otherwise a new [VariableGet] is created.
   ExpressionInferenceResult inferVariableGet({
-    required InternalExpressionVariable variable,
+    required InternalVariable variable,
     required DartType typeContext,
     required int nameOffset,
-    VariableGet? node,
   }) {
-    node ??= new VariableGet(variable.astVariable)..fileOffset = nameOffset;
+    VariableGet result = new VariableGet(variable.astVariable)
+      ..fileOffset = nameOffset;
     DartType? promotedType;
     DartType declaredOrInferredType = variable.lateType ?? variable.type;
     ExpressionInfo? expressionInfo;
@@ -4248,27 +4241,27 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       );
       promotedType = wrappedPromotedType?.unwrapTypeView();
     }
-    flowAnalysis.storeExpressionInfo(node, expressionInfo);
-    node.promotedType = promotedType;
+    flowAnalysis.storeExpressionInfo(result, expressionInfo);
+    result.promotedType = promotedType;
     DartType resultType = promotedType ?? declaredOrInferredType;
     Expression resultExpression;
     if (variable.isLocalFunction) {
-      return instantiateTearOff(resultType, typeContext, node);
+      return instantiateTearOff(resultType, typeContext, result);
     } else if (variable.lateGetter != null) {
       resultExpression = new LocalFunctionInvocation(
         variable.lateGetter!,
-        new Arguments(<Expression>[])..fileOffset = node.fileOffset,
+        new Arguments(<Expression>[])..fileOffset = result.fileOffset,
         functionType: variable.lateGetter!.type as FunctionType,
-      )..fileOffset = node.fileOffset;
+      )..fileOffset = result.fileOffset;
       // Future calls to flow analysis will be using `resultExpression` to refer
       // to the variable get, so instruct flow analysis to forward the
       // expression information.
       flowAnalysis.storeExpressionInfo(
         resultExpression,
-        flowAnalysis.getExpressionInfo(node),
+        flowAnalysis.getExpressionInfo(result),
       );
     } else {
-      resultExpression = node..expressionVariable = variable.astVariable;
+      resultExpression = result..variable = variable.astVariable;
     }
 
     bool isUnassigned = !flowAnalysis.isAssigned(variable.astVariable);
@@ -4277,7 +4270,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
           // Coverage-ignore(suite): Not run.
           ?.flowAnalysisResult // Coverage-ignore(suite): Not run.
           .potentiallyUnassignedNodes // Coverage-ignore(suite): Not run.
-          .add(node);
+          .add(result);
     }
     bool isDefinitelyUnassigned = flowAnalysis.isUnassigned(
       variable.astVariable,
@@ -4287,7 +4280,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
           // Coverage-ignore(suite): Not run.
           ?.flowAnalysisResult // Coverage-ignore(suite): Not run.
           .definitelyUnassignedNodes // Coverage-ignore(suite): Not run.
-          .add(node);
+          .add(result);
     }
     // Synthetic variables, local functions, and variables with
     // invalid types aren't checked.
@@ -4306,7 +4299,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
                 variableName: name,
               ),
               fileUri: fileUri,
-              fileOffset: node.fileOffset,
+              fileOffset: result.fileOffset,
               length: name.length,
             ),
           );
@@ -4320,11 +4313,11 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
                 compilerContext: compilerContext,
                 expression: resultExpression,
                 message: diag.finalNotAssignedError.withArguments(
-                  variableName: node.expressionVariable.cosmeticName!,
+                  variableName: result.variable.cosmeticName!,
                 ),
                 fileUri: fileUri,
-                fileOffset: node.fileOffset,
-                length: node.expressionVariable.cosmeticName!.length,
+                fileOffset: result.fileOffset,
+                length: result.variable.cosmeticName!.length,
               ),
             );
           } else if (declaredOrInferredType.isPotentiallyNonNullable) {
@@ -4334,11 +4327,11 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
                 compilerContext: compilerContext,
                 expression: resultExpression,
                 message: diag.nonNullableNotAssignedError.withArguments(
-                  variableName: node.expressionVariable.cosmeticName!,
+                  variableName: result.variable.cosmeticName!,
                 ),
                 fileUri: fileUri,
-                fileOffset: node.fileOffset,
-                length: node.expressionVariable.cosmeticName!.length,
+                fileOffset: result.fileOffset,
+                length: result.variable.cosmeticName!.length,
               ),
             );
           }
@@ -4352,7 +4345,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
   /// Computes the possible promoted variable type of [variable] and the type
   /// context for the value expression in a local set to [variable].
   (DartType variableType, DartType writeContext)
-  computeVariableSetTypeAndWriteContext(InternalExpressionVariable variable) {
+  computeVariableSetTypeAndWriteContext(InternalVariable variable) {
     DartType declaredOrInferredType = variable.lateType ?? variable.type;
     DartType? promotedType = flowAnalysis
         .promotedType(variable.astVariable)
@@ -4366,12 +4359,11 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
   /// If [node] is provided, it is used as the basis for the resulting
   /// expression, otherwise a new [VariableSet] is created.
   ExpressionInferenceResult inferVariableSet({
-    required InternalExpressionVariable variable,
+    required InternalVariable variable,
     required DartType variableType,
     required ExpressionInferenceResult rhsResult,
     required int assignOffset,
     required int nameOffset,
-    VariableSet? node,
   }) {
     bool isDefinitelyAssigned = flowAnalysis.isAssigned(variable.astVariable);
     bool isDefinitelyUnassigned = flowAnalysis.isUnassigned(
@@ -4384,12 +4376,12 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       isVoidAllowed: variableType is VoidType,
     );
     Expression rhs = rhsResult.expression;
-    node ??= new VariableSet(variable.astVariable, rhs)
+    VariableSet result = new VariableSet(variable.astVariable, rhs)
       ..fileOffset = nameOffset;
     flowAnalysis.storeExpressionInfo(
-      node,
+      result,
       flowAnalysis.write(
-        node,
+        result,
         variable.astVariable,
         new SharedTypeView(rhsResult.inferredType),
         flowAnalysis.getExpressionInfo(rhsResult.expression),
@@ -4400,19 +4392,19 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     if (variable.lateSetter != null) {
       resultExpression = new LocalFunctionInvocation(
         variable.lateSetter!,
-        new Arguments(<Expression>[rhs])..fileOffset = node.fileOffset,
+        new Arguments(<Expression>[rhs])..fileOffset = result.fileOffset,
         functionType: variable.lateSetter!.type as FunctionType,
-      )..fileOffset = node.fileOffset;
+      )..fileOffset = result.fileOffset;
       // Future calls to flow analysis will be using `resultExpression` to refer
       // to the variable set, so instruct flow analysis to forward the
       // expression information.
       flowAnalysis.storeExpressionInfo(
         resultExpression,
-        flowAnalysis.getExpressionInfo(node),
+        flowAnalysis.getExpressionInfo(result),
       );
     } else {
-      node.value = rhs..parent = node;
-      resultExpression = node..expressionVariable = variable.astVariable;
+      result.value = rhs..parent = result;
+      resultExpression = result..variable = variable.astVariable;
     }
     // Synthetic variables, local functions, and variables with
     // invalid types aren't checked.
@@ -4428,11 +4420,11 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
               compilerContext: compilerContext,
               expression: resultExpression,
               message: diag.lateDefinitelyAssignedError.withArguments(
-                variableName: node.expressionVariable.cosmeticName!,
+                variableName: result.variable.cosmeticName!,
               ),
               fileUri: fileUri,
-              fileOffset: node.fileOffset,
-              length: node.expressionVariable.cosmeticName!.length,
+              fileOffset: result.fileOffset,
+              length: result.variable.cosmeticName!.length,
             ),
           );
         }
@@ -4444,17 +4436,209 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
               compilerContext: compilerContext,
               expression: resultExpression,
               message: diag.finalPossiblyAssignedError.withArguments(
-                variableName: node.expressionVariable.cosmeticName!,
+                variableName: result.variable.cosmeticName!,
               ),
               fileUri: fileUri,
-              fileOffset: node.fileOffset,
-              length: node.expressionVariable.cosmeticName!.length,
+              fileOffset: result.fileOffset,
+              length: result.variable.cosmeticName!.length,
             ),
           );
         }
       }
     }
     return new ExpressionInferenceResult(resultType, resultExpression);
+  }
+
+  /// Computes [PropertySetData] used for writes to an instance setter as an
+  /// expression or as a for-in element.
+  PropertySetData computePropertySetData({
+    required Expression receiver,
+    required Name name,
+    required bool isNullAware,
+    required int fileOffset,
+  });
+
+  /// Creates a property set operation of [writeTarget] on [receiver] using
+  /// [valueResult] as the right-hand side. [valueResult] is created for
+  /// assignability to [writeContext].
+  ///
+  /// [fileOffset] is used as the file offset for created nodes. [propertyName]
+  /// is used for error reporting. [receiverType] is the already inferred type
+  /// of the [receiver] expression. The inferred type of [value] must already
+  /// have been computed.
+  ///
+  /// If [forEffect] the resulting expression is ensured to return the assigned
+  /// value. This is needed for extension setters which are encoded as static
+  /// method calls that do not implicitly return the value.
+  ///
+  /// The returned [ExpressionInferenceResult] holds the generated expression
+  /// and the type of this expression.
+  ExpressionInferenceResult inferPropertySet({
+    required int fileOffset,
+    required Expression receiver,
+    required DartType receiverType,
+    required Name propertyName,
+    required ObjectAccessTarget writeTarget,
+    required DartType writeContext,
+    required ExpressionInferenceResult valueResult,
+    required bool forEffect,
+  }) {
+    valueResult = ensureAssignableResult(
+      writeContext,
+      valueResult,
+      fileOffset: fileOffset,
+      isVoidAllowed: writeContext is VoidType,
+    );
+    Expression value = valueResult.expression;
+    DartType valueType = valueResult.inferredType;
+    if (expressionEvaluationHelper != null) {
+      // Coverage-ignore-block(suite): Not run.
+      OverwrittenInterfaceMember? overWritten = expressionEvaluationHelper
+          ?.overwriteFindInterfaceMember(
+            target: writeTarget,
+            name: propertyName,
+            receiverType: receiverType,
+            setter: true,
+          );
+      if (overWritten != null) {
+        writeTarget = overWritten.target;
+        propertyName = overWritten.name;
+      }
+    }
+    Expression write;
+    switch (writeTarget.kind) {
+      case ObjectAccessTargetKind.missing:
+        write = createMissingPropertySet(
+          fileOffset,
+          receiver,
+          receiverType,
+          propertyName,
+          value,
+          forEffect: forEffect,
+        );
+        break;
+      case ObjectAccessTargetKind.ambiguous:
+        write = createMissingPropertySet(
+          fileOffset,
+          receiver,
+          receiverType,
+          propertyName,
+          value,
+          forEffect: forEffect,
+          extensionAccessCandidates: writeTarget.candidates,
+        );
+        break;
+      case ObjectAccessTargetKind.extensionMember:
+      case ObjectAccessTargetKind.nullableExtensionMember:
+      case ObjectAccessTargetKind.extensionTypeMember:
+      case ObjectAccessTargetKind.nullableExtensionTypeMember:
+        if (forEffect) {
+          write = new StaticInvocation(
+            writeTarget.member as Procedure,
+            new Arguments(
+              <Expression>[receiver, value],
+              types: writeTarget.receiverTypeArguments,
+            )..fileOffset = fileOffset,
+          )..fileOffset = fileOffset;
+        } else {
+          VariableDeclaration valueVariable = createVariable(value, valueType);
+          VariableDeclaration assignmentVariable = createVariable(
+            new StaticInvocation(
+              writeTarget.member as Procedure,
+              new Arguments(
+                <Expression>[receiver, createVariableGet(valueVariable)],
+                types: writeTarget.receiverTypeArguments,
+              )..fileOffset = fileOffset,
+            )..fileOffset = fileOffset,
+            const VoidType(),
+          );
+          write = createLet(
+            valueVariable,
+            createLet(assignmentVariable, createVariableGet(valueVariable)),
+          )..fileOffset = fileOffset;
+        }
+        break;
+      case ObjectAccessTargetKind.invalid:
+        write = new DynamicSet(
+          DynamicAccessKind.Invalid,
+          receiver,
+          propertyName,
+          value,
+        )..fileOffset = fileOffset;
+        break;
+      case ObjectAccessTargetKind.never:
+        write = new DynamicSet(
+          DynamicAccessKind.Never,
+          receiver,
+          propertyName,
+          value,
+        )..fileOffset = fileOffset;
+        break;
+      case ObjectAccessTargetKind.callFunction:
+      case ObjectAccessTargetKind.nullableCallFunction:
+      case ObjectAccessTargetKind.dynamic:
+        write = new DynamicSet(
+          DynamicAccessKind.Dynamic,
+          receiver,
+          propertyName,
+          value,
+        )..fileOffset = fileOffset;
+        break;
+      case ObjectAccessTargetKind.instanceMember:
+      case ObjectAccessTargetKind.objectMember:
+      case ObjectAccessTargetKind.nullableInstanceMember:
+      // Coverage-ignore(suite): Not run.
+      case ObjectAccessTargetKind.superMember:
+        InstanceAccessKind kind;
+        switch (writeTarget.kind) {
+          case ObjectAccessTargetKind.instanceMember:
+            kind = InstanceAccessKind.Instance;
+            break;
+          case ObjectAccessTargetKind.nullableInstanceMember:
+            kind = InstanceAccessKind.Nullable;
+            break;
+          // Coverage-ignore(suite): Not run.
+          case ObjectAccessTargetKind.objectMember:
+            kind = InstanceAccessKind.Object;
+            break;
+          // Coverage-ignore(suite): Not run.
+          default:
+            throw new UnsupportedError('Unexpected target kind $writeTarget');
+        }
+        write = new InstanceSet(
+          kind,
+          receiver,
+          propertyName,
+          value,
+          interfaceTarget: writeTarget.classMember!,
+        )..fileOffset = fileOffset;
+        break;
+      // Coverage-ignore(suite): Not run.
+      case ObjectAccessTargetKind.recordIndexed:
+      case ObjectAccessTargetKind.recordNamed:
+      case ObjectAccessTargetKind.extensionTypeRepresentation:
+      case ObjectAccessTargetKind.nullableRecordIndexed:
+      case ObjectAccessTargetKind.nullableRecordNamed:
+      case ObjectAccessTargetKind.nullableExtensionTypeRepresentation:
+        throw new UnsupportedError('Unexpected write target ${writeTarget}');
+    }
+    Expression result;
+    if (writeTarget.isNullable) {
+      result = problemReporting.wrapInProblem(
+        compilerContext: compilerContext,
+        expression: write,
+        message: diag.nullablePropertyAccessError.withArguments(
+          propertyName: propertyName.text,
+          receiverType: receiverType,
+        ),
+        fileUri: fileUri,
+        fileOffset: write.fileOffset,
+        length: propertyName.text.length,
+      );
+    } else {
+      result = write;
+    }
+    return new ExpressionInferenceResult(valueType, result);
   }
 
   /// Computes the implicit instantiation from an expression of [tearOffType]
@@ -4514,6 +4698,24 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     }
     return null;
   }
+
+  /// Infers [iterable] as the iterable of a for-in loop with the given
+  /// [elementType].
+  ExpressionInferenceResult inferForInIterable(
+    Expression iterable,
+    DartType elementType, {
+    required bool isAsync,
+  });
+
+  /// Infers the [pattern] occurring as the element in for-in header with the
+  /// given [iterable].
+  PatternForInData inferPatternForInHeader({
+    required TreeNode node,
+    required Pattern pattern,
+    required Expression iterable,
+    required bool isAsync,
+    required int inOffset,
+  });
 
   ExpressionInferenceResult _applyImplicitInstantiation(
     ImplicitInstantiation? implicitInstantiation,
@@ -4788,11 +4990,11 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
     if (value is! VariableGet) return false;
     if (expression.body.statements.isEmpty) return false;
     Statement first = expression.body.statements.first;
-    if (first is! VariableDeclaration) return false;
-    Expression? initializer = first.initializer;
+    if (first is! VariableStatement) return false;
+    Expression? initializer = first.variable.initializer;
     if (initializer is! StaticInvocation) return false;
     if (initializer.target != engine.setFactory) return false;
-    return value.expressionVariable == first;
+    return value.variable == first.variable;
   }
 
   /// Determines if the given [expression]'s type is precisely known at compile
@@ -4843,7 +5045,7 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
       }
     }
     if (expression is VariableGet) {
-      ExpressionVariable variable = expression.expressionVariable;
+      VariableDeclaration variable = expression.variable;
       if (variable is VariableDeclarationImpl && variable.isLocalFunction) {
         return diag.invalidCastLocalFunction;
       }
@@ -5522,10 +5724,19 @@ abstract class InferenceVisitorBase implements InferenceVisitor {
   ScopeProviderInfo beginFunctionBodyInference(
     List<VariableDeclaration> parameters, {
     required ThisVariable? internalThisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   });
 
-  /// Performs finishing computations after inferring the body of a function.
+  /// Finishes computations after inferring the body of a function.
   void endFunctionBodyInference(ScopeProviderInfo scopeProviderInfo);
+
+  /// Performs preliminary computations before inferring the field initializer.
+  ScopeProviderInfo beginFieldInference({
+    required ThisVariable? internalThisVariable,
+  });
+
+  /// Finishes computations after inferring the field initializer.
+  void endFieldInference(ScopeProviderInfo scopeProviderInfo);
 }
 
 /// Describes assignability kind of one type to another.
@@ -5599,7 +5810,7 @@ class _WhyNotPromotedVisitor
         NonPromotionReasonVisitor<
           List<LocatedMessage>,
           Node,
-          ExpressionVariable
+          VariableDeclaration
         > {
   final InferenceVisitorBase inferrer;
 
@@ -5609,7 +5820,7 @@ class _WhyNotPromotedVisitor
 
   @override
   List<LocatedMessage> visitDemoteViaExplicitWrite(
-    DemoteViaExplicitWrite<ExpressionVariable> reason,
+    DemoteViaExplicitWrite<VariableDeclaration> reason,
   ) {
     TreeNode node = reason.node as TreeNode;
     if (inferrer.dataForTesting != null) {
@@ -5822,11 +6033,6 @@ class _DeferredArgumentInfo extends _ArgumentInfo {
     required super.formalType,
     required this.unparenthesizedExpression,
   });
-
-  // Coverage-ignore(suite): Not run.
-  /// The argument expression (possibly wrapped in an arbitrary number of
-  /// ParenthesizedExpressions).
-  Expression get argumentExpression => argument.expression;
 }
 
 /// Extension of the shared [FunctionLiteralDependencies] logic used by the
@@ -5922,15 +6128,27 @@ class _ArgumentInfo {
 }
 
 extension on List<_ArgumentInfo> {
-  (List<Expression> positional, List<NamedExpression> named)
-  computeArguments() {
+  (List<Expression> positional, List<NamedExpression> named) computeArguments({
+    required List<VariableDeclaration>? hoistedExpressions,
+    required int hoistingEndIndex,
+  }) {
     List<Expression> positional = [];
     List<NamedExpression> named = [];
-    for (_ArgumentInfo argumentInfo in this) {
+    for (int index = 0; index < length; index++) {
+      _ArgumentInfo argumentInfo = this[index];
       if (argumentInfo.isDuplicateNamed) {
         continue;
       }
       Argument argument = argumentInfo.argument;
+      if (index < hoistingEndIndex) {
+        ExpressionInferenceResult inferenceResult =
+            argumentInfo.argumentInferenceResult!;
+        argument.expression = _hoist(
+          inferenceResult.expression,
+          inferenceResult.postCoercionType ?? inferenceResult.inferredType,
+          hoistedExpressions,
+        );
+      }
       switch (argument) {
         case PositionalArgument():
           positional.add(argument.expression);
@@ -6167,4 +6385,49 @@ class _ObjectAccessDescriptor {
         return false;
     }
   }
+}
+
+/// Data needed for the inference of a write to an instance property.
+class PropertySetData {
+  final Expression receiver;
+  final DartType receiverType;
+  final DartType writeContext;
+  final ObjectAccessTarget target;
+
+  PropertySetData({
+    required this.receiver,
+    required this.receiverType,
+    required this.writeContext,
+    required this.target,
+  });
+}
+
+/// Data needed for the inference of a write to an extension setter.
+class ExtensionSetData {
+  final Expression receiver;
+  final DartType inferredReceiverType;
+  final DartType valueType;
+  final List<DartType> extensionTypeArguments;
+  final Procedure setter;
+
+  ExtensionSetData({
+    required this.receiver,
+    required this.inferredReceiverType,
+    required this.valueType,
+    required this.extensionTypeArguments,
+    required this.setter,
+  });
+}
+
+/// Data resulting from the inference of a pattern in a for-in element.
+class PatternForInData {
+  final VariableDeclaration loopVariable;
+  final Expression iterable;
+  final PatternVariableDeclaration Function() computePatternVariableDeclaration;
+
+  PatternForInData({
+    required this.loopVariable,
+    required this.iterable,
+    required this.computePatternVariableDeclaration,
+  });
 }

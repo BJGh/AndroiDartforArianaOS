@@ -63,10 +63,9 @@ class ConvertAddAllToSpread extends ResolvedCorrectionProducer {
 
   ConvertAddAllToSpread._({
     required super.context,
-    required MethodInvocation? invocation,
-    required bool isInlineInvocation,
-  }) : _invocation = invocation,
-       _isInlineInvocation = isInlineInvocation;
+    required this._invocation,
+    required this._isInlineInvocation,
+  });
 
   @override
   CorrectionApplicability get applicability =>
@@ -129,7 +128,7 @@ class ConvertAddAllToSpread extends ResolvedCorrectionProducer {
       elementText = utils.getText(startOffset, endOffset - startOffset);
       _args = ['addAll'];
     } else {
-      elementText = _computeElementText(argument);
+      elementText = _computeElementText(argument.argumentExpression);
     }
 
     await builder.addDartFileEdit(file, (builder) {

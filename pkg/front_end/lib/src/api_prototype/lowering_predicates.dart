@@ -339,7 +339,7 @@ Expression? getLateFieldInitializer(Member node) {
             return staticSet.value;
           }
         } else if (block.statements.isNotEmpty &&
-            block.statements.first is VariableDeclaration) {
+            block.statements.first is VariableStatement) {
           // We have
           //
           //    get field {
@@ -353,9 +353,9 @@ Expression? getLateFieldInitializer(Member node) {
           //    }
           //
           // in case `<init>` is the initializer.
-          VariableDeclaration variableDeclaration =
-              block.statements.first as VariableDeclaration;
-          return variableDeclaration.initializer;
+          VariableStatement variableStatement =
+              block.statements.first as VariableStatement;
+          return variableStatement.variable.initializer;
         }
       }
       return null;
@@ -701,7 +701,7 @@ String extractLocalNameFromLateLoweredSetter(String name) {
 ///     int Extension|method(int #this) => #this;
 ///
 /// where '#this' is the synthetic "extension this" parameter.
-bool isExtensionThis(ExpressionVariable node) {
+bool isExtensionThis(VariableDeclaration node) {
   assert(
     node.isLowered ||
         node.cosmeticName == null ||
@@ -1023,6 +1023,9 @@ extension ExtensionMemberExtension on Member {
 extension ExtensionTypeMemberExtension on Member {
   ExtensionTypeDeclaration? get extensionTypeDeclaration {
     if (!isExtensionTypeMember) return null;
+    if (parent is ExtensionTypeDeclaration) {
+      return parent as ExtensionTypeDeclaration;
+    }
     for (ExtensionTypeDeclaration extensionTypeDeclaration
         in enclosingLibrary.extensionTypeDeclarations) {
       for (ExtensionTypeMemberDescriptor descriptor
@@ -1039,6 +1042,9 @@ extension ExtensionTypeMemberExtension on Member {
 
   ExtensionTypeMemberDescriptor? get extensionTypeMemberDescriptor {
     if (!isExtensionTypeMember) return null;
+    if (parent is ExtensionTypeDeclaration) {
+      return null;
+    }
     for (ExtensionTypeDeclaration extensionTypeDeclaration
         in enclosingLibrary.extensionTypeDeclarations) {
       for (ExtensionTypeMemberDescriptor descriptor

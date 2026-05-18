@@ -6,11 +6,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:analysis_server/protocol/protocol.dart';
-import 'package:analysis_server/protocol/protocol_generated.dart';
 import 'package:analysis_server/src/plugin/notification_manager.dart';
+import 'package:analysis_server/src/protocol_server.dart';
 import 'package:analysis_server/src/utilities/process.dart';
-import 'package:analyzer/source/source.dart';
 import 'package:analyzer_plugin/protocol/protocol.dart' as plugin;
 import 'package:analyzer_plugin/protocol/protocol_common.dart' as protocol;
 import 'package:http/http.dart' as http;
@@ -93,6 +91,9 @@ class MockProcess implements Process {
 }
 
 class MockProcessRunner implements ProcessRunner {
+  @override
+  final Map<String, String>? environment = null;
+
   ProcessResult Function(
     String executable,
     List<String> arguments, {
@@ -150,25 +151,15 @@ class MockProcessRunner implements ProcessRunner {
   }
 }
 
-class MockSource implements Source {
-  @override
-  final String fullName;
-
-  MockSource({this.fullName = 'mocked.dart'});
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-
-  @override
-  String toString() => fullName;
-}
-
 class TestNotificationManager implements AbstractNotificationManager {
   List<plugin.Notification> notifications = [];
 
   Map<String, Map<String, List<protocol.AnalysisError>>> recordedErrors = {};
 
   List<String> pluginErrors = [];
+
+  @override
+  Stream<PluginPrint> pluginPrints = Stream.empty();
 
   @override
   void handlePluginError(String message) {

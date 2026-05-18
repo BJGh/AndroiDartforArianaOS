@@ -110,9 +110,7 @@ class Platform {
 
   static void SetCoreDumpResourceLimit(int value);
 
-#if defined(DART_HOST_OS_FUCHSIA)
-  static zx_handle_t GetVMEXResource();
-#endif
+  static bool SetEnvironmentVariable(const char* name, const char* value);
 
  private:
   // The path to the executable.

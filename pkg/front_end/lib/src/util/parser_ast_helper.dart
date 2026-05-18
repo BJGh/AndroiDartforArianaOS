@@ -272,7 +272,6 @@ abstract class AbstractParserAstListener implements Listener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -285,7 +284,6 @@ abstract class AbstractParserAstListener implements Listener {
       ParserAstType.BEGIN,
       begin: begin,
       abstractToken: abstractToken,
-      macroToken: macroToken,
       sealedToken: sealedToken,
       baseToken: baseToken,
       interfaceToken: interfaceToken,
@@ -412,6 +410,15 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
+  void handleNoMixinBody(Token semicolonToken) {
+    NoMixinBodyHandle data = new NoMixinBodyHandle(
+      ParserAstType.HANDLE,
+      semicolonToken: semicolonToken,
+    );
+    seen(data);
+  }
+
+  @override
   void endMixinDeclaration(Token beginToken, Token endToken) {
     MixinDeclarationEnd data = new MixinDeclarationEnd(
       ParserAstType.END,
@@ -474,6 +481,15 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
+  void handleNoExtensionBody(Token semicolonToken) {
+    NoExtensionBodyHandle data = new NoExtensionBodyHandle(
+      ParserAstType.HANDLE,
+      semicolonToken: semicolonToken,
+    );
+    seen(data);
+  }
+
+  @override
   void beginExtensionTypeDeclaration(
     Token? augmentKeyword,
     Token extensionKeyword,
@@ -518,32 +534,34 @@ abstract class AbstractParserAstListener implements Listener {
 
   @override
   void endPrimaryConstructor(
+    DeclarationKind kind,
     Token beginToken,
+    Token endToken,
     Token? constKeyword,
     bool hasConstructorName,
-    bool forExtensionType,
   ) {
     PrimaryConstructorEnd data = new PrimaryConstructorEnd(
       ParserAstType.END,
+      kind: kind,
       beginToken: beginToken,
+      endToken: endToken,
       constKeyword: constKeyword,
       hasConstructorName: hasConstructorName,
-      forExtensionType: forExtensionType,
     );
     seen(data);
   }
 
   @override
   void handleNoPrimaryConstructor(
+    DeclarationKind kind,
     Token token,
     Token? constKeyword,
-    bool forExtensionType,
   ) {
     NoPrimaryConstructorHandle data = new NoPrimaryConstructorHandle(
       ParserAstType.HANDLE,
+      kind: kind,
       token: token,
       constKeyword: constKeyword,
-      forExtensionType: forExtensionType,
     );
     seen(data);
   }
@@ -803,6 +821,15 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
+  void handleNoEnumBody(Token semicolonToken) {
+    NoEnumBodyHandle data = new NoEnumBodyHandle(
+      ParserAstType.HANDLE,
+      semicolonToken: semicolonToken,
+    );
+    seen(data);
+  }
+
+  @override
   void handleEnumElement(Token beginToken, Token? augmentToken) {
     EnumElementHandle data = new EnumElementHandle(
       ParserAstType.HANDLE,
@@ -852,6 +879,7 @@ abstract class AbstractParserAstListener implements Listener {
   void beginFactory(
     DeclarationKind declarationKind,
     Token lastConsumed,
+    Token? augmentToken,
     Token? externalToken,
     Token? constToken,
   ) {
@@ -859,6 +887,7 @@ abstract class AbstractParserAstListener implements Listener {
       ParserAstType.BEGIN,
       declarationKind: declarationKind,
       lastConsumed: lastConsumed,
+      augmentToken: augmentToken,
       externalToken: externalToken,
       constToken: constToken,
     );
@@ -1326,7 +1355,6 @@ abstract class AbstractParserAstListener implements Listener {
   void beginNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -1339,7 +1367,6 @@ abstract class AbstractParserAstListener implements Listener {
       ParserAstType.BEGIN,
       beginToken: beginToken,
       abstractToken: abstractToken,
-      macroToken: macroToken,
       sealedToken: sealedToken,
       baseToken: baseToken,
       interfaceToken: interfaceToken,
@@ -1494,11 +1521,10 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     ImportEnd data = new ImportEnd(
       ParserAstType.END,
       importKeyword: importKeyword,
-      augmentToken: augmentToken,
       semicolon: semicolon,
     );
     seen(data);
@@ -2354,8 +2380,8 @@ abstract class AbstractParserAstListener implements Listener {
   @override
   void beginFields(
     DeclarationKind declarationKind,
-    Token? abstractToken,
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2366,8 +2392,8 @@ abstract class AbstractParserAstListener implements Listener {
     FieldsBegin data = new FieldsBegin(
       ParserAstType.BEGIN,
       declarationKind: declarationKind,
-      abstractToken: abstractToken,
       augmentToken: augmentToken,
+      abstractToken: abstractToken,
       externalToken: externalToken,
       staticToken: staticToken,
       covariantToken: covariantToken,
@@ -2381,6 +2407,7 @@ abstract class AbstractParserAstListener implements Listener {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2393,6 +2420,7 @@ abstract class AbstractParserAstListener implements Listener {
     TopLevelFieldsEnd data = new TopLevelFieldsEnd(
       ParserAstType.END,
       augmentToken: augmentToken,
+      abstractToken: abstractToken,
       externalToken: externalToken,
       staticToken: staticToken,
       covariantToken: covariantToken,
@@ -2911,10 +2939,10 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
-  void endBinaryPattern(Token token) {
+  void endBinaryPattern(Token operatorToken) {
     BinaryPatternEnd data = new BinaryPatternEnd(
       ParserAstType.END,
-      token: token,
+      operatorToken: operatorToken,
     );
     seen(data);
   }
@@ -3704,21 +3732,6 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
-  void handleAugmentSuperExpression(
-    Token augmentToken,
-    Token superToken,
-    IdentifierContext context,
-  ) {
-    AugmentSuperExpressionHandle data = new AugmentSuperExpressionHandle(
-      ParserAstType.HANDLE,
-      augmentToken: augmentToken,
-      superToken: superToken,
-      context: context,
-    );
-    seen(data);
-  }
-
-  @override
   void beginSwitchCase(int labelCount, int expressionCount, Token beginToken) {
     SwitchCaseBegin data = new SwitchCaseBegin(
       ParserAstType.BEGIN,
@@ -4403,7 +4416,6 @@ class ClassOrMixinOrNamedMixinApplicationPreludeBegin extends ParserAstNode {
 class ClassDeclarationBegin extends ParserAstNode {
   final Token begin;
   final Token? abstractToken;
-  final Token? macroToken;
   final Token? sealedToken;
   final Token? baseToken;
   final Token? interfaceToken;
@@ -4416,7 +4428,6 @@ class ClassDeclarationBegin extends ParserAstNode {
     ParserAstType type, {
     required this.begin,
     this.abstractToken,
-    this.macroToken,
     this.sealedToken,
     this.baseToken,
     this.interfaceToken,
@@ -4430,7 +4441,6 @@ class ClassDeclarationBegin extends ParserAstNode {
   Map<String, Object?> get deprecatedArguments => {
     "begin": begin,
     "abstractToken": abstractToken,
-    "macroToken": macroToken,
     "sealedToken": sealedToken,
     "baseToken": baseToken,
     "interfaceToken": interfaceToken,
@@ -4646,6 +4656,21 @@ class RecoverMixinHeaderHandle extends ParserAstNode {
   R accept<R>(ParserAstVisitor<R> v) => v.visitRecoverMixinHeaderHandle(this);
 }
 
+class NoMixinBodyHandle extends ParserAstNode {
+  final Token semicolonToken;
+
+  NoMixinBodyHandle(ParserAstType type, {required this.semicolonToken})
+    : super("NoMixinBody", type);
+
+  @override
+  Map<String, Object?> get deprecatedArguments => {
+    "semicolonToken": semicolonToken,
+  };
+
+  @override
+  R accept<R>(ParserAstVisitor<R> v) => v.visitNoMixinBodyHandle(this);
+}
+
 class MixinDeclarationEnd extends ParserAstNode
     implements BeginAndEndTokenParserAstNode {
   @override
@@ -4755,6 +4780,21 @@ class ExtensionDeclarationEnd extends ParserAstNode
   R accept<R>(ParserAstVisitor<R> v) => v.visitExtensionDeclarationEnd(this);
 }
 
+class NoExtensionBodyHandle extends ParserAstNode {
+  final Token semicolonToken;
+
+  NoExtensionBodyHandle(ParserAstType type, {required this.semicolonToken})
+    : super("NoExtensionBody", type);
+
+  @override
+  Map<String, Object?> get deprecatedArguments => {
+    "semicolonToken": semicolonToken,
+  };
+
+  @override
+  R accept<R>(ParserAstVisitor<R> v) => v.visitNoExtensionBodyHandle(this);
+}
+
 class ExtensionTypeDeclarationBegin extends ParserAstNode {
   final Token? augmentKeyword;
   final Token extensionKeyword;
@@ -4825,26 +4865,32 @@ class PrimaryConstructorBegin extends ParserAstNode {
   R accept<R>(ParserAstVisitor<R> v) => v.visitPrimaryConstructorBegin(this);
 }
 
-class PrimaryConstructorEnd extends ParserAstNode {
+class PrimaryConstructorEnd extends ParserAstNode
+    implements BeginAndEndTokenParserAstNode {
+  final DeclarationKind kind;
+  @override
   final Token beginToken;
+  @override
+  final Token endToken;
   final Token? constKeyword;
   final bool hasConstructorName;
-  final bool forExtensionType;
 
   PrimaryConstructorEnd(
     ParserAstType type, {
+    required this.kind,
     required this.beginToken,
+    required this.endToken,
     this.constKeyword,
     required this.hasConstructorName,
-    required this.forExtensionType,
   }) : super("PrimaryConstructor", type);
 
   @override
   Map<String, Object?> get deprecatedArguments => {
+    "kind": kind,
     "beginToken": beginToken,
+    "endToken": endToken,
     "constKeyword": constKeyword,
     "hasConstructorName": hasConstructorName,
-    "forExtensionType": forExtensionType,
   };
 
   @override
@@ -4852,22 +4898,22 @@ class PrimaryConstructorEnd extends ParserAstNode {
 }
 
 class NoPrimaryConstructorHandle extends ParserAstNode {
+  final DeclarationKind kind;
   final Token token;
   final Token? constKeyword;
-  final bool forExtensionType;
 
   NoPrimaryConstructorHandle(
     ParserAstType type, {
+    required this.kind,
     required this.token,
     this.constKeyword,
-    required this.forExtensionType,
   }) : super("NoPrimaryConstructor", type);
 
   @override
   Map<String, Object?> get deprecatedArguments => {
+    "kind": kind,
     "token": token,
     "constKeyword": constKeyword,
-    "forExtensionType": forExtensionType,
   };
 
   @override
@@ -5287,6 +5333,21 @@ class EnumBodyEnd extends ParserAstNode
   R accept<R>(ParserAstVisitor<R> v) => v.visitEnumBodyEnd(this);
 }
 
+class NoEnumBodyHandle extends ParserAstNode {
+  final Token semicolonToken;
+
+  NoEnumBodyHandle(ParserAstType type, {required this.semicolonToken})
+    : super("NoEnumBody", type);
+
+  @override
+  Map<String, Object?> get deprecatedArguments => {
+    "semicolonToken": semicolonToken,
+  };
+
+  @override
+  R accept<R>(ParserAstVisitor<R> v) => v.visitNoEnumBodyHandle(this);
+}
+
 class EnumElementHandle extends ParserAstNode {
   final Token beginToken;
   final Token? augmentToken;
@@ -5386,6 +5447,7 @@ class ExpressionStatementHandle extends ParserAstNode
 class FactoryBegin extends ParserAstNode {
   final DeclarationKind declarationKind;
   final Token lastConsumed;
+  final Token? augmentToken;
   final Token? externalToken;
   final Token? constToken;
 
@@ -5393,6 +5455,7 @@ class FactoryBegin extends ParserAstNode {
     ParserAstType type, {
     required this.declarationKind,
     required this.lastConsumed,
+    this.augmentToken,
     this.externalToken,
     this.constToken,
   }) : super("Factory", type);
@@ -5401,6 +5464,7 @@ class FactoryBegin extends ParserAstNode {
   Map<String, Object?> get deprecatedArguments => {
     "declarationKind": declarationKind,
     "lastConsumed": lastConsumed,
+    "augmentToken": augmentToken,
     "externalToken": externalToken,
     "constToken": constToken,
   };
@@ -6148,7 +6212,6 @@ class MixinWithClauseHandle extends ParserAstNode {
 class NamedMixinApplicationBegin extends ParserAstNode {
   final Token beginToken;
   final Token? abstractToken;
-  final Token? macroToken;
   final Token? sealedToken;
   final Token? baseToken;
   final Token? interfaceToken;
@@ -6161,7 +6224,6 @@ class NamedMixinApplicationBegin extends ParserAstNode {
     ParserAstType type, {
     required this.beginToken,
     this.abstractToken,
-    this.macroToken,
     this.sealedToken,
     this.baseToken,
     this.interfaceToken,
@@ -6175,7 +6237,6 @@ class NamedMixinApplicationBegin extends ParserAstNode {
   Map<String, Object?> get deprecatedArguments => {
     "beginToken": beginToken,
     "abstractToken": abstractToken,
-    "macroToken": macroToken,
     "sealedToken": sealedToken,
     "baseToken": baseToken,
     "interfaceToken": interfaceToken,
@@ -6441,20 +6502,14 @@ class ImportPrefixHandle extends ParserAstNode {
 
 class ImportEnd extends ParserAstNode {
   final Token importKeyword;
-  final Token? augmentToken;
   final Token? semicolon;
 
-  ImportEnd(
-    ParserAstType type, {
-    required this.importKeyword,
-    this.augmentToken,
-    this.semicolon,
-  }) : super("Import", type);
+  ImportEnd(ParserAstType type, {required this.importKeyword, this.semicolon})
+    : super("Import", type);
 
   @override
   Map<String, Object?> get deprecatedArguments => {
     "importKeyword": importKeyword,
-    "augmentToken": augmentToken,
     "semicolon": semicolon,
   };
 
@@ -7925,8 +7980,8 @@ class TopLevelMemberBegin extends ParserAstNode {
 
 class FieldsBegin extends ParserAstNode {
   final DeclarationKind declarationKind;
-  final Token? abstractToken;
   final Token? augmentToken;
+  final Token? abstractToken;
   final Token? externalToken;
   final Token? staticToken;
   final Token? covariantToken;
@@ -7937,8 +7992,8 @@ class FieldsBegin extends ParserAstNode {
   FieldsBegin(
     ParserAstType type, {
     required this.declarationKind,
-    this.abstractToken,
     this.augmentToken,
+    this.abstractToken,
     this.externalToken,
     this.staticToken,
     this.covariantToken,
@@ -7950,8 +8005,8 @@ class FieldsBegin extends ParserAstNode {
   @override
   Map<String, Object?> get deprecatedArguments => {
     "declarationKind": declarationKind,
-    "abstractToken": abstractToken,
     "augmentToken": augmentToken,
+    "abstractToken": abstractToken,
     "externalToken": externalToken,
     "staticToken": staticToken,
     "covariantToken": covariantToken,
@@ -7967,6 +8022,7 @@ class FieldsBegin extends ParserAstNode {
 class TopLevelFieldsEnd extends ParserAstNode
     implements BeginAndEndTokenParserAstNode {
   final Token? augmentToken;
+  final Token? abstractToken;
   final Token? externalToken;
   final Token? staticToken;
   final Token? covariantToken;
@@ -7981,6 +8037,7 @@ class TopLevelFieldsEnd extends ParserAstNode
   TopLevelFieldsEnd(
     ParserAstType type, {
     this.augmentToken,
+    this.abstractToken,
     this.externalToken,
     this.staticToken,
     this.covariantToken,
@@ -7994,6 +8051,7 @@ class TopLevelFieldsEnd extends ParserAstNode
   @override
   Map<String, Object?> get deprecatedArguments => {
     "augmentToken": augmentToken,
+    "abstractToken": abstractToken,
     "externalToken": externalToken,
     "staticToken": staticToken,
     "covariantToken": covariantToken,
@@ -8862,13 +8920,15 @@ class BinaryPatternBegin extends ParserAstNode {
 }
 
 class BinaryPatternEnd extends ParserAstNode {
-  final Token token;
+  final Token operatorToken;
 
-  BinaryPatternEnd(ParserAstType type, {required this.token})
+  BinaryPatternEnd(ParserAstType type, {required this.operatorToken})
     : super("BinaryPattern", type);
 
   @override
-  Map<String, Object?> get deprecatedArguments => {"token": token};
+  Map<String, Object?> get deprecatedArguments => {
+    "operatorToken": operatorToken,
+  };
 
   @override
   R accept<R>(ParserAstVisitor<R> v) => v.visitBinaryPatternEnd(this);
@@ -10166,30 +10226,6 @@ class SuperExpressionHandle extends ParserAstNode {
   R accept<R>(ParserAstVisitor<R> v) => v.visitSuperExpressionHandle(this);
 }
 
-class AugmentSuperExpressionHandle extends ParserAstNode {
-  final Token augmentToken;
-  final Token superToken;
-  final IdentifierContext context;
-
-  AugmentSuperExpressionHandle(
-    ParserAstType type, {
-    required this.augmentToken,
-    required this.superToken,
-    required this.context,
-  }) : super("AugmentSuperExpression", type);
-
-  @override
-  Map<String, Object?> get deprecatedArguments => {
-    "augmentToken": augmentToken,
-    "superToken": superToken,
-    "context": context,
-  };
-
-  @override
-  R accept<R>(ParserAstVisitor<R> v) =>
-      v.visitAugmentSuperExpressionHandle(this);
-}
-
 class SwitchCaseBegin extends ParserAstNode {
   final int labelCount;
   final int expressionCount;
@@ -10799,6 +10835,7 @@ abstract class ParserAstVisitor<R> {
   R visitMixinOnHandle(MixinOnHandle node);
   R visitMixinHeaderHandle(MixinHeaderHandle node);
   R visitRecoverMixinHeaderHandle(RecoverMixinHeaderHandle node);
+  R visitNoMixinBodyHandle(NoMixinBodyHandle node);
   R visitMixinDeclarationEnd(MixinDeclarationEnd node);
   R visitUncategorizedTopLevelDeclarationBegin(
     UncategorizedTopLevelDeclarationBegin node,
@@ -10808,6 +10845,7 @@ abstract class ParserAstVisitor<R> {
   );
   R visitExtensionDeclarationBegin(ExtensionDeclarationBegin node);
   R visitExtensionDeclarationEnd(ExtensionDeclarationEnd node);
+  R visitNoExtensionBodyHandle(NoExtensionBodyHandle node);
   R visitExtensionTypeDeclarationBegin(ExtensionTypeDeclarationBegin node);
   R visitExtensionTypeDeclarationEnd(ExtensionTypeDeclarationEnd node);
   R visitPrimaryConstructorBegin(PrimaryConstructorBegin node);
@@ -10837,6 +10875,7 @@ abstract class ParserAstVisitor<R> {
   R visitEnumHeaderHandle(EnumHeaderHandle node);
   R visitEnumBodyBegin(EnumBodyBegin node);
   R visitEnumBodyEnd(EnumBodyEnd node);
+  R visitNoEnumBodyHandle(NoEnumBodyHandle node);
   R visitEnumElementHandle(EnumElementHandle node);
   R visitExportBegin(ExportBegin node);
   R visitExportEnd(ExportEnd node);
@@ -11139,7 +11178,6 @@ abstract class ParserAstVisitor<R> {
   R visitQualifiedHandle(QualifiedHandle node);
   R visitStringPartHandle(StringPartHandle node);
   R visitSuperExpressionHandle(SuperExpressionHandle node);
-  R visitAugmentSuperExpressionHandle(AugmentSuperExpressionHandle node);
   R visitSwitchCaseBegin(SwitchCaseBegin node);
   R visitSwitchCaseEnd(SwitchCaseEnd node);
   R visitSwitchExpressionCaseBegin(SwitchExpressionCaseBegin node);
@@ -11302,6 +11340,10 @@ class RecursiveParserAstVisitor implements ParserAstVisitor<void> {
       node.visitChildren(this);
 
   @override
+  void visitNoMixinBodyHandle(NoMixinBodyHandle node) =>
+      node.visitChildren(this);
+
+  @override
   void visitMixinDeclarationEnd(MixinDeclarationEnd node) =>
       node.visitChildren(this);
 
@@ -11321,6 +11363,10 @@ class RecursiveParserAstVisitor implements ParserAstVisitor<void> {
 
   @override
   void visitExtensionDeclarationEnd(ExtensionDeclarationEnd node) =>
+      node.visitChildren(this);
+
+  @override
+  void visitNoExtensionBodyHandle(NoExtensionBodyHandle node) =>
       node.visitChildren(this);
 
   @override
@@ -11432,6 +11478,9 @@ class RecursiveParserAstVisitor implements ParserAstVisitor<void> {
 
   @override
   void visitEnumBodyEnd(EnumBodyEnd node) => node.visitChildren(this);
+
+  @override
+  void visitNoEnumBodyHandle(NoEnumBodyHandle node) => node.visitChildren(this);
 
   @override
   void visitEnumElementHandle(EnumElementHandle node) =>
@@ -12476,10 +12525,6 @@ class RecursiveParserAstVisitor implements ParserAstVisitor<void> {
       node.visitChildren(this);
 
   @override
-  void visitAugmentSuperExpressionHandle(AugmentSuperExpressionHandle node) =>
-      node.visitChildren(this);
-
-  @override
   void visitSwitchCaseBegin(SwitchCaseBegin node) => node.visitChildren(this);
 
   @override
@@ -12736,6 +12781,10 @@ class RecursiveParserAstVisitorWithDefaultNodeAsync
       defaultNode(node);
 
   @override
+  Future<void> visitNoMixinBodyHandle(NoMixinBodyHandle node) =>
+      defaultNode(node);
+
+  @override
   Future<void> visitMixinDeclarationEnd(MixinDeclarationEnd node) =>
       defaultNode(node);
 
@@ -12755,6 +12804,10 @@ class RecursiveParserAstVisitorWithDefaultNodeAsync
 
   @override
   Future<void> visitExtensionDeclarationEnd(ExtensionDeclarationEnd node) =>
+      defaultNode(node);
+
+  @override
+  Future<void> visitNoExtensionBodyHandle(NoExtensionBodyHandle node) =>
       defaultNode(node);
 
   @override
@@ -12873,6 +12926,10 @@ class RecursiveParserAstVisitorWithDefaultNodeAsync
 
   @override
   Future<void> visitEnumBodyEnd(EnumBodyEnd node) => defaultNode(node);
+
+  @override
+  Future<void> visitNoEnumBodyHandle(NoEnumBodyHandle node) =>
+      defaultNode(node);
 
   @override
   Future<void> visitEnumElementHandle(EnumElementHandle node) =>
@@ -13971,11 +14028,6 @@ class RecursiveParserAstVisitorWithDefaultNodeAsync
   @override
   Future<void> visitSuperExpressionHandle(SuperExpressionHandle node) =>
       defaultNode(node);
-
-  @override
-  Future<void> visitAugmentSuperExpressionHandle(
-    AugmentSuperExpressionHandle node,
-  ) => defaultNode(node);
 
   @override
   Future<void> visitSwitchCaseBegin(SwitchCaseBegin node) => defaultNode(node);

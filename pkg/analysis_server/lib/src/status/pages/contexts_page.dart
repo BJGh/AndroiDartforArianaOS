@@ -3,16 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:analysis_server/src/status/diagnostics.dart';
 import 'package:analysis_server/src/status/pages.dart';
 import 'package:analysis_server/src/status/utilities/library_cycle_extensions.dart';
 import 'package:analysis_server/src/status/utilities/string_extensions.dart';
-import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/context/source.dart';
-import 'package:analyzer/src/dart/analysis/driver.dart' as analysis;
 import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/dart/analysis/library_graph.dart';
 import 'package:analyzer/src/dart/sdk/sdk.dart';
@@ -39,69 +36,53 @@ class ContextsPage extends DiagnosticPageWithNav {
 
   @override
   Future<void> generateContent(Map<String, String> params) async {
-    var driverMap = SplayTreeMap.of(
-      server.driverMap,
-      (a, b) => a.path.compareTo(b.path),
-    );
     if (driverMap.isEmpty) {
       blankslate('No contexts.');
       return;
     }
 
-    var (folder: folder, driver: driver) = _currentContext(params, driverMap);
+    var (folder: folder, driver: driver) = currentContext(params);
     var contextPath = folder.path;
 
-    buf.writeln('<div class="tabnav">');
-    buf.writeln('<nav class="tabnav-tabs">');
-    for (var f in driverMap.keys) {
-      var selectedClass = f == folder ? 'selected' : '';
-      var href = '${this.path}?context=${Uri.encodeQueryComponent(f.path)}';
-      buf.writeln(
-        '<a href="${escape(href)}" class="tabnav-tab $selectedClass" title="${escape(f.path)}">${escape(f.shortName)}</a>',
-      );
-    }
-    buf.writeln('</nav>');
-    buf.writeln('</div>');
-
-    buf.writeln(writeOption('Context location', escape(contextPath)));
+    writeContextNavigationTabs(folder);
+    buf.writeln(formatOption('Context location', escape(contextPath)));
     buf.writeln(
-      writeOption('SDK root', escape(driver.analysisContext?.sdkRoot?.path)),
+      formatOption('SDK root', escape(driver.analysisContext?.sdkRoot?.path)),
     );
 
     h3('Analysis options');
 
     // Display analysis options entries inside this context root.
+    var optionsList = getOptionsList(folder, driver);
+    var foldersInContextRoot = [
+      for (var options in optionsList) options.file!.path,
+    ];
     var separator = folder.provider.pathContext.separator;
-    var foldersInContextRoot = driver.analysisOptionsMap.folders.where(
-      (e) =>
-          contextPath == e.path ||
-          contextPath.startsWith('${e.path}$separator'),
-    );
-    ul(foldersInContextRoot, (folder) {
-      buf.write(escape(folder.path));
-      var optionsPath = path.join(folder.path, 'analysis_options.yaml');
-      var contentsPath =
-          '/contents?file=${Uri.encodeQueryComponent(optionsPath)}';
-      buf.writeln(' <a href="$contentsPath">analysis_options.yaml</a>');
+    ul(foldersInContextRoot, (folderPath) {
+      buf.write(escape(folderPath));
+      buf.write('$separator<wbr>');
+      var optionsPath = path.join(folderPath, file_paths.analysisOptionsYaml);
+      buf.writeln(
+        formatContentsLink(optionsPath, file_paths.analysisOptionsYaml),
+      );
     }, classes: 'scroll-table');
 
     h3('Workspace');
     var workspace = driver.analysisContext!.contextRoot.workspace;
     buf.writeln('<p>');
-    buf.writeln(writeOption('Workspace root', escape(workspace.root)));
+    buf.writeln(formatOption('Workspace root', escape(workspace.root)));
     var workspaceFolder = folder.provider.getFolder(workspace.root);
 
     void writePackage(WorkspacePackageImpl package) {
-      buf.writeln(writeOption('Package root', escape(package.root.path)));
+      buf.writeln(formatOption('Package root', escape(package.root.path)));
       if (package is PubPackage) {
-        buf.writeln(
-          writeOption(
-            'pubspec file',
-            escape(
-              workspaceFolder.getChildAssumingFile(file_paths.pubspecYaml).path,
-            ),
-          ),
-        );
+        buf.write('pubspec file: ');
+        buf.write(escape(workspaceFolder.path));
+        buf.write('$separator<wbr>');
+        var pubspecPath = workspaceFolder
+            .getChildAssumingFile(file_paths.pubspecYaml)
+            .path;
+        buf.writeln(formatContentsLink(pubspecPath, file_paths.pubspecYaml));
       }
     }
 
@@ -109,7 +90,7 @@ class ContextsPage extends DiagnosticPageWithNav {
         .getChildAssumingFolder(file_paths.dotDartTool)
         .getChildAssumingFile(file_paths.packageConfigJson);
     buf.writeln(
-      writeOption('Has package_config.json file', packageConfig.exists),
+      formatOption('Has package_config.json file', packageConfig.exists),
     );
 
     String lenCounter(int length) {
@@ -226,10 +207,11 @@ class ContextsPage extends DiagnosticPageWithNav {
     );
     buf.write('<p>There are ${cycles.length} library cycles. ');
     if (cyclesToDisplay < 10) {
-      buf.write(
-        '$cyclesToDisplay of these have more than one library. '
-        'They contain</p>',
-      );
+      buf.write('$cyclesToDisplay of these have more than one library.');
+      if (cyclesToDisplay > 0) {
+        buf.write(' They contain');
+      }
+      buf.write('</p>');
     } else {
       buf.write('The $cyclesToDisplay largest contain</p>');
     }
@@ -279,25 +261,5 @@ class ContextsPage extends DiagnosticPageWithNav {
       buf.write(',');
     }
     buf.write('<br>}');
-  }
-
-  /// Information regarding the context currently being displayed.
-  ({Folder folder, analysis.AnalysisDriver driver}) _currentContext(
-    Map<String, String> params,
-    Map<Folder, analysis.AnalysisDriver> driverMap,
-  ) {
-    var contextPath = params['context'];
-    if (contextPath == null) {
-      return (
-        folder: driverMap.entries.first.key,
-        driver: driverMap.entries.first.value,
-      );
-    } else {
-      var entry = driverMap.entries.firstWhere(
-        (e) => e.key.path == contextPath,
-        orElse: () => driverMap.entries.first,
-      );
-      return (folder: entry.key, driver: entry.value);
-    }
   }
 }

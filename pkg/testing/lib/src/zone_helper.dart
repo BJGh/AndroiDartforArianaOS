@@ -21,7 +21,7 @@ Future runGuarded(
 }) {
   PrintHandler? printWrapper;
   if (printLineOnStdout != null) {
-    printWrapper = (_, __, ___, String line) {
+    printWrapper = (_, _, _, String line) {
       printLineOnStdout(line);
     };
   }
@@ -75,8 +75,9 @@ Future runGuarded(
       errorPort.close();
       Isolate.current.setErrorsFatal(true);
       Isolate.current.removeErrorListener(errorPort.sendPort);
-      return acknowledgeControlMessages(Isolate.current)
-          .then((_) => errorFuture);
+      return acknowledgeControlMessages(
+        Isolate.current,
+      ).then((_) => errorFuture);
     });
   });
 }

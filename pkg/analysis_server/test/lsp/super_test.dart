@@ -31,7 +31,6 @@ class B^ extends A {}
     );
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   Future<void> test_augmentation_constructor() async {
     await verifyGoToSuper(
       TestCode.parse('''
@@ -64,11 +63,11 @@ class A {
 }
 
 augment class A {
-  augment void foo() {}
+  augment void foo();
 }
 
 augment class A {
-  augment void [!foo!]() {}
+  augment void [!foo!]();
 }
 
 class B extends A {}

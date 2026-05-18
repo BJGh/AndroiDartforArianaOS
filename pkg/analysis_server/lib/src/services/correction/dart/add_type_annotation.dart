@@ -43,8 +43,8 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
   Future<void> compute(ChangeBuilder builder) async {
     var node = this.node;
 
-    if (node is SimpleFormalParameter) {
-      await _forSimpleFormalParameter(builder, node);
+    if (node is RegularFormalParameter) {
+      await _forRegularFormalParameter(builder, node);
       return;
     }
 
@@ -129,9 +129,9 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
     );
   }
 
-  Future<void> _forSimpleFormalParameter(
+  Future<void> _forRegularFormalParameter(
     ChangeBuilder builder,
-    SimpleFormalParameter parameter,
+    RegularFormalParameter parameter,
   ) async {
     // Ensure that there isn't already a type annotation.
     if (parameter.type != null) {
@@ -196,13 +196,10 @@ class AddTypeAnnotation extends ResolvedCorrectionProducer {
       return;
     }
 
-    int offset;
-    switch (node) {
-      case ListLiteral():
-        offset = node.leftBracket.offset;
-      case SetOrMapLiteral():
-        offset = node.leftBracket.offset;
-    }
+    var offset = switch (node) {
+      ListLiteral() => node.leftBracket.offset,
+      SetOrMapLiteral() => node.leftBracket.offset,
+    };
 
     await builder.addDartFileEdit(file, (builder) {
       builder.addInsertion(offset, (builder) {

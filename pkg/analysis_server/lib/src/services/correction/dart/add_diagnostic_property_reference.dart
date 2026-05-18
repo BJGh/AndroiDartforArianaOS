@@ -4,7 +4,6 @@
 
 import 'package:analysis_server/src/services/correction/assist.dart';
 import 'package:analysis_server/src/services/correction/fix.dart';
-import 'package:analysis_server/src/utilities/extensions/object.dart';
 import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -192,7 +191,8 @@ class AddDiagnosticPropertyReference extends ResolvedCorrectionProducer {
     }
 
     for (var parameter in parameterList.parameters) {
-      if (parameter is SimpleFormalParameter) {
+      if (parameter is RegularFormalParameter &&
+          parameter.functionTypedSuffix == null) {
         var type = parameter.type;
         var identifier = parameter.name;
         if (type is NamedType &&
@@ -465,9 +465,7 @@ class _PropertyInfo {
 }
 
 extension on ClassDeclaration {
-  MethodDeclaration? get debugFillPropertiesDeclaration => body
-      .ifTypeOrNull<BlockClassBody>()
-      ?.members
+  MethodDeclaration? get debugFillPropertiesDeclaration => body.members
       .whereType<MethodDeclaration>()
       .where((e) => e.name.lexeme == 'debugFillProperties')
       .singleOrNull;

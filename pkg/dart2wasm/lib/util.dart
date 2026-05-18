@@ -28,8 +28,12 @@ bool hasPragma(CoreTypes coreTypes, Annotatable node, String name) {
   return getPragma(coreTypes, node, name, defaultValue: '') != null;
 }
 
-T? getPragma<T>(CoreTypes coreTypes, Annotatable node, String name,
-    {T? defaultValue}) {
+T? getPragma<T>(
+  CoreTypes coreTypes,
+  Annotatable node,
+  String name, {
+  T? defaultValue,
+}) {
   for (Expression annotation in node.annotations) {
     if (annotation is ConstantExpression) {
       Constant constant = annotation.constant;
@@ -47,8 +51,10 @@ T? getPragma<T>(CoreTypes coreTypes, Annotatable node, String name,
               return value.value;
             }
             if (value is! T) {
-              throw ArgumentError("$name pragma argument has unexpected type "
-                  "${value.runtimeType} (expected $T)");
+              throw ArgumentError(
+                "$name pragma argument has unexpected type "
+                "${value.runtimeType} (expected $T)",
+              );
             }
             return value as T;
           }
@@ -99,18 +105,30 @@ bool hasWasmWeakExportPragma(CoreTypes coreTypes, Member member) {
 }
 
 String? getWasmExportPragma(CoreTypes coreTypes, Member member) {
-  return getPragma<String>(coreTypes, member, 'wasm:export',
-      defaultValue: member.name.text);
+  return getPragma<String>(
+    coreTypes,
+    member,
+    'wasm:export',
+    defaultValue: member.name.text,
+  );
 }
 
 String? getWasmWeakExportPragma(CoreTypes coreTypes, Member member) {
-  return getPragma<String>(coreTypes, member, 'wasm:weak-export',
-      defaultValue: member.name.text);
+  return getPragma<String>(
+    coreTypes,
+    member,
+    'wasm:weak-export',
+    defaultValue: member.name.text,
+  );
 }
 
 bool hasWasmPureFunctionPragma(CoreTypes coreTypes, Member member) {
-  return getPragma<bool>(coreTypes, member, 'wasm:pure-function',
-          defaultValue: true) ==
+  return getPragma<bool>(
+        coreTypes,
+        member,
+        'wasm:pure-function',
+        defaultValue: true,
+      ) ==
       true;
 }
 
@@ -119,13 +137,19 @@ T addWasmEntryPointPragma<T extends Annotatable>(T node, CoreTypes coreTypes) =>
     addPragma(node, 'wasm:entry-point', coreTypes);
 
 T addPragma<T extends Annotatable>(
-        T node, String pragmaName, CoreTypes coreTypes, {Constant? value}) =>
-    node
-      ..addAnnotation(ConstantExpression(
-          InstanceConstant(coreTypes.pragmaClass.reference, [], {
+  T node,
+  String pragmaName,
+  CoreTypes coreTypes, {
+  Constant? value,
+}) => node
+  ..addAnnotation(
+    ConstantExpression(
+      InstanceConstant(coreTypes.pragmaClass.reference, [], {
         coreTypes.pragmaName.fieldReference: StringConstant(pragmaName),
         coreTypes.pragmaOptions.fieldReference: value ?? NullConstant(),
-      })));
+      }),
+    ),
+  );
 
 List<int> _intToLittleEndianBytes(int i) {
   List<int> bytes = [];
@@ -145,16 +169,37 @@ String intToBase64(int i) => base64.encode(_intToLittleEndianBytes(i));
 /// For simplicity, this only uses combinations of 1-byte characters. The 2+
 /// byte characters don't significantly impact the average string size.
 ///
-/// Starts at 1 to avoid emitting the empty string.
+/// Will not emit an empty string.
 String intToMinString(int i) {
+  // Stick to the 92 printable characters (starting after "), from 35 to 126.
+  var base = 92;
   assert(i >= 0);
   i += 1;
   final codeUnits = <int>[];
   while (i > 0) {
-    // Stick to the 92 printable characters (starting after "), from 35 to 126.
-    int remainder = i % 92;
-    i ~/= 92;
+    int remainder = i % base;
+    i ~/= base;
     codeUnits.add(remainder + 35);
+  }
+  return String.fromCharCodes(codeUnits);
+}
+
+/// Maps ints to minimal length strings that are safe to use as JavaScript
+/// identifiers.
+///
+/// Will not emit an empty string.
+String intToMinJsSafeString(int i) {
+  assert(i >= 0);
+  i += 1;
+  final codeUnits = <int>[];
+  while (i > 0) {
+    int remainder = i % 52;
+    i ~/= 52;
+    if (remainder < 26) {
+      codeUnits.add(remainder + 65); // 'A'-'Z'
+    } else {
+      codeUnits.add(remainder - 26 + 97); // 'a'-'z'
+    }
   }
   return String.fromCharCodes(codeUnits);
 }

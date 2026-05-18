@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -18,7 +17,7 @@ main() {
 @reflectiveTest
 class PropertyAccessResolutionTest extends PubPackageResolutionTest {
   test_extensionOverride_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -57,7 +56,7 @@ PropertyAccess
   }
 
   test_extensionOverride_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -109,7 +108,7 @@ AssignmentExpression
   }
 
   test_extensionOverride_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -160,7 +159,7 @@ AssignmentExpression
   }
 
   test_functionType_call_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(int Function(String) a) {
   (a).call;
 }
@@ -187,8 +186,7 @@ PropertyAccess
   }
 
   test_implicitCall_tearOff_nullable() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int call() => 0;
 }
@@ -199,10 +197,10 @@ class B {
 
 int Function() foo() {
   return B().a; // ref
+//       ^^^^^
+// [diag.returnOfInvalidTypeFromFunction] A value of type 'A?' can't be returned from the function 'foo' because it has a return type of 'int Function()'.
 }
-''',
-      [error(diag.returnOfInvalidTypeFromFunction, 85, 5)],
-    );
+''');
 
     var identifier = findNode.simple('a; // ref');
     assertResolvedNodeText(identifier, r'''
@@ -213,26 +211,20 @@ SimpleIdentifier
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_inClass_explicitThis_inDeclaration_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  int get foo;
+
+  void f() {
+    this.foo;
+  }
+}
 
 augment class A {
   augment int get foo => 0;
 }
 ''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {
-  int get foo => 0;
-
-  void f() {
-    this.foo;
-  }
-}
-''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -243,25 +235,14 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@getter::foo#element
+    element: <testLibrary>::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_inClass_explicitThis_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics(r'''
 int get foo => 0;
 
 class A {
@@ -269,6 +250,10 @@ class A {
     this.foo;
   }
 }
+
+augment class A {
+  int get foo => 0;
+}
 ''');
 
     var node = findNode.singlePropertyAccess;
@@ -280,33 +265,26 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
+    element: <testLibrary>::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_inClass_explicitThis_inDeclaration_augmentationDeclares_method() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+    await resolveTestCodeWithDiagnostics(r'''
+int get foo => 0;
+
+class A {
+  void f() {
+    this.foo;
+  }
+}
 
 augment class A {
   void foo() {}
 }
 ''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-int get foo => 0;
-
-class A {
-  void f() {
-    this.foo;
-  }
-}
-''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -317,26 +295,24 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
+    element: <testLibrary>::@class::A::@method::foo
     staticType: void Function()
   staticType: void Function()
 ''');
   }
 
   test_inClass_superExpression_identifier_setter() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   set foo(int _) {}
 
   void f() {
     super.foo;
+//        ^^^
+// [diag.undefinedSuperGetter] The getter 'foo' isn't defined in a superclass of 'A'.
   }
 }
-''',
-      [error(diag.undefinedSuperGetter, 54, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
@@ -354,7 +330,7 @@ PropertyAccess
   }
 
   test_inClass_superQualifier_identifier_getter() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int get foo => 0;
 }
@@ -384,7 +360,7 @@ PropertyAccess
   }
 
   test_inClass_superQualifier_identifier_method() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   void foo(int _) {}
 }
@@ -414,8 +390,7 @@ PropertyAccess
   }
 
   test_inClass_superQualifier_identifier_setter() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   set foo(int _) {}
 }
@@ -425,11 +400,11 @@ class B extends A {
 
   void f() {
     super.foo;
+//        ^^^
+// [diag.undefinedSuperGetter] The getter 'foo' isn't defined in a superclass of 'B'.
   }
 }
-''',
-      [error(diag.undefinedSuperGetter, 97, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
@@ -447,7 +422,7 @@ PropertyAccess
   }
 
   test_inClass_thisExpression_identifier_getter() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int get foo => 0;
 
@@ -473,7 +448,7 @@ PropertyAccess
   }
 
   test_inClass_thisExpression_identifier_method() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   void foo(int _) {}
 
@@ -499,7 +474,7 @@ PropertyAccess
   }
 
   test_inExtensionType_explicitThis_declared() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 
@@ -525,7 +500,7 @@ PropertyAccess
   }
 
   test_inExtensionType_explicitThis_exposed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo => 0;
 }
@@ -555,7 +530,7 @@ PropertyAccess
   }
 
   test_instanceCreation_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -589,7 +564,7 @@ PropertyAccess
   }
 
   test_instanceCreation_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -635,7 +610,7 @@ AssignmentExpression
   }
 
   test_instanceCreation_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -727,29 +702,26 @@ PropertyAccess
 void f({a = b?..foo}) {}
 ''');
 
-    var node = findNode.defaultParameter('a =');
+    var node = findNode.singleFormalParameter;
     assertResolvedNodeText(node, r'''
-DefaultFormalParameter
-  parameter: SimpleFormalParameter
-    name: a
-    declaredFragment: <testLibraryFragment> a@8
-      element: hasImplicitType isPublic
-        type: dynamic
-  separator: =
-  defaultValue: CascadeExpression
-    target: SimpleIdentifier
-      token: b
-      element: <null>
-      staticType: InvalidType
-    cascadeSections
-      PropertyAccess
-        operator: ?..
-        propertyName: SimpleIdentifier
-          token: foo
-          element: <null>
-          staticType: InvalidType
+RegularFormalParameter
+  name: a
+  defaultClause: FormalParameterDefaultClause
+    separator: =
+    value: CascadeExpression
+      target: SimpleIdentifier
+        token: b
+        element: <null>
         staticType: InvalidType
-    staticType: InvalidType
+      cascadeSections
+        PropertyAccess
+          operator: ?..
+          propertyName: SimpleIdentifier
+            token: foo
+            element: <null>
+            staticType: InvalidType
+          staticType: InvalidType
+      staticType: InvalidType
   declaredFragment: <testLibraryFragment> a@8
     element: hasImplicitType isPublic
       type: dynamic
@@ -757,7 +729,7 @@ DefaultFormalParameter
   }
 
   test_nullShorting_cascade() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo => 0;
   int get bar => 0;
@@ -795,7 +767,7 @@ CascadeExpression
   }
 
   test_nullShorting_cascade2() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int? get foo => 0;
 }
@@ -840,7 +812,7 @@ CascadeExpression
   }
 
   test_nullShorting_cascade3() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   A? get foo => this;
   A? get bar => this;
@@ -894,7 +866,7 @@ CascadeExpression
   }
 
   test_nullShorting_cascade4() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 A? get foo => A();
 
 class A {
@@ -941,26 +913,20 @@ CascadeExpression
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofClass_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  int get foo;
+}
+
+void f(A a) {
+  (a).foo;
+}
 
 augment class A {
   augment int get foo => 0;
 }
 ''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  (a).foo;
-}
-''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -969,37 +935,29 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@getter::foo#element
+    element: <testLibrary>::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofClass_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A a) {
   (a).foo;
+}
+
+augment class A {
+  int get foo => 0;
 }
 ''');
 
@@ -1010,23 +968,21 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
+    element: <testLibrary>::@class::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
   test_ofClass_inheritedGetter_ofGenericClass_usesTypeParameter() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   T get foo => throw 0;
 }
@@ -1061,7 +1017,7 @@ PropertyAccess
   }
 
   test_ofClass_inheritedGetter_ofGenericClass_usesTypeParameterNot() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   double get foo => throw 0;
 }
@@ -1094,7 +1050,7 @@ PropertyAccess
   }
 
   test_ofDynamic_read_hash() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   (a).hash;
 }
@@ -1121,7 +1077,7 @@ PropertyAccess
   }
 
   test_ofDynamic_read_hashCode() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   (a).hashCode;
 }
@@ -1148,7 +1104,7 @@ PropertyAccess
   }
 
   test_ofDynamic_read_runtimeType() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   (a).runtimeType;
 }
@@ -1175,7 +1131,7 @@ PropertyAccess
   }
 
   test_ofDynamic_read_toString() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   (a).toString;
 }
@@ -1202,7 +1158,7 @@ PropertyAccess
   }
 
   test_ofEnum_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   int get foo => 0;
@@ -1234,7 +1190,7 @@ PropertyAccess
   }
 
   test_ofEnum_read_fromMixin() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 mixin M on Enum {
   int get foo => 0;
 }
@@ -1269,7 +1225,7 @@ PropertyAccess
   }
 
   test_ofEnum_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   set foo(int _) {}
@@ -1312,25 +1268,18 @@ AssignmentExpression
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofExtension_augmentation_read() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
-
-augment extension E {
-  int get foo => 0;
-}
-''');
-
-    await assertNoErrorsInCode('''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {}
 
 void f(A a) {
   (a).foo;
+}
+
+augment extension E {
+  int get foo => 0;
 }
 ''');
 
@@ -1341,40 +1290,31 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@getter::foo#element
+    element: <testLibrary>::@extension::E::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofExtension_augmentation_write() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
-
-augment extension E {
-  set foo(int _) {}
-}
-''');
-
-    await assertNoErrorsInCode('''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {}
 
 void f(A a) {
   (a).foo = 0;
+}
+
+augment extension E {
+  set foo(int _) {}
 }
 ''');
 
@@ -1386,54 +1326,42 @@ AssignmentExpression
       leftParenthesis: (
       expression: SimpleIdentifier
         token: a
-        staticElement: <testLibraryFragment>::@function::f::@parameter::a
-        element: <testLibraryFragment>::@function::f::@parameter::a#element
+        element: <testLibrary>::@function::f::@formalParameter::a
         staticType: A
       rightParenthesis: )
       staticType: A
     operator: .
     propertyName: SimpleIdentifier
       token: foo
-      staticElement: <null>
       element: <null>
       staticType: null
     staticType: null
   operator: =
   rightHandSide: IntegerLiteral
     literal: 0
-    parameter: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@setter::foo::@parameter::_
+    correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::_
     staticType: int
   readElement: <null>
-  readElement2: <null>
   readType: null
-  writeElement: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@setter::foo
-  writeElement2: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@setter::foo#element
+  writeElement: <testLibrary>::@extension::E::@setter::foo
   writeType: int
-  staticElement: <null>
   element: <null>
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofExtension_augmentationGeneric_read() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
-
-augment extension E<U2> {
-  U2 get foo => throw 0;
-}
-''');
-
-    await assertNoErrorsInCode('''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
-extension E<U1> on A<U1> {}
+extension E<U> on A<U> {}
 
 void f(A<int> a) {
   (a).foo;
+}
+
+augment extension E<U> {
+  U get foo => throw 0;
 }
 ''');
 
@@ -1444,26 +1372,23 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A<int>
     rightParenthesis: )
     staticType: A<int>
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: GetterMember
-      base: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@getter::foo
-      augmentationSubstitution: {U2: U1}
-      substitution: {U1: int}
-    element: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@getter::foo#element
+    element: GetterMember
+      baseElement: <testLibrary>::@extension::E::@getter::foo
+      substitution: {U: int}
     staticType: int
   staticType: int
 ''');
   }
 
   test_ofExtension_onRecordType() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 extension IntStringRecordExtension on (int, String) {
   int get foo => 0;
 }
@@ -1490,7 +1415,7 @@ PropertyAccess
   }
 
   test_ofExtension_onRecordType_generic() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 extension BiRecordExtension<T, U> on (T, U) {
   Map<T, U> get foo => {};
 }
@@ -1519,7 +1444,7 @@ PropertyAccess
   }
 
   test_ofExtension_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -1555,7 +1480,7 @@ PropertyAccess
   }
 
   test_ofExtension_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -1604,7 +1529,7 @@ AssignmentExpression
   }
 
   test_ofExtension_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -1652,7 +1577,7 @@ AssignmentExpression
   }
 
   test_ofExtensionType_read() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -1683,7 +1608,7 @@ PropertyAccess
   }
 
   test_ofExtensionType_read_ofObject() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 
 void f(A a) {
@@ -1712,7 +1637,7 @@ PropertyAccess
   }
 
   test_ofExtensionType_read_ofObjectQuestion() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int? it) {}
 
 void f(A a) {
@@ -1741,16 +1666,15 @@ PropertyAccess
   }
 
   test_ofExtensionType_read_unresolved() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 
 void f(A a) {
   (a).foo;
+//    ^^^
+// [diag.undefinedGetter] The getter 'foo' isn't defined for the type 'A'.
 }
-''',
-      [error(diag.undefinedGetter, 49, 3)],
-    );
+''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -1773,7 +1697,7 @@ PropertyAccess
   }
 
   test_ofExtensionType_write() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   set foo(int _) {}
 }
@@ -1815,26 +1739,20 @@ AssignmentExpression
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofMixin_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+    await resolveTestCodeWithDiagnostics(r'''
+mixin A {
+  int get foo;
+}
+
+void f(A a) {
+  (a).foo;
+}
 
 augment mixin A {
   augment int get foo => 0;
 }
 ''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-mixin A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  (a).foo;
-}
-''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -1843,37 +1761,29 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getterAugmentation::foo
-    element: <testLibraryFragment>::@mixin::A::@getter::foo#element
+    element: <testLibrary>::@mixin::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_ofMixin_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
+    await resolveTestCodeWithDiagnostics(r'''
 mixin A {}
 
 void f(A a) {
   (a).foo;
+}
+
+augment mixin A {
+  int get foo => 0;
 }
 ''');
 
@@ -1884,23 +1794,21 @@ PropertyAccess
     leftParenthesis: (
     expression: SimpleIdentifier
       token: a
-      staticElement: <testLibraryFragment>::@function::f::@parameter::a
-      element: <testLibraryFragment>::@function::f::@parameter::a#element
+      element: <testLibrary>::@function::f::@formalParameter::a
       staticType: A
     rightParenthesis: )
     staticType: A
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo#element
+    element: <testLibrary>::@mixin::A::@getter::foo
     staticType: int
   staticType: int
 ''');
   }
 
   test_ofRecordType_namedField() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(({int foo}) r) {
   r.foo;
 }
@@ -1923,7 +1831,7 @@ PropertyAccess
   }
 
   test_ofRecordType_namedField_hasExtension() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 extension E on ({int foo}) {
   bool get foo => false;
 }
@@ -1954,7 +1862,7 @@ PropertyAccess
 final r = (foo: 42);
 ''');
 
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 // @dart = 2.19
 import 'a.dart';
 void f() {
@@ -1979,7 +1887,7 @@ PropertyAccess
   }
 
   test_ofRecordType_namedField_nullAware() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(({int foo})? r) {
   r?.foo;
 }
@@ -2002,7 +1910,7 @@ PropertyAccess
   }
 
   test_ofRecordType_namedField_ofTypeParameter() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f<T extends ({int foo})>(T r) {
   r.foo;
 }
@@ -2025,7 +1933,7 @@ PropertyAccess
   }
 
   test_ofRecordType_Object_hashCode() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(({int foo}) r) {
   r.hashCode;
 }
@@ -2048,7 +1956,7 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_0() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.$1;
 }
@@ -2071,7 +1979,7 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_0_hasExtension() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension E on (int, String) {
   bool get $1 => false;
 }
@@ -2098,7 +2006,7 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_1() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.$2;
 }
@@ -2121,7 +2029,7 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_2_fromExtension() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension on (int, String) {
   bool get $3 => false;
 }
@@ -2141,21 +2049,20 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: $3
-    element: <testLibrary>::@extension::0::@getter::$3
+    element: <testLibrary>::@extension::#0::@getter::$3
     staticType: bool
   staticType: bool
 ''');
   }
 
   test_ofRecordType_positionalField_2_unresolved() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.$3;
+//  ^^
+// [diag.undefinedGetter] The getter '$3' isn't defined for the type '(int, String)'.
 }
-''',
-      [error(diag.undefinedGetter, 30, 2)],
-    );
+''');
 
     var node = findNode.propertyAccess(r'$3;');
     assertResolvedNodeText(node, r'''
@@ -2174,14 +2081,13 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_dollarDigitLetter() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.$0a;
+//  ^^^
+// [diag.undefinedGetter] The getter '$0a' isn't defined for the type '(int, String)'.
 }
-''',
-      [error(diag.undefinedGetter, 30, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess(r'$0a;');
     assertResolvedNodeText(node, r'''
@@ -2200,14 +2106,13 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_dollarName() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.$zero;
+//  ^^^^^
+// [diag.undefinedGetter] The getter '$zero' isn't defined for the type '(int, String)'.
 }
-''',
-      [error(diag.undefinedGetter, 30, 5)],
-    );
+''');
 
     var node = findNode.propertyAccess(r'$zero;');
     assertResolvedNodeText(node, r'''
@@ -2230,7 +2135,7 @@ PropertyAccess
 final r = (0, 'bar');
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 // @dart = 2.19
 import 'a.dart';
 void f() {
@@ -2255,14 +2160,13 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_letterDollarZero() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   r.a$0;
+//  ^^^
+// [diag.undefinedGetter] The getter 'a$0' isn't defined for the type '(int, String)'.
 }
-''',
-      [error(diag.undefinedGetter, 30, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess(r'a$0;');
     assertResolvedNodeText(node, r'''
@@ -2281,7 +2185,7 @@ PropertyAccess
   }
 
   test_ofRecordType_positionalField_ofTypeParameter() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f<T extends (int, String)>(T r) {
   r.$1;
 }
@@ -2304,14 +2208,13 @@ PropertyAccess
   }
 
   test_ofRecordType_unresolved() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 void f(({int foo}) r) {
   r.bar;
+//  ^^^
+// [diag.undefinedGetter] The getter 'bar' isn't defined for the type '({int foo})'.
 }
-''',
-      [error(diag.undefinedGetter, 28, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess('bar;');
     assertResolvedNodeText(node, r'''
@@ -2332,14 +2235,13 @@ PropertyAccess
   /// Even though positional fields can have names, these names cannot be
   /// used to access these fields.
   test_ofRecordType_unresolved_positionalField() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 void f((int foo, String) r) {
   r.foo;
+//  ^^^
+// [diag.undefinedGetter] The getter 'foo' isn't defined for the type '(int, String)'.
 }
-''',
-      [error(diag.undefinedGetter, 34, 3)],
-    );
+''');
 
     var node = findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
@@ -2358,7 +2260,7 @@ PropertyAccess
   }
 
   test_ofSwitchExpression() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 void f(Object? x) {
   (switch (x) {
     _ => 0,
@@ -2400,7 +2302,7 @@ PropertyAccess
   }
 
   test_rewrite_nullShorting() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   T Function<T>(T) get f;
 }
@@ -2437,7 +2339,7 @@ int Function(int)? f(B? b) => b?.a.f;
   }
 
   test_super_read() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -2465,7 +2367,7 @@ PropertyAccess
   }
 
   test_super_readWrite_assignment() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -2505,7 +2407,7 @@ AssignmentExpression
   }
 
   test_super_write() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -2545,7 +2447,7 @@ AssignmentExpression
   }
 
   test_targetTypeParameter_dynamicBounded() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A<T extends dynamic> {
   void f(T t) {
     (t).foo;
@@ -2574,16 +2476,15 @@ PropertyAccess
   }
 
   test_targetTypeParameter_noBound() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class C<T> {
   void f(T t) {
     (t).foo;
+//      ^^^
+// [diag.uncheckedPropertyAccessOfNullableValue] The property 'foo' can't be unconditionally accessed because the receiver can be 'null'.
   }
 }
-''',
-      [error(diag.uncheckedPropertyAccessOfNullableValue, 37, 3)],
-    );
+''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
@@ -2606,7 +2507,7 @@ PropertyAccess
   }
 
   test_tearOff_method() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   void foo(int a) {}
 }
@@ -2626,14 +2527,13 @@ SimpleIdentifier
   }
 
   test_unresolved_identifier() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 void f() {
   (a).foo;
+// ^
+// [diag.undefinedIdentifier] Undefined name 'a'.
 }
-''',
-      [error(diag.undefinedIdentifier, 14, 1)],
-    );
+''');
 
     var node = findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''

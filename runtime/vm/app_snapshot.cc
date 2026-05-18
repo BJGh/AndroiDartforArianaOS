@@ -685,9 +685,9 @@ class Deserializer : public ThreadStackResource {
 
   // Verifies the image alignment.
   //
-  // Returns ApiError::null() on success and an ApiError with an an appropriate
-  // message otherwise.
-  ApiErrorPtr VerifyImageAlignment();
+  // On success, returns nullptr. On failure, returns an error message that the
+  // caller must free.
+  char* VerifyImageAlignment();
 
   ObjectPtr Allocate(intptr_t size);
   static void InitializeHeader(ObjectPtr raw, intptr_t cid, intptr_t size) {
@@ -3757,6 +3757,103 @@ class RODataDeserializationCluster
 #endif  // !DART_COMPRESSED_POINTERS
 
 #if !defined(DART_PRECOMPILED_RUNTIME)
+class LocalVarDescriptorsSerializationCluster : public SerializationCluster {
+ public:
+  LocalVarDescriptorsSerializationCluster()
+      : SerializationCluster("LocalVarDescriptors", kLocalVarDescriptorsCid) {}
+  ~LocalVarDescriptorsSerializationCluster() {}
+
+  void Trace(Serializer* s, ObjectPtr object) {
+    LocalVarDescriptorsPtr handlers = LocalVarDescriptors::RawCast(object);
+    objects_.Add(handlers);
+
+    const intptr_t length = handlers->untag()->num_entries_;
+    for (intptr_t i = 0; i < length; i++) {
+      s->Push(handlers->untag()->name(i));
+    }
+  }
+
+  void WriteAlloc(Serializer* s) {
+    const intptr_t count = objects_.length();
+    s->WriteUnsigned(count);
+    for (intptr_t i = 0; i < count; i++) {
+      LocalVarDescriptorsPtr handlers = objects_[i];
+      s->AssignRef(handlers);
+      AutoTraceObject(handlers);
+      const intptr_t length = handlers->untag()->num_entries_;
+      s->WriteUnsigned(length);
+      target_memory_size_ +=
+          compiler::target::LocalVarDescriptors::InstanceSize(length);
+    }
+  }
+
+  void WriteFill(Serializer* s) {
+    const intptr_t count = objects_.length();
+    for (intptr_t i = 0; i < count; i++) {
+      LocalVarDescriptorsPtr handlers = objects_[i];
+      AutoTraceObject(handlers);
+      const intptr_t length = handlers->untag()->num_entries_;
+      s->WriteUnsigned(length);
+      WriteFromTo(handlers, length);
+      for (intptr_t j = 0; j < length; j++) {
+        UntaggedLocalVarDescriptors::VarInfo& info =
+            handlers->untag()->data()[j];
+        s->Write<int32_t>(info.index_kind);
+        s->WriteTokenPosition(info.declaration_pos);
+        s->WriteTokenPosition(info.begin_pos);
+        s->WriteTokenPosition(info.end_pos);
+        s->Write<int64_t>(info.scope_id);
+      }
+    }
+  }
+
+ private:
+  GrowableArray<LocalVarDescriptorsPtr> objects_;
+};
+#endif  // !DART_PRECOMPILED_RUNTIME
+
+class LocalVarDescriptorsDeserializationCluster
+    : public DeserializationCluster {
+ public:
+  LocalVarDescriptorsDeserializationCluster()
+      : DeserializationCluster("LocalVarDescriptors") {}
+  ~LocalVarDescriptorsDeserializationCluster() {}
+
+  void ReadAlloc(Deserializer* d) override {
+    start_index_ = d->next_index();
+    const intptr_t count = d->ReadUnsigned();
+    for (intptr_t i = 0; i < count; i++) {
+      const intptr_t length = d->ReadUnsigned();
+      d->AssignRef(d->Allocate(LocalVarDescriptors::InstanceSize(length)));
+    }
+    stop_index_ = d->next_index();
+  }
+
+  void ReadFill(Deserializer* d_) override {
+    Deserializer::Local d(d_);
+
+    ASSERT(!is_canonical());  // Never canonical.
+    for (intptr_t id = start_index_, n = stop_index_; id < n; id++) {
+      LocalVarDescriptorsPtr handlers =
+          static_cast<LocalVarDescriptorsPtr>(d.Ref(id));
+      const intptr_t length = d.ReadUnsigned();
+      Deserializer::InitializeHeader(handlers, kLocalVarDescriptorsCid,
+                                     LocalVarDescriptors::InstanceSize(length));
+      d.ReadFromTo(handlers, length);
+      for (intptr_t j = 0; j < length; j++) {
+        UntaggedLocalVarDescriptors::VarInfo& info =
+            handlers->untag()->data()[j];
+        info.index_kind = d.Read<int32_t>();
+        info.declaration_pos = d.ReadTokenPosition();
+        info.begin_pos = d.ReadTokenPosition();
+        info.end_pos = d.ReadTokenPosition();
+        info.scope_id = d.Read<int64_t>();
+      }
+    }
+  }
+};
+
+#if !defined(DART_PRECOMPILED_RUNTIME)
 class ExceptionHandlersSerializationCluster : public SerializationCluster {
  public:
   ExceptionHandlersSerializationCluster()
@@ -4342,6 +4439,66 @@ class LoadingUnitDeserializationCluster : public DeserializationCluster {
 };
 
 #if !defined(DART_PRECOMPILED_RUNTIME)
+class ApiErrorSerializationCluster : public SerializationCluster {
+ public:
+  ApiErrorSerializationCluster()
+      : SerializationCluster("ApiError",
+                             kApiErrorCid,
+                             compiler::target::ApiError::InstanceSize()) {}
+  ~ApiErrorSerializationCluster() {}
+
+  void Trace(Serializer* s, ObjectPtr object) {
+    ApiErrorPtr error = ApiError::RawCast(object);
+    objects_.Add(error);
+    PushFromTo(error);
+  }
+
+  void WriteAlloc(Serializer* s) {
+    const intptr_t count = objects_.length();
+    s->WriteUnsigned(count);
+    for (intptr_t i = 0; i < count; i++) {
+      ApiErrorPtr error = objects_[i];
+      s->AssignRef(error);
+    }
+  }
+
+  void WriteFill(Serializer* s) {
+    const intptr_t count = objects_.length();
+    for (intptr_t i = 0; i < count; i++) {
+      ApiErrorPtr error = objects_[i];
+      AutoTraceObject(error);
+      WriteFromTo(error);
+    }
+  }
+
+ private:
+  GrowableArray<ApiErrorPtr> objects_;
+};
+#endif  // !DART_PRECOMPILED_RUNTIME
+
+class ApiErrorDeserializationCluster : public DeserializationCluster {
+ public:
+  ApiErrorDeserializationCluster() : DeserializationCluster("ApiError") {}
+  ~ApiErrorDeserializationCluster() {}
+
+  void ReadAlloc(Deserializer* d) override {
+    ReadAllocFixedSize(d, ApiError::InstanceSize());
+  }
+
+  void ReadFill(Deserializer* d_) override {
+    Deserializer::Local d(d_);
+
+    ASSERT(!is_canonical());  // Never canonical.
+    for (intptr_t id = start_index_, n = stop_index_; id < n; id++) {
+      ApiErrorPtr error = static_cast<ApiErrorPtr>(d.Ref(id));
+      Deserializer::InitializeHeader(error, kApiErrorCid,
+                                     ApiError::InstanceSize());
+      d.ReadFromTo(error);
+    }
+  }
+};
+
+#if !defined(DART_PRECOMPILED_RUNTIME)
 class LanguageErrorSerializationCluster : public SerializationCluster {
  public:
   LanguageErrorSerializationCluster()
@@ -4467,6 +4624,68 @@ class UnhandledExceptionDeserializationCluster : public DeserializationCluster {
       Deserializer::InitializeHeader(exception, kUnhandledExceptionCid,
                                      UnhandledException::InstanceSize());
       d.ReadFromTo(exception);
+    }
+  }
+};
+
+#if !defined(DART_PRECOMPILED_RUNTIME)
+class UnwindErrorSerializationCluster : public SerializationCluster {
+ public:
+  UnwindErrorSerializationCluster()
+      : SerializationCluster("UnwindError",
+                             kUnwindErrorCid,
+                             compiler::target::UnwindError::InstanceSize()) {}
+  ~UnwindErrorSerializationCluster() {}
+
+  void Trace(Serializer* s, ObjectPtr object) {
+    UnwindErrorPtr error = UnwindError::RawCast(object);
+    objects_.Add(error);
+    PushFromTo(error);
+  }
+
+  void WriteAlloc(Serializer* s) {
+    const intptr_t count = objects_.length();
+    s->WriteUnsigned(count);
+    for (intptr_t i = 0; i < count; i++) {
+      UnwindErrorPtr error = objects_[i];
+      s->AssignRef(error);
+    }
+  }
+
+  void WriteFill(Serializer* s) {
+    const intptr_t count = objects_.length();
+    for (intptr_t i = 0; i < count; i++) {
+      UnwindErrorPtr error = objects_[i];
+      AutoTraceObject(error);
+      WriteFromTo(error);
+      s->Write<bool>(error->untag()->is_user_initiated_);
+    }
+  }
+
+ private:
+  GrowableArray<UnwindErrorPtr> objects_;
+};
+#endif  // !DART_PRECOMPILED_RUNTIME
+
+class UnwindErrorDeserializationCluster : public DeserializationCluster {
+ public:
+  UnwindErrorDeserializationCluster() : DeserializationCluster("UnwindError") {}
+  ~UnwindErrorDeserializationCluster() {}
+
+  void ReadAlloc(Deserializer* d) override {
+    ReadAllocFixedSize(d, UnwindError::InstanceSize());
+  }
+
+  void ReadFill(Deserializer* d_) override {
+    Deserializer::Local d(d_);
+
+    ASSERT(!is_canonical());  // Never canonical.
+    for (intptr_t id = start_index_, n = stop_index_; id < n; id++) {
+      UnwindErrorPtr error = static_cast<UnwindErrorPtr>(d.Ref(id));
+      Deserializer::InitializeHeader(error, kUnwindErrorCid,
+                                     UnwindError::InstanceSize());
+      d.ReadFromTo(error);
+      error->untag()->is_user_initiated_ = d.Read<bool>();
     }
   }
 };
@@ -5257,7 +5476,7 @@ class ClosureSerializationCluster : public SerializationCluster {
   ClosureSerializationCluster(bool is_canonical, bool is_deeply_immutable)
       : SerializationCluster("Closure",
                              kClosureCid,
-                             compiler::target::Closure::InstanceSize(),
+                             kSizeVaries,
                              is_canonical,
                              is_deeply_immutable) {}
   ~ClosureSerializationCluster() {}
@@ -5265,7 +5484,9 @@ class ClosureSerializationCluster : public SerializationCluster {
   void Trace(Serializer* s, ObjectPtr object) {
     ClosurePtr closure = Closure::RawCast(object);
     objects_.Add(closure);
-    PushFromTo(closure);
+    const intptr_t length = UntaggedClosure::LengthBits::decode(
+        Smi::Value(closure->untag()->length_and_flags()));
+    PushFromTo(closure, length);
   }
 
   void WriteAlloc(Serializer* s) {
@@ -5274,6 +5495,11 @@ class ClosureSerializationCluster : public SerializationCluster {
     for (intptr_t i = 0; i < count; i++) {
       ClosurePtr closure = objects_[i];
       s->AssignRef(closure);
+      AutoTraceObject(closure);
+      const intptr_t length = UntaggedClosure::LengthBits::decode(
+          Smi::Value(closure->untag()->length_and_flags()));
+      s->WriteUnsigned(length);
+      target_memory_size_ += compiler::target::Closure::InstanceSize(length);
     }
   }
 
@@ -5281,8 +5507,11 @@ class ClosureSerializationCluster : public SerializationCluster {
     const intptr_t count = objects_.length();
     for (intptr_t i = 0; i < count; i++) {
       ClosurePtr closure = objects_[i];
+      const intptr_t length = UntaggedClosure::LengthBits::decode(
+          Smi::Value(closure->untag()->length_and_flags()));
       AutoTraceObject(closure);
-      WriteFromTo(closure);
+      s->WriteUnsigned(length);
+      WriteFromTo(closure, length);
     }
   }
 
@@ -5304,7 +5533,13 @@ class ClosureDeserializationCluster
   ~ClosureDeserializationCluster() {}
 
   void ReadAlloc(Deserializer* d) override {
-    ReadAllocFixedSize(d, Closure::InstanceSize());
+    start_index_ = d->next_index();
+    const intptr_t count = d->ReadUnsigned();
+    for (intptr_t i = 0; i < count; i++) {
+      const intptr_t length = d->ReadUnsigned();
+      d->AssignRef(d->Allocate(Closure::InstanceSize(length)));
+    }
+    stop_index_ = d->next_index();
   }
 
   void ReadFill(Deserializer* d_) override {
@@ -5313,10 +5548,11 @@ class ClosureDeserializationCluster
     const bool mark_canonical = is_root_unit_ && is_canonical();
     for (intptr_t id = start_index_, n = stop_index_; id < n; id++) {
       ClosurePtr closure = static_cast<ClosurePtr>(d.Ref(id));
+      const intptr_t length = d.ReadUnsigned();
       Deserializer::InitializeHeader(closure, kClosureCid,
-                                     Closure::InstanceSize(), mark_canonical,
-                                     is_deeply_immutable());
-      d.ReadFromTo(closure);
+                                     Closure::InstanceSize(length),
+                                     mark_canonical, is_deeply_immutable());
+      d.ReadFromTo(closure, length);
 #if defined(DART_PRECOMPILED_RUNTIME)
       closure->untag()->entry_point_ = 0;
 #endif
@@ -6956,11 +7192,11 @@ class VMSerializationRoots : public SerializationRoots {
                      "ExceptionHandlers", "<empty async>");
 
     for (intptr_t i = 0; i < ArgumentsDescriptor::kCachedDescriptorCount; i++) {
-      s->AddBaseObject(ArgumentsDescriptor::cached_args_descriptors_[i],
-                       "ArgumentsDescriptor", "<cached arguments descriptor>");
+      s->AddBaseObject(Roots::cached_args_descriptor(i), "ArgumentsDescriptor",
+                       "<cached arguments descriptor>");
     }
     for (intptr_t i = 0; i < ICData::kCachedICDataArrayCount; i++) {
-      s->AddBaseObject(ICData::cached_icdata_arrays_[i], "Array",
+      s->AddBaseObject(Roots::cached_icdata_array(i), "Array",
                        "<empty icdata entries>");
     }
 
@@ -7002,7 +7238,7 @@ class VMSerializationRoots : public SerializationRoots {
   }
 
   void WriteRoots(Serializer* s) {
-    for (intptr_t i = 1; i < Symbols::kMaxPredefinedId; i++) {
+    for (intptr_t i = 0; i < Symbols::kMaxPredefinedId; i++) {
       s->WriteRootRef(Symbols::Symbol(i).ptr(), "<symbol>");
     }
     s->WriteRootRef(
@@ -7073,10 +7309,10 @@ class VMDeserializationRoots : public DeserializationRoots {
     d->AddBaseObject(Object::empty_async_exception_handlers().ptr());
 
     for (intptr_t i = 0; i < ArgumentsDescriptor::kCachedDescriptorCount; i++) {
-      d->AddBaseObject(ArgumentsDescriptor::cached_args_descriptors_[i]);
+      d->AddBaseObject(Roots::cached_args_descriptor(i));
     }
     for (intptr_t i = 0; i < ICData::kCachedICDataArrayCount; i++) {
-      d->AddBaseObject(ICData::cached_icdata_arrays_[i]);
+      d->AddBaseObject(Roots::cached_icdata_array(i));
     }
 
     ClassTable* table = d->isolate_group()->class_table();
@@ -7099,10 +7335,8 @@ class VMDeserializationRoots : public DeserializationRoots {
   }
 
   void ReadRoots(Deserializer* d) override {
-    for (intptr_t i = 1; i < Symbols::kMaxPredefinedId; i++) {
-      String* symbol = String::ReadOnlyHandle();
-      *symbol ^= d->ReadRef();
-      Symbols::InitSymbol(i, symbol);
+    for (intptr_t i = 0; i < Symbols::kMaxPredefinedId; i++) {
+      Symbols::InitSymbol(i, static_cast<StringPtr>(d->ReadRef()));
     }
     symbol_table_ ^= d->ReadRef();
     if (!symbol_table_.IsNull()) {
@@ -7111,9 +7345,7 @@ class VMDeserializationRoots : public DeserializationRoots {
     Symbols::InitFromSnapshot(d->isolate_group());
     if (Snapshot::IncludesCode(d->kind())) {
       for (intptr_t i = 0; i < StubCode::NumEntries(); i++) {
-        Code* code = Code::ReadOnlyHandle();
-        *code ^= d->ReadRef();
-        StubCode::EntryAtPut(i, code);
+        StubCode::EntryAtPut(i, static_cast<CodePtr>(d->ReadRef()));
       }
       StubCode::InitializationDone();
     }
@@ -8045,10 +8277,14 @@ SerializationCluster* Serializer::NewClusterForClass(intptr_t cid,
       return new (Z) SubtypeTestCacheSerializationCluster();
     case kLoadingUnitCid:
       return new (Z) LoadingUnitSerializationCluster();
+    case kApiErrorCid:
+      return new (Z) ApiErrorSerializationCluster();
     case kLanguageErrorCid:
       return new (Z) LanguageErrorSerializationCluster();
     case kUnhandledExceptionCid:
       return new (Z) UnhandledExceptionSerializationCluster();
+    case kUnwindErrorCid:
+      return new (Z) UnwindErrorSerializationCluster();
     case kLibraryPrefixCid:
       return new (Z) LibraryPrefixSerializationCluster();
     case kTypeCid:
@@ -9257,6 +9493,10 @@ DeserializationCluster* Deserializer::ReadCluster() {
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
       return new (Z) CompressedStackMapsDeserializationCluster();
+    case kLocalVarDescriptorsCid:
+      ASSERT(!is_canonical);
+      ASSERT(!is_deeply_immutable);
+      return new (Z) LocalVarDescriptorsDeserializationCluster();
     case kExceptionHandlersCid:
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
@@ -9289,6 +9529,10 @@ DeserializationCluster* Deserializer::ReadCluster() {
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
       return new (Z) LoadingUnitDeserializationCluster();
+    case kApiErrorCid:
+      ASSERT(!is_canonical);
+      ASSERT(!is_deeply_immutable);
+      return new (Z) ApiErrorDeserializationCluster();
     case kLanguageErrorCid:
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
@@ -9297,6 +9541,10 @@ DeserializationCluster* Deserializer::ReadCluster() {
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
       return new (Z) UnhandledExceptionDeserializationCluster();
+    case kUnwindErrorCid:
+      ASSERT(!is_canonical);
+      ASSERT(!is_deeply_immutable);
+      return new (Z) UnwindErrorDeserializationCluster();
     case kLibraryPrefixCid:
       ASSERT(!is_canonical);
       ASSERT(!is_deeply_immutable);
@@ -9472,11 +9720,11 @@ void Deserializer::ReadDispatchTable(
 #endif
 }
 
-ApiErrorPtr Deserializer::VerifyImageAlignment() {
+char* Deserializer::VerifyImageAlignment() {
   if (image_reader_ != nullptr) {
     return image_reader_->VerifyAlignment();
   }
-  return ApiError::null();
+  return nullptr;
 }
 
 void SnapshotHeaderReader::SetCoverageFromSnapshotFeatures(
@@ -9596,17 +9844,6 @@ char* SnapshotHeaderReader::ReadFeatures(const char** features,
 
 char* SnapshotHeaderReader::BuildError(const char* message) {
   return Utils::StrDup(message);
-}
-
-ApiErrorPtr FullSnapshotReader::ConvertToApiError(char* message) {
-  // This can also fail while bringing up the VM isolate, so make sure to
-  // allocate the error message in old space.
-  const String& msg = String::Handle(String::New(message, Heap::kOld));
-
-  // The [message] was constructed with [BuildError] and needs to be freed.
-  free(message);
-
-  return ApiError::New(msg, Heap::kOld);
 }
 
 void Deserializer::ReadInstructions(CodePtr code, bool deferred) {
@@ -10136,14 +10373,14 @@ char* SnapshotHeaderReader::InitializeGlobalVMFlagsFromSnapshot(
   return nullptr;
 }
 
-ApiErrorPtr FullSnapshotReader::ReadVMSnapshot() {
+char* FullSnapshotReader::ReadVMSnapshot() {
   SnapshotHeaderReader header_reader(kind_, buffer_, size_);
 
   intptr_t offset = 0;
   char* error = header_reader.VerifyVersionAndFeatures(
       /*isolate_group=*/nullptr, &offset);
   if (error != nullptr) {
-    return ConvertToApiError(error);
+    return error;
   }
 
   // Even though there's no concurrent threads we have to guard agains, some
@@ -10154,9 +10391,9 @@ ApiErrorPtr FullSnapshotReader::ReadVMSnapshot() {
   Deserializer deserializer(thread_, kind_, buffer_, size_, data_image_,
                             instructions_image_, /*is_non_root_unit=*/false,
                             offset);
-  ApiErrorPtr api_error = deserializer.VerifyImageAlignment();
-  if (api_error != ApiError::null()) {
-    return api_error;
+  error = deserializer.VerifyImageAlignment();
+  if (error != nullptr) {
+    return error;
   }
 
   if (Snapshot::IncludesCode(kind_)) {
@@ -10180,17 +10417,17 @@ ApiErrorPtr FullSnapshotReader::ReadVMSnapshot() {
   }
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 
-  return ApiError::null();
+  return nullptr;
 }
 
-ApiErrorPtr FullSnapshotReader::ReadProgramSnapshot() {
+char* FullSnapshotReader::ReadProgramSnapshot() {
   SnapshotHeaderReader header_reader(kind_, buffer_, size_);
   header_reader.SetCoverageFromSnapshotFeatures(thread_->isolate_group());
   intptr_t offset = 0;
   char* error =
       header_reader.VerifyVersionAndFeatures(thread_->isolate_group(), &offset);
   if (error != nullptr) {
-    return ConvertToApiError(error);
+    return error;
   }
 
   // Even though there's no concurrent threads we have to guard agains, some
@@ -10201,9 +10438,9 @@ ApiErrorPtr FullSnapshotReader::ReadProgramSnapshot() {
   Deserializer deserializer(thread_, kind_, buffer_, size_, data_image_,
                             instructions_image_, /*is_non_root_unit=*/false,
                             offset);
-  ApiErrorPtr api_error = deserializer.VerifyImageAlignment();
-  if (api_error != ApiError::null()) {
-    return api_error;
+  error = deserializer.VerifyImageAlignment();
+  if (error != nullptr) {
+    return error;
   }
 
   if (Snapshot::IncludesCode(kind_)) {
@@ -10234,24 +10471,24 @@ ApiErrorPtr FullSnapshotReader::ReadProgramSnapshot() {
 
   InitializeBSS();
 
-  return ApiError::null();
+  return nullptr;
 }
 
-ApiErrorPtr FullSnapshotReader::ReadUnitSnapshot(const LoadingUnit& unit) {
+char* FullSnapshotReader::ReadUnitSnapshot(const LoadingUnit& unit) {
   SnapshotHeaderReader header_reader(kind_, buffer_, size_);
   intptr_t offset = 0;
   char* error =
       header_reader.VerifyVersionAndFeatures(thread_->isolate_group(), &offset);
   if (error != nullptr) {
-    return ConvertToApiError(error);
+    return error;
   }
 
   Deserializer deserializer(
       thread_, kind_, buffer_, size_, data_image_, instructions_image_,
       /*is_non_root_unit=*/unit.id() != LoadingUnit::kRootId, offset);
-  ApiErrorPtr api_error = deserializer.VerifyImageAlignment();
-  if (api_error != ApiError::null()) {
-    return api_error;
+  error = deserializer.VerifyImageAlignment();
+  if (error != nullptr) {
+    return nullptr;
   }
   {
     Array& units =
@@ -10259,9 +10496,9 @@ ApiErrorPtr FullSnapshotReader::ReadUnitSnapshot(const LoadingUnit& unit) {
     uint32_t main_program_hash = Smi::Value(Smi::RawCast(units.At(0)));
     uint32_t unit_program_hash = deserializer.Read<uint32_t>();
     if (main_program_hash != unit_program_hash) {
-      return ApiError::New(String::Handle(
-          String::New("Deferred loading unit is from a different "
-                      "program than the main loading unit")));
+      return Utils::StrDup(
+          "Deferred loading unit is from a different "
+          "program than the main loading unit");
     }
   }
 
@@ -10280,7 +10517,7 @@ ApiErrorPtr FullSnapshotReader::ReadUnitSnapshot(const LoadingUnit& unit) {
 
   InitializeBSS();
 
-  return ApiError::null();
+  return nullptr;
 }
 
 void FullSnapshotReader::InitializeBSS() {

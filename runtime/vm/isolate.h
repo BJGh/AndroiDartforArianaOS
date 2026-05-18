@@ -25,6 +25,7 @@
 #include "vm/field_table.h"
 #include "vm/fixed_cache.h"
 #include "vm/handles.h"
+#include "vm/hash_map.h"
 #include "vm/heap/verifier.h"
 #include "vm/intrusive_dlist.h"
 #include "vm/megamorphic_cache_table.h"
@@ -32,6 +33,7 @@
 #include "vm/os_thread.h"
 #include "vm/port.h"
 #include "vm/random.h"
+#include "vm/roots.h"
 #include "vm/service.h"
 #include "vm/tags.h"
 #include "vm/thread.h"
@@ -263,7 +265,6 @@ enum RootSlice : intptr_t {
   kClassTable,
   kApiState,
   kObjectStore,
-  kSavedUnlinkedCalls,
   kInitialFieldTable,
   kSentinelFieldTable,
   kSharedInitialFieldTable,
@@ -286,8 +287,6 @@ inline const char* RootSliceToCString(intptr_t slice) {
       return "api state";
     case kObjectStore:
       return "group object store";
-    case kSavedUnlinkedCalls:
-      return "saved unlinked calls";
     case kInitialFieldTable:
       return "initial field table";
     case kSentinelFieldTable:
@@ -343,6 +342,10 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   void set_initial_spawn_successful() { initial_spawn_successful_ = true; }
 
   Heap* heap() const { return heap_.get(); }
+  Roots* roots() const { return roots_.get(); }
+  FfiCallbackMetadata* callback_metadata() const {
+    return callback_metadata_.get();
+  }
 
   BackgroundCompiler* background_compiler() const {
 #if defined(DART_PRECOMPILED_RUNTIME)
@@ -772,9 +775,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   void RememberLiveTemporaries();
   void DeferredMarkLiveTemporaries();
 
-  ArrayPtr saved_unlinked_calls() const { return saved_unlinked_calls_; }
-  void set_saved_unlinked_calls(const Array& saved_unlinked_calls);
-
   FieldTable* initial_field_table() const { return initial_field_table_.get(); }
   std::shared_ptr<FieldTable> initial_field_table_shareable() {
     return initial_field_table_;
@@ -844,13 +844,17 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   }
 
   SafepointRwLock* tag_table_lock() { return &tag_table_lock_; }
-  GrowableObjectArrayPtr tag_table() const { return tag_table_; }
-  void set_tag_table(const GrowableObjectArray& value);
 
   intptr_t thread_locals_count() { return thread_locals_count_; }
   intptr_t increment_thread_locals_count() {
     return thread_locals_count_.fetch_add(1u, std::memory_order_relaxed);
   }
+
+  FfiCallbackMetadata::Trampoline CreateIsolateGroupBoundFfiCallback(
+      Zone* zone,
+      const Function& trampoline,
+      const Closure& target);
+  void DeleteFfiCallback(FfiCallbackMetadata::Trampoline callback);
 
  private:
   friend class Dart;  // For `object_store_ = ` in Dart::Init
@@ -956,7 +960,6 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   std::unique_ptr<DispatchTable> dispatch_table_;
   const uint8_t* dispatch_table_snapshot_ = nullptr;
   intptr_t dispatch_table_snapshot_size_ = 0;
-  ArrayPtr saved_unlinked_calls_;
   std::shared_ptr<FieldTable> initial_field_table_;
   std::shared_ptr<FieldTable> sentinel_field_table_;
   std::shared_ptr<FieldTable> shared_initial_field_table_;
@@ -964,6 +967,8 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   AtomicBitFieldContainer<uint32_t> isolate_group_flags_;
 
   NOT_IN_PRECOMPILED(std::unique_ptr<BackgroundCompiler> background_compiler_);
+
+  std::unique_ptr<FfiCallbackMetadata> callback_metadata_;
 
   Mutex symbols_mutex_;
   Mutex type_canonicalization_mutex_;
@@ -1011,9 +1016,12 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   std::atomic<bool> has_attempted_stepping_;
 
   SafepointRwLock tag_table_lock_;
-  GrowableObjectArrayPtr tag_table_;
 
   std::atomic<intptr_t> thread_locals_count_ = 0;
+
+  std::unique_ptr<Roots> roots_;
+
+  FfiCallbackMetadata::MetadataEntry* ffi_callback_list_head_ = nullptr;
 };
 
 // When an isolate sends-and-exits this class represent things that it passed
@@ -1332,7 +1340,14 @@ class Isolate : public IntrusiveDListEntry<Isolate> {
 
   RingServiceIdZone* GetServiceIdZone(intptr_t zone_id) const;
 
-  intptr_t NumServiceIdZones() const;
+  template <typename F>
+  void ForEachServiceIdZone(F callback) const {
+    if (service_id_zones_ == nullptr) return;
+    auto it = service_id_zones_->GetIterator();
+    while (auto* pair = it.Next()) {
+      callback(pair->value);
+    }
+  }
 #endif  // !defined(PRODUCT)
 
   FfiCallbackMetadata::Trampoline CreateAsyncFfiCallback(
@@ -1344,10 +1359,6 @@ class Isolate : public IntrusiveDListEntry<Isolate> {
       const Function& trampoline,
       const Closure& target,
       bool keep_isolate_alive);
-  FfiCallbackMetadata::Trampoline CreateIsolateGroupBoundFfiCallback(
-      Zone* zone,
-      const Function& trampoline,
-      const Closure& target);
   void DeleteFfiCallback(FfiCallbackMetadata::Trampoline callback);
   void UpdateNativeCallableKeepIsolateAliveCounter(intptr_t delta);
   bool HasOpenNativeCallables();
@@ -1646,8 +1657,13 @@ class Isolate : public IntrusiveDListEntry<Isolate> {
   // Used to wake the isolate when it is in the pause event loop.
   Monitor* pause_loop_monitor_ = nullptr;
 
-  // The array of Service ID zones is created lazily.
-  MallocGrowableArray<RingServiceIdZone*>* service_id_zones_;
+  // The map of Service ID zones is created lazily.
+  MallocDirectChainedHashMap<IntKeyRawPointerValueTrait<RingServiceIdZone*>>*
+      service_id_zones_;
+
+  // Monotonically increasing counter used to assign unique IDs to non-default
+  // Service ID zones.
+  intptr_t next_service_id_zone_id_;
 
 #define ISOLATE_METRIC_VARIABLE(type, variable, name, unit)                    \
   type metric_##variable##_;

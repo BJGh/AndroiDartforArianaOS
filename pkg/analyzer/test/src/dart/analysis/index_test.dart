@@ -3,6 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer/source/file_source.dart';
+import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/analysis/index.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
@@ -57,6 +60,40 @@ class IndexTest extends PubPackageResolutionTest with _IndexMixin {
       NodeTextExpectationsCollector.add(actual);
     }
     expect(actual, expected);
+  }
+
+  test_analyzer_diagnosticCode() async {
+    var diagnosticFile = newFile('$testPackageLibPath/diagnostic.dart', r'''
+const myDiagnosticCode = 0;
+''');
+
+    var diagnosticLibrary = await libraryElementForFile(diagnosticFile);
+    var element = diagnosticLibrary.topLevelVariables.firstWhere(
+      (v) => v.name == 'myDiagnosticCode',
+    );
+
+    newFile('$testPackageLibPath/helper.dart', r'''
+import 'diagnostic.dart';
+''');
+
+    await _indexTestUnit(r'''
+import 'helper.dart';
+
+void f() {
+  '// [diag.myDiagnosticCode] message';
+}
+''');
+
+    assertElementIndexText(element, r'''
+46 4:13 |myDiagnosticCode| IS_REFERENCED_BY qualified
+''');
+  }
+
+  test_ClassElement_emptyBody() async {
+    await _indexTestUnit(r'''
+class C;
+''');
+    assertErrorsInResult([]);
   }
 
   test_ClassElement_hierarchy_class_extends() async {
@@ -1438,6 +1475,13 @@ dynamic f() {}
     expect(index.usedElementOffsets, isEmpty);
   }
 
+  test_EnumElement_emptyBody() async {
+    await _indexTestUnit(r'''
+enum E;
+''');
+    assertErrorsInResult([error(diag.enumWithoutConstants, 5, 1)]);
+  }
+
   test_EnumElement_reference_annotation() async {
     await _indexTestUnit(r'''
 import 'test.dart' as p;
@@ -1566,6 +1610,13 @@ void f() {
 63 7:5 |E| IS_REFERENCED_BY qualified
 Prefixes: (unprefixed),p
 ''');
+  }
+
+  test_ExtensionElement_emptyBody() async {
+    await _indexTestUnit(r'''
+extension E on int;
+''');
+    assertErrorsInResult([]);
   }
 
   test_ExtensionElement_reference_memberAccess() async {
@@ -3793,6 +3844,13 @@ void useOperator(M m) {
 ''');
   }
 
+  test_MixinElement_emptyBody() async {
+    await _indexTestUnit(r'''
+mixin M;
+''');
+    assertErrorsInResult([]);
+  }
+
   test_MixinElement_hierarchy_class_implements() async {
     await _indexTestUnit(r'''
 mixin A {}
@@ -4063,14 +4121,14 @@ void useSetter() {
   }
 
   test_subtypes_classDeclaration() async {
-    String libP = 'package:test/lib.dart;package:test/lib.dart';
-    newFile('$testPackageLibPath/lib.dart', '''
+    var libFile = newFile('$testPackageLibPath/lib.dart', '''
 class A {}
 class B {}
 class C {}
 class D {}
 class E {}
 ''');
+    String libP = '${libFile.path};${libFile.path}';
     await _indexTestUnit('''
 import 'lib.dart';
 
@@ -4099,28 +4157,30 @@ class Z implements E, D {
     expect(index.supertypes, hasLength(6));
     expect(index.subtypes, hasLength(6));
 
-    _assertSubtype(0, 'dart:core;dart:core;Object', 'Y', ['methodY']);
-    _assertSubtype(1, '$libP;A', 'X', [
+    _assertSubtype(0, '$libP;A', 'X', [
       'field1',
       'field2',
       'getter1',
       'method1',
       'setter1',
     ]);
-    _assertSubtype(2, '$libP;B', 'Y', ['methodY']);
-    _assertSubtype(3, '$libP;C', 'Y', ['methodY']);
-    _assertSubtype(4, '$libP;D', 'Z', ['methodZ']);
-    _assertSubtype(5, '$libP;E', 'Z', ['methodZ']);
+    _assertSubtype(1, '$libP;B', 'Y', ['methodY']);
+    _assertSubtype(2, '$libP;C', 'Y', ['methodY']);
+    _assertSubtype(3, '$libP;D', 'Z', ['methodZ']);
+    _assertSubtype(4, '$libP;E', 'Z', ['methodZ']);
+    _assertSubtype(5, _interfaceId(typeProvider.objectElement)!, 'Y', [
+      'methodY',
+    ]);
   }
 
   test_subtypes_classTypeAlias() async {
-    String libP = 'package:test/lib.dart;package:test/lib.dart';
-    newFile('$testPackageLibPath/lib.dart', '''
+    var libFile = newFile('$testPackageLibPath/lib.dart', '''
 class A {}
 class B {}
 class C {}
 class D {}
 ''');
+    String libP = '${libFile.path};${libFile.path}';
     await _indexTestUnit('''
 import 'lib.dart';
 
@@ -4152,7 +4212,7 @@ class X extends dynamic {
   }
 
   test_subtypes_enum_implements() async {
-    String libP = 'package:test/test.dart;package:test/test.dart';
+    String libP = '${testFile.path};${testFile.path}';
     await _indexTestUnit('''
 class A {}
 
@@ -4167,7 +4227,7 @@ enum E implements A {
   }
 
   test_subtypes_enum_with() async {
-    String libP = 'package:test/test.dart;package:test/test.dart';
+    String libP = '${testFile.path};${testFile.path}';
     await _indexTestUnit('''
 mixin M {}
 
@@ -4182,13 +4242,13 @@ enum E with M {
   }
 
   test_subtypes_extensionType_class() async {
-    String libP = 'package:test/lib.dart;package:test/lib.dart';
-    newFile('$testPackageLibPath/lib.dart', '''
+    var libFile = newFile('$testPackageLibPath/lib.dart', '''
 class A {
   void method1() {}
   void method2() {}
 }
 ''');
+    String libP = '${libFile.path};${libFile.path}';
     await _indexTestUnit('''
 import 'lib.dart';
 
@@ -4205,13 +4265,13 @@ extension type X(A it) implements A {
   }
 
   test_subtypes_extensionType_extensionType() async {
-    String libP = 'package:test/lib.dart;package:test/lib.dart';
-    newFile('$testPackageLibPath/lib.dart', '''
+    var libFile = newFile('$testPackageLibPath/lib.dart', '''
 extension type A(int it) {
   void method1() {}
   void method2() {}
 }
 ''');
+    String libP = '${libFile.path};${libFile.path}';
     await _indexTestUnit('''
 import 'lib.dart';
 
@@ -4228,14 +4288,14 @@ extension type X(int it) implements A {
   }
 
   test_subtypes_mixinDeclaration() async {
-    String libP = 'package:test/lib.dart;package:test/lib.dart';
-    newFile('$testPackageLibPath/lib.dart', '''
+    var libFile = newFile('$testPackageLibPath/lib.dart', '''
 class A {}
 class B {}
 class C {}
 class D {}
 class E {}
 ''');
+    String libP = '${libFile.path};${libFile.path}';
     await _indexTestUnit('''
 import 'lib.dart';
 
@@ -4912,6 +4972,16 @@ mixin _IndexMixin on PubPackageResolutionTest {
     var indexBytes = indexBuilder.toBuffer();
     index = AnalysisDriverUnitIndex.fromBuffer(indexBytes);
   }
+
+  String? _interfaceId(InterfaceElement element) {
+    var libraryFile = element.library.firstFragment.source.mustBeFile;
+    var libraryPath = libraryFile.path;
+
+    var fragmentFile = element.firstFragment.libraryFragment.source.mustBeFile;
+    var fragmentPath = fragmentFile.path;
+
+    return '$libraryPath;$fragmentPath;${element.name}';
+  }
 }
 
 class _NameIndexAssert {
@@ -4924,7 +4994,7 @@ class _NameIndexAssert {
     test._assertUsedName(
       name,
       kind,
-      test._expectedLocation(search, false),
+      test._expectedLocation(search, false, length: name.length),
       true,
     );
   }
@@ -4933,7 +5003,7 @@ class _NameIndexAssert {
     test._assertUsedName(
       name,
       kind,
-      test._expectedLocation(search, true),
+      test._expectedLocation(search, true, length: name.length),
       true,
     );
   }
@@ -4942,7 +5012,7 @@ class _NameIndexAssert {
     test._assertUsedName(
       name,
       kind,
-      test._expectedLocation(search, false),
+      test._expectedLocation(search, false, length: name.length),
       false,
     );
   }
@@ -4951,7 +5021,7 @@ class _NameIndexAssert {
     test._assertUsedName(
       name,
       kind,
-      test._expectedLocation(search, true),
+      test._expectedLocation(search, true, length: name.length),
       false,
     );
   }
@@ -4974,5 +5044,16 @@ class _Relation {
   String toString() {
     return '_Relation{kind: $kind, offset: $offset, length: $length, '
         'isQualified: $isQualified})';
+  }
+}
+
+extension _SourceExtension on Source {
+  /// Returns the [File] for this source.
+  ///
+  /// This assumes that the source is a [FileSource], which is safe because
+  /// index and search are only supported in DAS, where all sources are file
+  /// based.
+  File get mustBeFile {
+    return (this as FileSource).file;
   }
 }

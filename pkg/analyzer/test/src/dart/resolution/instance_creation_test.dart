@@ -6,6 +6,7 @@ import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
@@ -16,6 +17,7 @@ main() {
     defineReflectiveTests(
       InstanceCreationExpressionResolutionTest_WithoutPrivateNamedParameters,
     );
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -28,18 +30,17 @@ class InstanceCreationExpressionResolutionTest_WithoutConstructorTearoffs
     extends PubPackageResolutionTest
     with WithoutConstructorTearoffsMixin {
   test_unnamedViaNew() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   A(int a);
 }
 
 void f() {
   A.new(0);
+//  ^^^
+// [diag.experimentNotEnabled] This requires the 'constructor-tearoffs' language feature to be enabled.
 }
-''',
-      [error(diag.experimentNotEnabled, 40, 3)],
-    );
+''');
 
     // Resolution should continue even though the experiment is not enabled.
     var node = findNode.instanceCreation('A.new(0)');
@@ -74,23 +75,22 @@ class InstanceCreationExpressionResolutionTest_WithoutPrivateNamedParameters
     extends PubPackageResolutionTest
     with WithoutPrivateNamedParametersMixin {
   test_preFeature() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class C {
   int? _x;
+//     ^^
+// [diag.unusedField] The value of the field '_x' isn't used.
   C({this._x});
+//        ^^
+// [diag.experimentNotEnabled] This requires the 'private-named-parameters' language feature to be enabled.
 }
 
 main() {
   C(x: 123);
+//  ^
+// [diag.undefinedNamedParameter] The named parameter 'x' isn't defined.
 }
-''',
-      [
-        error(diag.unusedField, 17, 2),
-        error(diag.experimentNotEnabled, 31, 2),
-        error(diag.undefinedNamedParameter, 53, 1),
-      ],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -104,14 +104,10 @@ InstanceCreationExpression
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: x
-            element: <null>
-            staticType: null
-          colon: :
-        expression: IntegerLiteral
+      NamedArgument
+        name: x
+        colon: :
+        argumentExpression: IntegerLiteral
           literal: 123
           staticType: int
         correspondingParameter: <null>
@@ -123,7 +119,7 @@ InstanceCreationExpression
 
 mixin InstanceCreationTestCases on PubPackageResolutionTest {
   test_arguments_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a, {required bool b, required double c});
 }
@@ -149,25 +145,17 @@ InstanceCreationExpression
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
         staticType: int
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: b
-            element: <testLibrary>::@class::A::@constructor::new::@formalParameter::b
-            staticType: null
-          colon: :
-        expression: BooleanLiteral
+      NamedArgument
+        name: b
+        colon: :
+        argumentExpression: BooleanLiteral
           literal: true
           staticType: bool
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::b
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: c
-            element: <testLibrary>::@class::A::@constructor::new::@formalParameter::c
-            staticType: null
-          colon: :
-        expression: DoubleLiteral
+      NamedArgument
+        name: c
+        colon: :
+        argumentExpression: DoubleLiteral
           literal: 1.2
           staticType: double
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::c
@@ -185,7 +173,7 @@ augment class A<T2> {
   A.named(T2 value);
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A<T> {}
@@ -288,7 +276,7 @@ InstanceCreationExpression
   }
 
   test_class_generic_named_inferTypeArguments() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named(T t);
 }
@@ -331,7 +319,7 @@ InstanceCreationExpression
   }
 
   test_class_generic_named_withTypeArguments() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named();
 }
@@ -375,7 +363,7 @@ InstanceCreationExpression
   }
 
   test_class_generic_unnamed_inferTypeArguments() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A(T t);
 }
@@ -411,7 +399,7 @@ InstanceCreationExpression
   }
 
   test_class_generic_unnamed_withTypeArguments() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {}
 
 void f() {
@@ -454,7 +442,7 @@ augment class A {
   augment A.named();
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A {
@@ -499,7 +487,7 @@ augment class A {
   A.named();
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A {}
@@ -542,7 +530,7 @@ augment class A {
   augment A();
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A {
@@ -615,7 +603,7 @@ InstanceCreationExpression
   }
 
   test_class_notGeneric_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   A.named(int a);
 }
@@ -652,7 +640,7 @@ InstanceCreationExpression
   }
 
   test_class_notGeneric_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -685,17 +673,16 @@ InstanceCreationExpression
   }
 
   test_class_notGeneric_unresolved() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f() {
   new A.unresolved(0);
+//      ^^^^^^^^^^
+// [diag.newWithUndefinedConstructor] The class 'A' doesn't have a constructor named 'unresolved'.
 }
 
-''',
-      [error(diag.newWithUndefinedConstructor, 31, 10)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -725,7 +712,7 @@ InstanceCreationExpression
   }
 
   test_demoteType() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A(T t);
 }
@@ -765,12 +752,11 @@ InstanceCreationExpression
   }
 
   test_error_newWithInvalidTypeParameters_implicitNew_inference_top() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 final foo = Map<int>();
-''',
-      [error(diag.wrongNumberOfTypeArguments, 12, 8)],
-    );
+//          ^^^^^^^^
+// [diag.wrongNumberOfTypeArguments] The type 'Map' is declared with 2 type parameters, but 1 type arguments were given.
+''');
 
     var node = findNode.instanceCreation('Map<int>');
     assertResolvedNodeText(node, r'''
@@ -799,25 +785,17 @@ InstanceCreationExpression
   }
 
   test_error_wrongNumberOfTypeArgumentsConstructor_explicitNew() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class Foo<X> {
   Foo.bar();
 }
 
 main() {
   new Foo.bar<int>();
+//           ^^^^^
+// [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'Foo.bar' doesn't have type parameters.
 }
-''',
-      [
-        error(
-          diag.wrongNumberOfTypeArgumentsConstructor,
-          53,
-          5,
-          messageContains: ["The constructor 'Foo.bar'"],
-        ),
-      ],
-    );
+''');
 
     var node = findNode.instanceCreation('Foo.bar<int>');
     assertResolvedNodeText(node, r'''
@@ -854,25 +832,17 @@ InstanceCreationExpression
   }
 
   test_error_wrongNumberOfTypeArgumentsConstructor_explicitNew_new() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class Foo<X> {
   Foo.new();
 }
 
 main() {
   new Foo.new<int>();
+//           ^^^^^
+// [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'Foo.new' doesn't have type parameters.
 }
-''',
-      [
-        error(
-          diag.wrongNumberOfTypeArgumentsConstructor,
-          53,
-          5,
-          messageContains: ["The constructor 'Foo.new'"],
-        ),
-      ],
-    );
+''');
 
     var node = findNode.instanceCreation('Foo.new<int>');
     assertResolvedNodeText(node, r'''
@@ -914,16 +884,15 @@ class Foo<X> {
   Foo.bar();
 }
 ''');
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as p;
 
 main() {
   new p.Foo.bar<int>();
+//          ^^^
+// [diag.constructorWithTypeArguments] A constructor invocation can't have type arguments after the constructor name.
 }
-''',
-      [error(diag.constructorWithTypeArguments, 44, 3)],
-    );
+''');
 
     // TODO(brianwilkerson): Test this more carefully after we can re-write the
     // AST to reflect the expected structure.
@@ -936,7 +905,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: p
         period: .
-        element: <testLibraryFragment>::@prefix2::p
+        element: <testLibraryFragment>::@prefix::p
       name: Foo
       element: package:test/a.dart::@class::Foo
       type: Foo<dynamic>
@@ -966,18 +935,17 @@ InstanceCreationExpression
   }
 
   test_error_wrongNumberOfTypeArgumentsConstructor_implicitNew() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class Foo<X> {
   Foo.bar();
 }
 
 main() {
   Foo.bar<int>();
+//       ^^^^^
+// [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'Foo.bar' doesn't have type parameters.
 }
-''',
-      [error(diag.wrongNumberOfTypeArgumentsConstructor, 49, 5)],
-    );
+''');
 
     var node = findNode.instanceCreation('Foo.bar<int>');
     assertResolvedNodeText(node, r'''
@@ -1018,16 +986,15 @@ class Foo<X> {
   Foo.bar();
 }
 ''');
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as p;
 
 main() {
   p.Foo.bar<int>();
+//         ^^^^^
+// [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'p.Foo.bar' doesn't have type parameters.
 }
-''',
-      [error(diag.wrongNumberOfTypeArgumentsConstructor, 43, 5)],
-    );
+''');
 
     var node = findNode.instanceCreation('Foo.bar<int>');
     assertResolvedNodeText(node, r'''
@@ -1037,7 +1004,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: p
         period: .
-        element: <testLibraryFragment>::@prefix2::p
+        element: <testLibraryFragment>::@prefix::p
       name: Foo
       typeArguments: TypeArgumentList
         leftBracket: <
@@ -1067,7 +1034,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_generic_primary_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A<T>(T it) {}
 
 void f() {
@@ -1101,7 +1068,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_generic_secondary_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A<T>.named(T it) {
   A(this.it);
 }
@@ -1137,7 +1104,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_notGeneric_primary_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {}
 
 void f() {
@@ -1172,7 +1139,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_notGeneric_primary_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 
 void f() {
@@ -1202,7 +1169,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_notGeneric_secondary_named() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   A.named(this.it);
 }
@@ -1239,7 +1206,7 @@ InstanceCreationExpression
   }
 
   test_extensionType_notGeneric_secondary_unnamed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A.named(int it) {
   A(this.it);
 }
@@ -1271,16 +1238,15 @@ InstanceCreationExpression
   }
 
   test_extensionType_notGeneric_unresolved() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 
 void f() {
   new A.named(0);
+//      ^^^^^
+// [diag.newWithUndefinedConstructor] The class 'A' doesn't have a constructor named 'named'.
 }
-''',
-      [error(diag.newWithUndefinedConstructor, 48, 5)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -1310,17 +1276,16 @@ InstanceCreationExpression
   }
 
   test_importPrefix() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as prefix;
 
 void f() {
   new prefix(0);
+//    ^^^^^^
+// [diag.newWithNonType] The name 'prefix' isn't a class.
 }
 
-''',
-      [error(diag.newWithNonType, 48, 6)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -1329,7 +1294,7 @@ InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: prefix
-      element: <testLibraryFragment>::@prefix2::prefix
+      element: <testLibraryFragment>::@prefix::prefix
       type: InvalidType
     element: <null>
   argumentList: ArgumentList
@@ -1360,7 +1325,7 @@ augment class A<T2> {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1378,7 +1343,7 @@ InstanceCreationExpression
         name: prefix
         period: .
         element: <testLibraryFragment>::@prefix::prefix
-        element2: <testLibraryFragment>::@prefix2::prefix
+        element2: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::<fragment>::@class::A
       element2: package:test/a.dart::@class::A
@@ -1430,7 +1395,7 @@ augment class A<T2> {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1447,7 +1412,7 @@ InstanceCreationExpression
         name: prefix
         period: .
         element: <testLibraryFragment>::@prefix::prefix
-        element2: <testLibraryFragment>::@prefix2::prefix
+        element2: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::<fragment>::@class::A
       element2: package:test/a.dart::@class::A
@@ -1479,7 +1444,7 @@ class A {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1496,7 +1461,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::@class::A
       type: A
@@ -1534,7 +1499,7 @@ augment class A {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1551,7 +1516,7 @@ InstanceCreationExpression
         name: prefix
         period: .
         element: <testLibraryFragment>::@prefix::prefix
-        element2: <testLibraryFragment>::@prefix2::prefix
+        element2: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::<fragment>::@class::A
       element2: package:test/a.dart::@class::A
@@ -1589,7 +1554,7 @@ augment class A {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1606,7 +1571,7 @@ InstanceCreationExpression
         name: prefix
         period: .
         element: <testLibraryFragment>::@prefix::prefix
-        element2: <testLibraryFragment>::@prefix2::prefix
+        element2: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::<fragment>::@class::A
       element2: package:test/a.dart::@class::A
@@ -1627,7 +1592,7 @@ class A<T> {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1644,7 +1609,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: A
       typeArguments: TypeArgumentList
         leftBracket: <
@@ -1687,7 +1652,7 @@ class A<T> {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1704,7 +1669,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: A
       typeArguments: TypeArgumentList
         leftBracket: <
@@ -1740,7 +1705,7 @@ class A {
 }
 ''');
 
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1757,7 +1722,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::@class::A
       type: A
@@ -1779,17 +1744,16 @@ InstanceCreationExpression
 class A {}
 ''');
 
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
   new prefix.A.foo(0);
+//             ^^^
+// [diag.newWithUndefinedConstructor] The class 'prefix.A' doesn't have a constructor named 'foo'.
 }
 
-''',
-      [error(diag.newWithUndefinedConstructor, 54, 3)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -1800,7 +1764,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: A
       element: package:test/a.dart::@class::A
       type: A
@@ -1823,17 +1787,16 @@ InstanceCreationExpression
   }
 
   test_importPrefix_unresolved_identifier() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as prefix;
 
 void f() {
   new prefix.Foo.bar(0);
+//           ^^^
+// [diag.newWithNonType] The name 'Foo' isn't a class.
 }
 
-''',
-      [error(diag.newWithNonType, 55, 3)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -1844,7 +1807,7 @@ InstanceCreationExpression
       importPrefix: ImportPrefixReference
         name: prefix
         period: .
-        element: <testLibraryFragment>::@prefix2::prefix
+        element: <testLibraryFragment>::@prefix::prefix
       name: Foo
       element: <null>
       type: InvalidType
@@ -1867,7 +1830,7 @@ InstanceCreationExpression
   }
 
   test_namedArgument_anywhere() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {}
 class B {}
 class C {}
@@ -1912,14 +1875,10 @@ InstanceCreationExpression
         staticType: A
         typeArgumentTypes
           A
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: c
-            element: <testLibrary>::@class::X::@constructor::new::@formalParameter::c
-            staticType: null
-          colon: :
-        expression: MethodInvocation
+      NamedArgument
+        name: c
+        colon: :
+        argumentExpression: MethodInvocation
           methodName: SimpleIdentifier
             token: g3
             element: <testLibrary>::@function::g3
@@ -1945,14 +1904,10 @@ InstanceCreationExpression
         staticType: B
         typeArgumentTypes
           B
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: d
-            element: <testLibrary>::@class::X::@constructor::new::@formalParameter::d
-            staticType: null
-          colon: :
-        expression: MethodInvocation
+      NamedArgument
+        name: d
+        colon: :
+        argumentExpression: MethodInvocation
           methodName: SimpleIdentifier
             token: g4
             element: <testLibrary>::@function::g4
@@ -1971,22 +1926,20 @@ InstanceCreationExpression
   }
 
   test_privateNamedParameter_privateNamedArgument() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class C {
   int? _x;
+//     ^^
+// [diag.unusedField] The value of the field '_x' isn't used.
   C({this._x});
 }
 
 main() {
   C(_x: 123);
+//  ^^
+// [diag.useOfPrivateParameterName] The named parameter '_x' should use the corresponding public name 'x' at the callsite.
 }
-''',
-      [
-        error(diag.unusedField, 17, 2),
-        error(diag.useOfPrivateParameterName, 53, 2),
-      ],
-    );
+''');
 
     var node = findNode.instanceCreation('C(_x');
     assertResolvedNodeText(node, r'''
@@ -2000,14 +1953,10 @@ InstanceCreationExpression
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: _x
-            element: <null>
-            staticType: null
-          colon: :
-        expression: IntegerLiteral
+      NamedArgument
+        name: _x
+        colon: :
+        argumentExpression: IntegerLiteral
           literal: 123
           staticType: int
         correspondingParameter: <null>
@@ -2017,19 +1966,18 @@ InstanceCreationExpression
   }
 
   test_privateNamedParameter_publicNamedArgument() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class C {
   int? _x;
+//     ^^
+// [diag.unusedField] The value of the field '_x' isn't used.
   C({this._x});
 }
 
 main() {
   C(x: 123);
 }
-''',
-      [error(diag.unusedField, 17, 2)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -2043,14 +1991,10 @@ InstanceCreationExpression
   argumentList: ArgumentList
     leftParenthesis: (
     arguments
-      NamedExpression
-        name: Label
-          label: SimpleIdentifier
-            token: x
-            element: <testLibrary>::@class::C::@constructor::new::@formalParameter::x
-            staticType: null
-          colon: :
-        expression: IntegerLiteral
+      NamedArgument
+        name: x
+        colon: :
+        argumentExpression: IntegerLiteral
           literal: 123
           staticType: int
         correspondingParameter: <testLibrary>::@class::C::@constructor::new::@formalParameter::x
@@ -2068,7 +2012,7 @@ augment class A<T2> {
   A.named(T2 value);
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A<T> {}
@@ -2174,7 +2118,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_generic_class_generic_named_infer_all() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named(T t);
 }
@@ -2219,7 +2163,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_generic_class_generic_named_infer_partial() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A.named(T t, U u);
 }
@@ -2266,7 +2210,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_generic_class_generic_unnamed_infer_all() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A(T t);
 }
@@ -2304,7 +2248,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_generic_class_generic_unnamed_infer_partial() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A(T t, U u);
 }
@@ -2344,8 +2288,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_notGeneric_class_generic_named_argumentTypeMismatch() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named(T t);
 }
@@ -2354,10 +2297,10 @@ typedef B = A<String>;
 
 void f() {
   B.named(0);
+//        ^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
 }
-''',
-      [error(diag.argumentTypeNotAssignable, 77, 1)],
-    );
+''');
 
     var node = findNode.instanceCreation('B.named(0)');
     assertResolvedNodeText(node, r'''
@@ -2392,8 +2335,7 @@ InstanceCreationExpression
   }
 
   test_typeAlias_notGeneric_class_generic_unnamed_argumentTypeMismatch() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A(T t);
 }
@@ -2402,10 +2344,10 @@ typedef B = A<String>;
 
 void f() {
   B(0);
+//  ^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
 }
-''',
-      [error(diag.argumentTypeNotAssignable, 65, 1)],
-    );
+''');
 
     var node = findNode.instanceCreation('B(0)');
     assertResolvedNodeText(node, r'''
@@ -2441,7 +2383,7 @@ augment class A {
   A.named();
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 
 class A {}
@@ -2522,7 +2464,7 @@ InstanceCreationExpression
   }
 
   test_unnamed_declaredNew() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   A.new(int a);
 }
@@ -2555,7 +2497,7 @@ InstanceCreationExpression
   }
 
   test_unnamedViaNew_declaredNew() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   A.new(int a);
 }
@@ -2593,7 +2535,7 @@ InstanceCreationExpression
   }
 
   test_unnamedViaNew_declaredUnnamed() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   A(int a);
 }
@@ -2631,15 +2573,14 @@ InstanceCreationExpression
   }
 
   test_unresolved() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   new Unresolved(0);
+//    ^^^^^^^^^^
+// [diag.newWithNonType] The name 'Unresolved' isn't a class.
 }
 
-''',
-      [error(diag.newWithNonType, 17, 10)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -2664,15 +2605,14 @@ InstanceCreationExpression
   }
 
   test_unresolved_identifier() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   new Unresolved.named(0);
+//    ^^^^^^^^^^^^^^^^
+// [diag.undefinedIdentifier] Undefined name 'Unresolved'.
 }
 
-''',
-      [error(diag.undefinedIdentifier, 17, 16)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''
@@ -2701,15 +2641,14 @@ InstanceCreationExpression
   }
 
   test_unresolved_identifier_identifier() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f() {
   new unresolved.Foo.bar(0);
+//    ^^^^^^^^^^^^^^
+// [diag.undefinedIdentifier] Undefined name 'unresolved'.
 }
 
-''',
-      [error(diag.undefinedIdentifier, 17, 14)],
-    );
+''');
 
     var node = findNode.singleInstanceCreationExpression;
     assertResolvedNodeText(node, r'''

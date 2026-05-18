@@ -32,6 +32,7 @@ import 'package:analyzer/src/dart/analysis/unlinked_unit_store.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/scanner/scanner.dart';
 import 'package:analyzer/src/dartdoc/dartdoc_directive_info.dart';
+import 'package:analyzer/src/error/listener.dart';
 import 'package:analyzer/src/exception/exception.dart';
 import 'package:analyzer/src/generated/parser.dart';
 import 'package:analyzer/src/generated/source.dart' show SourceFactory;
@@ -312,6 +313,41 @@ abstract class FileKind {
 
   List<UnlinkedLibraryImportDirective> get _unlinkedDocImports;
 
+  void addDirectivesSignature(ApiSignature signature) {
+    void appendDirectiveUri(DirectiveUri selectedUri) {
+      switch (selectedUri) {
+        case DirectiveUriWithFile(:var file):
+          signature.addInt(0);
+          signature.addBool(file.exists);
+          signature.addBool(file.kind is PartFileKind);
+          signature.addString(file.uriStr);
+        case DirectiveUriWithInSummarySource(:var source):
+          signature.addInt(1);
+          signature.addString(source.uri.toString());
+        case DirectiveUriWithUri(:var relativeUri):
+          signature.addInt(2);
+          signature.addString(relativeUri.toString());
+        case DirectiveUriWithString(:var relativeUriStr):
+          signature.addInt(3);
+          signature.addString(relativeUriStr);
+        case DirectiveUriWithoutString():
+          signature.addInt(4);
+      }
+    }
+
+    signature.addList(libraryExports, (directive) {
+      appendDirectiveUri(directive.selectedUri);
+    });
+
+    signature.addList(libraryImports, (directive) {
+      appendDirectiveUri(directive.selectedUri);
+    });
+
+    signature.addList(docLibraryImports, (directive) {
+      appendDirectiveUri(directive.selectedUri);
+    });
+  }
+
   /// Collect files that are transitively referenced by this file.
   @mustCallSuper
   void collectTransitive(Set<FileState> files) {
@@ -559,12 +595,14 @@ class FileState {
   CompilationUnitImpl parse({
     DiagnosticListener diagnosticListener = DiagnosticListener.nullListener,
     required OperationPerformanceImpl performance,
+    bool scanComments = true,
   }) {
     try {
       return parseCode(
         code: content,
         diagnosticListener: diagnosticListener,
         performance: performance,
+        scanComments: scanComments,
       );
     } catch (exception, stackTrace) {
       throw CaughtExceptionWithFiles(exception, stackTrace, {path: content});
@@ -576,17 +614,20 @@ class FileState {
     required String code,
     required DiagnosticListener diagnosticListener,
     required OperationPerformanceImpl performance,
+    required bool scanComments,
   }) {
     return performance.run('parseCode', (performance) {
       performance.getDataInt('length').add(code.length);
 
       var diagnosticReporter = DiagnosticReporter(diagnosticListener, source);
-      Scanner scanner = Scanner(code, diagnosticReporter)
-        ..configureFeatures(
-          featureSetForOverriding: featureSet,
-          featureSet: featureSet.restrictToVersion(packageLanguageVersion),
-        );
-      Token token = scanner.tokenize(reportScannerErrors: false);
+      Scanner scanner =
+          Scanner(inputText: code, reportError: diagnosticReporter.report)
+            ..configureFeatures(
+              featureSetForOverriding: featureSet,
+              featureSet: featureSet.restrictToVersion(packageLanguageVersion),
+            );
+      scanner.preserveComments = scanComments;
+      Token token = scanner.tokenize();
       LineInfo lineInfo = LineInfo(scanner.lineStarts);
       var languageVersion = LibraryLanguageVersion(
         package: packageLanguageVersion,
@@ -942,42 +983,21 @@ class FileState {
       } else if (directive is LibraryDirective) {
         libraryDirective = UnlinkedLibraryDirective(
           docImports: buildDocImports(directive),
-          name: useDottedNameInLibraryDirective
-              ? directive.name2?.tokens.map((e) => e.lexeme).join()
-              : directive.name?.name,
+          name: directive.name?.tokens.map((e) => e.lexeme).join(),
         );
       } else if (directive is PartDirective) {
         var unlinked = _serializePart(directive);
         parts.add(unlinked);
       } else if (directive is PartOfDirective) {
-        ({String name, int offset, int length})? nameInfo;
-        if (useDottedNameInLibraryDirective) {
-          var libraryName2 = directive.libraryName2;
-          if (libraryName2 != null) {
-            nameInfo = (
-              name: libraryName2.tokens.map((e) => e.lexeme).join(),
-              offset: libraryName2.offset,
-              length: libraryName2.length,
-            );
-          }
-        } else {
-          var libraryName = directive.libraryName;
-          if (libraryName != null) {
-            nameInfo = (
-              name: libraryName.name,
-              offset: libraryName.offset,
-              length: libraryName.length,
-            );
-          }
-        }
+        var libraryName = directive.libraryName;
         var uri = directive.uri;
-        if (nameInfo != null) {
+        if (libraryName != null) {
           partOfNameDirective ??= UnlinkedPartOfNameDirective(
             docImports: buildDocImports(directive),
-            name: nameInfo.name,
+            name: libraryName.tokens.map((e) => e.lexeme).join(),
             nameRange: UnlinkedSourceRange(
-              offset: nameInfo.offset,
-              length: nameInfo.length,
+              offset: libraryName.offset,
+              length: libraryName.length,
             ),
           );
         } else if (uri != null) {
@@ -1095,11 +1115,11 @@ class FileState {
     List<Configuration> configurations,
   ) {
     return configurations.map((configuration) {
+      var name = configuration.name.tokens.map((e) => e.lexeme).join();
+      var value = configuration.value?.stringValue ?? '';
       return UnlinkedNamespaceDirectiveConfiguration(
-        name: useDottedNameInLibraryDirective
-            ? configuration.name.tokens.map((e) => e.lexeme).join()
-            : configuration.name.components.join('.'),
-        value: configuration.value?.stringValue ?? '',
+        name: name,
+        value: value,
         uri: configuration.uri.stringValue,
       );
     }).toFixedList();
@@ -1277,13 +1297,9 @@ class FileSystemState {
   /// Update the state to reflect the fact that the file with the given [path]
   /// was changed. Specifically this means that we evict this file and every
   /// file that referenced it.
-  void changeFile(String path, Set<FileState> removedFiles) {
+  void changeFile(String path) {
     var file = _pathToFile.remove(path);
     if (file == null) {
-      return;
-    }
-
-    if (!removedFiles.add(file)) {
       return;
     }
 
@@ -1298,7 +1314,7 @@ class FileSystemState {
 
     // Recursively remove files that reference the removed file.
     for (var reference in file.referencingFiles.toList()) {
-      changeFile(reference.path, removedFiles);
+      changeFile(reference.path);
     }
   }
 
@@ -1475,24 +1491,30 @@ class FileSystemState {
     _clearFiles();
   }
 
-  /// Computes the set of [FileState]'s used/not used to analyze the given
-  /// [paths]. Removes the [FileState]'s of the files not used for analysis from
-  /// the cache. Returns the set of unused [FileState]'s.
-  Set<FileState> removeUnusedFiles(List<String> paths) {
+  /// Removes [FileState]s not used to analyze the given [paths].
+  ///
+  /// Calls [beforeRemoving] with the set of files that will be removed before
+  /// disposal begins, so higher layers can clear state that depends on their
+  /// current library cycles.
+  Set<FileState> removeFilesNotNecessaryForAnalysisOf(
+    List<String> paths, {
+    required void Function(Set<FileState> files) beforeRemoving,
+  }) {
     var referenced = <FileState>{};
     for (var path in paths) {
       var library = _pathToFile[path]?.kind.library;
       library?.collectTransitive(referenced);
     }
 
-    var removed = <FileState>{};
-    for (var file in _pathToFile.values.toList()) {
-      if (!referenced.contains(file)) {
-        changeFile(file.path, removed);
-      }
+    var unused = _pathToFile.values.whereNot(referenced.contains).toSet();
+
+    beforeRemoving(unused);
+
+    for (var file in unused) {
+      changeFile(file.path);
     }
 
-    return removed;
+    return unused;
   }
 
   /// Clear all [FileState] data - all maps from path or URI, etc.

@@ -18,6 +18,7 @@ import '../../builder/metadata_builder.dart';
 import '../../builder/property_builder.dart';
 import '../../builder/type_builder.dart';
 import '../../kernel/body_builder_context.dart';
+import '../../kernel/external_ast_helper.dart' as extern;
 import '../../kernel/hierarchy/class_member.dart';
 import '../../kernel/hierarchy/members_builder.dart';
 import '../../kernel/type_algorithms.dart';
@@ -28,8 +29,8 @@ import '../../source/source_library_builder.dart';
 import '../../source/source_loader.dart';
 import '../../source/source_member_builder.dart';
 import '../../source/source_property_builder.dart';
+import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
-import '../../type_inference/external_ast_helper.dart';
 import '../../type_inference/type_schema.dart';
 import '../fragment.dart';
 import 'body_builder_context.dart';
@@ -287,6 +288,11 @@ class RegularSetterDeclaration
         fileUri: _fragment.fileUri,
         nameOffset: _fragment.nameOffset,
         nameLength: _fragment.name.length,
+        isClosureContextLoweringEnabled: libraryBuilder
+            .loader
+            .target
+            .backendTarget
+            .isConstructorTearOffLoweringEnabled,
       );
     }
     _encoding.ensureTypes(libraryBuilder, membersBuilder.hierarchyBuilder);
@@ -308,8 +314,9 @@ class RegularSetterDeclaration
     required ProblemReporting problemReporting,
     required Statement? body,
     required Scope? scope,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
+    required VariableDeclaration? thisVariable,
   }) {
     List<FormalParameterBuilder>? declaredFormals = _fragment.declaredFormals;
     if (declaredFormals == null ||
@@ -317,20 +324,20 @@ class RegularSetterDeclaration
         declaredFormals.single.isOptionalPositional) {
       int fileOffset = _fragment.formalsOffset;
       if (body == null) {
-        body = new EmptyStatement()..fileOffset = fileOffset;
+        body = extern.createEmptyStatement(fileOffset: fileOffset);
       }
       if (declaredFormals != null) {
         // Illegal parameters were removed by the function builder.
         // Add them as local variable to put them in scope of the body.
         List<Statement> statements = <Statement>[];
         for (FormalParameterBuilder parameter in declaredFormals) {
-          statements.add(parameter.variable);
+          statements.add(extern.createVariableStatement(parameter.variable));
         }
         statements.add(body);
-        body = createBlock(statements, fileOffset: fileOffset);
+        body = extern.createBlock(statements, fileOffset: fileOffset);
       }
-      body = createBlock([
-        createExpressionStatement(
+      body = extern.createBlock([
+        extern.createExpressionStatement(
           problemReporting.buildProblem(
             compilerContext: compilerContext,
             message: diag.setterWithWrongNumberOfFormals,
@@ -343,17 +350,18 @@ class RegularSetterDeclaration
       ], fileOffset: fileOffset);
     }
     assert(
-      asyncMarker == _fragment.asyncModifier,
+      asyncModifier.kind == _fragment.asyncModifier.kind,
       "Unexpected change in async modifier on $this from "
-      "${_fragment.asyncModifier} to $asyncMarker.",
+      "${_fragment.asyncModifier} to ${asyncModifier.kind}.",
     );
     _encoding.registerFunctionBody(
       body: body,
       // TODO(cstefantsova): Update scope to handle the insertion of parameters
       // as locals above.
       scope: scope,
-      asyncMarker: asyncMarker,
+      asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
+      thisVariable: thisVariable,
     );
   }
 
@@ -402,8 +410,9 @@ abstract class SetterFragmentDeclaration {
     required ProblemReporting problemReporting,
     required Statement? body,
     required Scope? scope,
-    required AsyncMarker asyncMarker,
+    required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
+    required VariableDeclaration? thisVariable,
   });
 
   DartType get returnTypeContext;

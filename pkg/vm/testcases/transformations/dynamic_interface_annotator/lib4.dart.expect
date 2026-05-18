@@ -19,6 +19,7 @@ extension /* unnamed */ _extension#2 on core::String {
   method addSuffix3 = self::_extension#2|addSuffix3;
   method tearoff addSuffix3 = self::_extension#2|get#addSuffix3;
 }
+@#C3
 extension type E3(core::int _info) {
   abstract extension-type-member representation-field get _info() → core::int;
   get info = self::E3|get#info;
@@ -32,7 +33,7 @@ extension type _E4(core::int _info) {
   constructor tearoff • = self::_E4|constructor#_#new#tearOff;
 }
 @#C3
-static extension-type-member method E3|constructor#(core::int _info) → self::E3% /* erasure=core::int, declared=! */ {
+static extension-type-member method E3|constructor#(initializing-formal core::int _info) → self::E3% /* erasure=core::int, declared=! */ {
   lowered final self::E3% /* erasure=core::int, declared=! */ #this = _info;
   return #this;
 }
@@ -42,7 +43,7 @@ static extension-type-member synthetic method E3|constructor#_#new#tearOff(core:
 @#C3
 static extension-type-member method E3|get#info(lowered final self::E3% /* erasure=core::int, declared=! */ #this) → core::int
   return #this as{Unchecked} core::int;
-static extension-type-member method _E4|constructor#(core::int _info) → self::_E4% /* erasure=core::int, declared=! */ {
+static extension-type-member method _E4|constructor#(initializing-formal core::int _info) → self::_E4% /* erasure=core::int, declared=! */ {
   lowered final self::_E4% /* erasure=core::int, declared=! */ #this = _info;
   return #this;
 }

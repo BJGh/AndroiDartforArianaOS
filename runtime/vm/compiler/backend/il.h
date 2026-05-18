@@ -7553,7 +7553,8 @@ class AllocateObjectInstr : public AllocationInstr {
   }
 
   static bool WillAllocateNewOrRemembered(const Class& cls) {
-    return IsAllocatableInNewSpace(cls.target_instance_size());
+    return compiler::target::Heap::IsAllocatableInNewSpace(
+        cls.target_instance_size());
   }
 
   virtual const Slot* SlotForInput(intptr_t pos) {
@@ -7583,48 +7584,52 @@ class AllocateObjectInstr : public AllocationInstr {
   DISALLOW_COPY_AND_ASSIGN(AllocateObjectInstr);
 };
 
-// Allocates and null initializes a closure object, given the closure function
-// and the context as values.
-class AllocateClosureInstr : public TemplateAllocation<3> {
+// Allocates and null initializes a closure object.
+class AllocateClosureInstr : public TemplateAllocation<2> {
  public:
   enum Inputs {
     kFunctionPos = 0,
     kContextPos = 1,
-    kInstantiatorTypeArgsPos = 2,
   };
   AllocateClosureInstr(const InstructionSource& source,
                        Value* closure_function,
                        Value* context,
-                       Value* instantiator_type_args,  // Optional.
-                       bool is_generic,
+                       bool has_delayed_type_args,
+                       bool has_instantiator_type_args,
+                       bool has_function_type_args,
                        bool is_tear_off,
                        intptr_t deopt_id)
       : TemplateAllocation(source, deopt_id),
-        has_instantiator_type_args_(instantiator_type_args != nullptr),
-        is_generic_(is_generic),
+        has_delayed_type_args_(has_delayed_type_args),
+        has_instantiator_type_args_(has_instantiator_type_args),
+        has_function_type_args_(has_function_type_args),
         is_tear_off_(is_tear_off) {
     SetInputAt(kFunctionPos, closure_function);
     SetInputAt(kContextPos, context);
-    if (has_instantiator_type_args_) {
-      SetInputAt(kInstantiatorTypeArgsPos, instantiator_type_args);
-    }
   }
 
   DECLARE_INSTRUCTION(AllocateClosure)
   virtual CompileType ComputeType() const;
 
-  virtual intptr_t InputCount() const {
-    return has_instantiator_type_args() ? 3 : 2;
-  }
+  virtual intptr_t InputCount() const { return 2; }
 
   Value* closure_function() const { return inputs_[kFunctionPos]; }
   Value* context() const { return inputs_[kContextPos]; }
 
-  bool has_instantiator_type_args() const {
-    return has_instantiator_type_args_;
-  }
-  bool is_generic() const { return is_generic_; }
   bool is_tear_off() const { return is_tear_off_; }
+
+  intptr_t NumElements() const {
+    return UntaggedClosure::ContextIndex(has_delayed_type_args_,
+                                         has_instantiator_type_args_,
+                                         has_function_type_args_) +
+           1;
+  }
+
+  intptr_t EncodedLengthAndFlags() const {
+    return UntaggedClosure::EncodeLengthAndFlags(
+        has_delayed_type_args_, has_instantiator_type_args_,
+        has_function_type_args_, NumElements());
+  }
 
   const Function& known_function() const {
     Value* const value = closure_function();
@@ -7640,11 +7645,12 @@ class AllocateClosureInstr : public TemplateAllocation<3> {
       case kFunctionPos:
         return &Slot::Closure_function();
       case kContextPos:
-        return &Slot::Closure_context();
-      case kInstantiatorTypeArgsPos:
-        return has_instantiator_type_args()
-                   ? &Slot::Closure_instantiator_type_arguments()
-                   : nullptr;
+        return &Slot::GetClosureElementSlot(
+            Thread::Current(),
+            compiler::target::Closure::element_offset(
+                UntaggedClosure::ContextIndex(has_delayed_type_args_,
+                                              has_instantiator_type_args_,
+                                              has_function_type_args_)));
       default:
         return TemplateAllocation::SlotForInput(pos);
     }
@@ -7658,19 +7664,22 @@ class AllocateClosureInstr : public TemplateAllocation<3> {
 
   virtual bool AttributesEqual(const Instruction& other) const {
     const auto other_ac = other.AsAllocateClosure();
-    return (other_ac->has_instantiator_type_args() ==
-            has_instantiator_type_args()) &&
-           (other_ac->is_generic() == is_generic()) &&
+    return (other_ac->has_delayed_type_args_ == has_delayed_type_args_) &&
+           (other_ac->has_instantiator_type_args_ ==
+            has_instantiator_type_args_) &&
+           (other_ac->has_function_type_args_ == has_function_type_args_) &&
            (other_ac->is_tear_off() == is_tear_off());
   }
 
   virtual bool WillAllocateNewOrRemembered() const {
-    return IsAllocatableInNewSpace(compiler::target::Closure::InstanceSize());
+    return compiler::target::Heap::IsAllocatableInNewSpace(
+        compiler::target::Closure::InstanceSize(NumElements()));
   }
 
 #define FIELD_LIST(F)                                                          \
+  F(const bool, has_delayed_type_args_)                                        \
   F(const bool, has_instantiator_type_args_)                                   \
-  F(const bool, is_generic_)                                                   \
+  F(const bool, has_function_type_args_)                                       \
   F(const bool, is_tear_off_)
 
   DECLARE_INSTRUCTION_SERIALIZABLE_FIELDS(AllocateClosureInstr,
@@ -7732,7 +7741,7 @@ class AllocateRecordInstr : public TemplateAllocation<0> {
   virtual bool HasUnknownSideEffects() const { return false; }
 
   virtual bool WillAllocateNewOrRemembered() const {
-    return IsAllocatableInNewSpace(
+    return compiler::target::Heap::IsAllocatableInNewSpace(
         compiler::target::Record::InstanceSize(num_fields()));
   }
 
@@ -7784,7 +7793,7 @@ class AllocateSmallRecordInstr : public TemplateAllocation<3> {
   virtual bool HasUnknownSideEffects() const { return false; }
 
   virtual bool WillAllocateNewOrRemembered() const {
-    return IsAllocatableInNewSpace(
+    return compiler::target::Heap::IsAllocatableInNewSpace(
         compiler::target::Record::InstanceSize(num_fields()));
   }
 

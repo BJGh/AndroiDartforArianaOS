@@ -7,6 +7,7 @@ import 'dart:developer';
 import 'dart:io' as io;
 
 import 'package:args/args.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 import 'src/common.dart';
@@ -116,13 +117,13 @@ class _Recorder {
   Future<void> record() async {
     try {
       if (config.outputDir case final String outputDirPath) {
-        outputDir = io.Directory(outputDirPath);
+        outputDir = io.Directory(outputDirPath).absolute;
       } else {
         outputDir = io.Directory.systemTemp.createTempSync('recording');
       }
 
       if (!outputDir.existsSync()) {
-        print('Created output directory $outputDir');
+        print('Created output directory ${outputDir.path}');
         outputDir.createSync(recursive: true);
       }
 
@@ -143,16 +144,29 @@ class _Recorder {
         );
       }
 
-      print('... data will be written to $outputDir');
+      print('... data will be written to ${outputDir.path}');
 
       _recording = true;
-      if (!config.recordOnlyNewProcesses) {
+      if (_activeConnections.isNotEmpty) {
+        assert(!config.recordOnlyNewProcesses);
         await Future.wait([
-          for (var conn in _activeConnections)
-            conn.startRecording(outputDir.path, config: config),
+          for (var conn in _activeConnections.toList())
+            conn.startRecording(outputDir.path, config: config).catchError((e) {
+              print(
+                'Failed to start recording of process ${conn.info.pid}: $e',
+              );
+              _activeConnections.remove(conn);
+              try {
+                conn.disconnect();
+              } catch (_) {
+                // Ignore exception.
+              }
+            }),
         ]);
-      } else {
-        assert(_activeConnections.isEmpty);
+        if (_activeConnections.isEmpty) {
+          // All connections errored.
+          io.exitCode = -1;
+        }
       }
 
       if (config.recordNewProcesses || config.recordOnlyNewProcesses) {
@@ -305,9 +319,13 @@ class _Recorder {
 class Connection {
   final Stopwatch _recordingTime = Stopwatch();
   final ProcessInfo info;
+
+  @visibleForTesting
+  final io.Socket? socket;
+
   final JsonRpcPeer _endpoint;
 
-  Connection._(this.info, this._endpoint);
+  Connection._(this.info, this._endpoint, {this.socket});
 
   Future<void> startRecording(
     String outputDir, {
@@ -339,13 +357,12 @@ class Connection {
   }
 
   static Future<Connection> connectTo(String controlSocketPath) async {
-    final client = jsonRpcPeerFromSocket(
-      await UnixDomainSocket.connect(controlSocketPath),
-    );
+    final socket = await UnixDomainSocket.connect(controlSocketPath);
+    final client = jsonRpcPeerFromSocket(socket);
     final info = ProcessInfo.fromJson(
       await client.sendRequest('process.getInfo') as Map<String, Object?>,
     );
-    return Connection._(info, client);
+    return Connection._(info, client, socket: socket);
   }
 
   static Future<Connection?> _tryConnectTo(String controlSocket) async {

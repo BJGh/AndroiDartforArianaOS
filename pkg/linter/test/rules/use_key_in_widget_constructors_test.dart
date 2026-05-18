@@ -18,6 +18,9 @@ class UseKeyInWidgetConstructorsTest extends LintRuleTest {
   bool get addFlutterPackageDep => true;
 
   @override
+  bool get addMetaPackageDep => true;
+
+  @override
   String get lintRule => LintNames.use_key_in_widget_constructors;
 
   test_augmentedConstructor_noKey() async {
@@ -52,6 +55,30 @@ abstract class MyWidget extends StatelessWidget {
 }
 ''',
       [lint(107, 5)],
+    );
+  }
+
+  test_constructor_factory_withoutKey() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+class MyWidget extends StatelessWidget {
+  MyWidget({super.key});
+  factory fact() => MyWidget();
+}
+''');
+  }
+
+  test_constructor_new_withoutKey() async {
+    await assertDiagnostics(
+      r'''
+import 'package:flutter/widgets.dart';
+
+abstract class MyWidget extends StatelessWidget {
+  new ();
+}
+''',
+      [lint(92, 3)],
     );
   }
 
@@ -209,6 +236,25 @@ abstract class MyWidget extends StatelessWidget {
 ''');
   }
 
+  test_primaryConstructor_withKey() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+abstract class MyWidget({super.key}) extends StatelessWidget {}
+''');
+  }
+
+  test_primaryConstructor_withoutKey() async {
+    await assertDiagnostics(
+      r'''
+import 'package:flutter/widgets.dart';
+
+abstract class MyWidget() extends StatelessWidget {}
+''',
+      [lint(55, 8)],
+    );
+  }
+
   test_privateClass() async {
     await assertNoDiagnostics(r'''
 import 'package:flutter/widgets.dart';
@@ -271,6 +317,37 @@ class OtherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container();
+}
+''');
+  }
+
+  test_visibleForTestingClass() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+@visibleForTesting
+abstract class MyWidget extends StatefulWidget {}
+''');
+  }
+
+  test_visibleForTestingConstructor() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+abstract class MyWidget extends StatefulWidget {
+  @visibleForTesting
+  MyWidget();
+}
+''');
+  }
+
+  test_visibleForTestingConstructor_primary() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+abstract class MyWidget() extends StatefulWidget {
+  @visibleForTesting
+  this;
 }
 ''');
   }

@@ -12,7 +12,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/workspace/workspace.dart';
-import 'package:path/path.dart' as path;
 
 /// Return the compilation unit of a node
 CompilationUnit? getCompilationUnit(AstNode node) =>
@@ -42,73 +41,55 @@ int? getIntValue(Expression expression, RuleContext? context) {
   return _getIntValue(expression, context);
 }
 
-/// Returns the most specific AST node appropriate for associating errors.
-SyntacticEntity getNodeToAnnotate(Declaration node) {
-  // TODO(srawlins): Convert to a switch expression over `Declaration` subtypes,
-  // assuming `Declaration` becomes an exhaustive type.
+/// Returns the most specific AST node appropriate for associating errors with
+/// the given node.
+///
+/// The node is generally assumed to be a [Declaration], but the parameter
+/// allows any [AstNode] in order to handle [PrimaryConstructorDeclaration]s.
+SyntacticEntity getNodeToAnnotate(AstNode node) {
   if (node is ClassDeclaration) {
     return node.namePart.typeName;
-  }
-  if (node is ClassTypeAlias) {
+  } else if (node is ClassTypeAlias) {
     return node.name;
-  }
-  if (node is ConstructorDeclaration) {
+  } else if (node is ConstructorDeclaration) {
     return node.name ??
         node.typeName ??
         node.newKeyword ??
         node.factoryKeyword!;
-  }
-  if (node is EnumConstantDeclaration) {
+  } else if (node is EnumConstantDeclaration) {
     return node.name;
-  }
-  if (node is EnumDeclaration) {
+  } else if (node is EnumDeclaration) {
     return node.namePart.typeName;
-  }
-  if (node is ExtensionDeclaration) {
+  } else if (node is ExtensionDeclaration) {
     return node.name ?? node;
-  }
-  if (node is FieldDeclaration) {
+  } else if (node is FieldDeclaration) {
     return node.fields;
-  }
-  if (node is FunctionDeclaration) {
+  } else if (node is FunctionDeclaration) {
     return node.name;
-  }
-  if (node is FunctionTypeAlias) {
+  } else if (node is FunctionTypeAlias) {
     return node.name;
-  }
-  if (node is GenericTypeAlias) {
+  } else if (node is GenericTypeAlias) {
     return node.name;
-  }
-  if (node is MethodDeclaration) {
+  } else if (node is MethodDeclaration) {
     return node.name;
-  }
-  if (node is MixinDeclaration) {
+  } else if (node is MixinDeclaration) {
     return node.name;
-  }
-  if (node is PrimaryConstructorBody) {
+  } else if (node is PrimaryConstructorBody) {
     return node.thisKeyword;
-  }
-  if (node is TopLevelVariableDeclaration) {
+  } else if (node is PrimaryConstructorDeclaration) {
+    return node.constructorName?.name ?? node.typeName;
+  } else if (node is TopLevelVariableDeclaration) {
     return node.variables;
-  }
-  if (node is TypeParameter) {
+  } else if (node is TypeParameter) {
     return node.name;
-  }
-  if (node is VariableDeclaration) {
+  } else if (node is VariableDeclaration) {
     return node.name;
-  }
-  if (node is ExtensionTypeDeclaration) {
+  } else if (node is ExtensionTypeDeclaration) {
     return node.primaryConstructor.typeName;
   }
-  assert(false, "Unaccounted for Declaration subtype: '${node.runtimeType}'");
+  assert(false, "Unaccounted for node type: '${node.runtimeType}'");
   return node;
 }
-
-/// If the [node] is the finishing identifier of an assignment, return its
-/// "writeElement", otherwise return its "element", which might be
-/// thought as the "readElement".
-Element? getWriteOrReadElement(SimpleIdentifier node) =>
-    _getWriteElement(node) ?? node.element;
 
 bool hasConstantError(Expression node) =>
     node.computeConstantValue()?.diagnostics.isNotEmpty ?? true;
@@ -132,13 +113,14 @@ bool isInPublicDir(CompilationUnit node, WorkspacePackage? package) {
   if (package == null) return false;
   var cuPath = node.declaredFragment?.element.firstFragment.source.fullName;
   if (cuPath == null) return false;
-  var libDir = path.join(package.root.path, 'lib');
-  var binDir = path.join(package.root.path, 'bin');
+  var pathContext = package.root.provider.pathContext;
+  var libDir = pathContext.join(package.root.path, 'lib');
+  var binDir = pathContext.join(package.root.path, 'bin');
   // Hook directory: https://github.com/dart-lang/sdk/issues/54334,
-  var buildHookFile = path.join(package.root.path, 'hook', 'build.dart');
-  var linkHookFile = path.join(package.root.path, 'hook', 'link.dart');
-  return path.isWithin(libDir, cuPath) ||
-      path.isWithin(binDir, cuPath) ||
+  var buildHookFile = pathContext.join(package.root.path, 'hook', 'build.dart');
+  var linkHookFile = pathContext.join(package.root.path, 'hook', 'link.dart');
+  return pathContext.isWithin(libDir, cuPath) ||
+      pathContext.isWithin(binDir, cuPath) ||
       cuPath == buildHookFile ||
       cuPath == linkHookFile;
 }
@@ -303,33 +285,6 @@ int? _getIntValue(
   if (value is! int) return null;
 
   return negated ? -value : value;
-}
-
-/// If the [node] is the target of a [CompoundAssignmentExpression],
-/// return the corresponding "writeElement", which is the local variable,
-/// the setter referenced with a [SimpleIdentifier] or a [PropertyAccess],
-/// or the `[]=` operator.
-Element? _getWriteElement(AstNode node) {
-  var parent = node.parent;
-  if (parent is AssignmentExpression && parent.leftHandSide == node) {
-    return parent.writeElement;
-  }
-  if (parent is PostfixExpression) {
-    return parent.writeElement;
-  }
-  if (parent is PrefixExpression) {
-    return parent.writeElement;
-  }
-
-  if (parent is PrefixedIdentifier && parent.identifier == node) {
-    return _getWriteElement(parent);
-  }
-
-  if (parent is PropertyAccess && parent.propertyName == node) {
-    return _getWriteElement(parent);
-  }
-
-  return null;
 }
 
 bool _hasFieldOrMethod(ClassMember element, String name) =>

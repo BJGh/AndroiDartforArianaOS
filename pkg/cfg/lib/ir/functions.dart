@@ -99,6 +99,13 @@ sealed class CFunction {
   /// Return type of this function.
   CType get returnType;
 
+  /// Async marker of this function.
+  ast.AsyncMarker get asyncMarker =>
+      functionNode?.asyncMarker ?? ast.AsyncMarker.Sync;
+
+  /// Whether this function is suspendable (i.e. async, async* or sync*).
+  bool get isSuspendable => asyncMarker != ast.AsyncMarker.Sync;
+
   /// Source position of the beginning of this function.
   SourcePosition get sourcePosition => SourcePosition(member.fileOffset);
 }
@@ -106,9 +113,6 @@ sealed class CFunction {
 /// Function representing a getter.
 final class GetterFunction extends CFunction {
   GetterFunction._(super.member) : assert(member.hasGetter), super._();
-
-  @override
-  ast.FunctionNode? get functionNode => null;
 
   @override
   int get numberOfRequiredPositionalParameters => numberOfImplicitParameters;
@@ -128,12 +132,19 @@ final class ImplicitFieldGetter extends GetterFunction {
   ImplicitFieldGetter._(ast.Field super.member) : super._();
 }
 
+/// Function representing closurization of an instance method.
+final class MethodExtractor extends GetterFunction {
+  MethodExtractor._(ast.Procedure super.member)
+    : assert(member.isInstanceMember),
+      super._();
+
+  @override
+  String toString() => 'method-extractor $member';
+}
+
 /// Function representing a setter.
 final class SetterFunction extends CFunction {
   SetterFunction._(super.member) : assert(member.hasSetter), super._();
-
-  @override
-  ast.FunctionNode? get functionNode => null;
 
   @override
   int get numberOfRequiredPositionalParameters =>
@@ -231,6 +242,19 @@ final class LocalFunction extends ClosureFunction {
 
   @override
   SourcePosition get sourcePosition => SourcePosition(localFunction.fileOffset);
+
+  bool hasGenericEnclosingFunction() {
+    ast.TreeNode node = localFunction;
+    for (;;) {
+      node = node.parent!;
+      if (node is ast.Member) {
+        return false;
+      }
+      if (node is ast.FunctionNode && node.typeParameters.isNotEmpty) {
+        return true;
+      }
+    }
+  }
 }
 
 /// Tear-off (result of function closurization).
@@ -260,6 +284,9 @@ final class TearOffFunction extends ClosureFunction {
           )
         : member.function!.returnType,
   );
+
+  @override
+  ast.AsyncMarker get asyncMarker => .Sync;
 }
 
 class ArgumentsShape {
@@ -298,6 +325,7 @@ class FunctionRegistry {
   final Map<ast.Member, CFunction> _setters = {};
   final Map<ast.LocalFunction, CFunction> _closures = {};
   final Map<ast.Member, CFunction> _tearOffs = {};
+  final Map<ast.Member, CFunction> _methodExtractors = {};
   final Map<ast.Member, CFunction> _fieldInitializers = {};
   final Map<ast.Member, CFunction> _other = {};
   final List<ArgumentsShape> _positionalArgShapes = [];
@@ -310,19 +338,32 @@ class FunctionRegistry {
     bool isSetter = false,
     bool isInitializer = false,
     bool isTearOff = false,
+    bool isMethodExtractor = false,
     ast.LocalFunction? localFunction,
   }) {
     if (localFunction != null) {
-      assert(!isGetter && !isSetter && !isInitializer && !isTearOff);
+      assert(
+        !isGetter &&
+            !isSetter &&
+            !isInitializer &&
+            !isTearOff &&
+            !isMethodExtractor,
+      );
       return _closures[localFunction] ??= LocalFunction._(
         member,
         localFunction,
       );
     }
     if (isTearOff) {
-      assert(!isGetter && !isSetter && !isInitializer);
+      assert(!isGetter && !isSetter && !isInitializer && !isMethodExtractor);
       assert(member is ast.Procedure || member is ast.Constructor);
       return _tearOffs[member] ??= TearOffFunction._(member);
+    }
+    if (isMethodExtractor) {
+      assert(!isGetter && !isSetter && !isInitializer);
+      return _methodExtractors[member] ??= MethodExtractor._(
+        member as ast.Procedure,
+      );
     }
     if (isInitializer) {
       assert(!isGetter && !isSetter);

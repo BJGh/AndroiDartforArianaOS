@@ -33,7 +33,6 @@ abstract class OmittedTypeBuilderImpl extends OmittedTypeBuilder {
   }
 
   @override
-  // Coverage-ignore(suite): Not run.
   int? get charOffset => null;
 
   @override
@@ -236,6 +235,7 @@ class InferableTypeBuilder extends OmittedTypeBuilderImpl
       } else {
         switch (inferenceDefaultType) {
           case InferenceDefaultType.NullableObject:
+            // Coverage-ignore(suite): Not run.
             registerInferredType(hierarchy.coreTypes.objectNullableRawType);
           case InferenceDefaultType.Dynamic:
             registerInferredType(const DynamicType());

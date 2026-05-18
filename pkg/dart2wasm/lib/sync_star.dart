@@ -20,7 +20,10 @@ mixin SyncStarCodeGeneratorMixin on StateMachineEntryAstCodeGenerator {
 
   @override
   void generateOuter(
-      FunctionNode functionNode, Context? context, Source functionSource) {
+    FunctionNode functionNode,
+    Context? context,
+    Source functionSource,
+  ) {
     final resumeFun = _defineInnerBodyFunction(functionNode);
 
     // Instantiate a [_SyncStarIterable] containing the context and resume
@@ -40,23 +43,40 @@ mixin SyncStarCodeGeneratorMixin on StateMachineEntryAstCodeGenerator {
     b.return_();
     b.end();
 
-    translator.compilationQueue.add(CompilationTask(
+    translator.compilationQueue.add(
+      CompilationTask(
         resumeFun,
-        SyncStarStateMachineCodeGenerator(translator, resumeFun,
-            enclosingMember, functionNode, functionSource, closures)));
+        SyncStarStateMachineCodeGenerator(
+          translator,
+          resumeFun,
+          enclosingMember,
+          functionNode,
+          functionSource,
+          closures,
+        ),
+      ),
+    );
   }
 
-  w.FunctionBuilder _defineInnerBodyFunction(FunctionNode functionNode) =>
-      translator.moduleForReference(enclosingMember.reference).functions.define(
-          translator.typesBuilder.defineFunction([
+  w.FunctionBuilder _defineInnerBodyFunction(
+    FunctionNode functionNode,
+  ) => translator
+      .moduleForReference(enclosingMember.reference)
+      .functions
+      .define(
+        translator.typesBuilder.defineFunction(
+          [
             suspendStateInfo.nonNullableType, // _SuspendState
             translator.topType, // Object?, error value
-            translator.stackTraceTypeNullable // StackTrace?, error stack trace
-          ], const [
+            translator.stackTraceTypeNullable, // StackTrace?, error stack trace
+          ],
+          const [
             // bool for whether the generator has more to do
-            w.NumType.i32
-          ]),
-          "${function.functionName} inner");
+            w.NumType.i32,
+          ],
+        ),
+        "$functionName inner",
+      );
 }
 
 /// Generates code for sync* procedures.
@@ -64,14 +84,17 @@ class SyncStarProcedureCodeGenerator
     extends ProcedureStateMachineEntryCodeGenerator
     with SyncStarCodeGeneratorMixin {
   SyncStarProcedureCodeGenerator(
-      super.translator, super.function, super.enclosingMember);
+    super.translator,
+    super.signature,
+    super.functionName,
+    super.enclosingMember,
+  );
 }
 
 /// Generates code for sync* closures.
 class SyncStarLambdaCodeGenerator extends LambdaStateMachineEntryCodeGenerator
     with SyncStarCodeGeneratorMixin {
-  SyncStarLambdaCodeGenerator(
-      super.translator, super.enclosingMember, super.lambda, super.closures);
+  SyncStarLambdaCodeGenerator(super.translator, super.lambda);
 }
 
 /// A specialized code generator for generating code for `sync*` functions.
@@ -91,18 +114,16 @@ class SyncStarLambdaCodeGenerator extends LambdaStateMachineEntryCodeGenerator
 /// captured by any lambdas.
 class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
   SyncStarStateMachineCodeGenerator(
-      super.translator,
-      super.function,
-      super.enclosingMember,
-      super.functionNode,
-      super.functionSource,
-      super.closures);
+    super.translator,
+    super.function,
+    super.enclosingMember,
+    super.functionNode,
+    super.functionSource,
+    super.closures,
+  );
 
   late final ClassInfo suspendStateInfo =
       translator.classInfo[translator.suspendStateClass]!;
-
-  late final ClassInfo syncStarIterableInfo =
-      translator.classInfo[translator.syncStarIterableClass]!;
 
   late final ClassInfo syncStarIteratorInfo =
       translator.classInfo[translator.syncStarIteratorClass]!;
@@ -117,29 +138,37 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     b.local_get(_suspendStateLocal);
     emitValue();
     b.struct_set(
-        suspendStateInfo.struct, FieldIndex.suspendStateCurrentException);
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateCurrentException,
+    );
   }
 
   @override
   void getSuspendStateCurrentException() {
     b.local_get(_suspendStateLocal);
     b.struct_get(
-        suspendStateInfo.struct, FieldIndex.suspendStateCurrentException);
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateCurrentException,
+    );
   }
 
   @override
   void setSuspendStateCurrentStackTrace(void Function() emitValue) {
     b.local_get(_suspendStateLocal);
     emitValue();
-    b.struct_set(suspendStateInfo.struct,
-        FieldIndex.suspendStateCurrentExceptionStackTrace);
+    b.struct_set(
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateCurrentExceptionStackTrace,
+    );
   }
 
   @override
   void getSuspendStateCurrentStackTrace() {
     b.local_get(_suspendStateLocal);
-    b.struct_get(suspendStateInfo.struct,
-        FieldIndex.suspendStateCurrentExceptionStackTrace);
+    b.struct_get(
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateCurrentExceptionStackTrace,
+    );
   }
 
   @override
@@ -168,15 +197,20 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     while (localContext != null) {
       if (!localContext.isEmpty) {
         localContext.currentLocal = b.addLocal(
-            w.RefType.def(localContext.struct, nullable: true),
-            name: "context");
+          w.RefType.def(localContext.struct, nullable: true),
+          name: "context",
+        );
         if (localContext.containsThis) {
           assert(thisLocal == null);
           thisLocal = b.addLocal(
-              localContext
-                  .struct.fields[localContext.thisFieldIndex].type.unpacked
-                  .withNullability(false),
-              name: "this");
+            localContext
+                .struct
+                .fields[localContext.thisFieldIndex]
+                .type
+                .unpacked
+                .withNullability(false),
+            name: "this",
+          );
           translator
               .getDummyValuesCollectorForModule(b.moduleBuilder)
               .instantiateLocalDummyValue(b, thisLocal!.type);
@@ -213,9 +247,15 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     emitTargetLabel(initialTarget);
 
     // Clone context on first execution.
-    b.restoreSuspendStateContext(_suspendStateLocal, suspendStateInfo.struct,
-        FieldIndex.suspendStateContext, closures, context, thisLocal,
-        cloneContextFor: functionNode);
+    b.restoreSuspendStateContext(
+      _suspendStateLocal,
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateContext,
+      closures,
+      context,
+      thisLocal,
+      cloneContextFor: functionNode,
+    );
 
     translateStatement(functionNode.body!);
 
@@ -237,11 +277,15 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     translateExpression(node.expression, translator.topType);
     if (node.isYieldStar) {
       b.ref_cast(translator.objectInfo.nonNullableType);
-      b.struct_set(syncStarIteratorInfo.struct,
-          FieldIndex.syncStarIteratorYieldStarIterable);
+      b.struct_set(
+        syncStarIteratorInfo.struct,
+        FieldIndex.syncStarIteratorYieldStarIterable,
+      );
     } else {
       b.struct_set(
-          syncStarIteratorInfo.struct, FieldIndex.syncStarIteratorCurrent);
+        syncStarIteratorInfo.struct,
+        FieldIndex.syncStarIteratorCurrent,
+      );
     }
 
     // Find the current context.
@@ -250,8 +294,8 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     do {
       contextOwner = contextOwner.parent!;
       context = closures.contexts[contextOwner];
-    } while (
-        contextOwner.parent != null && (context == null || context.isEmpty));
+    } while (contextOwner.parent != null &&
+        (context == null || context.isEmpty));
 
     // Store context.
     if (context != null) {
@@ -274,8 +318,14 @@ class SyncStarStateMachineCodeGenerator extends StateMachineCodeGenerator {
     // Resume.
     emitTargetLabel(after);
 
-    b.restoreSuspendStateContext(_suspendStateLocal, suspendStateInfo.struct,
-        FieldIndex.suspendStateContext, closures, context, thisLocal);
+    b.restoreSuspendStateContext(
+      _suspendStateLocal,
+      suspendStateInfo.struct,
+      FieldIndex.suspendStateContext,
+      closures,
+      context,
+      thisLocal,
+    );
 
     // For `yield*`, check for pending exception.
     if (node.isYieldStar) {

@@ -45,10 +45,10 @@ plugins:
 ''');
   }
 
-  Future<void> test_handleAnalysisSetContextRoots_throwingAsyncError() async {
+  Future<void> test_handleAnalysisSetContextRoots_print() async {
     pluginServer = PluginServer(
       resourceProvider: resourceProvider,
-      plugins: [_RuleThrowsAsyncErrorPlugin()],
+      plugins: [_PrintingPlugin()],
     );
     await startPlugin();
 
@@ -60,6 +60,27 @@ plugins:
       protocol.AnalysisSetContextRootsParams([contextRoot]),
     );
 
+    var pluginErrorParamsQueue = StreamQueue(
+      channel.notifications
+          .where((n) => n.event == protocol.PLUGIN_NOTIFICATION_PRINT)
+          .map((n) => protocol.PluginPrintParams.fromNotification(n)),
+    );
+    var pluginErrorParams = await pluginErrorParamsQueue.next;
+    expect(pluginErrorParams.pluginPrint.pluginName, 'no_bools');
+    expect(pluginErrorParams.pluginPrint.message, 'A message.');
+  }
+
+  Future<void> test_handleAnalysisSetContextRoots_throwingAsyncError() async {
+    pluginServer = PluginServer(
+      resourceProvider: resourceProvider,
+      plugins: [_RuleThrowsAsyncErrorPlugin()],
+    );
+    await startPlugin();
+
+    var filePath = join(packagePath, 'lib', 'test.dart');
+    newFile(filePath, 'bool b = false;');
+    var contextRoot = protocol.ContextRoot(packagePath, []);
+
     // Create a broadcast Stream of notifications, so that we can have multiple
     // StreamQueues listening.
     var notifications = channel.notifications.asBroadcastStream();
@@ -69,18 +90,28 @@ plugins:
           .map((n) => protocol.AnalysisErrorsParams.fromNotification(n))
           .where((p) => p.file == filePath),
     );
-    var analysisErrorsParams = await analysisErrorsParamsQueue.next;
-    expect(analysisErrorsParams.errors, isEmpty);
-
     var pluginErrorParamsQueue = StreamQueue(
       notifications
           .where((n) => n.event == protocol.PLUGIN_NOTIFICATION_ERROR)
           .map((n) => protocol.PluginErrorParams.fromNotification(n)),
     );
+
+    await channel.sendRequest(
+      protocol.AnalysisSetContextRootsParams([contextRoot]),
+    );
+
+    var analysisErrorsParams = await analysisErrorsParamsQueue.next;
+    expect(analysisErrorsParams.errors, isEmpty);
+
     var pluginErrorParams = await pluginErrorParamsQueue.next;
     expect(pluginErrorParams.isFatal, false);
     expect(pluginErrorParams.message, 'Bad state: A message.');
     // TODO(srawlins): Does `StackTrace.toString()` not do what I think?
+    // Might be https://github.com/dart-lang/sdk/issues/43076.
+    // Or we might want to use package:stack_trace:
+    // https://pub.dev/documentation/stack_trace/latest/stack_trace/Chain/capture.html
+    // as per
+    // https://github.com/dart-lang/sdk/issues/51005#issuecomment-1382109840.
     expect(pluginErrorParams.stackTrace, '');
   }
 
@@ -95,15 +126,21 @@ plugins:
     newFile(filePath, 'bool b = false;');
     var contextRoot = protocol.ContextRoot(packagePath, []);
 
-    var response = await channel.sendRequest(
+    await channel.sendRequest(
       protocol.AnalysisSetContextRootsParams([contextRoot]),
     );
 
+    var pluginErrorParamsQueue = StreamQueue(
+      channel.notifications
+          .where((n) => n.event == protocol.PLUGIN_NOTIFICATION_ERROR)
+          .map((n) => protocol.PluginErrorParams.fromNotification(n)),
+    );
+    var pluginErrorParams = await pluginErrorParamsQueue.next;
+    expect(pluginErrorParams.isFatal, false);
+    expect(pluginErrorParams.message, 'Bad state: A message.');
     expect(
-      response.error,
-      isA<protocol.RequestError>()
-          .having((e) => e.message, 'message', 'Bad state: A message.')
-          .having((e) => e.stackTrace, 'stackTrace', isNotNull),
+      pluginErrorParams.stackTrace,
+      contains('_ThrowsSyncErrorVisitor.visitBooleanLiteral'),
     );
   }
 
@@ -118,13 +155,6 @@ plugins:
     newFile(filePath, 'bool b = false;');
     var contextRoot = protocol.ContextRoot(packagePath, []);
 
-    await channel.sendRequest(
-      protocol.AnalysisSetContextRootsParams([contextRoot]),
-    );
-    await channel.sendRequest(
-      protocol.EditGetFixesParams(filePath, 'bool b = '.length),
-    );
-
     // Create a broadcast Stream of notifications, so that we can have multiple
     // StreamQueues listening.
     var notifications = channel.notifications.asBroadcastStream();
@@ -134,18 +164,33 @@ plugins:
           .map((n) => protocol.AnalysisErrorsParams.fromNotification(n))
           .where((p) => p.file == filePath),
     );
-    var analysisErrorsParams = await analysisErrorsParamsQueue.next;
-    expect(analysisErrorsParams.errors.single, isNotNull);
-
     var pluginErrorParamsQueue = StreamQueue(
       notifications
           .where((n) => n.event == protocol.PLUGIN_NOTIFICATION_ERROR)
           .map((n) => protocol.PluginErrorParams.fromNotification(n)),
     );
+
+    await channel.sendRequest(
+      protocol.AnalysisSetContextRootsParams([contextRoot]),
+    );
+
+    // Wait for initial analysis to complete and populate `_recentState`.
+    var analysisErrorsParams = await analysisErrorsParamsQueue.next;
+    expect(analysisErrorsParams.errors.single, isNotNull);
+
+    await channel.sendRequest(
+      protocol.EditGetFixesParams(filePath, 'bool b = '.length),
+    );
+
     var pluginErrorParams = await pluginErrorParamsQueue.next;
     expect(pluginErrorParams.isFatal, false);
     expect(pluginErrorParams.message, 'Bad state: A message.');
     // TODO(srawlins): Does `StackTrace.toString()` not do what I think?
+    // Might be https://github.com/dart-lang/sdk/issues/43076.
+    // Or we might want to use package:stack_trace:
+    // https://pub.dev/documentation/stack_trace/latest/stack_trace/Chain/capture.html
+    // as per
+    // https://github.com/dart-lang/sdk/issues/51005#issuecomment-1382109840.
     expect(pluginErrorParams.stackTrace, '');
   }
 
@@ -160,9 +205,19 @@ plugins:
     newFile(filePath, 'bool b = false;');
     var contextRoot = protocol.ContextRoot(packagePath, []);
 
+    var analysisErrorsParamsQueue = StreamQueue(
+      channel.notifications
+          .where((n) => n.event == protocol.ANALYSIS_NOTIFICATION_ERRORS)
+          .map((n) => protocol.AnalysisErrorsParams.fromNotification(n))
+          .where((p) => p.file == filePath),
+    );
+
     await channel.sendRequest(
       protocol.AnalysisSetContextRootsParams([contextRoot]),
     );
+
+    // Wait for initial analysis to complete and populate `_recentState`.
+    await analysisErrorsParamsQueue.next;
 
     var response = await channel.sendRequest(
       protocol.EditGetFixesParams(filePath, 'bool b = '.length),
@@ -248,6 +303,51 @@ class _PluginWithFixWithNoFixKind extends Plugin {
   void register(PluginRegistry registry) {
     registry.registerWarningRule(NoBoolsRule());
     registry.registerFixForRule(NoBoolsRule.code, _MissingFixKindFix.new);
+  }
+}
+
+class _PrintingPlugin extends Plugin {
+  @override
+  String get name => 'Printing Plugin';
+
+  @override
+  void register(PluginRegistry registry) {
+    registry.registerWarningRule(_PrintingRule());
+  }
+}
+
+/// An [AnalysisRule] which calls `print`.
+class _PrintingRule extends AnalysisRule {
+  static const LintCode code = LintCode(
+    'no_bools',
+    'No bools message',
+    uniqueName: 'LintCode.no_bools',
+  );
+
+  _PrintingRule() : super(name: 'no_bools', description: 'No bools desc');
+
+  @override
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
+  ) {
+    var visitor = _PrintingVisitor(this);
+    registry.addBooleanLiteral(this, visitor);
+  }
+}
+
+/// An [AnalysisRule] visitor which calls `print`.
+class _PrintingVisitor extends SimpleAstVisitor<void> {
+  final AnalysisRule rule;
+
+  _PrintingVisitor(this.rule);
+
+  @override
+  void visitBooleanLiteral(BooleanLiteral node) {
+    print('A message.');
   }
 }
 

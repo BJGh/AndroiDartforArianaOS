@@ -31,7 +31,8 @@ Uri computePackageConfig(Uri repoDir) =>
 /// nominality. For instance the name of a variable declaration is taking as
 /// defining its identity.
 const Map<String, String?> _declarativeClassesNames = const {
-  'VariableDeclaration': 'name',
+  // TODO(johnniwinther): This should be [VariableDeclaration].
+  'LegacyVariable': 'name',
   'TypeParameter': 'name',
   'StructuralParameter': 'name',
   'LabeledStatement': null,
@@ -63,6 +64,7 @@ const Set<String> _interchangeableClasses = const {
   'DartType',
   'Initializer',
   'Pattern',
+  'VariableDeclaration',
 };
 
 /// Names of subclasses of [NamedNode] that do _not_ have a `visitXReference`
@@ -124,18 +126,18 @@ const Map<String?, Map<String, FieldRule?>> _fieldRuleMap = {
   'TypedefTearOffConstant': {'parameters': FieldRule(isDeclaration: true)},
   'LocalInitializer': {'variable': FieldRule(isDeclaration: true)},
   'Let': {'variable': FieldRule(isDeclaration: true)},
-  'VariableGet': {'expressionVariable': FieldRule(isDeclaration: false)},
-  'VariableSet': {'expressionVariable': FieldRule(isDeclaration: false)},
+  'VariableGet': {'variable': FieldRule(isDeclaration: false)},
+  'VariableSet': {'variable': FieldRule(isDeclaration: false)},
   'LocalFunctionInvocation': {'variable': FieldRule(isDeclaration: false)},
   'LocalVariable': {'variableInitialization': FieldRule(isDeclaration: false)},
   'BreakStatement': {'target': FieldRule(isDeclaration: false)},
-  'ForStatement': {'variableInitializations': FieldRule(isDeclaration: true)},
-  'ForInStatement': {'expressionVariable': FieldRule(isDeclaration: true)},
+  'ForStatement': {'variables': FieldRule(isDeclaration: true)},
+  'ForInStatement': {'variable': FieldRule(isDeclaration: true)},
   'SwitchStatement': {'cases': FieldRule(isDeclaration: true)},
   'ContinueSwitchStatement': {'target': FieldRule(isDeclaration: false)},
   'Catch': {
-    'exceptionCatchVariable': FieldRule(isDeclaration: true),
-    'stackTraceCatchVariable': FieldRule(isDeclaration: true),
+    'exception': FieldRule(isDeclaration: true),
+    'stackTrace': FieldRule(isDeclaration: true),
   },
   'LocalFunctionIdGenerator': {'_counter': null},
   'FunctionExpression': {'id': null},
@@ -149,18 +151,20 @@ const Map<String?, Map<String, FieldRule?>> _fieldRuleMap = {
   'SyntheticVariable': {
     'variableInitialization': FieldRule(isDeclaration: false),
   },
-  'VariableStatement': {'_name': FieldRule(name: 'name')},
-  'AssignedVariablePattern': {
-    'expressionVariable': FieldRule(isDeclaration: false),
-  },
+  'LegacyVariable': {'_name': FieldRule(name: 'name')},
+  'AssignedVariablePattern': {'variable': FieldRule(isDeclaration: false)},
   'InvalidPattern': {'declaredVariables': FieldRule(isDeclaration: true)},
   'OrPattern': {'orPatternJointVariables': FieldRule(isDeclaration: false)},
   'VariablePattern': {'variable': FieldRule(isDeclaration: true)},
   'PatternSwitchCase': {'jointVariables': FieldRule(isDeclaration: true)},
   'PatternSwitchStatement': {'cases': FieldRule(isDeclaration: true)},
   'TypeVariable': {'parameter': FieldRule(isDeclaration: false)},
-  'ClassTypeParameterType': {'parameter': FieldRule(isDeclaration: false)},
+  'ClassTypeParameterType': {
+    'parameter': FieldRule(isDeclaration: false),
+    'thisVariable': FieldRule(isDeclaration: false),
+  },
   'NominalParameter': {'_variance': FieldRule(name: 'variance')},
+  'VariableInitialization': {'variable': FieldRule(isDeclaration: false)},
 };
 
 /// Data that determines exceptions to how fields are used.
@@ -760,8 +764,7 @@ Future<AstModel> deriveAstModel(Uri repoDir, {bool printDump = false}) async {
               "and a rule must therefore specify "
               "whether this constitutes declarative or referential use.",
             );
-          }
-          if (!rule.isDeclaration!) {
+          } else if (!rule.isDeclaration!) {
             return new FieldType(type, AstFieldKind.use);
           }
         }

@@ -35,6 +35,23 @@ class C {
     );
   }
 
+  test_assertInitializer_canBeConst_enumComparison() async {
+    await assertDiagnostics(
+      r'''
+import 'package:meta/meta.dart';
+
+enum E { a, b }
+
+@immutable
+class C {
+  final E e;
+  C(this.e) : assert(e == E.a);
+}
+''',
+      [lint(87, 1)],
+    );
+  }
+
   test_assertInitializer_cannotBeConst() async {
     await assertNoDiagnostics(r'''
 import 'package:meta/meta.dart';
@@ -213,6 +230,23 @@ class D(final int i) extends C {
 }
 ''',
       [lint(75, 1)],
+    );
+  }
+
+  test_immutable_enumComparisonInInitializerList() async {
+    await assertDiagnostics(
+      r'''
+import 'package:meta/meta.dart';
+
+enum E { a, b }
+
+@immutable
+class C {
+  final bool isA;
+  C(E e) : isA = e == E.a;
+}
+''',
+      [lint(92, 1)],
     );
   }
 
@@ -453,6 +487,19 @@ class C {
 }
 ''',
       [lint(69, 1)],
+    );
+  }
+
+  test_immutableInstantiation_nonConstConstructor() async {
+    await assertDiagnostics(
+      r'''
+import 'package:meta/meta.dart';
+@Immutable('')
+class A {
+  A();
+}
+''',
+      [lint(60, 1)],
     );
   }
 

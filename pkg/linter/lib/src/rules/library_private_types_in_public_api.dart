@@ -49,9 +49,7 @@ class Validator extends SimpleAstVisitor<void> {
       return;
     }
     namePart.typeParameters?.accept(this);
-    if (node.body case BlockClassBody body) {
-      body.members.accept(this);
-    }
+    node.body.members.accept(this);
     if (namePart is PrimaryConstructorDeclaration) {
       visitPrimaryConstructorDeclaration(namePart);
     }
@@ -62,7 +60,6 @@ class Validator extends SimpleAstVisitor<void> {
     if (isPrivateName(node.name.lexeme)) {
       return;
     }
-    node.superclass.accept(this);
     node.typeParameters?.accept(this);
   }
 
@@ -72,11 +69,6 @@ class Validator extends SimpleAstVisitor<void> {
     if (isEffectivelyPrivate(node)) return;
 
     node.parameters.accept(this);
-  }
-
-  @override
-  void visitDefaultFormalParameter(DefaultFormalParameter node) {
-    node.parameter.accept(this);
   }
 
   @override
@@ -108,17 +100,15 @@ class Validator extends SimpleAstVisitor<void> {
 
     for (var formalParameter
         in node.primaryConstructor.formalParameters.parameters) {
-      if (formalParameter is SimpleFormalParameter) {
+      if (formalParameter is RegularFormalParameter) {
         var name = formalParameter.name;
         if (name != null && !Identifier.isPrivateName(name.lexeme)) {
-          formalParameter.type!.accept(this);
+          formalParameter.type?.accept(this);
         }
       }
     }
 
-    if (node.body case BlockClassBody body) {
-      body.members.accept(this);
-    }
+    node.body.members.accept(this);
   }
 
   @override
@@ -171,16 +161,6 @@ class Validator extends SimpleAstVisitor<void> {
   @override
   void visitFunctionTypeAlias(FunctionTypeAlias node) {
     if (Identifier.isPrivateName(node.name.lexeme)) {
-      return;
-    }
-    node.returnType?.accept(this);
-    node.typeParameters?.accept(this);
-    node.parameters.accept(this);
-  }
-
-  @override
-  void visitFunctionTypedFormalParameter(FunctionTypedFormalParameter node) {
-    if (node.isNamed && Identifier.isPrivateName(node.name.lexeme)) {
       return;
     }
     node.returnType?.accept(this);
@@ -242,12 +222,18 @@ class Validator extends SimpleAstVisitor<void> {
   }
 
   @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
+  void visitRegularFormalParameter(RegularFormalParameter node) {
     var name = node.name;
     if (name != null && node.isNamed && Identifier.isPrivateName(name.lexeme)) {
       return;
     }
-    node.type?.accept(this);
+    if (node.functionTypedSuffix case var functionTypedSuffix?) {
+      node.type?.accept(this);
+      functionTypedSuffix.typeParameters?.accept(this);
+      functionTypedSuffix.formalParameters.accept(this);
+    } else {
+      node.type?.accept(this);
+    }
   }
 
   @override

@@ -11,13 +11,10 @@ import 'package:analysis_server/src/protocol_server.dart'
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/token.dart';
-import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/source/line_info.dart';
-import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/scanner/scanner.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' as plugin;
 import 'package:analyzer_plugin/src/utilities/formatter.dart';
-import 'package:dart_style/dart_style.dart' hide TrailingCommas;
 
 /// Checks whether a string contains only characters that are allowed to differ
 /// between unformattedformatted code (such as whitespace, commas, semicolons).
@@ -131,16 +128,7 @@ ErrorOr<List<TextEdit>?> generateEditsForFormatting(
   var unformattedSource = result.content;
 
   var formatter = createFormatter(result, defaultPageWidth: defaultPageWidth);
-  String formattedSource;
-  try {
-    formattedSource = formatter.format(unformattedSource);
-  } on FormatterException {
-    // If the document fails to parse, just return no edits to avoid the
-    // use seeing edits on every save with invalid code (if LSP gains the
-    // ability to pass a context to know if the format was manually invoked
-    // we may wish to change this to return an error for that case).
-    return success(null);
-  }
+  var formattedSource = formatter.formatSafely(unformattedSource).text;
 
   if (formattedSource == unformattedSource) {
     return success(null);
@@ -296,16 +284,13 @@ class _MinimalEditComputer {
 
   _MinimalEditComputer({
     required ParsedUnitResult result,
-    required LineInfo lineInfo,
+    required this._lineInfo,
     required String unformatted,
     required String formatted,
-    required int? rangeStart,
-    required int? rangeEnd,
-  }) : _lineInfo = lineInfo,
-       _unformatted = unformatted,
+    required this._rangeStart,
+    required this._rangeEnd,
+  }) : _unformatted = unformatted,
        _formatted = formatted,
-       _rangeStart = rangeStart,
-       _rangeEnd = rangeEnd,
        _parsedUnformatted = _parse(unformatted, result.unit.featureSet),
        _parsedFormatted = _parse(formatted, result.unit.featureSet);
 
@@ -682,27 +667,14 @@ class _MinimalEditComputer {
   /// be parsed.
   static Token? _parse(String s, FeatureSet featureSet) {
     try {
-      var scanner =
-          Scanner(
-            s,
-            DiagnosticReporter(
-              DiagnosticListener.nullListener,
-              _SourceMock.instance,
-            ),
-          )..configureFeatures(
-            featureSetForOverriding: featureSet,
-            featureSet: featureSet,
-          );
+      var scanner = Scanner(inputText: s, reportError: (_) {})
+        ..configureFeatures(
+          featureSetForOverriding: featureSet,
+          featureSet: featureSet,
+        );
       return scanner.tokenize();
     } catch (e) {
       return null;
     }
   }
-}
-
-class _SourceMock implements Source {
-  static final Source instance = _SourceMock();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

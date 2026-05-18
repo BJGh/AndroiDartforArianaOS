@@ -24,6 +24,7 @@ import '../fragment/fragment.dart';
 import '../util/helpers.dart';
 import 'offset_map.dart';
 import 'source_type_parameter_builder.dart';
+import 'stack_listener_impl.dart';
 import 'type_parameter_factory.dart';
 
 abstract class FragmentFactory {
@@ -198,7 +199,6 @@ abstract class FragmentFactory {
     OffsetMap? offsetMap,
     Token? importKeyword,
     required List<MetadataBuilder>? metadata,
-    required bool isAugmentationImport,
     required String uri,
     required List<Configuration>? configurations,
     required String? prefix,
@@ -329,7 +329,7 @@ abstract class FragmentFactory {
     required bool forAbstractClassOrMixin,
     required bool isExtensionMember,
     required bool isExtensionTypeMember,
-    required AsyncMarker asyncModifier,
+    required AsyncModifier asyncModifier,
     required String? nativeMethodName,
     required ProcedureKind kind,
   });
@@ -347,7 +347,7 @@ abstract class FragmentFactory {
     required String? nativeMethodName,
     required Token? beginInitializers,
     required bool hasNewKeyword,
-    required bool forAbstractClassOrMixin,
+    required bool forAbstractClassOrEnumOrMixin,
   });
 
   void addPrimaryConstructor({
@@ -356,9 +356,11 @@ abstract class FragmentFactory {
     required String? name,
     required List<FormalParameterBuilder>? formals,
     required int startOffset,
+    required int endOffset,
     required int? nameOffset,
     required int formalsOffset,
     required bool isConst,
+    required bool forAbstractClassOrEnumOrMixin,
   });
 
   void addPrimaryConstructorBody({
@@ -392,7 +394,7 @@ abstract class FragmentFactory {
     required int formalsOffset,
     required int endOffset,
     required String? nativeMethodName,
-    required AsyncMarker asyncModifier,
+    required AsyncModifier asyncModifier,
   });
 
   ConstructorName computeAndValidateConstructorName(
@@ -416,7 +418,7 @@ abstract class FragmentFactory {
     required int formalsOffset,
     required int endOffset,
     required String? nativeMethodName,
-    required AsyncMarker asyncModifier,
+    required AsyncModifier asyncModifier,
     required bool isInstanceMember,
     required bool isExtensionMember,
     required bool isExtensionTypeMember,
@@ -437,7 +439,7 @@ abstract class FragmentFactory {
     required int formalsOffset,
     required int endOffset,
     required String? nativeMethodName,
-    required AsyncMarker asyncModifier,
+    required AsyncModifier asyncModifier,
     required bool isInstanceMember,
     required bool isExtensionMember,
     required bool isExtensionTypeMember,
@@ -457,7 +459,7 @@ abstract class FragmentFactory {
     required int formalsOffset,
     required int endOffset,
     required String? nativeMethodName,
-    required AsyncMarker asyncModifier,
+    required AsyncModifier asyncModifier,
     required bool isInstanceMember,
     required bool isExtensionMember,
     required bool isExtensionTypeMember,

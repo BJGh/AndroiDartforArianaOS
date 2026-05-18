@@ -5,17 +5,19 @@
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
+import 'node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(FieldFormalParameterResolutionTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class FieldFormalParameterResolutionTest extends PubPackageResolutionTest {
   test_class_functionTyped() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   Function f;
   A(void this.f(int a));
@@ -32,18 +34,19 @@ FieldFormalParameter
   thisKeyword: this
   period: .
   name: f
-  parameters: FormalParameterList
-    leftParenthesis: (
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: int
-        element: dart:core::@class::int
-        type: int
-      name: a
-      declaredFragment: <testLibraryFragment> a@44
-        element: isPublic
+  functionTypedSuffix: FunctionTypedFormalParameterSuffix
+    formalParameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
           type: int
-    rightParenthesis: )
+        name: a
+        declaredFragment: <testLibraryFragment> a@44
+          element: isPublic
+            type: int
+      rightParenthesis: )
   declaredFragment: <testLibraryFragment> f@38
     element: isFinal isPublic
       type: void Function(int)
@@ -54,7 +57,7 @@ FieldFormalParameter
   /// There was a crash.
   /// https://github.com/dart-lang/sdk/issues/46968
   test_class_functionTyped_hasTypeParameters() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   T Function<T>(T) f;
   A(U this.f<U>(U a));
@@ -71,26 +74,27 @@ FieldFormalParameter
   thisKeyword: this
   period: .
   name: f
-  typeParameters: TypeParameterList
-    leftBracket: <
-    typeParameters
-      TypeParameter
-        name: U
-        declaredFragment: <testLibraryFragment> U@45
-          defaultType: null
-    rightBracket: >
-  parameters: FormalParameterList
-    leftParenthesis: (
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: U
-        element: #E0 U
-        type: U
-      name: a
-      declaredFragment: <testLibraryFragment> a@50
-        element: isPublic
+  functionTypedSuffix: FunctionTypedFormalParameterSuffix
+    typeParameters: TypeParameterList
+      leftBracket: <
+      typeParameters
+        TypeParameter
+          name: U
+          declaredFragment: <testLibraryFragment> U@45
+            defaultType: null
+      rightBracket: >
+    formalParameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: U
+          element: #E0 U
           type: U
-    rightParenthesis: )
+        name: a
+        declaredFragment: <testLibraryFragment> a@50
+          element: isPublic
+            type: U
+      rightParenthesis: )
   declaredFragment: <testLibraryFragment> f@43
     element: isFinal isPublic
       type: U Function<U>(U)
@@ -99,7 +103,7 @@ FieldFormalParameter
   }
 
   test_class_functionTyped_hasTypeParameters2() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A<V> {
   T Function<T, U>(U, V) f;
   A(T this.f<T, U>(U a, V b));
@@ -116,39 +120,40 @@ FieldFormalParameter
   thisKeyword: this
   period: .
   name: f
-  typeParameters: TypeParameterList
-    leftBracket: <
-    typeParameters
-      TypeParameter
-        name: T
-        declaredFragment: <testLibraryFragment> T@54
-          defaultType: null
-      TypeParameter
-        name: U
-        declaredFragment: <testLibraryFragment> U@57
-          defaultType: null
-    rightBracket: >
-  parameters: FormalParameterList
-    leftParenthesis: (
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: U
-        element: #E1 U
-        type: U
-      name: a
-      declaredFragment: <testLibraryFragment> a@62
-        element: isPublic
+  functionTypedSuffix: FunctionTypedFormalParameterSuffix
+    typeParameters: TypeParameterList
+      leftBracket: <
+      typeParameters
+        TypeParameter
+          name: T
+          declaredFragment: <testLibraryFragment> T@54
+            defaultType: null
+        TypeParameter
+          name: U
+          declaredFragment: <testLibraryFragment> U@57
+            defaultType: null
+      rightBracket: >
+    formalParameters: FormalParameterList
+      leftParenthesis: (
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: U
+          element: #E1 U
           type: U
-    parameter: SimpleFormalParameter
-      type: NamedType
-        name: V
-        element: #E2 V
-        type: V
-      name: b
-      declaredFragment: <testLibraryFragment> b@67
-        element: isPublic
+        name: a
+        declaredFragment: <testLibraryFragment> a@62
+          element: isPublic
+            type: U
+      parameter: RegularFormalParameter
+        type: NamedType
+          name: V
+          element: #E2 V
           type: V
-    rightParenthesis: )
+        name: b
+        declaredFragment: <testLibraryFragment> b@67
+          element: isPublic
+            type: V
+      rightParenthesis: )
   declaredFragment: <testLibraryFragment> f@52
     element: isFinal isPublic
       type: T Function<T, U>(U, V)
@@ -157,7 +162,7 @@ FieldFormalParameter
   }
 
   test_class_simple() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int f;
   A(this.f);
@@ -178,7 +183,7 @@ FieldFormalParameter
   }
 
   test_class_simple_typed() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int f;
   A(int this.f);
@@ -203,7 +208,7 @@ FieldFormalParameter
   }
 
   test_enum() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(0);
   final int f;

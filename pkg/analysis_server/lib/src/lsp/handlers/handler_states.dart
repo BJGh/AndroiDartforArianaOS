@@ -15,7 +15,9 @@ import 'package:analysis_server/src/lsp/handlers/custom/handler_augmented.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_connect_to_dtd.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_diagnostic_server.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_experimental_echo.dart';
+import 'package:analysis_server/src/lsp/handlers/custom/handler_get_widget_previews.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_imports.dart';
+import 'package:analysis_server/src/lsp/handlers/custom/handler_migrate.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_reanalyze.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_summary.dart';
 import 'package:analysis_server/src/lsp/handlers/custom/handler_super.dart';
@@ -95,7 +97,6 @@ class InitializedLspStateMessageHandler extends InitializedStateMessageHandler {
         PrepareRenameHandler.new,
         RenameHandler.new,
         FoldingHandler.new,
-        DiagnosticServerHandler.new,
         WorkspaceDidChangeConfigurationMessageHandler.new,
         ReanalyzeHandler.new,
         SelectionRangeHandler.new,
@@ -125,6 +126,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
         CodeActionHandler.new,
         CodeLensHandler.new,
         ConnectToDtdHandler.new,
+        DiagnosticServerHandler.new,
         DocumentColorHandler.new,
         DocumentColorPresentationHandler.new,
         DocumentHighlightsHandler.new,
@@ -133,6 +135,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
         EditArgumentHandler.new,
         ExecuteCommandHandler.new,
         ExperimentalEchoHandler.new,
+        FlutterWidgetPreviewsHandler.new,
         FormatOnTypeHandler.new,
         FormatRangeHandler.new,
         FormattingHandler.new,
@@ -141,6 +144,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
         ImplementationHandler.new,
         IncomingCallHierarchyHandler.new,
         InlineValueHandler.new,
+        MigrateHandler.new,
         OutgoingCallHierarchyHandler.new,
         PrepareCallHierarchyHandler.new,
         PrepareTypeHierarchyHandler.new,
@@ -152,6 +156,7 @@ class InitializedStateMessageHandler extends ServerStateMessageHandler {
         TypeHierarchySupertypesHandler.new,
         UpdateDiagnosticInformationHandler.new,
         WillRenameFilesHandler.new,
+        WorkspaceFlutterWidgetPreviewsHandler.new,
         WorkspaceSymbolHandler.new,
       ];
 

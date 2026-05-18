@@ -17,7 +17,7 @@ main() {
 
 abstract class FunctionTypeAnnotationElementTest extends ElementsBaseTest {
   test_generic_function_type_nullability_none() async {
-    var library = await buildLibrary('''
+    var library = await buildLibrary(r'''
 void Function() f;
 ''');
     checkElementText(library, r'''
@@ -27,32 +27,36 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       topLevelVariables
-        #F1 isOriginDeclaration f (nameOffset:16) (firstTokenOffset:16) (offset:16)
+        #F1 isOriginDeclaration isStatic f (nameOffset:16) (firstTokenOffset:16) (offset:16)
           element: <testLibrary>::@topLevelVariable::f
+          inducedGetter: #F2
+          inducedSetter: #F3
       getters
-        #F2 isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+        #F2 isCompleteDeclaration isOriginVariable isStatic f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
           element: <testLibrary>::@getter::f
+          inducingVariable: #F1
       setters
-        #F3 isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+        #F3 isCompleteDeclaration isOriginVariable isStatic f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
           element: <testLibrary>::@setter::f
+          inducingVariable: #F1
           formalParameters
             #F4 requiredPositional value (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
               element: <testLibrary>::@setter::f::@formalParameter::value
   topLevelVariables
-    isOriginDeclaration f
+    isOriginDeclaration isStatic f
       reference: <testLibrary>::@topLevelVariable::f
       firstFragment: #F1
       type: void Function()
       getter: <testLibrary>::@getter::f
       setter: <testLibrary>::@setter::f
   getters
-    static isOriginVariable f
+    isOriginVariable isStatic f
       reference: <testLibrary>::@getter::f
       firstFragment: #F2
       returnType: void Function()
       variable: <testLibrary>::@topLevelVariable::f
   setters
-    static isOriginVariable f
+    isOriginVariable isStatic f
       reference: <testLibrary>::@setter::f
       firstFragment: #F3
       formalParameters
@@ -65,7 +69,7 @@ library
   }
 
   test_generic_function_type_nullability_question() async {
-    var library = await buildLibrary('''
+    var library = await buildLibrary(r'''
 void Function()? f;
 ''');
     checkElementText(library, r'''
@@ -75,32 +79,36 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       topLevelVariables
-        #F1 isOriginDeclaration f (nameOffset:17) (firstTokenOffset:17) (offset:17)
+        #F1 isOriginDeclaration isStatic f (nameOffset:17) (firstTokenOffset:17) (offset:17)
           element: <testLibrary>::@topLevelVariable::f
+          inducedGetter: #F2
+          inducedSetter: #F3
       getters
-        #F2 isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:17)
+        #F2 isCompleteDeclaration isOriginVariable isStatic f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:17)
           element: <testLibrary>::@getter::f
+          inducingVariable: #F1
       setters
-        #F3 isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:17)
+        #F3 isCompleteDeclaration isOriginVariable isStatic f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:17)
           element: <testLibrary>::@setter::f
+          inducingVariable: #F1
           formalParameters
             #F4 requiredPositional value (nameOffset:<null>) (firstTokenOffset:<null>) (offset:17)
               element: <testLibrary>::@setter::f::@formalParameter::value
   topLevelVariables
-    isOriginDeclaration f
+    isOriginDeclaration isStatic f
       reference: <testLibrary>::@topLevelVariable::f
       firstFragment: #F1
       type: void Function()?
       getter: <testLibrary>::@getter::f
       setter: <testLibrary>::@setter::f
   getters
-    static isOriginVariable f
+    isOriginVariable isStatic f
       reference: <testLibrary>::@getter::f
       firstFragment: #F2
       returnType: void Function()?
       variable: <testLibrary>::@topLevelVariable::f
   setters
-    static isOriginVariable f
+    isOriginVariable isStatic f
       reference: <testLibrary>::@setter::f
       firstFragment: #F3
       formalParameters
@@ -123,10 +131,10 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isOriginDeclaration f (nameOffset:30) (firstTokenOffset:0) (offset:30)
+        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:30) (firstTokenOffset:0) (offset:30)
           element: <testLibrary>::@function::f
   functions
-    isOriginDeclaration f
+    isOriginDeclaration isStatic f
       reference: <testLibrary>::@function::f
       firstFragment: #F1
       returnType: int Function(int, String)
@@ -144,16 +152,16 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isOriginDeclaration f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
-            #F2 requiredPositional p (nameOffset:37) (firstTokenOffset:7) (offset:37)
+            #F2 requiredPositional isOriginDeclaration p (nameOffset:37) (firstTokenOffset:7) (offset:37)
               element: <testLibrary>::@function::f::@formalParameter::p
               parameters
-                #F3 requiredPositional c (nameOffset:43) (firstTokenOffset:39) (offset:43)
+                #F3 requiredPositional isOriginDeclaration c (nameOffset:43) (firstTokenOffset:39) (offset:43)
                   element: c@43
   functions
-    isOriginDeclaration f
+    isOriginDeclaration isStatic f
       reference: <testLibrary>::@function::f
       firstFragment: #F1
       formalParameters
@@ -182,7 +190,7 @@ library
         #F1 F (nameOffset:8) (firstTokenOffset:0) (offset:8)
           element: <testLibrary>::@typeAlias::F
   typeAliases
-    F
+    isSimplyBounded F
       reference: <testLibrary>::@typeAlias::F
       firstFragment: #F1
       aliasedType: void Function(String) Function(int)
@@ -209,10 +217,10 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           methods
-            #F3 isOriginDeclaration m (nameOffset:42) (firstTokenOffset:12) (offset:42)
+            #F3 isCompleteDeclaration isOriginDeclaration m (nameOffset:42) (firstTokenOffset:12) (offset:42)
               element: <testLibrary>::@class::C::@method::m
   classes
-    class C
+    isSimplyBounded class C
       reference: <testLibrary>::@class::C
       firstFragment: #F1
       constructors
@@ -238,13 +246,13 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isOriginDeclaration f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
-            #F2 requiredPositional p (nameOffset:37) (firstTokenOffset:7) (offset:37)
+            #F2 requiredPositional isOriginDeclaration p (nameOffset:37) (firstTokenOffset:7) (offset:37)
               element: <testLibrary>::@function::f::@formalParameter::p
   functions
-    isOriginDeclaration f
+    isOriginDeclaration isStatic f
       reference: <testLibrary>::@function::f
       firstFragment: #F1
       formalParameters
@@ -266,32 +274,36 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       topLevelVariables
-        #F1 isOriginDeclaration v (nameOffset:30) (firstTokenOffset:30) (offset:30)
+        #F1 isOriginDeclaration isStatic v (nameOffset:30) (firstTokenOffset:30) (offset:30)
           element: <testLibrary>::@topLevelVariable::v
+          inducedGetter: #F2
+          inducedSetter: #F3
       getters
-        #F2 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:30)
+        #F2 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:30)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F1
       setters
-        #F3 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:30)
+        #F3 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:30)
           element: <testLibrary>::@setter::v
+          inducingVariable: #F1
           formalParameters
             #F4 requiredPositional value (nameOffset:<null>) (firstTokenOffset:<null>) (offset:30)
               element: <testLibrary>::@setter::v::@formalParameter::value
   topLevelVariables
-    isOriginDeclaration v
+    isOriginDeclaration isStatic v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F1
       type: int Function(int, String)
       getter: <testLibrary>::@getter::v
       setter: <testLibrary>::@setter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F2
       returnType: int Function(int, String)
       variable: <testLibrary>::@topLevelVariable::v
   setters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@setter::v
       firstFragment: #F3
       formalParameters
@@ -325,7 +337,7 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
@@ -336,17 +348,17 @@ library
               element: <testLibrary>::@class::B::@constructor::new
               typeName: B
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
-    class B
+    isSimplyBounded class B
       reference: <testLibrary>::@class::B
       firstFragment: #F4
       constructors
@@ -378,12 +390,12 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
       topLevelVariables
-        #F4 hasInitializer isOriginDeclaration v (nameOffset:62) (firstTokenOffset:62) (offset:62)
+        #F4 hasImplicitType hasInitializer isOriginDeclaration isStatic v (nameOffset:62) (firstTokenOffset:62) (offset:62)
           element: <testLibrary>::@topLevelVariable::v
           metadata
             Annotation
@@ -403,7 +415,7 @@ library
                     functionKeyword: Function @36
                     parameters: FormalParameterList
                       leftParenthesis: ( @44
-                      parameter: SimpleFormalParameter
+                      parameter: RegularFormalParameter
                         type: NamedType
                           name: String @45
                           element: dart:core::@class::String
@@ -429,28 +441,32 @@ library
               element: ConstructorMember
                 baseElement: <testLibrary>::@class::A::@constructor::new
                 substitution: {T: int Function(String)}
+          inducedGetter: #F5
+          inducedSetter: #F6
       getters
-        #F5 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:62)
+        #F5 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:62)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F4
       setters
-        #F6 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:62)
+        #F6 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:62)
           element: <testLibrary>::@setter::v
+          inducingVariable: #F4
           formalParameters
             #F7 requiredPositional value (nameOffset:<null>) (firstTokenOffset:<null>) (offset:62)
               element: <testLibrary>::@setter::v::@formalParameter::value
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
   topLevelVariables
-    hasImplicitType hasInitializer isOriginDeclaration v
+    hasImplicitType hasInitializer isOriginDeclaration isStatic isTypeInferredFromInitializer v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F4
       metadata
@@ -471,7 +487,7 @@ library
                 functionKeyword: Function @36
                 parameters: FormalParameterList
                   leftParenthesis: ( @44
-                  parameter: SimpleFormalParameter
+                  parameter: RegularFormalParameter
                     type: NamedType
                       name: String @45
                       element: dart:core::@class::String
@@ -501,13 +517,13 @@ library
       getter: <testLibrary>::@getter::v
       setter: <testLibrary>::@setter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F5
       returnType: int
       variable: <testLibrary>::@topLevelVariable::v
   setters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@setter::v
       firstFragment: #F6
       formalParameters
@@ -540,12 +556,12 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
       topLevelVariables
-        #F4 hasInitializer isOriginDeclaration v (nameOffset:35) (firstTokenOffset:35) (offset:35)
+        #F4 hasImplicitType hasInitializer isConst isOriginDeclaration isStatic v (nameOffset:35) (firstTokenOffset:35) (offset:35)
           element: <testLibrary>::@topLevelVariable::v
           initializer: expression_0
             InstanceCreationExpression
@@ -564,17 +580,13 @@ library
                         parameters: FormalParameterList
                           leftParenthesis: ( @56
                           leftDelimiter: { @57
-                          parameter: DefaultFormalParameter
-                            parameter: SimpleFormalParameter
-                              type: NamedType
-                                name: int @58
-                                question: ? @61
-                                element: dart:core::@class::int
-                                type: int?
-                              name: a @63
-                              declaredFragment: <testLibraryFragment> a@63
-                                element: isPublic
-                                  type: int?
+                          parameter: RegularFormalParameter
+                            type: NamedType
+                              name: int @58
+                              question: ? @61
+                              element: dart:core::@class::int
+                              type: int?
+                            name: a @63
                             declaredFragment: <testLibraryFragment> a@63
                               element: isPublic
                                 type: int?
@@ -599,22 +611,24 @@ library
                 leftParenthesis: ( @67
                 rightParenthesis: ) @68
               staticType: A<String Function({int? a})>
+          inducedGetter: #F5
       getters
-        #F5 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
+        #F5 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F4
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
   topLevelVariables
-    const hasImplicitType hasInitializer isOriginDeclaration v
+    hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F4
       type: A<String Function({int? a})>
@@ -623,7 +637,7 @@ library
         expression: expression_0
       getter: <testLibrary>::@getter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F5
       returnType: A<String Function({int? a})>
@@ -652,12 +666,12 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
       topLevelVariables
-        #F4 hasInitializer isOriginDeclaration v (nameOffset:35) (firstTokenOffset:35) (offset:35)
+        #F4 hasImplicitType hasInitializer isConst isOriginDeclaration isStatic v (nameOffset:35) (firstTokenOffset:35) (offset:35)
           element: <testLibrary>::@topLevelVariable::v
           initializer: expression_0
             InstanceCreationExpression
@@ -676,17 +690,13 @@ library
                         parameters: FormalParameterList
                           leftParenthesis: ( @56
                           leftDelimiter: [ @57
-                          parameter: DefaultFormalParameter
-                            parameter: SimpleFormalParameter
-                              type: NamedType
-                                name: int @58
-                                question: ? @61
-                                element: dart:core::@class::int
-                                type: int?
-                              name: a @63
-                              declaredFragment: <testLibraryFragment> a@63
-                                element: isPublic
-                                  type: int?
+                          parameter: RegularFormalParameter
+                            type: NamedType
+                              name: int @58
+                              question: ? @61
+                              element: dart:core::@class::int
+                              type: int?
+                            name: a @63
                             declaredFragment: <testLibraryFragment> a@63
                               element: isPublic
                                 type: int?
@@ -711,22 +721,24 @@ library
                 leftParenthesis: ( @67
                 rightParenthesis: ) @68
               staticType: A<String Function([int?])>
+          inducedGetter: #F5
       getters
-        #F5 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
+        #F5 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F4
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
   topLevelVariables
-    const hasImplicitType hasInitializer isOriginDeclaration v
+    hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F4
       type: A<String Function([int?])>
@@ -735,7 +747,7 @@ library
         expression: expression_0
       getter: <testLibrary>::@getter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F5
       returnType: A<String Function([int?])>
@@ -764,12 +776,12 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
       topLevelVariables
-        #F4 hasInitializer isOriginDeclaration v (nameOffset:35) (firstTokenOffset:35) (offset:35)
+        #F4 hasImplicitType hasInitializer isConst isOriginDeclaration isStatic v (nameOffset:35) (firstTokenOffset:35) (offset:35)
           element: <testLibrary>::@topLevelVariable::v
           initializer: expression_0
             InstanceCreationExpression
@@ -788,17 +800,13 @@ library
                         parameters: FormalParameterList
                           leftParenthesis: ( @56
                           leftDelimiter: { @57
-                          parameter: DefaultFormalParameter
-                            parameter: SimpleFormalParameter
-                              requiredKeyword: required @58
-                              type: NamedType
-                                name: int @67
-                                element: dart:core::@class::int
-                                type: int
-                              name: a @71
-                              declaredFragment: <testLibraryFragment> a@71
-                                element: isPublic
-                                  type: int
+                          parameter: RegularFormalParameter
+                            requiredKeyword: required @58
+                            type: NamedType
+                              name: int @67
+                              element: dart:core::@class::int
+                              type: int
+                            name: a @71
                             declaredFragment: <testLibraryFragment> a@71
                               element: isPublic
                                 type: int
@@ -823,22 +831,24 @@ library
                 leftParenthesis: ( @75
                 rightParenthesis: ) @76
               staticType: A<String Function({required int a})>
+          inducedGetter: #F5
       getters
-        #F5 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
+        #F5 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F4
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
   topLevelVariables
-    const hasImplicitType hasInitializer isOriginDeclaration v
+    hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F4
       type: A<String Function({required int a})>
@@ -847,7 +857,7 @@ library
         expression: expression_0
       getter: <testLibrary>::@getter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F5
       returnType: A<String Function({required int a})>
@@ -876,12 +886,12 @@ library
             #F2 T (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 T
           constructors
-            #F3 const isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
+            #F3 isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:15) (offset:21)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
               typeNameOffset: 21
       topLevelVariables
-        #F4 hasInitializer isOriginDeclaration v (nameOffset:35) (firstTokenOffset:35) (offset:35)
+        #F4 hasImplicitType hasInitializer isConst isOriginDeclaration isStatic v (nameOffset:35) (firstTokenOffset:35) (offset:35)
           element: <testLibrary>::@topLevelVariable::v
           initializer: expression_0
             InstanceCreationExpression
@@ -899,7 +909,7 @@ library
                         functionKeyword: Function @48
                         parameters: FormalParameterList
                           leftParenthesis: ( @56
-                          parameter: SimpleFormalParameter
+                          parameter: RegularFormalParameter
                             type: NamedType
                               name: int @57
                               element: dart:core::@class::int
@@ -928,22 +938,24 @@ library
                 leftParenthesis: ( @64
                 rightParenthesis: ) @65
               staticType: A<String Function(int)>
+          inducedGetter: #F5
       getters
-        #F5 isOriginVariable v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
+        #F5 isCompleteDeclaration isOriginVariable isStatic v (nameOffset:<null>) (firstTokenOffset:<null>) (offset:35)
           element: <testLibrary>::@getter::v
+          inducingVariable: #F4
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        const isOriginDeclaration new
+        hasEnclosingTypeParameterReference isConst isOriginDeclaration new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
   topLevelVariables
-    const hasImplicitType hasInitializer isOriginDeclaration v
+    hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer v
       reference: <testLibrary>::@topLevelVariable::v
       firstFragment: #F4
       type: A<String Function(int)>
@@ -952,7 +964,7 @@ library
         expression: expression_0
       getter: <testLibrary>::@getter::v
   getters
-    static isOriginVariable v
+    isOriginVariable isStatic v
       reference: <testLibrary>::@getter::v
       firstFragment: #F5
       returnType: A<String Function(int)>
@@ -977,7 +989,7 @@ library
             #F2 X (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: #E0 X
   mixins
-    mixin B
+    isSimplyBounded mixin B
       reference: <testLibrary>::@mixin::B
       firstFragment: #F1
       typeParameters
@@ -992,7 +1004,9 @@ library
   test_genericFunction_typeArgument_ofSuperclass_ofClassAlias() async {
     var library = await buildLibrary(r'''
 class A<T> {}
+
 mixin M {}
+
 class B = A<void Function()> with M;
 ''');
     checkElementText(library, r'''
@@ -1011,27 +1025,27 @@ library
             #F3 isOriginImplicitDefault new (nameOffset:<null>) (firstTokenOffset:<null>) (offset:6)
               element: <testLibrary>::@class::A::@constructor::new
               typeName: A
-        #F4 class B (nameOffset:31) (firstTokenOffset:25) (offset:31)
+        #F4 isMixinApplication class B (nameOffset:33) (firstTokenOffset:27) (offset:33)
           element: <testLibrary>::@class::B
           constructors
-            #F5 isOriginMixinApplication new (nameOffset:<null>) (firstTokenOffset:<null>) (offset:31)
+            #F5 isOriginMixinApplication new (nameOffset:<null>) (firstTokenOffset:<null>) (offset:33)
               element: <testLibrary>::@class::B::@constructor::new
               typeName: B
       mixins
-        #F6 mixin M (nameOffset:20) (firstTokenOffset:14) (offset:20)
+        #F6 mixin M (nameOffset:21) (firstTokenOffset:15) (offset:21)
           element: <testLibrary>::@mixin::M
   classes
-    class A
+    isSimplyBounded class A
       reference: <testLibrary>::@class::A
       firstFragment: #F1
       typeParameters
         #E0 T
           firstFragment: #F2
       constructors
-        isOriginImplicitDefault new
+        hasEnclosingTypeParameterReference isOriginImplicitDefault new
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
-    class alias B
+    isMixinApplication isSimplyBounded class B
       reference: <testLibrary>::@class::B
       firstFragment: #F4
       supertype: A<void Function()>
@@ -1052,7 +1066,7 @@ library
             baseElement: <testLibrary>::@class::A::@constructor::new
             substitution: {T: void Function()}
   mixins
-    mixin M
+    isSimplyBounded mixin M
       reference: <testLibrary>::@mixin::M
       firstFragment: #F6
       superclassConstraints
@@ -1080,11 +1094,11 @@ library
             #F3 V2 (nameOffset:46) (firstTokenOffset:46) (offset:46)
               element: #E0 V2
   typeAliases
-    F1
+    isSimplyBounded F1
       reference: <testLibrary>::@typeAlias::F1
       firstFragment: #F1
       aliasedType: dynamic Function<V1>(V1 Function())
-    F2
+    isSimplyBounded F2
       reference: <testLibrary>::@typeAlias::F2
       firstFragment: #F2
       typeParameters

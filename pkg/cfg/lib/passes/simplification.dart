@@ -98,6 +98,9 @@ final class Simplification extends Pass
   Instruction visitReturn(Return instr) => instr;
 
   @override
+  Instruction visitUnreachable(Unreachable instr) => instr;
+
+  @override
   Instruction visitComparison(Comparison instr) {
     Definition left = instr.left;
     Definition right = instr.right;
@@ -238,10 +241,16 @@ final class Simplification extends Pass
   Instruction visitAllocateClosure(AllocateClosure instr) => instr;
 
   @override
+  Instruction visitAllocateContext(AllocateContext instr) => instr;
+
+  @override
   Instruction visitAllocateListLiteral(AllocateListLiteral instr) => instr;
 
   @override
   Instruction visitAllocateMapLiteral(AllocateMapLiteral instr) => instr;
+
+  @override
+  Instruction visitAllocateRecordLiteral(AllocateRecordLiteral instr) => instr;
 
   @override
   Instruction visitStringInterpolation(StringInterpolation instr) {
@@ -274,10 +283,20 @@ final class Simplification extends Pass
   }
 
   @override
+  Instruction visitEnterSuspendableFunction(EnterSuspendableFunction instr) =>
+      instr;
+
+  @override
+  Instruction visitSuspend(Suspend instr) => instr;
+
+  @override
   Instruction visitAllocateList(AllocateList instr) => instr;
 
   @override
   Instruction visitSetListElement(SetListElement instr) => instr;
+
+  @override
+  Instruction visitAllocateRecord(AllocateRecord instr) => instr;
 
   @override
   Instruction visitBoxInt(BoxInt instr) => instr;

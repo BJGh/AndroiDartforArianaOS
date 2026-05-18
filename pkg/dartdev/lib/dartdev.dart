@@ -36,6 +36,7 @@ import 'src/commands/tooling_daemon.dart';
 import 'src/commands/uninstall.dart';
 import 'src/core.dart';
 import 'src/experiments.dart';
+import 'src/sdk.dart';
 import 'src/unified_analytics.dart';
 import 'src/utils.dart';
 import 'src/vm_interop_handler.dart';
@@ -46,6 +47,8 @@ Future<void> runDartdev(List<String> args, SendPort? port) async {
   int? exitCode = 1;
   try {
     VmInteropHandler.initialize(port);
+    // Set the DART_ROOT environment variable to the SDK path.
+    VmInteropHandler.setEnvironmentVariable('DART_ROOT', sdk.sdkPath);
     // Call the runner to execute the command; see DartdevRunner.
     final runner = DartdevRunner(args, vmArgs: io.Platform.executableArguments);
     exitCode = await runner.run(args);
@@ -89,7 +92,7 @@ class DartdevRunner extends CommandRunner<int> {
   DartdevRunner(
     List<String> args, {
     Analytics? analyticsOverride,
-    bool isAnalyticsTest = false,
+    this._isAnalyticsTest = false,
     List<String> vmArgs = const [],
   }) : verbose = args.contains('-v') || args.contains('--verbose'),
        argParser = globalDartdevOptionsParser(
@@ -97,7 +100,6 @@ class DartdevRunner extends CommandRunner<int> {
        ),
        vmEnabledExperiments = parseVmEnabledExperiments(vmArgs),
        _unifiedAnalytics = analyticsOverride,
-       _isAnalyticsTest = isAnalyticsTest,
        super('dart', '$dartdevDescription.') {
     // The list of commands should be kept in sync with
     // `DartDevIsolate::ShouldParseCommand` in `runtime/bin/dartdev_isolate.cc`.

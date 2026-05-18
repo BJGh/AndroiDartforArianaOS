@@ -951,6 +951,8 @@ class Assembler : public AssemblerBase {
 
   void PushRegisters(const RegisterSet& registers);
   void PopRegisters(const RegisterSet& registers);
+  void PushRegistersAligned(const RegisterSet& registers, intptr_t space);
+  void PopRegistersAligned(const RegisterSet& registers, intptr_t space);
 
   void PushRegistersInOrder(std::initializer_list<Register> regs);
 
@@ -976,6 +978,11 @@ class Assembler : public AssemblerBase {
   // if platform ABI requires that.
   void CallCFunction(Register reg, bool restore_rsp = false);
   void CallCFunction(Address address, bool restore_rsp = false);
+
+  void ExtractBitField(Register dst,
+                       Register src,
+                       intptr_t low_bit,
+                       intptr_t width) override;
 
   void ExtractClassIdFromTags(Register result, Register tags);
   void ExtractInstanceSizeFromTags(Register result, Register tags);

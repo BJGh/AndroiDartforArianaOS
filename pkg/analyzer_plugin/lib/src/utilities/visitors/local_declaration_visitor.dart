@@ -103,9 +103,7 @@ abstract class LocalDeclarationVisitor extends UnifyingAstVisitor {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    if (node.body case BlockClassBody body) {
-      _visitClassOrMixinMembers(body.members);
-    }
+    _visitClassOrMixinMembers(node.body.members);
     visitNode(node);
   }
 
@@ -386,11 +384,10 @@ abstract class LocalDeclarationVisitor extends UnifyingAstVisitor {
         // is called: constructors are accessible if the class is accessible.
         for (var classDeclaration
             in node.declarations.whereType<ClassDeclaration>()) {
-          if (classDeclaration.body case BlockClassBody body) {
-            for (var constructor
-                in body.members.whereType<ConstructorDeclaration>()) {
-              declaredConstructor(constructor);
-            }
+          for (var constructor
+              in classDeclaration.body.members
+                  .whereType<ConstructorDeclaration>()) {
+            declaredConstructor(constructor);
           }
         }
       } else if (declaration is EnumDeclaration) {
@@ -441,21 +438,10 @@ abstract class LocalDeclarationVisitor extends UnifyingAstVisitor {
   void _visitParamList(FormalParameterList? paramList) {
     if (paramList != null) {
       for (var param in paramList.parameters) {
-        NormalFormalParameter? normalParam;
-        if (param is DefaultFormalParameter) {
-          normalParam = param.parameter;
-        } else if (param is NormalFormalParameter) {
-          normalParam = param;
+        var name = param.name;
+        if (name != null) {
+          declaredParam(name, param.declaredFragment?.element, param.type);
         }
-        TypeAnnotation? type;
-        if (normalParam is FieldFormalParameter) {
-          type = normalParam.type;
-        } else if (normalParam is FunctionTypedFormalParameter) {
-          type = normalParam.returnType;
-        } else if (normalParam is SimpleFormalParameter) {
-          type = normalParam.type;
-        }
-        declaredParam(param.name!, param.declaredFragment?.element, type);
       }
     }
   }

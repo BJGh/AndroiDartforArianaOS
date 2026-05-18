@@ -7,6 +7,8 @@ import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/utilities/extensions/object.dart';
 import 'package:analysis_server_plugin/edit/correction_utils.dart';
 import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
@@ -45,46 +47,102 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
     });
   }
 
+  /// Adds some or all of [ranges] to [deletedRanges], if they are valid
+  /// additions.
+  ///
+  /// If any range in [ranges] is covered by one of the deleted ranges, it is
+  /// not added. If any range intersects with one of the deleted ranges,
+  /// returns `false`, and no ranges are added.
+  bool _addReferenceRanges(
+    List<SourceRange> ranges,
+    List<SourceRange> deletedRanges,
+  ) {
+    var rangesToAdd = <SourceRange>[];
+    for (var range in ranges) {
+      var isCovered = false;
+      for (var other in deletedRanges) {
+        if (other.covers(range)) {
+          isCovered = true;
+          break;
+        } else if (other.intersects(range)) {
+          return false;
+        }
+      }
+
+      if (!isCovered) {
+        rangesToAdd.add(range);
+      }
+    }
+
+    for (var range in rangesToAdd) {
+      _commands.add(_DeleteSourceRangeCommand(sourceRange: range));
+      deletedRanges.add(range);
+    }
+
+    return true;
+  }
+
   bool _deleteDeclaration() {
+    var element = _localVariableElement();
+    if (element == null) {
+      return false;
+    }
     switch (node) {
       case VariableDeclaration():
         var declarationList = node.parent;
-        if (declarationList is VariableDeclarationList) {
-          var declarationStatement = declarationList.parent;
-          if (declarationStatement is VariableDeclarationStatement) {
-            if (declarationList.variables.length == 1) {
-              var initializer = declarationList.variables.first.initializer;
-              if (initializer?.unParenthesized
-                  case MethodInvocation() ||
-                      FunctionExpressionInvocation() ||
-                      AwaitExpression()) {
-                _commands.add(
-                  _DeleteSourceRangeCommand(
-                    sourceRange: SourceRange(
-                      declarationStatement.offset,
-                      initializer!.offset - declarationStatement.offset,
-                    ),
+        if (declarationList is! VariableDeclarationList) return false;
+        var declarationStatement = declarationList.parent;
+        if (declarationStatement is! VariableDeclarationStatement) return false;
+        if (declarationList.variables.length != 1) {
+          _commands.add(
+            _DeleteNodeInListCommand(
+              nodes: declarationList.variables,
+              node: node,
+            ),
+          );
+        } else {
+          var initializer = declarationList.variables.first.initializer;
+          var unParenthesized = initializer?.unParenthesized;
+          if (unParenthesized != null &&
+              _hasSideEffect(unParenthesized, element)) {
+            if (unParenthesized is AsExpression) {
+              _commands.add(
+                _DeleteSourceRangeCommand(
+                  sourceRange: range.startStart(
+                    declarationStatement,
+                    unParenthesized.expression,
                   ),
-                );
-              } else {
-                _commands.add(
-                  _DeleteStatementCommand(
-                    utils: utils,
-                    statement: declarationStatement,
+                ),
+              );
+              _commands.add(
+                _DeleteSourceRangeCommand(
+                  sourceRange: range.endEnd(
+                    unParenthesized.expression,
+                    unParenthesized,
                   ),
-                );
-              }
+                ),
+              );
             } else {
               _commands.add(
-                _DeleteNodeInListCommand(
-                  nodes: declarationList.variables,
-                  node: node,
+                _DeleteSourceRangeCommand(
+                  sourceRange: SourceRange(
+                    declarationStatement.offset,
+                    initializer!.offset - declarationStatement.offset,
+                  ),
                 ),
               );
             }
-            return true;
+          } else {
+            _commands.add(
+              _DeleteStatementCommand(
+                utils: utils,
+                statement: declarationStatement,
+              ),
+            );
           }
         }
+        return true;
+
       case DeclaredVariablePattern declaredVariable:
         switch (node.parent) {
           case ListPattern _:
@@ -174,9 +232,9 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
         // Remove completely `var A(:notUsed) = x;`
         if (fields.length == 1) {
           var patternDeclaration = objectPattern.parent;
-          if (patternDeclaration is PatternVariableDeclaration) {
+          if (patternDeclaration is PatternVariableDeclarationImpl) {
             var patternStatement = patternDeclaration.parent;
-            if (patternStatement is PatternVariableDeclarationStatement) {
+            if (patternStatement is PatternVariableDeclarationStatementImpl) {
               _commands.add(
                 _DeleteStatementCommand(
                   utils: utils,
@@ -232,7 +290,7 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
 
   bool _deleteReferences() {
     var element = _localVariableElement();
-    if (element is! LocalVariableElement) {
+    if (element == null) {
       return false;
     }
 
@@ -247,41 +305,58 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
     var deletedRanges = <SourceRange>[];
 
     for (var reference in references) {
-      var referenceRange = _referenceRangeToDelete(reference);
-      if (referenceRange == null) {
+      var referenceRanges = _referenceRangesToDelete(reference, element);
+      if (referenceRanges == null) {
         return false;
       }
 
-      var isCovered = false;
-      for (var other in deletedRanges) {
-        if (other.covers(referenceRange)) {
-          isCovered = true;
-          break;
-        } else if (other.intersects(referenceRange)) {
-          return false;
-        }
+      if (!_addReferenceRanges(referenceRanges, deletedRanges)) {
+        return false;
       }
-
-      if (isCovered) {
-        continue;
-      }
-
-      _commands.add(_DeleteSourceRangeCommand(sourceRange: referenceRange));
-      deletedRanges.add(referenceRange);
     }
 
     return true;
   }
 
-  SourceRange _forAssignmentExpression(AssignmentExpression node) {
-    // TODO(pq): consider node.parent is! ExpressionStatement to handle
-    // assignments in parens, etc.
+  List<SourceRange>? _forAssignmentExpression(
+    AssignmentExpression node,
+    LocalVariableElement element,
+  ) {
     var parent = node.parent!;
     if (parent is ArgumentList) {
-      return range.startStart(node, node.operator.next!);
-    } else {
-      return utils.getLinesRange(range.node(parent));
+      return [range.startStart(node, node.operator.next!)];
     }
+
+    var unParenthesized = node.rightHandSide.unParenthesized;
+    if (_hasSideEffect(unParenthesized, element)) {
+      if (unParenthesized is AssignmentExpression) {
+        return [
+          range.startStart(parent, unParenthesized),
+          range.endEnd(unParenthesized, node),
+        ];
+      }
+
+      if (unParenthesized is AsExpression) {
+        return [
+          range.startStart(parent, unParenthesized.expression),
+          range.endEnd(unParenthesized.expression, unParenthesized),
+        ];
+      }
+
+      return [range.startStart(node, node.rightHandSide)];
+    }
+
+    return [utils.getLinesRange(range.node(parent))];
+  }
+
+  /// Returns whether [node] may reasonably be assumed to have side effects.
+  ///
+  /// In the case of an [AssignmentExpression], [element] is used to determine
+  /// whether [node] has side effects _other than_ assigning to [element].
+  bool _hasSideEffect(Expression node, LocalVariableElement element) {
+    var visitor = _SideEffectVisitor(element);
+    node.accept(visitor);
+    return visitor.hasSideEffect;
   }
 
   LocalVariableElement? _localVariableElement() {
@@ -296,11 +371,14 @@ class RemoveUnusedLocalVariable extends ResolvedCorrectionProducer {
     return null;
   }
 
-  SourceRange? _referenceRangeToDelete(AstNode reference) {
+  List<SourceRange>? _referenceRangesToDelete(
+    AstNode reference,
+    LocalVariableElement element,
+  ) {
     var parent = reference.parent;
     if (parent is AssignmentExpression) {
       if (parent.leftHandSide == reference) {
-        return _forAssignmentExpression(parent);
+        return _forAssignmentExpression(parent, element);
       }
     }
     return null;
@@ -391,5 +469,70 @@ class _ReplaceSourceRangeCommand extends _Command {
   @override
   void execute(DartFileEditBuilder builder) {
     builder.addSimpleReplacement(sourceRange, replacement);
+  }
+}
+
+class _SideEffectVisitor extends RecursiveAstVisitor<void> {
+  final LocalVariableElement element;
+  bool hasSideEffect = false;
+
+  _SideEffectVisitor(this.element);
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    if (hasSideEffect) return;
+    var lhs = node.leftHandSide.unParenthesized;
+    if (lhs is Identifier && lhs.element == element) {
+      node.rightHandSide.accept(this);
+    } else {
+      hasSideEffect = true;
+    }
+  }
+
+  @override
+  void visitAwaitExpression(AwaitExpression node) {
+    hasSideEffect = true;
+  }
+
+  @override
+  void visitFunctionExpressionInvocation(FunctionExpressionInvocation node) {
+    hasSideEffect = true;
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    hasSideEffect = true;
+  }
+
+  @override
+  void visitPostfixExpression(PostfixExpression node) {
+    if (hasSideEffect) return;
+    if (node.operator.type == TokenType.PLUS_PLUS ||
+        node.operator.type == TokenType.MINUS_MINUS) {
+      var operand = node.operand.unParenthesized;
+      if (operand is Identifier && operand.element == element) {
+        // Not a side effect.
+      } else {
+        hasSideEffect = true;
+      }
+    } else {
+      super.visitPostfixExpression(node);
+    }
+  }
+
+  @override
+  void visitPrefixExpression(PrefixExpression node) {
+    if (hasSideEffect) return;
+    if (node.operator.type == TokenType.PLUS_PLUS ||
+        node.operator.type == TokenType.MINUS_MINUS) {
+      var operand = node.operand.unParenthesized;
+      if (operand is Identifier && operand.element == element) {
+        // Not a side effect.
+      } else {
+        hasSideEffect = true;
+      }
+    } else {
+      super.visitPrefixExpression(node);
+    }
   }
 }

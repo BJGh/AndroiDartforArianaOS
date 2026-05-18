@@ -966,7 +966,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOfInt(invoke.staticType as InterfaceType);
     _isFutureOfInt(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -982,7 +983,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOfInt(invoke.staticType as InterfaceType);
     _isFutureOfInt(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -998,7 +1000,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOf([_isNum])(invoke.staticType as InterfaceType);
     _isFutureOf([_isNum])(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -1014,7 +1017,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOrOfInt(invoke.staticType as InterfaceType);
     _isFutureOfInt(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -1030,7 +1034,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOfInt(invoke.staticType as InterfaceType);
     _isFutureOfInt(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -1048,7 +1053,8 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
     );
     _isFutureOfInt(invoke.staticType as InterfaceType);
     _isFutureOfInt(
-      invoke.argumentList.arguments[0].staticType as InterfaceType,
+      invoke.argumentList.arguments[0].argumentExpression.staticType
+          as InterfaceType,
     );
   }
 
@@ -1063,7 +1069,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       expectedDiagnostics: [error(diag.returnOfInvalidTypeFromFunction, 48, 4)],
     );
     _isListOf(_isInt)(invoke.staticType as InterfaceType);
-    _isInt(invoke.argumentList.arguments[0].typeOrThrow);
+    _isInt(invoke.argumentList.arguments[0].argumentExpression.typeOrThrow);
   }
 
   test_futureOr_methods1() async {
@@ -1121,7 +1127,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -1138,7 +1144,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -1155,7 +1161,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -1198,7 +1204,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -1215,7 +1221,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -1232,7 +1238,7 @@ class StrongModeLocalInferenceTest extends PubPackageResolutionTest {
       ],
     );
     _isFunction2Of(_isInt, _isNull)(
-      invoke.argumentList.arguments[0].typeOrThrow,
+      invoke.argumentList.arguments[0].argumentExpression.typeOrThrow,
     );
     _isFutureOfNull(invoke.staticType as InterfaceType);
   }
@@ -3152,7 +3158,7 @@ class B<T2, U2> {
     );
     var invocation =
         constructor.initializers[0] as RedirectingConstructorInvocation;
-    Expression exp = invocation.argumentList.arguments[0];
+    var exp = invocation.argumentList.arguments[0].argumentExpression;
     _isListOf(_isString)(exp.staticType as InterfaceType);
   }
 
@@ -3299,7 +3305,7 @@ class B<T2, U2> {
       null,
     );
     var invocation = constructor.initializers[0] as SuperConstructorInvocation;
-    Expression exp = invocation.argumentList.arguments[0];
+    var exp = invocation.argumentList.arguments[0].argumentExpression;
     _isListOf(_isString)(exp.staticType as InterfaceType);
   }
 
@@ -3439,7 +3445,7 @@ FunctionDeclaration
       rightBracket: >
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: T
           element: #E0 T
@@ -3494,7 +3500,7 @@ FunctionDeclaration
       rightBracket: >
     parameters: FormalParameterList
       leftParenthesis: (
-      parameter: SimpleFormalParameter
+      parameter: RegularFormalParameter
         type: NamedType
           name: T
           element: #E0 T
@@ -3559,7 +3565,7 @@ MethodDeclaration
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: T
         element: #E0 T
@@ -4040,7 +4046,7 @@ MethodInvocation
       FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: e
             declaredFragment: <testLibraryFragment> e@93
               element: hasImplicitType isPublic
@@ -4086,7 +4092,7 @@ MethodInvocation
       FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
-          parameter: SimpleFormalParameter
+          parameter: RegularFormalParameter
             name: e
             declaredFragment: <testLibraryFragment> e@115
               element: hasImplicitType isPublic
@@ -4397,7 +4403,7 @@ MethodDeclaration
     rightBracket: >
   parameters: FormalParameterList
     leftParenthesis: (
-    parameter: SimpleFormalParameter
+    parameter: RegularFormalParameter
       type: NamedType
         name: T
         element: #E0 T

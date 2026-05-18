@@ -39,18 +39,18 @@ const Iterable<String> _allowedDartSchemePaths = [
   'web_gl',
 ];
 
-List<Pattern> _allowedNativeTestPatterns = [
-  RegExp(r'(?<!generated_)tests/web/native'),
-  RegExp(r'(?<!generated_)tests/web/internal'),
-  RegExp(r'(?<!generated_)tests/web/dart2js'),
-  'generated_tests/web/native/native_test',
-  'generated_tests/web/dart2js/deferred_url_test',
-  'pkg/front_end/testcases/dart2js/native',
+List<String> _allowedNativeTestPatterns = [
+  '/tests/web/native',
+  '/tests/web/internal',
+  '/tests/web/dart2js',
+  '/generated_tests/web/native/native_test',
+  '/generated_tests/web/dart2js/deferred_url_test',
+  '/pkg/front_end/testcases/dart2js/native',
 ];
 
 bool allowedNativeTest(Uri uri) {
   String path = uri.path;
-  return _allowedNativeTestPatterns.any((pattern) => path.contains(pattern));
+  return _allowedNativeTestPatterns.any((s) => path.contains(s));
 }
 
 bool maybeEnableNative(Uri uri) {
@@ -361,6 +361,20 @@ class Dart2jsSummaryTarget extends Dart2jsTarget with SummaryMixin {
     this.excludeNonSources,
     TargetFlags targetFlags,
   ) : super(name, targetFlags);
+
+  @override
+  bool isModularlyCompatibleWith(Target other) {
+    if (other is! Dart2jsSummaryTarget) return false;
+    if (excludeNonSources != other.excludeNonSources) return false;
+    return true;
+  }
+
+  @override
+  void updateModularCompatibilityAs(Target other) {
+    assert(other is Dart2jsSummaryTarget);
+    sources.clear();
+    sources.addAll((other as Dart2jsSummaryTarget).sources);
+  }
 }
 
 class Dart2jsConstantsBackend extends ConstantsBackend {

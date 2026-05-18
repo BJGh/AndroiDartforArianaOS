@@ -1056,6 +1056,15 @@ const MessageCode extensionDeclaresInstanceField = const MessageCode(
 );
 
 // DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+const MessageCode extensionPrimaryConstructor = const MessageCode(
+  "ExtensionPrimaryConstructor",
+  sharedCode: SharedCode.extensionPrimaryConstructor,
+  problemMessage: """Extensions can't have primary constructors.""",
+  correctionMessage:
+      """Try removing the primary constructor or changing the extension to an extension type.""",
+);
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
 const MessageCode extensionTypeDeclaresAbstractMember = const MessageCode(
   "ExtensionTypeDeclaresAbstractMember",
   pseudoSharedCode: PseudoSharedCode.extensionTypeWithAbstractMember,
@@ -2118,10 +2127,26 @@ const MessageCode missingTypedefParameters = const MessageCode(
 );
 
 // DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+const MessageCode mixinApplicationClassAugmentation = const MessageCode(
+  "MixinApplicationClassAugmentation",
+  sharedCode: SharedCode.mixinApplicationClassAugmentation,
+  problemMessage: """A mixin application class can't be augmented.""",
+);
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
 const MessageCode mixinDeclaresConstructor = const MessageCode(
   "MixinDeclaresConstructor",
   sharedCode: SharedCode.mixinDeclaresConstructor,
   problemMessage: """Mixins can't declare constructors.""",
+);
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+const MessageCode mixinPrimaryConstructor = const MessageCode(
+  "MixinPrimaryConstructor",
+  sharedCode: SharedCode.mixinPrimaryConstructor,
+  problemMessage: """Mixins can't have primary constructors.""",
+  correctionMessage:
+      """Try removing the primary constructor or changing the mixin to a class.""",
 );
 
 // DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
@@ -2505,6 +2530,28 @@ const MessageCode prefixAfterCombinator = const MessageCode(
 );
 
 // DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+const Template<Message Function({required String modifier})>
+primaryConstructorBodyWithModifier = const Template(
+  "PrimaryConstructorBodyWithModifier",
+  withArguments: _withArgumentsPrimaryConstructorBodyWithModifier,
+  sharedCode: SharedCode.primaryConstructorBodyWithModifier,
+);
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+Message _withArgumentsPrimaryConstructorBodyWithModifier({
+  required String modifier,
+}) {
+  var modifier_0 = conversions.validateString(modifier);
+  return new Message(
+    primaryConstructorBodyWithModifier,
+    problemMessage:
+        """A primary constructor body can't have the modifier '${modifier_0}'.""",
+    correctionMessage: """Try removing the modifier.""",
+    arguments: {'modifier': modifier},
+  );
+}
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
 const MessageCode primaryConstructorBodyWithoutDeclaration = const MessageCode(
   "PrimaryConstructorBodyWithoutDeclaration",
   sharedCode: SharedCode.primaryConstructorBodyWithoutDeclaration,
@@ -2749,6 +2796,13 @@ const MessageCode typeBeforeFactory = const MessageCode(
   sharedCode: SharedCode.typeBeforeFactory,
   problemMessage: """Factory constructors cannot have a return type.""",
   correctionMessage: """Try removing the type appearing before 'factory'.""",
+);
+
+// DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
+const MessageCode typedefAugmentation = const MessageCode(
+  "TypedefAugmentation",
+  sharedCode: SharedCode.typedefAugmentation,
+  problemMessage: """Type aliases can't be augmented.""",
 );
 
 // DO NOT EDIT. THIS FILE IS GENERATED. SEE TOP OF FILE.
@@ -3094,6 +3148,7 @@ enum SharedCode {
   extensionAugmentationHasOnClause,
   extensionDeclaresAbstractMember,
   extensionDeclaresConstructor,
+  extensionPrimaryConstructor,
   extensionTypeExtends,
   extensionTypeWith,
   externalClass,
@@ -3173,7 +3228,9 @@ enum SharedCode {
   missingPrimaryConstructor,
   missingPrimaryConstructorParameters,
   missingStatement,
+  mixinApplicationClassAugmentation,
   mixinDeclaresConstructor,
+  mixinPrimaryConstructor,
   mixinWithClause,
   modifierOutOfOrder,
   multipleClauses,
@@ -3194,6 +3251,7 @@ enum SharedCode {
   patternAssignmentDeclaresVariable,
   patternVariableDeclarationOutsideFunctionOrMethod,
   prefixAfterCombinator,
+  primaryConstructorBodyWithModifier,
   primaryConstructorBodyWithoutDeclaration,
   recordLiteralOnePositionalNoTrailingComma,
   recordTypeOnePositionalNoTrailingComma,
@@ -3214,6 +3272,7 @@ enum SharedCode {
   typeBeforeFactory,
   typeParameterOnConstructor,
   typeParameterOnOperator,
+  typedefAugmentation,
   typedefInClass,
   unexpectedTokens,
   varAndType,

@@ -11,7 +11,6 @@ import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/binary/binary_reader.dart';
 import 'package:analyzer/src/binary/binary_writer.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
-import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/summary2/linked_element_factory.dart';
 import 'package:analyzer/src/summary2/not_serializable_nodes.dart';
@@ -582,13 +581,13 @@ class _InfoBuilder {
         classDeclarations.add(_buildClass(declaration));
       } else if (declaration is ClassTypeAlias) {
         classTypeAliases.add(_buildClassTypeAlias(declaration));
-      } else if (declaration is EnumDeclaration) {
+      } else if (declaration is EnumDeclarationImpl) {
         enums.add(_buildEnum(declaration));
       } else if (declaration is ExtensionDeclaration) {
         extensions.add(_buildExtension(declaration));
       } else if (declaration is ExtensionTypeDeclaration) {
         extensionTypes.add(_buildExtensionType(declaration));
-      } else if (declaration is MixinDeclaration) {
+      } else if (declaration is MixinDeclarationImpl) {
         mixinDeclarations.add(_buildMixin(declaration));
       } else if (declaration is FunctionDeclaration) {
         if (declaration.isGetter) {
@@ -669,7 +668,7 @@ class _InfoBuilder {
         name: node.namePart.typeName,
         typeParameters: node.namePart.typeParameters,
         primaryConstructor: node.namePart.tryCast(),
-        members: node.body.tryCast<BlockClassBody>()?.members ?? [],
+        members: node.body.members,
       ),
     );
   }
@@ -732,13 +731,9 @@ class _InfoBuilder {
       if (formalParameters != null) {
         for (var parameter in formalParameters.parameters) {
           parameter.metadata.accept(collector);
-          addFormalParameters(
-            parameter is FunctionTypedFormalParameter
-                ? parameter.parameters
-                : null,
-          );
-          if (parameter is DefaultFormalParameter) {
-            parameter.defaultValue?.accept(collector);
+          addFormalParameters(parameter.functionTypedSuffix?.formalParameters);
+          if (parameter.defaultClause case var defaultClause?) {
+            defaultClause.value.accept(collector);
           }
         }
       }
@@ -789,7 +784,7 @@ class _InfoBuilder {
     );
   }
 
-  _InfoEnumDeclaration _buildEnum(EnumDeclaration node) {
+  _InfoEnumDeclaration _buildEnum(EnumDeclarationImpl node) {
     return _InfoEnumDeclaration(
       data: _buildInterfaceData(
         node,
@@ -850,7 +845,7 @@ class _InfoBuilder {
         name: node.primaryConstructor.typeName,
         typeParameters: node.primaryConstructor.typeParameters,
         primaryConstructor: node.primaryConstructor,
-        members: node.body.tryCast<BlockClassBody>()?.members ?? [],
+        members: node.body.members,
       ),
     );
   }
@@ -872,23 +867,16 @@ class _InfoBuilder {
   }
 
   _InfoFormalParameter _buildFormalParameter(FormalParameter node) {
-    var notDefault = node.notDefault;
-
-    var (typeParameters, parameters) = switch (notDefault) {
-      FunctionTypedFormalParameter p => (p.typeParameters, p.parameters),
-      FieldFormalParameter p => (p.typeParameters, p.parameters),
-      SuperFormalParameter p => (p.typeParameters, p.parameters),
-      _ => (null, null),
-    };
+    var functionTypedSuffix = node.functionTypedSuffix;
 
     return _InfoFormalParameter(
       firstTokenOffset: node.offset,
       codeOffset: node.offset,
       codeLength: node.length,
       nameOffset: node.name?.offsetIfNotEmpty,
-      documentationComment: _getDocumentationComment(notDefault),
-      typeParameters: _buildTypeParameters(typeParameters),
-      parameters: _buildFormalParameters(parameters),
+      documentationComment: _getDocumentationComment(node),
+      typeParameters: _buildTypeParameters(functionTypedSuffix?.typeParameters),
+      parameters: _buildFormalParameters(functionTypedSuffix?.formalParameters),
     );
   }
 
@@ -1041,19 +1029,11 @@ class _InfoBuilder {
   _InfoLibraryName _buildLibraryName(LibraryDirective? firstLibraryDirective) {
     var nameOffset = -1;
     var nameLength = 0;
-
-    if (useDottedNameInLibraryDirective) {
-      if (firstLibraryDirective?.name2 case var name?) {
-        nameOffset = name.offset;
-        nameLength = name.length;
-      }
-    } else {
-      if (firstLibraryDirective?.name case var name?) {
-        nameOffset = name.offset;
-        nameLength = name.length;
-      }
+    var libraryName = firstLibraryDirective?.name;
+    if (libraryName != null) {
+      nameOffset = libraryName.offset;
+      nameLength = libraryName.length;
     }
-
     return _InfoLibraryName(offset: nameOffset, length: nameLength);
   }
 
@@ -1074,7 +1054,7 @@ class _InfoBuilder {
     );
   }
 
-  _InfoMixinDeclaration _buildMixin(MixinDeclaration node) {
+  _InfoMixinDeclaration _buildMixin(MixinDeclarationImpl node) {
     return _InfoMixinDeclaration(
       data: _buildInterfaceData(
         node,
@@ -1833,8 +1813,8 @@ class _OffsetsApplier extends _OffsetsAstVisitor {
   }
 
   @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    super.visitSimpleFormalParameter(node);
+  void visitRegularFormalParameter(RegularFormalParameter node) {
+    super.visitRegularFormalParameter(node);
 
     var fragment = node.declaredFragment;
     var identifier = node.name;
@@ -2062,6 +2042,13 @@ abstract class _OffsetsAstVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitNamedArgument(NamedArgument node) {
+    _tokenOrNull(node.name);
+    _tokenOrNull(node.colon);
+    super.visitNamedArgument(node);
+  }
+
+  @override
   void visitNamedType(NamedType node) {
     node.importPrefix?.accept(this);
     _tokenOrNull(node.name);
@@ -2116,6 +2103,13 @@ abstract class _OffsetsAstVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitRecordLiteralNamedField(RecordLiteralNamedField node) {
+    _tokenOrNull(node.name);
+    _tokenOrNull(node.colon);
+    super.visitRecordLiteralNamedField(node);
+  }
+
+  @override
   void visitRecordTypeAnnotation(RecordTypeAnnotation node) {
     _tokenOrNull(node.leftParenthesis);
     _tokenOrNull(node.rightParenthesis);
@@ -2158,18 +2152,18 @@ abstract class _OffsetsAstVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitRegularFormalParameter(RegularFormalParameter node) {
+    _tokenOrNull(node.requiredKeyword);
+    _tokenOrNull(node.name);
+    super.visitRegularFormalParameter(node);
+  }
+
+  @override
   void visitSetOrMapLiteral(SetOrMapLiteral node) {
     _tokenOrNull(node.constKeyword);
     _tokenOrNull(node.leftBracket);
     _tokenOrNull(node.rightBracket);
     super.visitSetOrMapLiteral(node);
-  }
-
-  @override
-  void visitSimpleFormalParameter(SimpleFormalParameter node) {
-    _tokenOrNull(node.requiredKeyword);
-    _tokenOrNull(node.name);
-    super.visitSimpleFormalParameter(node);
   }
 
   @override
