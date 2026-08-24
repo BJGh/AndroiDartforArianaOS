@@ -88,19 +88,16 @@ abstract class CombinedMemberSignatureBase {
 
   bool _isCombinedMemberSignatureCovarianceComputed = false;
 
-  final bool _isClosureContextLoweringEnabled;
-
   Covariance? _combinedMemberSignatureCovariance;
 
   /// Creates a [CombinedMemberSignatureBase] whose canonical member is already
   /// defined.
-  CombinedMemberSignatureBase.internal(
+  new internal(
     this.membersBuilder,
     this._canonicalMemberIndex,
     this.members, {
     required this.forSetter,
-    required bool isClosureContextLoweringEnabled,
-  }) : _isClosureContextLoweringEnabled = isClosureContextLoweringEnabled;
+  });
 
   /// Creates a [CombinedMemberSignatureBase] for [members] inherited into
   /// [extensionTypeDeclarationBuilder].
@@ -108,12 +105,7 @@ abstract class CombinedMemberSignatureBase {
   /// If [forSetter] is `true`, contravariance of the setter types is used to
   /// compute the most specific member type. Otherwise covariance of the getter
   /// types or function types is used.
-  CombinedMemberSignatureBase(
-    this.membersBuilder,
-    this.members, {
-    required this.forSetter,
-    required bool isClosureContextLoweringEnabled,
-  }) : _isClosureContextLoweringEnabled = isClosureContextLoweringEnabled {
+  new(this.membersBuilder, this.members, {required this.forSetter}) {
     int? bestSoFarIndex;
     if (members.length == 1) {
       bestSoFarIndex = 0;
@@ -423,7 +415,7 @@ abstract class CombinedMemberSignatureBase {
           );
           break;
         case ProcedureKind.Setter:
-          VariableDeclaration parameter =
+          PositionalParameter parameter =
               member.function.positionalParameters.first;
           combinedMemberSignature = _createSetterMemberSignature(
             declarationNode,
@@ -537,7 +529,7 @@ abstract class CombinedMemberSignatureBase {
     DartType type, {
     required bool isCovariantByDeclaration,
     required bool isCovariantByClass,
-    VariableDeclaration? parameter,
+    FunctionParameter? parameter,
     required bool copyLocation,
   }) {
     Reference? reference = indexedContainer?.lookupSetterReference(member.name);
@@ -559,32 +551,18 @@ abstract class CombinedMemberSignatureBase {
       fileUri = declarationNode.fileUri;
       fileOffset = fileStartOffset = fileEndOffset = declarationNode.fileOffset;
     }
-    VariableDeclaration setterParameter;
-    if (_isClosureContextLoweringEnabled) {
-      // Coverage-ignore-block(suite): Not run.
-      setterParameter =
-          new PositionalParameter(
-              cosmeticName: parameter?.name ?? 'value',
-              type: type,
-              isCovariantByDeclaration: isCovariantByDeclaration,
-            )
-            ..isCovariantByClass = isCovariantByClass
-            ..fileOffset = copyLocation
-                ? parameter?.fileOffset ?? fileOffset
-                : fileOffset;
-    } else {
-      setterParameter = extern.createParameterVariable(
-        parameter?.name ?? 'value',
-        type: type,
-        isCovariantByDeclaration: isCovariantByDeclaration,
-        isCovariantByClass: isCovariantByClass,
-        fileOffset: copyLocation
-            ?
-              // Coverage-ignore(suite): Not run.
-              parameter?.fileOffset ?? fileOffset
-            : fileOffset,
-      );
-    }
+    PositionalParameter setterParameter =
+        new PositionalParameter(
+            parameterName: parameter?.parameterName ?? 'value',
+            type: type,
+            isCovariantByDeclaration: isCovariantByDeclaration,
+          )
+          ..isCovariantByClass = isCovariantByClass
+          ..fileOffset = copyLocation
+              ?
+                // Coverage-ignore(suite): Not run.
+                parameter?.fileOffset ?? fileOffset
+              : fileOffset;
     return extern.createProcedure(
       member.name,
       ProcedureKind.Setter,
@@ -630,87 +608,59 @@ abstract class CombinedMemberSignatureBase {
       fileOffset = fileStartOffset = fileEndOffset = declarationNode.fileOffset;
     }
     FunctionNode function = procedure.function;
-    List<VariableDeclaration> positionalParameters = [];
+    List<PositionalParameter> positionalParameters = [];
     FreshTypeParametersFromStructuralParameters freshTypeParameters =
         getFreshTypeParametersFromStructuralParameters(
           functionType.typeParameters,
         );
     CloneVisitorNotMembers cloner = new CloneVisitorNotMembers();
     for (int i = 0; i < function.positionalParameters.length; i++) {
-      VariableDeclaration parameter = function.positionalParameters[i];
+      PositionalParameter parameter = function.positionalParameters[i];
       DartType parameterType = freshTypeParameters.substitute(
         functionType.positionalParameters[i],
       );
-      VariableDeclaration positionalParameter;
-      if (_isClosureContextLoweringEnabled) {
-        // Coverage-ignore-block(suite): Not run.
-        positionalParameter =
-            new PositionalParameter(
-                cosmeticName: parameter.name,
-                type: parameterType,
-                isCovariantByDeclaration: parameter.isCovariantByDeclaration,
-                defaultValue: cloner.cloneOptional(parameter.initializer),
-              )
-              ..hasDeclaredInitializer = parameter.hasDeclaredInitializer
-              ..isCovariantByClass = parameter.isCovariantByClass
-              ..fileOffset = copyLocation ? parameter.fileOffset : fileOffset;
-      } else {
-        positionalParameter = extern.createParameterVariable(
-          parameter.name,
-          type: parameterType,
-          isCovariantByDeclaration: parameter.isCovariantByDeclaration,
-          initializer: cloner.cloneOptional(parameter.initializer),
-          hasDeclaredInitializer: parameter.hasDeclaredInitializer,
-          isCovariantByClass: parameter.isCovariantByClass,
-          fileOffset: copyLocation
-              ?
-                // Coverage-ignore(suite): Not run.
-                parameter.fileOffset
-              : fileOffset,
-        );
-      }
+      PositionalParameter positionalParameter = extern
+          .createPositionalParameter(
+            parameterName: parameter.parameterName,
+            type: parameterType,
+            isCovariantByDeclaration: parameter.isCovariantByDeclaration,
+            defaultValue: cloner.cloneOptional(parameter.defaultValue),
+            hasDeclaredDefaultValue: parameter.hasDeclaredDefaultValue,
+            isCovariantByClass: parameter.isCovariantByClass,
+            fileOffset: copyLocation
+                ?
+                  // Coverage-ignore(suite): Not run.
+                  parameter.fileOffset
+                : fileOffset,
+          );
       positionalParameters.add(positionalParameter);
     }
 
-    VariableDeclaration cloneNamedParameter(
-      VariableDeclaration parameter,
+    NamedParameter cloneNamedParameter(
+      NamedParameter parameter,
       NamedType namedType,
     ) {
-      if (_isClosureContextLoweringEnabled) {
-        // Coverage-ignore-block(suite): Not run.
-        return new NamedParameter(
-            parameterName: parameter.name!,
-            type: freshTypeParameters.substitute(namedType.type),
-            isRequired: namedType.isRequired,
-            isCovariantByDeclaration: parameter.isCovariantByDeclaration,
-            defaultValue: cloner.cloneOptional(parameter.initializer),
-          )
-          ..hasDeclaredInitializer = parameter.hasDeclaredInitializer
-          ..isCovariantByClass = parameter.isCovariantByClass
-          ..fileOffset = copyLocation ? parameter.fileOffset : fileOffset;
-      } else {
-        return extern.createParameterVariable(
-          parameter.name,
-          type: freshTypeParameters.substitute(namedType.type),
-          isRequired: namedType.isRequired,
-          isCovariantByDeclaration: parameter.isCovariantByDeclaration,
-          initializer: cloner.cloneOptional(parameter.initializer),
-          hasDeclaredInitializer: parameter.hasDeclaredInitializer,
-          isCovariantByClass: parameter.isCovariantByClass,
-          fileOffset: copyLocation
-              ?
-                // Coverage-ignore(suite): Not run.
-                parameter.fileOffset
-              : fileOffset,
-        );
-      }
+      return extern.createNamedParameter(
+        parameterName: parameter.parameterName,
+        type: freshTypeParameters.substitute(namedType.type),
+        isRequired: namedType.isRequired,
+        isCovariantByDeclaration: parameter.isCovariantByDeclaration,
+        defaultValue: cloner.cloneOptional(parameter.defaultValue),
+        hasDeclaredDefaultValue: parameter.hasDeclaredDefaultValue,
+        isCovariantByClass: parameter.isCovariantByClass,
+        fileOffset: copyLocation
+            ?
+              // Coverage-ignore(suite): Not run.
+              parameter.fileOffset
+            : fileOffset,
+      );
     }
 
-    List<VariableDeclaration> namedParameters = [];
+    List<NamedParameter> namedParameters = [];
     int namedParameterCount = function.namedParameters.length;
     if (namedParameterCount == 1) {
       NamedType namedType = functionType.namedParameters.first;
-      VariableDeclaration parameter = function.namedParameters.first;
+      NamedParameter parameter = function.namedParameters.first;
       namedParameters.add(cloneNamedParameter(parameter, namedType));
     } else if (namedParameterCount > 1) {
       Map<String, NamedType> namedTypes = {};
@@ -718,8 +668,8 @@ abstract class CombinedMemberSignatureBase {
         namedTypes[namedType.name] = namedType;
       }
       for (int i = 0; i < namedParameterCount; i++) {
-        VariableDeclaration parameter = function.namedParameters[i];
-        NamedType namedParameterType = namedTypes[parameter.name]!;
+        NamedParameter parameter = function.namedParameters[i];
+        NamedType namedParameterType = namedTypes[parameter.parameterName]!;
         namedParameters.add(cloneNamedParameter(parameter, namedParameterType));
       }
     }
@@ -797,19 +747,17 @@ class CombinedClassMemberSignature extends CombinedMemberSignatureBase {
 
   /// Creates a [CombinedClassMemberSignature] whose canonical member is already
   /// defined.
-  CombinedClassMemberSignature.internal(
+  new internal(
     ClassMembersBuilder membersBuilder,
     this.classBuilder,
     int? canonicalMemberIndex,
     List<ClassMember> members, {
     required bool forSetter,
-    required bool isClosureContextLoweringEnabled,
   }) : super.internal(
          membersBuilder,
          canonicalMemberIndex,
          members,
          forSetter: forSetter,
-         isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
        );
 
   /// Creates a [CombinedClassMemberSignature] for [members] inherited into
@@ -818,18 +766,12 @@ class CombinedClassMemberSignature extends CombinedMemberSignatureBase {
   /// If [forSetter] is `true`, contravariance of the setter types is used to
   /// compute the most specific member type. Otherwise covariance of the getter
   /// types or function types is used.
-  CombinedClassMemberSignature(
+  new(
     ClassMembersBuilder membersBuilder,
     this.classBuilder,
     List<ClassMember> members, {
     required bool forSetter,
-    required bool isClosureContextLoweringEnabled,
-  }) : super(
-         membersBuilder,
-         members,
-         forSetter: forSetter,
-         isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
-       );
+  }) : super(membersBuilder, members, forSetter: forSetter);
 
   @override
   DeclarationBuilder get declarationBuilder => classBuilder;
@@ -864,18 +806,12 @@ class CombinedExtensionTypeMemberSignature extends CombinedMemberSignatureBase {
   /// If [forSetter] is `true`, contravariance of the setter types is used to
   /// compute the most specific member type. Otherwise covariance of the getter
   /// types or function types is used.
-  CombinedExtensionTypeMemberSignature(
+  new(
     ClassMembersBuilder membersBuilder,
     this.extensionTypeDeclarationBuilder,
     List<ClassMember> members, {
     required bool forSetter,
-    required bool isClosureContextLoweringEnabled,
-  }) : super(
-         membersBuilder,
-         members,
-         forSetter: forSetter,
-         isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
-       );
+  }) : super(membersBuilder, members, forSetter: forSetter);
 
   @override
   DeclarationBuilder get declarationBuilder => extensionTypeDeclarationBuilder;

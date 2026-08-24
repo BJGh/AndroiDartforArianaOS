@@ -18,6 +18,7 @@ import '../../kernel/body_builder_context.dart';
 import '../../kernel/constructor_tearoff_lowering.dart';
 import '../../kernel/external_ast_helper.dart' as extern;
 import '../../kernel/internal_ast.dart';
+import '../../kernel/internal_ast_helper.dart' as intern;
 import '../../kernel/kernel_helper.dart';
 import '../../source/name_scheme.dart';
 import '../../source/source_class_builder.dart';
@@ -30,6 +31,7 @@ import '../../source/source_loader.dart';
 import '../../source/source_member_builder.dart';
 import '../../source/source_type_parameter_builder.dart';
 import '../../source/type_parameter_factory.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../../type_inference/type_inferrer.dart';
 import '../../type_inference/type_schema.dart';
 import '../fragment.dart';
@@ -45,9 +47,9 @@ abstract class ConstructorEncoding {
 
   void prependInitializer(Initializer initializer);
 
-  VariableDeclaration? getTearOffParameter(int index);
+  FunctionParameter? getTearOffParameter(int index);
 
-  VariableDeclaration? get thisVariable;
+  InternalVariable? get thisVariable;
 
   List<TypeParameter>? get thisTypeParameters;
 
@@ -91,11 +93,12 @@ abstract class ConstructorEncoding {
 
   void registerFunctionBody({
     required Statement? body,
-    Scope? scope,
-    VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   });
 
-  void registerNoBodyConstructor();
+  void registerNoBodyConstructor({
+    required ScopeProviderInfo? scopeProviderInfo,
+  });
 
   void addSuperParameterDefaultValueCloners({
     required List<DelayedDefaultValueCloner> delayedDefaultValueCloners,
@@ -130,30 +133,35 @@ class RegularConstructorEncoding implements ConstructorEncoding {
 
   List<Initializer>? _prependedInitializers;
 
-  RegularConstructorEncoding({
-    required bool isExternal,
-    required bool isEnumConstructor,
-  }) : _isExternal = isExternal,
-       _isEnumConstructor = isEnumConstructor;
+  new({required bool isExternal, required bool isEnumConstructor})
+    : _isExternal = isExternal,
+      _isEnumConstructor = isEnumConstructor;
 
   @override
   void registerFunctionBody({
     required Statement? body,
-    Scope? scope,
-    VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     if (body != null) {
       _constructor.function.registerFunctionBody(body);
     }
-    _constructor.function.scope = scope;
-    _constructor.function.thisVariable = thisVariable;
+    _constructor.function.registerScopeProviderInfo(scopeProviderInfo);
   }
 
   @override
-  void registerNoBodyConstructor() {
+  void registerNoBodyConstructor({
+    required ScopeProviderInfo? scopeProviderInfo,
+  }) {
     if (!_isExternal) {
-      registerFunctionBody(body: extern.createEmptyStatement());
+      // null is passed for scopeProviderInfo in the call below since the
+      // scopeProviderInfo object is registered outside of the if-statement
+      // later in the method.
+      registerFunctionBody(
+        body: extern.createEmptyStatement(),
+        scopeProviderInfo: null,
+      );
     }
+    _constructor.function.registerScopeProviderInfo(scopeProviderInfo);
   }
 
   @override
@@ -195,7 +203,7 @@ class RegularConstructorEncoding implements ConstructorEncoding {
   }
 
   @override
-  VariableDeclaration? get thisVariable => null;
+  InternalVariable? get thisVariable => null;
 
   @override
   List<TypeParameter>? get thisTypeParameters => null;
@@ -352,7 +360,7 @@ class RegularConstructorEncoding implements ConstructorEncoding {
             (formal.isInitializingFormal || formal.isSuperInitializingFormal)) {
           formal.variable.type = const UnknownType();
           needsInference = true;
-        } else if (!formal.hasDeclaredInitializer &&
+        } else if (!formal.hasDeclaredDefaultValue &&
             formal.isSuperInitializingFormal) {
           needsInference = true;
         }
@@ -401,7 +409,7 @@ class RegularConstructorEncoding implements ConstructorEncoding {
   }
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     Procedure? constructorTearOff = _constructorTearOff;
     if (constructorTearOff != null) {
       if (index < constructorTearOff.function.positionalParameters.length) {
@@ -504,7 +512,7 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
   /// If this procedure is an extension instance member or extension type
   /// instance member, [_thisVariable] holds the synthetically added `this`
   /// parameter.
-  VariableDeclaration? _thisVariable;
+  InternalDeclaredVariable? _thisVariable;
 
   /// If this procedure is an extension instance member or extension type
   /// instance member, [_thisTypeParameters] holds the type parameters copied
@@ -528,21 +536,28 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
   @override
   void registerFunctionBody({
     required Statement? body,
-    Scope? scope,
-    VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     if (body != null) {
       _constructor.function.registerFunctionBody(body);
     }
-    _constructor.function.scope = scope;
-    _constructor.function.thisVariable = thisVariable;
+    _constructor.function.registerScopeProviderInfo(scopeProviderInfo);
   }
 
   @override
-  void registerNoBodyConstructor() {
+  void registerNoBodyConstructor({
+    required ScopeProviderInfo? scopeProviderInfo,
+  }) {
     if (!_hasBuiltBody && !_isExternal) {
-      registerFunctionBody(body: extern.createEmptyStatement());
+      // null is passed for scopeProviderInfo below since registering of the
+      // scopeProviderInfo object is done outside of the if-statement, later in
+      // the method.
+      registerFunctionBody(
+        body: extern.createEmptyStatement(),
+        scopeProviderInfo: null,
+      );
     }
+    _constructor.function.registerScopeProviderInfo(scopeProviderInfo);
   }
 
   @override
@@ -634,28 +649,14 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
         typeArguments = [];
       }
 
-      _thisVariable =
-          libraryBuilder
-              .loader
-              .target
-              .backendTarget
-              .flags
-              .isClosureContextLoweringEnabled
-          ?
-            // Coverage-ignore(suite): Not run.
-            (new PositionalParameter(
-              cosmeticName: syntheticThisName,
-              type: _computeThisType(declarationBuilder, typeArguments),
-
-              isFinal: true,
-              isLowered: true,
-            )..fileOffset = fileOffset)
-          : (new VariableDeclarationImpl(
-              syntheticThisName,
-              isFinal: true,
-              type: _computeThisType(declarationBuilder, typeArguments),
-              fileOffset: fileOffset,
-            )..isLowered = true);
+      _thisVariable = intern.createSyntheticVariable(
+        name: syntheticThisName,
+        type: _computeThisType(declarationBuilder, typeArguments),
+        isFinal: true,
+        isLowered: true,
+        isSynthesized: false,
+        fileOffset: fileOffset,
+      );
 
       List<DartType> typeParameterTypes = <DartType>[];
       for (int i = 0; i < _constructor.function.typeParameters.length; i++) {
@@ -695,7 +696,7 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
             (formal.isInitializingFormal || formal.isSuperInitializingFormal)) {
           formal.variable.type = const UnknownType();
           needsInference = true;
-        } else if (!formal.hasDeclaredInitializer &&
+        } else if (!formal.hasDeclaredDefaultValue &&
             formal.isSuperInitializingFormal) {
           needsInference = true;
         }
@@ -709,7 +710,7 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
   }
 
   @override
-  VariableDeclaration? get thisVariable {
+  InternalDeclaredVariable? get thisVariable {
     assert(
       _thisVariable != null,
       "ProcedureBuilder.thisVariable has not been set.",
@@ -754,7 +755,7 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
   }
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     Procedure? constructorTearOff = _constructorTearOff;
     if (constructorTearOff != null) {
       if (index < constructorTearOff.function.positionalParameters.length) {
@@ -777,9 +778,9 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
       return;
     }
     if (!_isExternal) {
-      VariableDeclaration thisVariable = this.thisVariable!;
+      InternalDeclaredVariable thisVariable = this.thisVariable!;
       VariableStatement thisVariableStatement = extern.createVariableStatement(
-        thisVariable,
+        extern.createVariableDeclaration(thisVariable.astVariable),
       );
       List<Statement> statements = [thisVariableStatement];
       _ExtensionTypeInitializerToStatementConverter visitor =
@@ -797,7 +798,9 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
         statements.add(body);
       }
       statements.add(
-        extern.createReturnStatement(extern.createVariableGet(thisVariable)),
+        extern.createReturnStatement(
+          extern.createVariableGet(thisVariable.astVariable),
+        ),
       );
       // TODO(cstefantsova): Provide a scope here.
       registerFunctionBody(
@@ -806,6 +809,7 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
           fileOffset: fileOffset,
           fileEndOffset: endOffset,
         ),
+        scopeProviderInfo: null,
       );
     }
     _hasBuiltBody = true;
@@ -820,7 +824,10 @@ mixin _ExtensionTypeConstructorEncodingMixin<T extends DeclarationBuilder>
       constructorBuilder,
       constructorDeclaration,
       _constructor,
-      new _ExtensionTypeConstructorContext(constructorBuilder, thisVariable!),
+      new _ExtensionTypeConstructorContext(
+        constructorBuilder,
+        thisVariable!.astVariable,
+      ),
     );
   }
 
@@ -853,10 +860,7 @@ class _ExtensionTypeInitializerToStatementConverter
   VariableStatement thisVariableStatement;
   final List<Statement> statements;
 
-  _ExtensionTypeInitializerToStatementConverter(
-    this.statements,
-    this.thisVariableStatement,
-  );
+  new(this.statements, this.thisVariableStatement);
 
   @override
   void visitAssertInitializer(AssertInitializer node) {
@@ -865,18 +869,14 @@ class _ExtensionTypeInitializerToStatementConverter
 
   @override
   void visitAuxiliaryInitializer(AuxiliaryInitializer node) {
-    if (node is ExtensionTypeRedirectingInitializer) {
+    if (node is ExternalExtensionTypeRedirectingInitializer) {
       statements.add(
         extern.createExpressionStatement(
           extern.createVariableSet(
-            thisVariableStatement.variable,
+            thisVariableStatement.declaration.variable,
             extern.createStaticInvocation(
               node.target,
-              node.arguments.toArguments(
-                node.inferredTypeArguments,
-                node.positional,
-                node.named,
-              ),
+              node.arguments,
               fileOffset: node.fileOffset,
             ),
             fileOffset: node.fileOffset,
@@ -886,9 +886,10 @@ class _ExtensionTypeInitializerToStatementConverter
         ),
       );
       return;
-    } else if (node is ExtensionTypeRepresentationFieldInitializer) {
-      thisVariableStatement.variable
-        ..initializer = (node.value..parent = thisVariableStatement.variable)
+    } else if (node is ExternalExtensionTypeRepresentationFieldInitializer) {
+      thisVariableStatement.declaration.variable
+        ..initializer = (node.value
+          ..parent = thisVariableStatement.declaration.variable)
         ..fileOffset = node.fileOffset;
       thisVariableStatement.fileOffset = node.fileOffset;
       return;
@@ -902,8 +903,9 @@ class _ExtensionTypeInitializerToStatementConverter
   @override
   // Coverage-ignore(suite): Not run.
   void visitFieldInitializer(FieldInitializer node) {
-    thisVariableStatement.variable
-      ..initializer = (node.value..parent = thisVariableStatement.variable)
+    thisVariableStatement.declaration.variable
+      ..initializer = (node.value
+        ..parent = thisVariableStatement.declaration.variable)
       ..fileOffset = node.fileOffset;
     thisVariableStatement.fileOffset = node.fileOffset;
   }
@@ -922,7 +924,11 @@ class _ExtensionTypeInitializerToStatementConverter
 
   @override
   void visitLocalInitializer(LocalInitializer node) {
-    statements.add(extern.createVariableStatement(node.variable));
+    statements.add(
+      extern.createVariableStatement(
+        extern.createVariableDeclaration(node.variable),
+      ),
+    );
   }
 
   @override
@@ -948,8 +954,7 @@ class ExtensionTypeConstructorEncoding
   @override
   final bool _isExternal;
 
-  ExtensionTypeConstructorEncoding({required bool isExternal})
-    : _isExternal = isExternal;
+  new({required bool isExternal}) : _isExternal = isExternal;
 
   @override
   DartType _computeThisType(
@@ -1061,8 +1066,7 @@ class ExtensionConstructorEncoding
   @override
   final bool _isExternal;
 
-  ExtensionConstructorEncoding({required bool isExternal})
-    : _isExternal = isExternal;
+  new({required bool isExternal}) : _isExternal = isExternal;
 
   @override
   void buildOutlineNodes(
@@ -1160,16 +1164,14 @@ class ExtensionConstructorEncoding
 }
 
 abstract class ConstructorEncodingStrategy {
-  factory ConstructorEncodingStrategy(
+  factory(
     DeclarationBuilder declarationBuilder, {
     required bool isClosureContextLoweringEnabled,
   }) {
     switch (declarationBuilder) {
       case ClassBuilder():
         if (declarationBuilder.isEnum) {
-          return new EnumConstructorEncodingStrategy(
-            isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
-          );
+          return const EnumConstructorEncodingStrategy();
         } else {
           return const RegularConstructorEncodingStrategy();
         }
@@ -1199,7 +1201,7 @@ abstract class ConstructorEncodingStrategy {
 
 class RegularConstructorEncodingStrategy
     implements ConstructorEncodingStrategy {
-  const RegularConstructorEncodingStrategy();
+  const new();
 
   @override
   ConstructorEncoding createEncoding({required bool isExternal}) {
@@ -1231,11 +1233,7 @@ class RegularConstructorEncodingStrategy
 }
 
 class EnumConstructorEncodingStrategy implements ConstructorEncodingStrategy {
-  final bool isClosureContextLoweringEnabled;
-
-  const EnumConstructorEncodingStrategy({
-    required this.isClosureContextLoweringEnabled,
-  });
+  const new();
 
   @override
   ConstructorEncoding createEncoding({required bool isExternal}) {
@@ -1261,8 +1259,7 @@ class EnumConstructorEncodingStrategy implements ConstructorEncodingStrategy {
         fileOffset: fileOffset,
         fileUri: fileUri,
         nameOffset: null,
-        hasImmediatelyDeclaredInitializer: false,
-        isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+        hasImmediatelyDeclaredDefaultValue: false,
       ),
       new FormalParameterBuilder(
         kind: FormalParameterKind.requiredPositional,
@@ -1272,8 +1269,7 @@ class EnumConstructorEncodingStrategy implements ConstructorEncodingStrategy {
         fileOffset: fileOffset,
         fileUri: fileUri,
         nameOffset: null,
-        hasImmediatelyDeclaredInitializer: false,
-        isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+        hasImmediatelyDeclaredDefaultValue: false,
       ),
       ...?formals,
     ];
@@ -1292,7 +1288,7 @@ class EnumConstructorEncodingStrategy implements ConstructorEncodingStrategy {
 
 class ExtensionConstructorEncodingStrategy
     implements ConstructorEncodingStrategy {
-  const ExtensionConstructorEncodingStrategy();
+  const new();
 
   @override
   ConstructorEncoding createEncoding({required bool isExternal}) {
@@ -1338,7 +1334,7 @@ class ExtensionConstructorEncodingStrategy
 
 class ExtensionTypeConstructorEncodingStrategy
     implements ConstructorEncodingStrategy {
-  const ExtensionTypeConstructorEncodingStrategy();
+  const new();
 
   @override
   List<FormalParameterBuilder>? createFormals({
@@ -1385,7 +1381,7 @@ class ExtensionTypeConstructorEncodingStrategy
 class _RegularConstructorContext implements ConstructorContext {
   final SourceConstructorBuilder _builder;
 
-  _RegularConstructorContext(this._builder);
+  new(this._builder);
 
   @override
   // Coverage-ignore(suite): Not run.
@@ -1397,16 +1393,16 @@ class _RegularConstructorContext implements ConstructorContext {
   }
 
   @override
-  VariableDeclaration? get thisVariable => null;
+  Variable? get thisVariable => null;
 }
 
 class _ExtensionTypeConstructorContext implements ConstructorContext {
   final SourceConstructorBuilder _builder;
 
   @override
-  final VariableDeclaration thisVariable;
+  final Variable thisVariable;
 
-  _ExtensionTypeConstructorContext(this._builder, this.thisVariable);
+  new(this._builder, this.thisVariable);
 
   @override
   FunctionSignature get signature => _builder.signature;

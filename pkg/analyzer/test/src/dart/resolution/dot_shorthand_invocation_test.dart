@@ -33,7 +33,7 @@ class CAssert {
   }
 
   test_basic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C(1);
   int x;
@@ -46,7 +46,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleDotShorthandInvocation;
+    var node = result.findNode.singleDotShorthandInvocation;
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -64,7 +64,7 @@ DotShorthandInvocation
   }
 
   test_basic_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C<T> {
   static C member<U>(U x) => C(x);
   T x;
@@ -77,7 +77,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleDotShorthandInvocation;
+    var node = result.findNode.singleDotShorthandInvocation;
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -95,10 +95,10 @@ DotShorthandInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::C::@method::member::@formalParameter::x
           substitution: {U: int}
         staticType: int
@@ -112,7 +112,7 @@ DotShorthandInvocation
   }
 
   test_basic_parameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member(int x) => C(x);
   int x;
@@ -125,7 +125,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleDotShorthandInvocation;
+    var node = result.findNode.singleDotShorthandInvocation;
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -135,7 +135,7 @@ DotShorthandInvocation
     staticType: C Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <testLibrary>::@class::C::@method::member::@formalParameter::x
@@ -148,7 +148,7 @@ DotShorthandInvocation
   }
 
   test_chain_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C(1);
   int x;
@@ -162,8 +162,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -180,7 +180,7 @@ DotShorthandInvocation
   }
 
   test_chain_property() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C(1);
   int x;
@@ -194,8 +194,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -212,7 +212,7 @@ DotShorthandInvocation
   }
 
   test_equality() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   static C member(int x) => C(x);
   int x;
@@ -226,8 +226,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -236,7 +236,7 @@ DotShorthandInvocation
     staticType: C Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <testLibrary>::@class::C::@method::member::@formalParameter::x
@@ -249,8 +249,36 @@ DotShorthandInvocation
 ''');
   }
 
-  test_equality_indexExpression() async {
+  test_equality_extensionOverride() async {
     await resolveTestCodeWithDiagnostics(r'''
+extension E on int {}
+
+void f() {
+  E(0) == .member();
+//     ^^
+// [diag.undefinedExtensionOperator] The operator '==' isn't defined for the extension 'E'.
+//        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
+}
+''');
+  }
+
+  test_equality_extensionOverride_neq() async {
+    await resolveTestCodeWithDiagnostics(r'''
+extension E on int {}
+
+void f() {
+  E(0) != .member();
+//     ^^
+// [diag.undefinedExtensionOperator] The operator '==' isn't defined for the extension 'E'.
+//        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
+}
+''');
+  }
+
+  test_equality_indexExpression() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   int x;
   C(this.x);
@@ -262,8 +290,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -276,6 +304,38 @@ DotShorthandInvocation
   isDotShorthand: false
   staticInvokeType: List<C> Function()
   staticType: List<C>
+''');
+  }
+
+  test_equality_super() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  const A();
+}
+
+class B extends A {
+  const B();
+  static B member() => B();
+  bool test() => super == .member();
+//                        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
+}
+''');
+  }
+
+  test_equality_super_neq() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  const A();
+}
+
+class B extends A {
+  const B();
+  static B member() => B();
+  bool test() => super != .member();
+//                        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
+}
 ''');
   }
 
@@ -296,8 +356,8 @@ void main() {
     await resolveTestCodeWithDiagnostics(r'''
 void main() {
   var c = .member();
-//         ^^^^^^
-// [diag.dotShorthandUndefinedInvocation] The static method or constructor 'member' isn't defined for the context type '_'.
+//        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
   print(c);
 }
 ''');
@@ -347,7 +407,7 @@ void main() {
   }
 
   test_extensionType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type C(int integer) {
   static C one() => C(1);
 }
@@ -358,8 +418,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -390,7 +450,7 @@ void main() {
   }
 
   test_functionExpression_call() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C();
   C call() => this;
@@ -401,10 +461,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: DotShorthandInvocation
+  function2: DotShorthandInvocation
     period: .
     memberName: SimpleIdentifier
       token: member
@@ -426,7 +486,7 @@ FunctionExpressionInvocation
   }
 
   test_functionExpression_call_argument() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C();
   C call(int a) => this;
@@ -437,10 +497,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: DotShorthandInvocation
+  function2: DotShorthandInvocation
     period: .
     memberName: SimpleIdentifier
       token: member
@@ -454,7 +514,7 @@ FunctionExpressionInvocation
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <testLibrary>::@class::C::@method::call::@formalParameter::a
@@ -467,7 +527,7 @@ FunctionExpressionInvocation
   }
 
   test_functionExpression_call_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C();
 }
@@ -481,10 +541,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: DotShorthandInvocation
+  function2: DotShorthandInvocation
     period: .
     memberName: SimpleIdentifier
       token: member
@@ -506,7 +566,7 @@ FunctionExpressionInvocation
   }
 
   test_functionExpression_call_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member() => C();
   C call<T>(T t) => this;
@@ -517,10 +577,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: DotShorthandInvocation
+  function2: DotShorthandInvocation
     period: .
     memberName: SimpleIdentifier
       token: member
@@ -542,10 +602,10 @@ FunctionExpressionInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::C::@method::call::@formalParameter::t
           substitution: {T: int}
         staticType: int
@@ -559,7 +619,7 @@ FunctionExpressionInvocation
   }
 
   test_functionExpression_call_nested() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member(C c) => C();
   static C one() => C(); 
@@ -571,10 +631,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: DotShorthandInvocation
+  function2: DotShorthandInvocation
     period: .
     memberName: SimpleIdentifier
       token: member
@@ -582,7 +642,7 @@ FunctionExpressionInvocation
       staticType: C Function(C)
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         DotShorthandInvocation
           period: .
           memberName: SimpleIdentifier
@@ -625,7 +685,7 @@ void main() {
   }
 
   test_futureOr() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:async';
 
 class C {
@@ -640,7 +700,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleDotShorthandInvocation;
+    var node = result.findNode.singleDotShorthandInvocation;
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -658,7 +718,7 @@ DotShorthandInvocation
   }
 
   test_futureOr_nested() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:async';
 
 class C {
@@ -673,7 +733,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.singleDotShorthandInvocation;
+    var node = result.findNode.singleDotShorthandInvocation;
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -691,7 +751,7 @@ DotShorthandInvocation
   }
 
   test_mixin() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static C member(int x) => C(x);
   int x;
@@ -713,8 +773,8 @@ void main() {
 
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -731,7 +791,7 @@ DotShorthandInvocation
   }
 
   test_nested() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C<T> {
   static C<int> member() => C(1);
   static C<U> memberType<U, V>(U u) => C(u);
@@ -745,7 +805,7 @@ void main() {
 }
 ''');
 
-    var node = findNode.dotShorthandInvocation('.memberType');
+    var node = result.findNode.dotShorthandInvocation('.memberType');
     assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
@@ -755,18 +815,18 @@ DotShorthandInvocation
     staticType: C<U> Function<U, V>(U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       DotShorthandConstructorInvocation
         period: .
         constructorName: SimpleIdentifier
           token: new
-          element: ConstructorMember
+          element: SubstitutedConstructorElementImpl
             baseElement: <testLibrary>::@class::C::@constructor::new
             substitution: {T: C<dynamic>}
           staticType: null
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             DotShorthandInvocation
               period: .
               memberName: SimpleIdentifier
@@ -777,14 +837,14 @@ DotShorthandInvocation
                 leftParenthesis: (
                 rightParenthesis: )
               isDotShorthand: true
-              correspondingParameter: FieldFormalParameterMember
+              correspondingParameter: SubstitutedFieldFormalParameterElementImpl
                 baseElement: <testLibrary>::@class::C::@constructor::new::@formalParameter::x
                 substitution: {T: C<dynamic>}
               staticInvokeType: C<int> Function()
               staticType: C<int>
           rightParenthesis: )
         isDotShorthand: true
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::C::@method::memberType::@formalParameter::u
           substitution: {U: C<C<dynamic>>, V: dynamic}
         staticType: C<C<dynamic>>
@@ -808,8 +868,8 @@ class C {
 
 void main() {
   C c = .member()++;
-//       ^^^^^^
-// [diag.dotShorthandUndefinedInvocation] The static method or constructor 'member' isn't defined for the context type '_'.
+//      ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
 //               ^^
 // [diag.illegalAssignmentToNonAssignable] Illegal assignment to non-assignable expression.
   print(c);
@@ -827,8 +887,8 @@ class C {
 
 void main() {
   C c = ++.member();
-//         ^^^^^^
-// [diag.dotShorthandUndefinedInvocation] The static method or constructor 'member' isn't defined for the context type '_'.
+//        ^^^^^^^^^
+// [diag.dotShorthandMissingContext] A dot shorthand can't be used where there is no context type.
 //                ^
 // [diag.missingAssignableSelector] Missing selector such as '.identifier' or '[0]'.
   print(c);
@@ -885,7 +945,7 @@ void main() {
   }
 
   test_privateClass_sameLibrary_constructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class _Private {
   _Private();
 }
@@ -900,9 +960,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.singleDotShorthandConstructorInvocation,
-      r'''
+    var node = result.findNode.singleDotShorthandConstructorInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandConstructorInvocation
   period: .
   constructorName: SimpleIdentifier
@@ -915,12 +974,11 @@ DotShorthandConstructorInvocation
   isDotShorthand: true
   correspondingParameter: <null>
   staticType: _Private
-''',
-    );
+''');
   }
 
   test_privateClass_sameLibrary_invocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class _Private {
   static _Private instance() => _Private();
 }
@@ -935,7 +993,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.singleDotShorthandInvocation, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -999,7 +1058,7 @@ void main() {
   }
 
   test_privateEnum_sameLibrary_constructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum _Private {
   one;
   factory _Private.a() => one;
@@ -1015,9 +1074,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.singleDotShorthandConstructorInvocation,
-      r'''
+    var node = result.findNode.singleDotShorthandConstructorInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandConstructorInvocation
   period: .
   constructorName: SimpleIdentifier
@@ -1030,12 +1088,11 @@ DotShorthandConstructorInvocation
   isDotShorthand: true
   correspondingParameter: <null>
   staticType: _Private
-''',
-    );
+''');
   }
 
   test_privateEnum_sameLibrary_invocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum _Private {
   one;
   static _Private instance() => one;
@@ -1051,7 +1108,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.singleDotShorthandInvocation, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -1116,7 +1174,7 @@ void main() {
   }
 
   test_privateExtensionType_sameLibrary_constructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type _Private(int i) {}
 
 typedef Public = _Private;
@@ -1129,9 +1187,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.singleDotShorthandConstructorInvocation,
-      r'''
+    var node = result.findNode.singleDotShorthandConstructorInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandConstructorInvocation
   period: .
   constructorName: SimpleIdentifier
@@ -1140,7 +1197,7 @@ DotShorthandConstructorInvocation
     staticType: null
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <testLibrary>::@extensionType::_Private::@constructor::new::@formalParameter::i
@@ -1149,12 +1206,11 @@ DotShorthandConstructorInvocation
   isDotShorthand: true
   correspondingParameter: <null>
   staticType: _Private
-''',
-    );
+''');
   }
 
   test_privateExtensionType_sameLibrary_invocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type _Private(int it) {
   static _Private instance() => _Private(0);
 }
@@ -1169,7 +1225,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.singleDotShorthandInvocation, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -1210,7 +1267,7 @@ void main() {
   }
 
   test_privateMixin_sameLibrary_invocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin _Private {
   static _Private instance() => C();
 }
@@ -1226,7 +1283,8 @@ void main() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.singleDotShorthandInvocation, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -1261,7 +1319,7 @@ void main() {
   }
 
   test_typeParameters_inference() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C<T> {
   static C<X> foo<X>(X x) => new C<X>();
   C<U> cast<U>() => new C<U>();
@@ -1272,8 +1330,8 @@ void main() {
 }
 ''');
 
-    var identifier = findNode.singleDotShorthandInvocation;
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.singleDotShorthandInvocation;
+    assertResolvedNodeText(node, r'''
 DotShorthandInvocation
   period: .
   memberName: SimpleIdentifier
@@ -1282,7 +1340,7 @@ DotShorthandInvocation
     staticType: C<X> Function<X>(X)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleStringLiteral
         literal: "String"
     rightParenthesis: )

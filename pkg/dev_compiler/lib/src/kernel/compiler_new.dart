@@ -101,7 +101,7 @@ class SymbolData {
   ///
   /// This mapping is used when generating the symbol information for the
   /// module.
-  final variableIdentifiers = <VariableDeclaration, js_ast.Identifier>{};
+  final variableIdentifiers = <Variable, js_ast.Identifier>{};
 }
 
 /// Compiles a kernel [Component] to a bundle of individual libraries.
@@ -134,7 +134,7 @@ class LibraryBundleCompiler implements old.Compiler {
   Map<Procedure, js_ast.Identifier> get procedureIdentifiers =>
       _symbolData.procedureIdentifiers;
   @override
-  Map<VariableDeclaration, js_ast.Identifier> get variableIdentifiers =>
+  Map<Variable, js_ast.Identifier> get variableIdentifiers =>
       _symbolData.variableIdentifiers;
 
   @override
@@ -333,17 +333,17 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   ///
   /// This mapping is used when generating the symbol information for the
   /// module.
-  Map<VariableDeclaration, js_ast.Identifier> get variableIdentifiers =>
+  Map<Variable, js_ast.Identifier> get variableIdentifiers =>
       _symbolData.variableIdentifiers;
 
   /// Identifiers for kernel variables with an analogous identifier in JS.
   ///
-  /// [VariableDeclaration.name] is not necessarily a safe identifier for JS
+  /// [Variable.name] is not necessarily a safe identifier for JS
   /// transpiled code. The same name can be used in shadowing contexts. We map
   /// each kernel variable to a [js_ast.ScopedId] so that at code emission
   /// time, references that would be shadowed are given a unique name. If there
   /// is no risk of shadowing, the original name will be used.
-  final Map<VariableDeclaration, js_ast.ScopedId> _variableTempIds = {};
+  final Map<Variable, js_ast.ScopedId> _variableTempIds = {};
 
   /// Maps a library URI import, that is not in [_libraries], to the
   /// corresponding Kernel summary module we imported it with.
@@ -357,10 +357,10 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   final Map<Component, String> _summaryToModule;
 
   /// The variable for the current catch clause
-  VariableDeclaration? _rethrowParameter;
+  Variable? _rethrowParameter;
 
   /// Temporary variables mapped to their corresponding JavaScript variable.
-  final _tempVariables = <VariableDeclaration, js_ast.ScopedId>{};
+  final _tempVariables = <Variable, js_ast.ScopedId>{};
 
   /// Let variables collected for the given function.
   List<js_ast.ScopedId>? _letVariables;
@@ -593,6 +593,10 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
 
   /// Imported libraries, and the temporaries used to refer to them.
   final _imports = <Library, js_ast.Identifier>{};
+
+  /// Imported libraries in incremental mode, and the temporaries used to refer
+  /// to them.
+  final _incrementalImports = <Library, js_ast.Identifier>{};
 
   /// Incremental mode for expression compilation.
   ///
@@ -2366,18 +2370,18 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
           namedParameter.name: namedParameter,
       };
       DartType reifyParameter(
-        VariableDeclaration parameter,
+        FunctionParameter parameter,
         DartType fComputedParameter,
       ) => isCovariantParameter(parameter)
           ? _coreTypes.objectNullableRawType
           : fComputedParameter;
       NamedType reifyNamedParameter(
-        VariableDeclaration parameter,
+        NamedParameter parameter,
         NamedType fComputedNamedParameter,
       ) {
-        assert(parameter.name == fComputedNamedParameter.name);
+        assert(parameter.parameterName == fComputedNamedParameter.name);
         return NamedType(
-          parameter.name!,
+          parameter.parameterName,
           reifyParameter(parameter, fComputedNamedParameter.type),
         );
       }
@@ -2398,7 +2402,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
           f.namedParameters.length,
           (index) => reifyNamedParameter(
             f.namedParameters[index],
-            fComputedNamedByName[f.namedParameters[index].name]!,
+            fComputedNamedByName[f.namedParameters[index].parameterName]!,
           ),
         )..sort(),
         typeParameters: fComputed.typeParameters,
@@ -2575,7 +2579,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       if (init is LocalInitializer) {
         // Temporary locals are created when named arguments don't appear at
         // the end of the arguments list.
-        jsInitializers.add(visitVariableDeclaration(init.variable));
+        jsInitializers.add(visitVariable(init.variable));
       } else if (init is RedirectingInitializer) {
         var rtiParam = _requiresRtiForInstantiation(init.target.enclosingClass)
             ? _rtiParam
@@ -2711,7 +2715,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
         if (init is FieldInitializer) {
           body.add(_emitFieldInit(init.field, init.value, init));
         } else if (init is LocalInitializer) {
-          body.add(visitVariableDeclaration(init.variable));
+          body.add(visitVariable(init.variable));
         } else if (init is AssertInitializer) {
           body.add(visitAssertStatement(init.statement));
         }
@@ -3075,7 +3079,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     var positionalParameters = function.positionalParameters;
     for (var i = 0, n = positionalParameters.length; i < n; i++) {
       var param = positionalParameters[i];
-      var jsParam = _emitIdentifier(param.name!);
+      var jsParam = _emitIdentifier(param.parameterName);
       jsParams.add(jsParam);
 
       if (isCovariantParameter(param) &&
@@ -3093,12 +3097,12 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       if (isCovariantParameter(param) &&
           !isCovariantParameter(
             superMemberFunction.namedParameters.firstWhere(
-              (n) => n.name == param.name,
+              (n) => n.parameterName == param.parameterName,
             ),
           )) {
-        var name = _propertyName(param.name!);
+        var name = _propertyName(param.parameterName);
         var paramType = superMethodType.namedParameters.firstWhere(
-          (n) => n.name == param.name,
+          (n) => n.name == param.parameterName,
         );
         body.add(
           js.statement('if (#) #;', [
@@ -4547,6 +4551,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       );
     }
     _incrementalModules.clear();
+    _incrementalImports.clear();
     _privateNames.clear();
     _symbolContainer.setIncrementalMode();
     _incrementalMode = true;
@@ -4618,7 +4623,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     // Import all necessary libraries, including libraries accessed from the
     // current module and libraries accessed from the type table.
     for (var library in _typeTable.incrementalLibraries()) {
-      _setEmitIfIncrementalLibrary(library);
+      _emitLibraryName(library);
     }
     _emitImports(items);
     _emitExportsAsImports(items, _currentLibrary!);
@@ -4794,7 +4799,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   }
 
   js_ast.Parameter _emitParameter(
-    VariableDeclaration node, {
+    Variable node, {
     bool withoutInitializer = false,
   }) {
     var initializer = node.initializer;
@@ -4897,7 +4902,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     _emitCovarianceBoundsCheck(f.typeParameters, body);
 
     void initParameter(
-      VariableDeclaration p,
+      FunctionParameter p,
       js_ast.Identifier jsParam,
       bool isOptional,
     ) {
@@ -4923,7 +4928,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
               isOptional &&
               isConstructorTearOffLowering(f.parent as Procedure) &&
               !p.type.isPotentiallyNullable &&
-              !p.initializer!
+              !p.defaultValue!
                   .getStaticType(_staticTypeContext)
                   .isPotentiallyNonNullable)) {
         var castExpr = _emitCast(jsParam, p.type);
@@ -4949,7 +4954,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       // Parameters will be passed using their real names, not the (possibly
       // renamed) local variable.
       var jsParam = _emitVariableDef(p);
-      var paramName = _propertyName(p.name!);
+      var paramName = _propertyName(p.parameterName);
       var defaultValue = _defaultParamValue(p);
       body.add(
         js.statement('let # = # && # ? #.# : #;', [
@@ -4994,7 +4999,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     return js.statement('if (# == null) #;', [param, call]);
   }
 
-  js_ast.Expression _defaultParamValue(VariableDeclaration p) {
+  js_ast.Expression _defaultParamValue(Variable p) {
     if (p.initializer != null) {
       return _visitExpression(p.initializer!);
     } else {
@@ -5086,8 +5091,8 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       // named argument initialization, and sync* functions also emit locally
       // modified parameters into the function's scope.
       var parameterNames = {
-        for (var p in f.positionalParameters) p.name!,
-        for (var p in f.namedParameters) p.name!,
+        for (var p in f.positionalParameters) p.parameterName,
+        for (var p in f.namedParameters) p.parameterName,
       };
 
       return body.toScopedBlock(parameterNames);
@@ -5475,10 +5480,10 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   @override
   js_ast.Statement visitForStatement(ForStatement node) {
     return _translateLoop(node, () {
-      js_ast.VariableInitialization emitForInitializer(VariableStatement s) =>
+      js_ast.VariableInitialization emitForInitializer(VariableDeclaration d) =>
           js_ast.VariableInitialization(
-            _emitVariableDef(s.variable),
-            _visitInitializer(s.variable.initializer, s.variable.annotations),
+            _emitVariableDef(d.variable),
+            _visitInitializer(d.variable.initializer, d.variable.annotations),
           );
 
       if (node.variables.any(containsFunctionExpression)) {
@@ -5553,7 +5558,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     };
     var prevVariableTempIds = {
       for (var stmt in node.variables)
-        stmt.variable: _emitScopedId('t#_prev_${stmt.variable.name!}'),
+        stmt.variable: _emitScopedId('t#_prev_${stmt.variable.cosmeticName!}'),
     };
     var inits = js_ast.Block([
       // Set init flag to false so the initialization only happens on the first
@@ -5652,8 +5657,8 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
         ]);
       }
 
-      if (node.variable.name != null &&
-          js_ast.variableIsReferenced(node.variable.name!, iterable)) {
+      if (node.variable.cosmeticName != null &&
+          js_ast.variableIsReferenced(node.variable.cosmeticName!, iterable)) {
         var temp = _emitScopedId('iter');
         return js_ast.Block([
           iterable.toVariableDeclaration(temp),
@@ -5914,7 +5919,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   js_ast.Catch? _visitCatch(List<Catch> clauses) {
     if (clauses.isEmpty) return null;
 
-    var caughtError = VariableDeclaration('#e', isSynthesized: true);
+    var caughtError = SyntheticVariable(cosmeticName: '#e');
     var savedRethrow = _rethrowParameter;
     _rethrowParameter = caughtError;
 
@@ -5922,12 +5927,12 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     // don't shadow any names.
     var exceptionParameter =
         (clauses.length == 1 ? clauses[0].exception : null) ??
-        VariableDeclaration('#ex', isSynthesized: true);
+        SyntheticVariable(cosmeticName: '#ex');
 
     var stackTraceParameter =
         (clauses.length == 1 ? clauses[0].stackTrace : null) ??
         (clauses.any((c) => c.stackTrace != null)
-            ? VariableDeclaration('#st', isSynthesized: true)
+            ? SyntheticVariable(cosmeticName: '#st')
             : null);
 
     js_ast.Statement catchBody = js_ast.Throw(_emitVariableRef(caughtError));
@@ -5961,19 +5966,16 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   js_ast.Statement _catchClauseGuard(
     Catch node,
     js_ast.Statement otherwise,
-    VariableDeclaration exceptionParameter,
-    VariableDeclaration? stackTraceParameter,
+    Variable exceptionParameter,
+    Variable? stackTraceParameter,
   ) {
     var body = <js_ast.Statement>[];
     var vars = HashSet<String>();
 
-    void declareVariable(
-      VariableDeclaration? variable,
-      VariableDeclaration? value,
-    ) {
+    void declareVariable(Variable? variable, Variable? value) {
       if (variable == null || value == null) return;
-      vars.add(variable.name!);
-      if (variable.name != value.name) {
+      vars.add(variable.cosmeticName!);
+      if (variable.cosmeticName != value.cosmeticName) {
         body.add(
           js.statement('let # = #', [
             _emitVariableDef(variable),
@@ -6026,7 +6028,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   }
 
   @override
-  js_ast.Statement visitVariableDeclaration(VariableDeclaration node) {
+  js_ast.Statement visitVariable(Variable node) {
     // TODO(jmesserly): casts are sometimes required here.
     // Kernel does not represent these explicitly.
     var v = _emitVariableDef(node);
@@ -6068,9 +6070,9 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   js_ast.Expression visitVariableGet(VariableGet node) {
     var v = node.variable;
     var id = _emitVariableRef(v);
-    if (id.name == v.name) {
+    if (id.name == v.cosmeticName) {
       id = id.withSourceInformation(
-        _variableSpan(node.fileOffset, v.name!.length),
+        _variableSpan(node.fileOffset, v.cosmeticName!.length),
       );
     }
     return id;
@@ -6078,7 +6080,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
 
   /// Detects temporary variables so we can avoid displaying
   /// them in the debugger if needed.
-  bool _isTemporaryVariable(VariableDeclaration v) {
+  bool _isTemporaryVariable(Variable v) {
     // Late local variables are be exposed to the debugger for inspection and
     // evaluation by treating the backing store local variable as a regular
     // non-temporary variable.
@@ -6086,26 +6088,26 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
     if (isLateLoweredLocal(v)) return false;
     return v.isLowered ||
         v.isSynthesized ||
-        v.name == null ||
-        v.name!.startsWith('#');
+        v.cosmeticName == null ||
+        v.cosmeticName!.startsWith('#');
   }
 
   /// Creates a temporary name recognized by the debugger.
   /// Assumes `_isTemporaryVariable(v)`  is true.
-  String? _debuggerFriendlyTemporaryVariableName(VariableDeclaration v) {
+  String? _debuggerFriendlyTemporaryVariableName(Variable v) {
     assert(_isTemporaryVariable(v));
 
     // Show extension 'this' in the debugger.
     // Do not show the rest of temporary variables.
     if (isExtensionThis(v)) {
       return extractLocalNameFromVariable(v);
-    } else if (v.name != null) {
-      return 't\$${v.name}';
+    } else if (v.cosmeticName != null) {
+      return 't\$${v.cosmeticName}';
     }
     return null;
   }
 
-  js_ast.ScopedId _emitVariableRef(VariableDeclaration v) {
+  js_ast.ScopedId _emitVariableRef(Variable v) {
     if (_isTemporaryVariable(v)) {
       var name = _debuggerFriendlyTemporaryVariableName(v);
       name ??= 't\$${_tempVariables.length}';
@@ -6114,7 +6116,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
         () => _emitScopedId(name!, needsCapture: true),
       );
     }
-    var name = v.name!;
+    var name = v.cosmeticName!;
     if (isLateLoweredLocal(v)) {
       // Late local variables are be exposed to the debugger for inspection and
       // evaluation by treating the backing store local variable as a regular
@@ -6131,7 +6133,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   ///
   /// This is similar to [_emitVariableRef] but it also attaches source
   /// location information, so hover will work as expected.
-  js_ast.Identifier _emitVariableDef(VariableDeclaration v) {
+  js_ast.Identifier _emitVariableDef(Variable v) {
     var identifier = _emitVariableRef(v)..sourceInformation = _nodeStart(v);
     variableIdentifiers[v] = identifier;
     return identifier;
@@ -7307,7 +7309,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
         var params = [
           ..._emitTypeFormals(function.typeParameters),
           for (var param in function.positionalParameters)
-            _emitIdentifier(param.name!),
+            _emitIdentifier(param.parameterName),
           if (function.namedParameters.isNotEmpty) _namedArgumentTemp,
         ];
 
@@ -7425,7 +7427,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
         var replacementArguments = node.arguments.positional;
         var replacements = {
           for (var i = 0; i < originalParameters.length; i++)
-            originalParameters[i].accept(cloner) as VariableDeclaration:
+            originalParameters[i].accept(cloner) as Variable:
                 replacementArguments[i],
         };
         // Clone the body using the same cloner to ensure the cloned parameters
@@ -7629,7 +7631,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
       for (var named in node.arguments.named) {
         var name = named.name;
         for (var parameter in target.function.namedParameters) {
-          if (parameter.name == named.name) {
+          if (parameter.parameterName == named.name) {
             var customName = getDartJSInteropJSName(parameter);
             if (customName.isNotEmpty) {
               name = customName;
@@ -8942,7 +8944,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   @override
   js_ast.Expression visitLet(Let node) {
     var v = node.variable;
-    var init = _visitExpression(v.initializer!);
+    var init = _visitExpression(node.value);
     var body = _visitExpression(node.body);
     var temp = _tempVariables.remove(v);
     // TODO(eernst): Remove the following `if` if anonymous-methods is rejected.
@@ -9768,9 +9770,10 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   js_ast.Identifier _emitLibraryName(Library library) {
     _setEmitIfIncrementalLibrary(library);
 
+    var activeImports = _incrementalMode ? _incrementalImports : _imports;
     // It's either one of the libraries in this module, or it's an import.
     return _libraries[library] ??
-        _imports.putIfAbsent(library, () {
+        activeImports.putIfAbsent(library, () {
           if (_isSdkInternalRuntime(library)) return _runtimeLibraryId;
           if (_isDartLibrary(library, '_rti')) return _rtiLibraryId;
           return js_ast.ScopedId(_jsLibraryName(library));
@@ -9779,8 +9782,9 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
 
   /// Emits imports into [items].
   void _emitImports(List<js_ast.ModuleItem> items) {
+    var activeImports = _incrementalMode ? _incrementalImports : _imports;
     var modules = <String, List<Library>>{};
-    for (var import in _imports.keys) {
+    for (var import in activeImports.keys) {
       modules.putIfAbsent(_libraryToModule(import), () => []).add(import);
     }
     // TODO(nshahan): Update this code and the representation of
@@ -9808,7 +9812,10 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
                 js_ast.ImportDeclaration(
                   from: js.string('${library.importUri}'),
                   namedImports: [
-                    js_ast.NameSpecifier(aliasId, asName: _imports[library]),
+                    js_ast.NameSpecifier(
+                      aliasId,
+                      asName: activeImports[library],
+                    ),
                   ],
                 ),
               );
@@ -9816,7 +9823,7 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
               items.add(
                 js_ast.ImportDeclaration(
                   from: js.string('${library.importUri}'),
-                  namedImports: [js_ast.NameSpecifier(_imports[library])],
+                  namedImports: [js_ast.NameSpecifier(activeImports[library])],
                 ),
               );
             }

@@ -479,6 +479,7 @@ struct InstrAttrs {
   M(HashDoubleOp, kNoGC)                                                       \
   M(HashIntegerOp, kNoGC)                                                      \
   M(UnarySmiOp, kNoGC)                                                         \
+  M(UnaryInt32Op, kNoGC)                                                       \
   M(UnaryDoubleOp, kNoGC)                                                      \
   M(CheckStackOverflow, _)                                                     \
   M(SmiToDouble, kNoGC)                                                        \
@@ -1156,12 +1157,16 @@ class Instruction : public ZoneObject {
   PRINT_OPERANDS_TO_SUPPORT
 
 #define DECLARE_INSTRUCTION_TYPE_CHECK(Name, Type)                             \
-  bool Is##Name() const { return (As##Name() != nullptr); }                    \
+  bool Is##Name() const {                                                      \
+    return (As##Name() != nullptr);                                            \
+  }                                                                            \
   Type* As##Name() {                                                           \
     auto const_this = static_cast<const Instruction*>(this);                   \
     return const_cast<Type*>(const_this->As##Name());                          \
   }                                                                            \
-  virtual const Type* As##Name() const { return nullptr; }
+  virtual const Type* As##Name() const {                                       \
+    return nullptr;                                                            \
+  }
 #define INSTRUCTION_TYPE_CHECK(Name, Attrs)                                    \
   DECLARE_INSTRUCTION_TYPE_CHECK(Name, Name##Instr)
 
@@ -1175,7 +1180,9 @@ class Instruction : public ZoneObject {
 #undef INSTRUCTION_TYPE_CHECK
 
 #define DECLARE_INSTRUCTION_TYPE_CHECK(Name, Type)                             \
-  bool Is##Name() const { return (As##Name() != nullptr); }                    \
+  bool Is##Name() const {                                                      \
+    return (As##Name() != nullptr);                                            \
+  }                                                                            \
   Type* As##Name() {                                                           \
     auto const_this = static_cast<const Instruction*>(this);                   \
     return const_cast<Type*>(const_this->As##Name());                          \
@@ -1984,8 +1991,8 @@ class GraphEntryInstr : public BlockEntryWithInitialDefs {
 
   DECLARE_INSTRUCTION(GraphEntry)
 
-  virtual intptr_t PredecessorCount() const { return 0; }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  intptr_t PredecessorCount() const final { return 0; }
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     UNREACHABLE();
     return nullptr;
   }
@@ -2082,8 +2089,8 @@ class JoinEntryInstr : public BlockEntryInstr {
 
   DECLARE_INSTRUCTION(JoinEntry)
 
-  virtual intptr_t PredecessorCount() const { return predecessors_.length(); }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  intptr_t PredecessorCount() const final { return predecessors_.length(); }
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     return predecessors_[index];
   }
 
@@ -2167,10 +2174,10 @@ class TargetEntryInstr : public BlockEntryInstr {
   void set_edge_weight(double weight) { edge_weight_ = weight; }
   void adjust_edge_weight(double scale_factor) { edge_weight_ *= scale_factor; }
 
-  virtual intptr_t PredecessorCount() const {
+  intptr_t PredecessorCount() const final {
     return (predecessor_ == nullptr) ? 0 : 1;
   }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     ASSERT((index == 0) && (predecessor_ != nullptr));
     return predecessor_;
   }
@@ -2221,10 +2228,10 @@ class FunctionEntryInstr : public BlockEntryWithInitialDefs {
 
   DECLARE_INSTRUCTION(FunctionEntry)
 
-  virtual intptr_t PredecessorCount() const {
+  intptr_t PredecessorCount() const final {
     return (graph_entry_ == nullptr) ? 0 : 1;
   }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     ASSERT(index == 0 && graph_entry_ != nullptr);
     return graph_entry_;
   }
@@ -2295,10 +2302,10 @@ class OsrEntryInstr : public BlockEntryWithInitialDefs {
 
   DECLARE_INSTRUCTION(OsrEntry)
 
-  virtual intptr_t PredecessorCount() const {
+  intptr_t PredecessorCount() const final {
     return (graph_entry_ == nullptr) ? 0 : 1;
   }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     ASSERT(index == 0 && graph_entry_ != nullptr);
     return graph_entry_;
   }
@@ -2430,10 +2437,10 @@ class CatchBlockEntryInstr : public BlockEntryWithInitialDefs {
 
   DECLARE_INSTRUCTION(CatchBlockEntry)
 
-  virtual intptr_t PredecessorCount() const {
+  intptr_t PredecessorCount() const final {
     return (predecessor_ == nullptr) ? 0 : 1;
   }
-  virtual BlockEntryInstr* PredecessorAt(intptr_t index) const {
+  BlockEntryInstr* PredecessorAt(intptr_t index) const final {
     ASSERT((index == 0) && (predecessor_ != nullptr));
     return predecessor_;
   }
@@ -7253,7 +7260,7 @@ class StoreIndexedInstr : public TemplateInstruction<3, NoThrow> {
 
 class RecordCoverageInstr : public TemplateInstruction<0, NoThrow> {
  public:
-  RecordCoverageInstr(const Array& coverage_array,
+  RecordCoverageInstr(const TypedData& coverage_array,
                       intptr_t coverage_index,
                       const InstructionSource& source)
       : TemplateInstruction(source),
@@ -7270,7 +7277,7 @@ class RecordCoverageInstr : public TemplateInstruction<0, NoThrow> {
   virtual Instruction* Canonicalize(FlowGraph* flow_graph);
 
 #define FIELD_LIST(F)                                                          \
-  F(const Array&, coverage_array_)                                             \
+  F(const TypedData&, coverage_array_)                                         \
   F(const intptr_t, coverage_index_)                                           \
   F(const TokenPosition, token_pos_)
 
@@ -7446,17 +7453,10 @@ class AllocationInstr : public Definition {
   // or if the input is not stored in the object.
   virtual const Slot* SlotForInput(intptr_t pos) { return nullptr; }
 
-  // Returns the input index that has a corresponding slot which is identical to
-  // the given slot. Returns a negative index if no such input found.
-  intptr_t InputForSlot(const Slot& slot) {
-    for (intptr_t i = 0; i < InputCount(); i++) {
-      auto* const input_slot = SlotForInput(i);
-      if (input_slot != nullptr && input_slot->IsIdentical(slot)) {
-        return i;
-      }
-    }
-    return -1;
-  }
+  // Returns a definition carrying the initial value of the field
+  // corresponding to the given slot in the allocated object and
+  // nullptr if such definition can't be computed.
+  virtual Definition* InitialValueForSlot(FlowGraph* graph, const Slot& slot);
 
   // Returns whether the allocated object has initialized fields and/or payload
   // elements. Override for any subclass that returns an uninitialized object.
@@ -7655,6 +7655,8 @@ class AllocateClosureInstr : public TemplateAllocation<2> {
         return TemplateAllocation::SlotForInput(pos);
     }
   }
+
+  virtual Definition* InitialValueForSlot(FlowGraph* graph, const Slot& slot);
 
   virtual Definition* Canonicalize(FlowGraph* flow_graph);
 
@@ -9200,7 +9202,8 @@ class UnaryIntegerOpInstr : public TemplateDefinition<1, NoThrow, Pure> {
  public:
   UnaryIntegerOpInstr(Token::Kind op_kind, Value* value, intptr_t deopt_id)
       : TemplateDefinition(deopt_id), op_kind_(op_kind) {
-    ASSERT((op_kind == Token::kNEGATE) || (op_kind == Token::kBIT_NOT));
+    ASSERT((op_kind == Token::kNEGATE) || (op_kind == Token::kBIT_NOT) ||
+           (op_kind == Token::kPOPCNT) || (op_kind == Token::kCTZ));
     SetInputAt(0, value);
   }
 
@@ -9214,6 +9217,8 @@ class UnaryIntegerOpInstr : public TemplateDefinition<1, NoThrow, Pure> {
   Token::Kind op_kind() const { return op_kind_; }
 
   virtual Definition* Canonicalize(FlowGraph* flow_graph);
+
+  virtual void InferRange(RangeAnalysis* analysis, Range* range);
 
   virtual bool AttributesEqual(const Instruction& other) const {
     return other.AsUnaryIntegerOp()->op_kind() == op_kind();
@@ -9290,12 +9295,43 @@ class UnaryUint32OpInstr : public UnaryIntegerOpInstr {
   DISALLOW_COPY_AND_ASSIGN(UnaryUint32OpInstr);
 };
 
+class UnaryInt32OpInstr : public UnaryIntegerOpInstr {
+ public:
+  UnaryInt32OpInstr(Token::Kind op_kind, Value* value, intptr_t deopt_id)
+      : UnaryIntegerOpInstr(op_kind, value, deopt_id) {
+    ASSERT(IsSupported(op_kind));
+  }
+
+  virtual bool ComputeCanDeoptimize() const { return false; }
+
+  virtual Representation representation() const { return kUnboxedInt32; }
+
+  virtual Representation RequiredInputRepresentation(intptr_t idx) const {
+    ASSERT(idx == 0);
+    return kUnboxedInt32;
+  }
+
+  static bool IsSupported(Token::Kind op_kind) {
+    return op_kind == Token::kBIT_NOT;
+  }
+
+  DECLARE_INSTRUCTION(UnaryInt32Op)
+
+  DECLARE_EMPTY_SERIALIZATION(UnaryInt32OpInstr, UnaryIntegerOpInstr)
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(UnaryInt32OpInstr);
+};
+
 class UnaryInt64OpInstr : public UnaryIntegerOpInstr {
  public:
   UnaryInt64OpInstr(Token::Kind op_kind, Value* value, intptr_t deopt_id)
       : UnaryIntegerOpInstr(op_kind, value, deopt_id) {
-    ASSERT(op_kind == Token::kBIT_NOT || op_kind == Token::kNEGATE);
+    ASSERT(op_kind == Token::kBIT_NOT || op_kind == Token::kNEGATE ||
+           op_kind == Token::kPOPCNT || op_kind == Token::kCTZ);
   }
+
+  static bool IsSupported(Token::Kind op_kind);
 
   virtual bool ComputeCanDeoptimize() const { return false; }
 
@@ -11178,6 +11214,7 @@ class LoadThreadInstr : public TemplateDefinition<0, NoThrow, Pure> {
   SIMD_BINARY_INTEGER_OP_LIST(M, BINARY_OP, Int32x4)                           \
   SIMD_PER_COMPONENT_XYZW(M, 1, Float32x4Get, (Float32x4), Double)             \
   SIMD_PER_COMPONENT_XYZW(M, 2, Float32x4With, (Double, Float32x4), Float32x4) \
+  SIMD_PER_COMPONENT_XYZW(M, 1, Int32x4Get, (Int32x4), Int32)                  \
   SIMD_PER_COMPONENT_XYZW(M, 1, Int32x4GetFlag, (Int32x4), Bool)               \
   SIMD_PER_COMPONENT_XYZW(M, 2, Int32x4WithFlag, (Int32x4, Bool), Int32x4)     \
   M(1, MASK, Float32x4Shuffle, (Float32x4), Float32x4)                         \
@@ -11211,6 +11248,7 @@ class LoadThreadInstr : public TemplateDefinition<0, NoThrow, Pure> {
   M(1, _, Float64x2Negate, (Float64x2), Float64x2)                             \
   M(1, _, Float32x4Abs, (Float32x4), Float32x4)                                \
   M(1, _, Float64x2Abs, (Float64x2), Float64x2)                                \
+  M(1, _, Int32x4Not, (Int32x4), Int32x4)                                      \
   M(3, _, Float32x4Clamp, (Float32x4, Float32x4, Float32x4), Float32x4)        \
   M(3, _, Float64x2Clamp, (Float64x2, Float64x2, Float64x2), Float64x2)        \
   M(1, _, Float64x2GetX, (Float64x2), Double)                                  \

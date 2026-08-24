@@ -284,14 +284,10 @@ static const char* ImageName(uword vm_instructions,
                              uword isolate_instructions,
                              uword pc,
                              intptr_t* offset) {
-  const Image vm_image(vm_instructions);
-  const Image isolate_image(isolate_instructions);
-  if (vm_image.contains(pc)) {
-    *offset = pc - vm_instructions;
-    return kVmSnapshotInstructionsAsmSymbol;
-  } else if (isolate_image.contains(pc)) {
+  const TextImage isolate_image(isolate_instructions);
+  if (isolate_image.contains(pc)) {
     *offset = pc - isolate_instructions;
-    return kIsolateSnapshotInstructionsAsmSymbol;
+    return kSnapshotTextAsmSymbol;
   } else {
     *offset = 0;
     return "<unknown>";
@@ -335,10 +331,9 @@ void SimulatorDebugger::PrintBacktrace() {
   auto const T = Thread::Current();
   auto const Z = T->zone();
 #if defined(DART_PRECOMPILED_RUNTIME)
-  auto const vm_instructions = reinterpret_cast<uword>(
-      Dart::vm_isolate_group()->source()->snapshot_instructions);
-  auto const isolate_instructions = reinterpret_cast<uword>(
-      T->isolate_group()->source()->snapshot_instructions);
+  const uword vm_instructions = 0;
+  const uword isolate_instructions =
+      reinterpret_cast<uword>(T->isolate_group()->source()->snapshot_text);
   OS::PrintErr("vm_instructions=0x%" Px ", isolate_instructions=0x%" Px "\n",
                vm_instructions, isolate_instructions);
 #else
@@ -829,10 +824,6 @@ Simulator::Simulator() : memory_(FLAG_sim_buffer_memory) {
 
 Simulator::~Simulator() {
   delete[] stack_;
-  Isolate* isolate = Isolate::Current();
-  if (isolate != nullptr) {
-    isolate->set_simulator(nullptr);
-  }
 }
 
 // When the generated code calls an external reference we need to catch that in
@@ -932,14 +923,14 @@ uword Simulator::FunctionForRedirect(uword redirect) {
   return Redirection::FunctionForRedirect(redirect);
 }
 
-// Get the active Simulator for the current isolate.
+// Get the active Simulator for the current thread.
 Simulator* Simulator::Current() {
-  Isolate* isolate = Isolate::Current();
-  Simulator* simulator = isolate->simulator();
+  Thread* thread = Thread::Current();
+  Simulator* simulator = thread->simulator();
   if (simulator == nullptr) {
     NoSafepointScope no_safepoint;
     simulator = new Simulator();
-    isolate->set_simulator(simulator);
+    thread->set_simulator(simulator);
   }
   return simulator;
 }
@@ -1678,7 +1669,7 @@ void Simulator::DoRedirectedCall(Instr* instr) {
   // We can't instrument the runtime.
   memory_.FlushAll();
 
-  ASSERT(Utils::IsAligned(get_register(SPREG), OS::ActivationFrameAlignment()));
+  ASSERT(Utils::IsAligned(get_register(R31), OS::ActivationFrameAlignment()));
 
   SimulatorSetjmpBuffer buffer(this);
   if (!DART_SETJMP(buffer.buffer_)) {
@@ -1822,46 +1813,7 @@ void Simulator::DoRedirectedFfiCall(Instr* instr) {
 #endif
 }
 
-struct CallbackContext {
-  uword integer_arguments[8];
-  uword double_arguments[8];
-  uword r8;
-  uword sp;
-};
-
 #if defined(SIMULATOR_FFI) && defined(HOST_ARCH_ARM64)
-
-extern "C" void DoRedirectedFfiCallback(CallbackContext* ctxt,
-                                        uword trampoline) {
-  // Assumptions in ffi_trampolines_arm64.S
-  COMPILE_ASSERT(sizeof(CallbackContext) == 144);
-  COMPILE_ASSERT(FfiCallbackMetadata::kDoRedirectedFfiCallback == 1);
-#if defined(DART_TARGET_OS_FUCHSIA)
-  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 4 * KB);
-  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 483);
-#elif defined(DART_TARGET_OS_MACOS)
-  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 16 * KB);
-  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 2019);
-#else
-  COMPILE_ASSERT(FfiCallbackMetadata::kPageSize == 64 * KB);
-  COMPILE_ASSERT(FfiCallbackMetadata::NumCallbackTrampolinesPerPage() == 8163);
-#endif
-
-  CallbackMetadata out;
-  Thread* thread = DLRT_GetFfiCallbackMetadata(trampoline, &out);
-  if (thread == nullptr) {
-    // If GetFfiCallbackMetadata returned a null thread, it means that the async
-    // callback was invoked after it was deleted. In this case, do nothing.
-    return;
-  }
-
-  Simulator* sim = Simulator::Current();
-  ASSERT(sim != nullptr);
-  sim->DoRedirectedFfiCallback(thread, ctxt, &out);
-}
-
-#endif  // defined(SIMULATOR_FFI) && defined(HOST_ARCH_ARM64)
-
 // Compare FfiCallbackTrampolineStub.
 void Simulator::DoRedirectedFfiCallback(Thread* thread,
                                         CallbackContext* ctxt,
@@ -1882,9 +1834,11 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
     *--sp = get_register(LR);
     *--sp = get_register(R20);
     *--sp = get_register(R21);
+    *--sp = get_register(R22);
+    *--sp = get_register(R23);
     set_register(nullptr, R31, reinterpret_cast<uword>(sp));
     COMPILE_ASSERT(FfiCallbackMetadata::kNativeCallbackTrampolineStackDelta ==
-                   4);
+                   6);
   }
 
   set_register(nullptr, R0, ctxt->integer_arguments[0]);
@@ -1921,6 +1875,8 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
     // ldp lr, thr, [sp], 16!
     // <drop arguments>
     uword* sp = reinterpret_cast<uword*>(get_register(R31, R31IsSP));
+    set_register(nullptr, R23, *sp++);
+    set_register(nullptr, R22, *sp++);
     set_register(nullptr, R21, *sp++);
     set_register(nullptr, R20, *sp++);
     set_register(nullptr, LR, *sp++);
@@ -1928,12 +1884,13 @@ void Simulator::DoRedirectedFfiCallback(Thread* thread,
     sp += kStackSlotsCopied;
     set_register(nullptr, R31, reinterpret_cast<uword>(sp));
     COMPILE_ASSERT(FfiCallbackMetadata::kNativeCallbackTrampolineStackDelta ==
-                   4);
+                   6);
   }
 
   auto epilogue = reinterpret_cast<void* (*)(Thread*)>(out->epilogue);
   epilogue(thread);
 }
+#endif  // defined(SIMULATOR_FFI) && defined(HOST_ARCH_ARM64)
 
 void Simulator::ClobberVolatileRegisters() {
   // Clear atomic reservation.
@@ -2000,6 +1957,9 @@ void Simulator::DecodeSystem(Instr* instr) {
   if (instr->InstructionBits() == kDMB_ISH) {
     // Format(instr, "dmb ish");
     memory_.FlushAll();
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wtsan"
+#endif
     std::atomic_thread_fence(std::memory_order_seq_cst);
     return;
   }
@@ -2010,9 +1970,11 @@ void Simulator::DecodeSystem(Instr* instr) {
     return;
   }
 
-  if ((instr->Bits(0, 8) == 0x1f) && (instr->Bits(12, 4) == 2) &&
-      (instr->Bits(16, 3) == 3) && (instr->Bits(19, 2) == 0) &&
-      (instr->Bit(21) == 0)) {
+  if (instr->Bits(12, 20) == 0xD5032 && instr->Bits(0, 5) == 0x1f) {
+    // Format(instr, "hint");
+  } else if ((instr->Bits(0, 8) == 0x1f) && (instr->Bits(12, 4) == 2) &&
+             (instr->Bits(16, 3) == 3) && (instr->Bits(19, 2) == 0) &&
+             (instr->Bit(21) == 0)) {
     if (instr->Bits(8, 4) == 0) {
       // Format(instr, "nop");
     } else {
@@ -3340,6 +3302,9 @@ void Simulator::DecodeSIMDThreeSame(Instr* instr) {
       } else if ((U == 1) && (opcode == 0x3)) {
         // Format(instr, "veor 'vd, 'vn, 'vm");
         res = vn_val ^ vm_val;
+      } else if ((U == 1) && (opcode == 0x11)) {
+        // Format(instr, "vceq'vsz 'vd, 'vn, 'vm");
+        res = (vn_val == vm_val) ? 0xffffffff : 0;
       } else if ((U == 0) && (opcode == 0x10)) {
         // Format(instr, "vadd'vsz 'vd, 'vn, 'vm");
         res = vn_val + vm_val;
@@ -3562,6 +3527,21 @@ void Simulator::DecodeSIMDTwoReg(Instr* instr) {
   const VRegister vd = instr->VdField();
   const VRegister vn = instr->VnField();
 
+  if ((U == 0) && (op == 5) && (sz == 0)) {
+    // Format(instr, "vcnt 'vd.{8,16}B, 'vn.{8,16}B");
+    const int lanes = (Q == 1) ? 16 : 8;
+    int64_t vn_bits[2] = {get_vregisterd(vn, 0), get_vregisterd(vn, 1)};
+    int64_t result[2] = {0, 0};
+    uint8_t* in = reinterpret_cast<uint8_t*>(&vn_bits[0]);
+    uint8_t* out = reinterpret_cast<uint8_t*>(&result[0]);
+    for (int i = 0; i < lanes; i++) {
+      out[i] = Utils::CountOneBits32(in[i]);
+    }
+    set_vregisterd(vd, 0, result[0]);
+    set_vregisterd(vd, 1, result[1]);
+    return;
+  }
+
   if (Q != 1) {
     UnimplementedInstruction(instr);
     return;
@@ -3656,6 +3636,32 @@ void Simulator::DecodeSIMDTwoReg(Instr* instr) {
 }
 
 void Simulator::DecodeDPSimd1(Instr* instr) {
+  // UADDLV Hd, Vn.<T> — Advanced SIMD across-vector unsigned add long.
+  // Encoding: 0 Q 1 01110 sz 11000 00011 10 Vn Vd.
+  if ((instr->Bits(24, 5) == 0xE) && (instr->Bit(29) == 1) &&
+      (instr->Bits(17, 5) == 0x18) && (instr->Bits(12, 5) == 0x3) &&
+      (instr->Bits(10, 2) == 0x2)) {
+    const int32_t Q = instr->Bit(30);
+    const int32_t sz = instr->Bits(22, 2);
+    const VRegister vd = instr->VdField();
+    const VRegister vn = instr->VnField();
+    if (sz == 0) {
+      // Format(instr, "vuaddlv 'hd, 'vn.{8,16}B");
+      int64_t vn_bits[2] = {get_vregisterd(vn, 0), get_vregisterd(vn, 1)};
+      uint8_t* in = reinterpret_cast<uint8_t*>(&vn_bits[0]);
+      const int lanes = (Q == 1) ? 16 : 8;
+      uint32_t sum = 0;
+      for (int i = 0; i < lanes; i++) {
+        sum += in[i];
+      }
+      set_vregisterd(vd, 0, static_cast<int64_t>(sum));
+      set_vregisterd(vd, 1, 0);
+      return;
+    }
+    UnimplementedInstruction(instr);
+    return;
+  }
+
   if (instr->IsSIMDCopyOp()) {
     DecodeSIMDCopy(instr);
   } else if (instr->IsSIMDThreeSameOp()) {

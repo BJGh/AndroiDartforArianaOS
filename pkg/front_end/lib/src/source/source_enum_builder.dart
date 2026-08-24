@@ -9,7 +9,6 @@ import 'package:kernel/ast.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/reference_from_index.dart' show IndexedClass;
 import 'package:kernel/src/bounds_checks.dart';
-import 'package:kernel/transformations/flags.dart';
 import 'package:kernel/type_environment.dart';
 
 import '../api_prototype/experimental_flags.dart';
@@ -41,6 +40,7 @@ import '../fragment/method/encoding.dart';
 import '../kernel/body_builder_context.dart';
 import '../kernel/hierarchy/class_member.dart';
 import '../kernel/hierarchy/members_builder.dart';
+import '../kernel/internal_ast.dart';
 import '../kernel/kernel_helper.dart';
 import '../kernel/member_covariance.dart';
 import '../kernel/type_algorithms.dart';
@@ -78,7 +78,7 @@ class SourceEnumBuilder extends SourceClassBuilder {
 
   late final _EnumValuesFieldDeclaration _enumValuesFieldDeclaration;
 
-  SourceEnumBuilder({
+  new({
     required String name,
     required List<SourceNominalParameterBuilder>? typeParameters,
     required TypeBuilder underscoreEnumTypeBuilder,
@@ -239,12 +239,8 @@ class SourceEnumBuilder extends SourceClassBuilder {
       }
     }
     if (needsSynthesizedDefaultConstructor) {
-      bool isClosureContextLoweringEnabled = libraryBuilder
-          .loader
-          .target
-          .backendTarget
-          .flags
-          .isClosureContextLoweringEnabled;
+      bool isClosureContextLoweringEnabled =
+          libraryBuilder.loader.isClosureContextLoweringEnabled;
       ConstructorEncodingStrategy encodingStrategy =
           new ConstructorEncodingStrategy(
             this,
@@ -260,8 +256,7 @@ class SourceEnumBuilder extends SourceClassBuilder {
             nameOffset: null,
             fileOffset: fileOffset,
             fileUri: fileUri,
-            hasImmediatelyDeclaredInitializer: false,
-            isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+            hasImmediatelyDeclaredDefaultValue: false,
           );
 
       FormalParameterBuilder indexFormalParameterBuilder =
@@ -273,8 +268,7 @@ class SourceEnumBuilder extends SourceClassBuilder {
             nameOffset: null,
             fileOffset: fileOffset,
             fileUri: fileUri,
-            hasImmediatelyDeclaredInitializer: false,
-            isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+            hasImmediatelyDeclaredDefaultValue: false,
           );
 
       ConstructorDeclaration constructorDeclaration =
@@ -473,7 +467,7 @@ class _EnumToStringMethodDeclaration implements MethodDeclaration {
   final int _fileOffset;
   late final Procedure _procedure;
 
-  _EnumToStringMethodDeclaration(
+  new(
     this._enumBuilder,
     this._stringTypeBuilder,
     this._underscoreEnumTypeBuilder, {
@@ -513,7 +507,7 @@ class _EnumToStringMethodDeclaration implements MethodDeclaration {
 
     if (toStringSuperTarget != null) {
       // Coverage-ignore-block(suite): Not run.
-      _procedure.transformerFlags |= TransformerFlag.superCalls;
+      _procedure.containsSuperCalls = true;
       _procedure.function.registerFunctionBody(
         new ReturnStatement(
           new SuperMethodInvocation(
@@ -524,6 +518,9 @@ class _EnumToStringMethodDeclaration implements MethodDeclaration {
           ),
         ),
       );
+      // TODO(cstefantsova): Verify that null should be passed for
+      //  scopeProviderInfo in the call below.
+      _procedure.function.registerScopeProviderInfo(null);
     } else {
       ClassBuilder enumClass =
           _underscoreEnumTypeBuilder.declaration as ClassBuilder;
@@ -547,6 +544,9 @@ class _EnumToStringMethodDeclaration implements MethodDeclaration {
           ]),
         ),
       );
+      // TODO(cstefantsova): Verify that null should be passed for
+      //  scopeProviderInfo in the call below.
+      _procedure.function.registerScopeProviderInfo(null);
     }
   }
 
@@ -580,7 +580,7 @@ class _EnumToStringMethodDeclaration implements MethodDeclaration {
           )
           ..fileOffset = _fileOffset
           ..fileEndOffset = _fileOffset
-          ..transformerFlags |= TransformerFlag.superCalls;
+          ..containsSuperCalls = true;
     f(kind: BuiltMemberKind.Method, member: _procedure);
   }
 
@@ -649,7 +649,7 @@ class _EnumValuesFieldDeclaration
 
   final TypeBuilder _typeBuilder;
 
-  _EnumValuesFieldDeclaration(this._sourceEnumBuilder, this._typeBuilder);
+  new(this._sourceEnumBuilder, this._typeBuilder);
 
   @override
   UriOffsetLength get uriOffset =>
@@ -681,9 +681,9 @@ class _EnumValuesFieldDeclaration
   }
 
   @override
-  List<Initializer> buildInitializer(
+  List<InternalInitializer> buildInitializer(
     int fileOffset,
-    Expression value, {
+    InternalExpression value, {
     required bool isSynthetic,
   }) {
     throw new UnsupportedError('${runtimeType}.buildInitializer');
@@ -924,7 +924,7 @@ class _EnumValuesClassMember implements ClassMember {
 
   Covariance? _covariance;
 
-  _EnumValuesClassMember(this._builder, this.uriOffset);
+  new(this._builder, this.uriOffset);
 
   @override
   bool get forSetter => false;

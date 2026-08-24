@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../dart/resolution/node_text_expectations.dart';
@@ -19,16 +18,15 @@ main() {
 @reflectiveTest
 class InvalidCodeTest extends ParserDiagnosticsTest {
   void test_const_mistyped() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 List<String> fruits = cont <String>['apples', 'bananas', 'pears'];
+//                                ^
+// [diag.equalityCannotBeEqualityOperand] A comparison expression can't be an operand of another comparison expression.
 ''');
-    parseResult.assertErrors([
-      error(diag.equalityCannotBeEqualityOperand, 34, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -43,7 +41,27 @@ CompilationUnit
           VariableDeclaration
             name: fruits
             equals: =
-            initializer: BinaryExpression
+            initializer2: BinaryOperatorInvocation
+              leftOperand: BinaryOperatorInvocation
+                leftOperand: SimpleIdentifier
+                  token: cont
+                operator: <
+                rightOperand: SimpleIdentifier
+                  token: String
+                binaryOperator: lessThan
+              operator: >
+              rightOperand: ListLiteral
+                leftBracket: [
+                elements2
+                  SimpleStringLiteral
+                    literal: 'apples'
+                  SimpleStringLiteral
+                    literal: 'bananas'
+                  SimpleStringLiteral
+                    literal: 'pears'
+                rightBracket: ]
+              binaryOperator: greaterThan
+            initializer(v1): BinaryExpression
               leftOperand: BinaryExpression
                 leftOperand: SimpleIdentifier
                   token: cont
@@ -66,16 +84,15 @@ CompilationUnit
   }
 
   void test_default_asVariableName() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const default = const Object();
+//    ^^^^^^^
+// [diag.expectedIdentifierButGotKeyword] 'default' can't be used as an identifier because it's a keyword.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 6, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -83,7 +100,15 @@ CompilationUnit
           VariableDeclaration
             name: default
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: const
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  name: Object
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: const
               constructorName: ConstructorName
                 type: NamedType
@@ -96,16 +121,17 @@ CompilationUnit
   }
 
   void test_expressionInPlaceOfTypeName() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   return <g('')>[0, 1, 2];
+//        ^
+// [diag.expectedToken] Expected to find '>'.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 16, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -118,7 +144,7 @@ CompilationUnit
             statements
               ReturnStatement
                 returnKeyword: return
-                expression: ListLiteral
+                expression2: ListLiteral
                   typeArguments: TypeArgumentList
                     leftBracket: <
                     arguments
@@ -126,7 +152,7 @@ CompilationUnit
                         name: g
                     rightBracket: >
                   leftBracket: [
-                  elements
+                  elements2
                     IntegerLiteral
                       literal: 0
                     IntegerLiteral
@@ -140,16 +166,17 @@ CompilationUnit
   }
 
   void test_expressionInPlaceOfTypeName2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   return <test('', (){})>[0, 1, 2];
+//        ^^^^
+// [diag.expectedToken] Expected to find '>'.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 16, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -162,7 +189,7 @@ CompilationUnit
             statements
               ReturnStatement
                 returnKeyword: return
-                expression: ListLiteral
+                expression2: ListLiteral
                   typeArguments: TypeArgumentList
                     leftBracket: <
                     arguments
@@ -170,7 +197,7 @@ CompilationUnit
                         name: test
                     rightBracket: >
                   leftBracket: [
-                  elements
+                  elements2
                     IntegerLiteral
                       literal: 0
                     IntegerLiteral
@@ -184,16 +211,17 @@ CompilationUnit
   }
 
   void test_functionInPlaceOfTypeName() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   return <test('', (){});>[0, 1, 2];
+//        ^^^^
+// [diag.expectedToken] Expected to find '>'.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 16, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -206,7 +234,7 @@ CompilationUnit
             statements
               ReturnStatement
                 returnKeyword: return
-                expression: ListLiteral
+                expression2: ListLiteral
                   typeArguments: TypeArgumentList
                     leftBracket: <
                     arguments
@@ -214,7 +242,7 @@ CompilationUnit
                         name: test
                     rightBracket: >
                   leftBracket: [
-                  elements
+                  elements2
                     IntegerLiteral
                       literal: 0
                     IntegerLiteral
@@ -228,19 +256,18 @@ CompilationUnit
   }
 
   void test_with_asArgumentName() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {}
 g() {
   f(with: 3);
+//  ^^^^
+// [diag.expectedIdentifierButGotKeyword] 'with' can't be used as an identifier because it's a keyword.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 17, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -262,16 +289,16 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: MethodInvocation
+                expression2: MethodInvocation
                   methodName: SimpleIdentifier
                     token: f
                   argumentList: ArgumentList
                     leftParenthesis: (
-                    arguments
+                    arguments2
                       NamedArgument
                         name: with
                         colon: :
-                        argumentExpression: IntegerLiteral
+                        argumentExpression2: IntegerLiteral
                           literal: 3
                     rightParenthesis: )
                 semicolon: ;
@@ -280,20 +307,34 @@ CompilationUnit
   }
 
   void test_with_asParameterName() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f({int with: 0}) {}
+//     ^^^^
+// [diag.expectedIdentifierButGotKeyword] 'with' can't be used as an identifier because it's a keyword.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 7, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          delimitedFormalParameters: DelimitedFormalParameters
+            leftDelimiter: {
+            formalParameters
+              RegularFormalParameter
+                type: NamedType
+                  name: int
+                name: with
+                defaultClause: FormalParameterDefaultClause
+                  separator: :
+                  value2: IntegerLiteral
+                    literal: 0
+            rightDelimiter: }
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           leftDelimiter: {
           parameter: RegularFormalParameter
@@ -317,22 +358,24 @@ CompilationUnit
 @reflectiveTest
 class MisplacedCodeTest extends ParserDiagnosticsTest {
   void test_const_mistyped() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var allValues = [];
 allValues.forEach((enum) {});
+// [diag.missingFunctionParameters][column 1][length 9] Functions must have an explicit list of parameters.
+//       ^
+// [diag.missingFunctionBody] A function body must be provided.
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
+//                ^
+// [diag.missingIdentifier] Expected an identifier.
+//                 ^^^^
+// [diag.expectedIdentifierButGotKeyword] 'enum' can't be used as an identifier because it's a keyword.
+//                       ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingFunctionParameters, 20, 9),
-      error(diag.missingFunctionBody, 29, 1),
-      error(diag.expectedExecutable, 29, 1),
-      error(diag.expectedIdentifierButGotKeyword, 39, 4),
-      error(diag.missingIdentifier, 38, 1),
-      error(diag.expectedToken, 45, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -340,7 +383,7 @@ CompilationUnit
           VariableDeclaration
             name: allValues
             equals: =
-            initializer: ListLiteral
+            initializer2: ListLiteral
               leftBracket: [
               rightBracket: ]
       semicolon: ;
@@ -358,6 +401,24 @@ CompilationUnit
       name: forEach
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: <empty> <synthetic>
+              functionTypedSuffix: FunctionTypedFormalParameterSuffix
+                formalParameters: FormalParameterList
+                  leftParenthesis: (
+                  requiredPositionalFormalParameters
+                    RegularFormalParameter
+                      name: enum
+                  rightParenthesis: )
+                formalParameters(v1): FormalParameterList
+                  leftParenthesis: (
+                  parameter: RegularFormalParameter
+                    name: enum
+                  rightParenthesis: )
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: <empty> <synthetic>

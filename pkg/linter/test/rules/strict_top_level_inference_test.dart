@@ -606,7 +606,7 @@ class C {
 ''');
   }
 
-  test_instanceOperator_parameter() async {
+  test_instanceOperator_binary_parameter() async {
     await assertDiagnostics(
       r'''
 class C {
@@ -617,7 +617,7 @@ class C {
     );
   }
 
-  test_instanceOperator_parameter_typed() async {
+  test_instanceOperator_binary_parameter_typed() async {
     await assertNoDiagnostics(r'''
 class C {
   void operator +(int p1) {}
@@ -625,7 +625,7 @@ class C {
 ''');
   }
 
-  test_instanceOperator_returnType() async {
+  test_instanceOperator_binary_returnType() async {
     await assertDiagnostics(
       r'''
 class C {
@@ -636,10 +636,34 @@ class C {
     );
   }
 
-  test_instanceOperator_returnType_typed() async {
+  test_instanceOperator_binary_returnType_typed() async {
     await assertNoDiagnostics(r'''
 class C {
   void operator +(int p1) {}
+}
+''');
+  }
+
+  test_instanceOperator_indexAssignment_parameterType() async {
+    await assertNoDiagnostics(r'''
+class C {
+  void operator []=(int i, c) {}
+}
+''');
+  }
+
+  test_instanceOperator_indexAssignment_parameterType_typed() async {
+    await assertNoDiagnostics(r'''
+class C {
+  void operator []=(int i, C c) {}
+}
+''');
+  }
+
+  test_instanceOperator_indexAssignment_returnType() async {
+    await assertNoDiagnostics(r'''
+class C {
+  operator []=(int i, C c) {}
 }
 ''');
   }
@@ -691,8 +715,24 @@ void f() {
   }
 
   test_primaryConstructorParameter_named_declaring_final() async {
-    await assertDiagnosticsFromMarkdown(r'''
+    await assertDiagnosticsFromMarkup(r'''
 class C({final [!p1!]});
+''');
+  }
+
+  test_primaryConstructorParameter_named_declaring_final_typeFromDefaultValue() async {
+    await assertNoDiagnostics(r'''
+class C({final p1 = 0});
+''');
+  }
+
+  test_primaryConstructorParameter_named_declaring_final_typeFromOverride() async {
+    await assertNoDiagnostics(r'''
+abstract class A {
+  int get p1;
+}
+
+class C({required final p1}) implements A {}
 ''');
   }
 
@@ -703,25 +743,25 @@ class C({required int p1});
   }
 
   test_primaryConstructorParameter_named_declaring_var() async {
-    await assertDiagnosticsFromMarkdown(r'''
+    await assertDiagnosticsFromMarkup(r'''
 class C({var [!p1!]});
 ''');
   }
 
   test_primaryConstructorParameter_positional() async {
-    await assertDiagnosticsFromMarkdown(r'''
+    await assertDiagnosticsFromMarkup(r'''
 class C([!p1!]);
 ''');
   }
 
   test_primaryConstructorParameter_positional_declaring_final() async {
-    await assertDiagnosticsFromMarkdown(r'''
+    await assertDiagnosticsFromMarkup(r'''
 class C(final [!p1!]);
 ''');
   }
 
   test_primaryConstructorParameter_positional_declaring_var() async {
-    await assertDiagnosticsFromMarkdown(r'''
+    await assertDiagnosticsFromMarkup(r'''
 class C(var [!p1!]);
 ''');
   }
@@ -733,17 +773,14 @@ class C(int p1);
   }
 
   test_reflectiveTest_nonTest() async {
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 @reflectiveTest
 class ReflectiveTest {
-  foo() {}
+  [!foo!]() {}
 }
-''',
-      [lint(111, 3)],
-    );
+''');
   }
 
   test_reflectiveTest_soloTest() async {
@@ -1012,13 +1049,10 @@ void m(int p1) {}
   }
 
   test_topLevelFunction_parameter_positional_var() async {
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 // @dart = 3.10
-void m(var p1) {}
-''',
-      [lint(27, 2)],
-    );
+void m(var [!p1!]) {}
+''');
   }
 
   test_topLevelFunction_returnType() async {
@@ -1117,16 +1151,13 @@ class C {
   }
 
   test_wildcardVariable_constructorParameter_preWildcards() async {
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 // @dart = 3.4
 // (pre wildcard-variables)
 class C {
-  C(_) {}
+  C([!_!]) {}
 }
-''',
-      [lint(57, 1)],
-    );
+''');
   }
 
   test_wildcardVariable_function() async {
@@ -1136,14 +1167,11 @@ void m(_) {}
   }
 
   test_wildcardVariable_function_preWildcards() async {
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 // @dart = 3.4
 // (pre wildcard-variables)
-void m(_) {}
-''',
-      [lint(50, 1)],
-    );
+void m([!_!]) {}
+''');
   }
 
   test_wildcardVariable_method() async {
@@ -1155,15 +1183,12 @@ class C {
   }
 
   test_wildcardVariable_method_preWilcards() async {
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 // @dart = 3.4
 // (pre wildcard-variables)
 class C {
-  void m(_) {}
+  void m([!_!]) {}
 }
-''',
-      [lint(62, 1)],
-    );
+''');
   }
 }

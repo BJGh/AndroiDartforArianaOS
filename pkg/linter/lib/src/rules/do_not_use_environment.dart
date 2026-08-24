@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Do not use environment declared variables.';
 
 class DoNotUseEnvironment extends AnalysisRule {
-  DoNotUseEnvironment()
-    : super(name: LintNames.do_not_use_environment, description: _desc);
+  new() : super(name: LintNames.do_not_use_environment, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.doNotUseEnvironment;
@@ -33,11 +32,7 @@ class DoNotUseEnvironment extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void reportIfUsingEnvironment(
     AstNode node,
     String constructorName,

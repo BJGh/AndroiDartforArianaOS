@@ -18,7 +18,7 @@ main() {
 class VariableDeclarationStatementResolutionTest
     extends PubPackageResolutionTest {
   test_initializer_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     final a = super;
@@ -30,7 +30,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleVariableDeclarationStatement;
+    var node = result.findNode.singleVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 VariableDeclarationStatement
   variables: VariableDeclarationList
@@ -39,7 +39,7 @@ VariableDeclarationStatement
       VariableDeclaration
         name: a
         equals: =
-        initializer: SuperExpression
+        initializer2: SuperExpression
           superKeyword: super
           staticType: A
         declaredFragment: isFinal isPublic a@33
@@ -50,7 +50,7 @@ VariableDeclarationStatement
   }
 
   test_initializer_this() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     final a = this;
@@ -60,7 +60,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleVariableDeclarationStatement;
+    var node = result.findNode.singleVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 VariableDeclarationStatement
   variables: VariableDeclarationList
@@ -69,7 +69,7 @@ VariableDeclarationStatement
       VariableDeclaration
         name: a
         equals: =
-        initializer: ThisExpression
+        initializer2: ThisExpression
           thisKeyword: this
           staticType: A
         declaredFragment: isFinal isPublic a@33

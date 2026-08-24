@@ -26,7 +26,7 @@ namespace compiler {
 #define EXPECT_DISASSEMBLY_NOT_WINDOWS_ENDS_WITH(expected)
 #else
 #define EXPECT_DISASSEMBLY(expected)                                           \
-  EXPECT_STREQ(expected, test->RelativeDisassembly())
+  EXPECT_STREQ_NO_PREFIX_SUFFIX(expected, test->RelativeDisassembly())
 #define EXPECT_DISASSEMBLY_ENDS_WITH(expected_arg)                             \
   char* disassembly = test->RelativeDisassembly();                             \
   const char* expected = expected_arg;                                         \
@@ -732,6 +732,31 @@ ASSEMBLER_TEST_RUN(Lzcnt, test) {
       "movl rcx,0xf0\n"
       "lzcntq rcx,rcx\n"
       "addq rax,rcx\n"
+      "ret\n");
+}
+
+ASSEMBLER_TEST_GENERATE(RepBsf, assembler) {
+  __ movq(RCX, Immediate(0));
+  __ LoadImmediate(RAX, Immediate(64));
+  __ rep_bsfq(RAX, RCX);
+  __ movq(RCX, Immediate(0xFF00));
+  __ LoadImmediate(RDX, Immediate(64));
+  __ rep_bsfq(RDX, RCX);
+  __ addq(RAX, RDX);
+  __ ret();
+}
+
+ASSEMBLER_TEST_RUN(RepBsf, test) {
+  typedef int64_t (*RepBsfCode)();
+  EXPECT_EQ(72, reinterpret_cast<RepBsfCode>(test->entry())());
+  EXPECT_DISASSEMBLY(
+      "movl rcx,0\n"
+      "movl rax,0x40\n"
+      "tzcntq rax,rcx\n"
+      "movl rcx,0xff00\n"
+      "movl rdx,0x40\n"
+      "tzcntq rdx,rcx\n"
+      "addq rax,rdx\n"
       "ret\n");
 }
 
@@ -5289,6 +5314,45 @@ ASSEMBLER_TEST_RUN(Pxor, test) {
       "ret\n");
 }
 
+ASSEMBLER_TEST_GENERATE(Pcmpeqd, assembler) {
+  // Comparing a register with itself: every lane is equal -> all ones.
+  __ pcmpeqd(XMM0, XMM0);
+  // Collect the four lane sign bits; all set -> 0xF.
+  __ movmskps(RAX, XMM0);
+  __ ret();
+}
+
+ASSEMBLER_TEST_RUN(Pcmpeqd, test) {
+  typedef intptr_t (*PcmpeqdCode)();
+  intptr_t res = reinterpret_cast<PcmpeqdCode>(test->entry())();
+  EXPECT_EQ(0xF, res);
+  EXPECT_DISASSEMBLY(
+      "pcmpeqd xmm0,xmm0\n"
+      "movmskps rax,xmm0\n"
+      "ret\n");
+}
+
+ASSEMBLER_TEST_GENERATE(Ptest, assembler) {
+  // Zero vector: ptest sets ZF=1, so setcc(EQUAL) yields 1.
+  __ xorps(XMM0, XMM0);
+  __ ptest(XMM0, XMM0);
+  __ setcc(EQUAL, ByteRegisterOf(RAX));
+  __ movzxb(RAX, RAX);
+  __ ret();
+}
+
+ASSEMBLER_TEST_RUN(Ptest, test) {
+  typedef intptr_t (*PtestCode)();
+  intptr_t res = reinterpret_cast<PtestCode>(test->entry())();
+  EXPECT_EQ(1, res);
+  EXPECT_DISASSEMBLY(
+      "xorps xmm0,xmm0\n"
+      "ptest xmm0,xmm0\n"
+      "setz al\n"
+      "movzxbq rax,rax\n"
+      "ret\n");
+}
+
 ASSEMBLER_TEST_GENERATE(SquareRootDouble, assembler) {
   __ sqrtsd(XMM0, XMM0);
   __ ret();
@@ -6560,6 +6624,44 @@ intptr_t RegRegImmTests::Asr(intptr_t value, intptr_t shift, OperandSize sz) {
   // For non-word sizes, the result is always zero extended to reduce
   // instruction count.
   return ZeroExtendValue(SignExtendValue(value, sz) >> shift, sz);
+}
+
+ASSEMBLER_TEST_GENERATE(TestEndbr, assembler) {
+  __ endbr64();
+  __ ret();
+}
+
+ASSEMBLER_TEST_RUN(TestEndbr, test) {
+  typedef int (*TestNop)();
+  reinterpret_cast<TestNop>(test->payload_start())();
+  EXPECT_DISASSEMBLY(
+      "endbr64\n"
+      "ret\n");
+}
+
+static constexpr intptr_t kTestNotrackOffset = 4;
+
+ASSEMBLER_TEST_GENERATE(TestNotrack, assembler) {
+  // notrack prefix makes the indirect call valid even though the target doesn't
+  // have an endbr.
+  __ notrack();
+  __ jmp(CallingConventions::kArg1Reg);
+  __ int3();
+
+  ASSERT_EQUAL(__ CodeSize(), kTestNotrackOffset);
+  __ LoadImmediate(RAX, 42);
+  __ ret();
+}
+
+ASSEMBLER_TEST_RUN(TestNotrack, test) {
+  typedef intptr_t (*TestNotrack)(intptr_t);
+  EXPECT_EQ(42, reinterpret_cast<TestNotrack>(test->payload_start())(
+                    test->payload_start() + kTestNotrackOffset));
+  EXPECT_DISASSEMBLY_NOT_WINDOWS(
+      "notrack jmp rdi\n"
+      "int3\n"
+      "movl rax,0x2a\n"
+      "ret\n");
 }
 
 }  // namespace compiler

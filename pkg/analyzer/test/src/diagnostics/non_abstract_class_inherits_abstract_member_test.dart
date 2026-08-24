@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -126,7 +125,11 @@ class C extends B {}
   }
 
   test_augment_withClause_crossFile_error_nonAbstractClassInheritsAbstractMember() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 mixin M {
@@ -134,20 +137,15 @@ mixin M {
 }
 
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+//    ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'M.foo'.
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class A with M {}
-''');
-
-    await assertErrorsInFile2(a, [
-      error(diag.nonAbstractClassInheritsAbstractMemberOne, 48, 1),
-    ]);
-    await assertErrorsInFile2(b, [
-      error(diag.nonAbstractClassInheritsAbstractMemberOne, 33, 1),
-    ]);
+''',
+    });
   }
 
   test_augment_withClause_sameFile_error_nonAbstractClassInheritsAbstractMember() async {
@@ -161,8 +159,56 @@ class A {}
 // [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'M.foo'.
 
 augment class A with M {}
-//            ^
-// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'M.foo'.
+''');
+  }
+
+  test_class_abstract_implementsClause_method() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+abstract class B implements A {}
+''');
+  }
+
+  test_class_concrete_implementsClause_method() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+class B implements A {}
+//    ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+''');
+  }
+
+  test_class_concrete_implementsClause_method_hasClassAugmentation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+class B implements A {}
+//    ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+
+augment class B {}
+''');
+  }
+
+  test_class_concrete_implementsClause_method_hasClassAugmentation_withImplementsClause() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+class B {}
+//    ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+
+augment class B implements A {}
 ''');
   }
 
@@ -185,7 +231,7 @@ class D extends C {}
   test_classTypeAlias_interface() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class M {}
 abstract class A {}
 abstract class I {
@@ -198,7 +244,7 @@ abstract class B = A with M implements I;
   test_classTypeAlias_mixin() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class M {
   m();
 }
@@ -210,7 +256,7 @@ abstract class B = A with M;
   test_classTypeAlias_superclass() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class M {}
 abstract class A {
   m();
@@ -244,6 +290,52 @@ enum E with M {
 // [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'getter M.foo'.
   v;
 }
+''');
+  }
+
+  test_enum_implementsClause_method() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+enum B implements A {
+//   ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+  v;
+}
+''');
+  }
+
+  test_enum_implementsClause_method_hasEnumAugmentation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+enum B implements A {
+//   ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+  v;
+}
+
+augment enum B {}
+''');
+  }
+
+  test_enum_implementsClause_method_hasEnumAugmentation_withImplementsClause() async {
+    await resolveTestCodeWithDiagnostics(r'''
+abstract class A {
+  void foo();
+}
+
+enum B {
+//   ^
+// [diag.nonAbstractClassInheritsAbstractMemberOne] Missing concrete implementation of 'A.foo'.
+  v;
+}
+
+augment enum B implements A {}
 ''');
   }
 
@@ -408,7 +500,7 @@ class C extends A {
   test_mixin_concreteGetter() async {
     // issue 17034
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class A {
   var a;
 }
@@ -422,7 +514,7 @@ class C extends B {}
 
   test_mixin_concreteMethod() async {
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class A {
   m() {}
 }
@@ -436,7 +528,7 @@ class C extends B {}
 
   test_mixin_concreteSetter() async {
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class A {
   var a;
 }
@@ -472,7 +564,7 @@ class B extends A {
 
   test_noSuchMethod_mixin() async {
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class A {
   noSuchMethod(v) => '';
 }
@@ -496,7 +588,7 @@ class B extends A {
   test_one_classTypeAlias_interface() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class M {}
 abstract class A {}
 abstract class I {
@@ -511,7 +603,7 @@ class B = A with M implements I;
   test_one_classTypeAlias_mixin() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class M {
   m();
 }
@@ -525,7 +617,7 @@ class B = A with M;
   test_one_classTypeAlias_superclass() async {
     // issue 15979
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class M {}
 abstract class A {
   m();
@@ -643,7 +735,7 @@ class C implements A, B {
   test_one_mixinInherits_getter() async {
     // issue 15001
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class A { get g1; get g2; }
 abstract class B implements A { get g1 => 1; }
 class C extends Object with B {}
@@ -655,7 +747,7 @@ class C extends Object with B {}
   test_one_mixinInherits_method() async {
     // issue 15001
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class A { m1(); m2(); }
 abstract class B implements A { m1() => 1; }
 class C extends Object with B {}
@@ -667,7 +759,7 @@ class C extends Object with B {}
   test_one_mixinInherits_setter() async {
     // issue 15001
     await resolveTestCodeWithDiagnostics('''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 abstract class A { set s1(v); set s2(v); }
 abstract class B implements A { set s1(v) {} }
 class C extends Object with B {}
@@ -779,7 +871,7 @@ class C implements I {
 
   test_overridesConcreteMethodInObject() async {
     await resolveTestCodeWithDiagnostics(r'''
-//@dart=2.19
+// %before-language-feature: class-modifiers
 class A {
   String toString([String prefix = '']) => '${prefix}Hello';
 }

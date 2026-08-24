@@ -15,8 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid relative imports for files in `lib/`.';
 
 class AlwaysUsePackageImports extends AnalysisRule {
-  AlwaysUsePackageImports()
-    : super(name: LintNames.always_use_package_imports, description: _desc);
+  new() : super(name: LintNames.always_use_package_imports, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.alwaysUsePackageImports;
@@ -40,11 +39,7 @@ class AlwaysUsePackageImports extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   bool isRelativeImport(ImportDirective node) {
     var uriContent = node.uri.stringValue;
     if (uriContent != null) {

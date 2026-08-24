@@ -6,6 +6,9 @@
 // To regenerate the file, use the script
 // "pkg/analysis_server/tool/spec/generate_files".
 
+// ignore_for_file: unnecessary_ignore, duplicate_ignore
+// ignore_for_file: unnecessary_type_name_in_constructor
+
 /// Convenience methods for running integration tests.
 library;
 
@@ -71,9 +74,8 @@ abstract class IntegrationTest {
   Future<void> sendServerSetSubscriptions(
     List<ServerService> subscriptions,
   ) async {
-    var params = ServerSetSubscriptionsParams(
-      subscriptions,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ServerSetSubscriptionsParams(subscriptions)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('server.setSubscriptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -92,9 +94,8 @@ abstract class IntegrationTest {
   ///
   ///   The id of the request that should be cancelled.
   Future<void> sendServerCancelRequest(String id) async {
-    var params = ServerCancelRequestParams(
-      id,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ServerCancelRequestParams(id)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('server.cancelRequest', params);
     outOfTestExpect(result, isNull);
   }
@@ -176,9 +177,8 @@ abstract class IntegrationTest {
   ///
   ///   The URL to be opened.
   Future<void> sendServerOpenUrlRequest(String url) async {
-    var params = ServerOpenUrlRequestParams(
-      url,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ServerOpenUrlRequestParams(url)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('server.openUrlRequest', params);
     outOfTestExpect(result, isNull);
   }
@@ -380,9 +380,8 @@ abstract class IntegrationTest {
   ///
   ///   The errors associated with the file.
   Future<AnalysisGetErrorsResult> sendAnalysisGetErrors(String file) async {
-    var params = AnalysisGetErrorsParams(
-      file,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisGetErrorsParams(file)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.getErrors', params);
     var decoder = ResponseDecoder(null);
     return AnalysisGetErrorsResult.fromJson(
@@ -616,9 +615,8 @@ abstract class IntegrationTest {
   Future<AnalysisGetReachableSourcesResult> sendAnalysisGetReachableSources(
     String file,
   ) async {
-    var params = AnalysisGetReachableSourcesParams(
-      file,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisGetReachableSourcesParams(file)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.getReachableSources', params);
     var decoder = ResponseDecoder(null);
     return AnalysisGetReachableSourcesResult.fromJson(
@@ -780,9 +778,8 @@ abstract class IntegrationTest {
   Future<void> sendAnalysisSetGeneralSubscriptions(
     List<GeneralAnalysisService> subscriptions,
   ) async {
-    var params = AnalysisSetGeneralSubscriptionsParams(
-      subscriptions,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisSetGeneralSubscriptionsParams(subscriptions)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.setGeneralSubscriptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -811,9 +808,8 @@ abstract class IntegrationTest {
   ///
   ///   The files that are to be a priority for analysis.
   Future<void> sendAnalysisSetPriorityFiles(List<String> files) async {
-    var params = AnalysisSetPriorityFilesParams(
-      files,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisSetPriorityFilesParams(files)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.setPriorityFiles', params);
     outOfTestExpect(result, isNull);
   }
@@ -851,9 +847,8 @@ abstract class IntegrationTest {
   Future<void> sendAnalysisSetSubscriptions(
     Map<AnalysisService, List<String>> subscriptions,
   ) async {
-    var params = AnalysisSetSubscriptionsParams(
-      subscriptions,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisSetSubscriptionsParams(subscriptions)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.setSubscriptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -877,9 +872,8 @@ abstract class IntegrationTest {
   Future<AnalysisUpdateContentResult> sendAnalysisUpdateContent(
     Map<String, Object> files,
   ) async {
-    var params = AnalysisUpdateContentParams(
-      files,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisUpdateContentParams(files)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.updateContent', params);
     var decoder = ResponseDecoder(null);
     return AnalysisUpdateContentResult.fromJson(
@@ -907,9 +901,8 @@ abstract class IntegrationTest {
   // ignore: provide_deprecation_message
   @deprecated
   Future<void> sendAnalysisUpdateOptions(AnalysisOptions options) async {
-    var params = AnalysisUpdateOptionsParams(
-      options,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalysisUpdateOptionsParams(options)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analysis.updateOptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -1350,9 +1343,8 @@ abstract class IntegrationTest {
   Future<void> sendCompletionRegisterLibraryPaths(
     List<LibraryPathSet> paths,
   ) async {
-    var params = CompletionRegisterLibraryPathsParams(
-      paths,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = CompletionRegisterLibraryPathsParams(paths)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('completion.registerLibraryPaths', params);
     outOfTestExpect(result, isNull);
   }
@@ -1523,9 +1515,8 @@ abstract class IntegrationTest {
   Future<SearchFindMemberDeclarationsResult> sendSearchFindMemberDeclarations(
     String name,
   ) async {
-    var params = SearchFindMemberDeclarationsParams(
-      name,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = SearchFindMemberDeclarationsParams(name)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('search.findMemberDeclarations', params);
     var decoder = ResponseDecoder(null);
     return SearchFindMemberDeclarationsResult.fromJson(
@@ -1558,9 +1549,8 @@ abstract class IntegrationTest {
   Future<SearchFindMemberReferencesResult> sendSearchFindMemberReferences(
     String name,
   ) async {
-    var params = SearchFindMemberReferencesParams(
-      name,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = SearchFindMemberReferencesParams(name)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('search.findMemberReferences', params);
     var decoder = ResponseDecoder(null);
     return SearchFindMemberReferencesResult.fromJson(
@@ -1592,9 +1582,8 @@ abstract class IntegrationTest {
   ///   The identifier used to associate results with this search request.
   Future<SearchFindTopLevelDeclarationsResult>
   sendSearchFindTopLevelDeclarations(String pattern) async {
-    var params = SearchFindTopLevelDeclarationsParams(
-      pattern,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = SearchFindTopLevelDeclarationsParams(pattern)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('search.findTopLevelDeclarations', params);
     var decoder = ResponseDecoder(null);
     return SearchFindTopLevelDeclarationsResult.fromJson(
@@ -1826,9 +1815,8 @@ abstract class IntegrationTest {
   Future<EditFormatIfEnabledResult> sendEditFormatIfEnabled(
     List<String> directories,
   ) async {
-    var params = EditFormatIfEnabledParams(
-      directories,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = EditFormatIfEnabledParams(directories)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('edit.formatIfEnabled', params);
     var decoder = ResponseDecoder(null);
     return EditFormatIfEnabledResult.fromJson(
@@ -2382,9 +2370,8 @@ abstract class IntegrationTest {
   ///   The file edit that is to be applied to the given file to affect the
   ///   sorting.
   Future<EditSortMembersResult> sendEditSortMembers(String file) async {
-    var params = EditSortMembersParams(
-      file,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = EditSortMembersParams(file)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('edit.sortMembers', params);
     var decoder = ResponseDecoder(null);
     return EditSortMembersResult.fromJson(
@@ -2422,9 +2409,8 @@ abstract class IntegrationTest {
   Future<EditOrganizeDirectivesResult> sendEditOrganizeDirectives(
     String file,
   ) async {
-    var params = EditOrganizeDirectivesParams(
-      file,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = EditOrganizeDirectivesParams(file)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('edit.organizeDirectives', params);
     var decoder = ResponseDecoder(null);
     return EditOrganizeDirectivesResult.fromJson(
@@ -2455,9 +2441,8 @@ abstract class IntegrationTest {
   Future<ExecutionCreateContextResult> sendExecutionCreateContext(
     String contextRoot,
   ) async {
-    var params = ExecutionCreateContextParams(
-      contextRoot,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ExecutionCreateContextParams(contextRoot)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('execution.createContext', params);
     var decoder = ResponseDecoder(null);
     return ExecutionCreateContextResult.fromJson(
@@ -2478,9 +2463,8 @@ abstract class IntegrationTest {
   ///
   ///   The identifier of the execution context that is to be deleted.
   Future<void> sendExecutionDeleteContext(String id) async {
-    var params = ExecutionDeleteContextParams(
-      id,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ExecutionDeleteContextParams(id)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('execution.deleteContext', params);
     outOfTestExpect(result, isNull);
   }
@@ -2671,9 +2655,8 @@ abstract class IntegrationTest {
   Future<void> sendExecutionSetSubscriptions(
     List<ExecutionService> subscriptions,
   ) async {
-    var params = ExecutionSetSubscriptionsParams(
-      subscriptions,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = ExecutionSetSubscriptionsParams(subscriptions)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('execution.setSubscriptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -2800,9 +2783,8 @@ abstract class IntegrationTest {
   // ignore: provide_deprecation_message
   @deprecated
   Future<void> sendAnalyticsEnable(bool value) async {
-    var params = AnalyticsEnableParams(
-      value,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalyticsEnableParams(value)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analytics.enable', params);
     outOfTestExpect(result, isNull);
   }
@@ -2826,9 +2808,8 @@ abstract class IntegrationTest {
   ///
   ///   The value used to indicate which action was performed.
   Future<void> sendAnalyticsSendEvent(String action) async {
-    var params = AnalyticsSendEventParams(
-      action,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = AnalyticsSendEventParams(action)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('analytics.sendEvent', params);
     outOfTestExpect(result, isNull);
   }
@@ -2994,9 +2975,8 @@ abstract class IntegrationTest {
   Future<void> sendFlutterSetSubscriptions(
     Map<FlutterService, List<String>> subscriptions,
   ) async {
-    var params = FlutterSetSubscriptionsParams(
-      subscriptions,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = FlutterSetSubscriptionsParams(subscriptions)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('flutter.setSubscriptions', params);
     outOfTestExpect(result, isNull);
   }
@@ -3042,9 +3022,8 @@ abstract class IntegrationTest {
   ///
   ///   The LSP ResponseMessage returned by the handler.
   Future<LspHandleResult> sendLspHandle(Object lspMessage) async {
-    var params = LspHandleParams(
-      lspMessage,
-    ).toJson(clientUriConverter: uriConverter);
+    var params = LspHandleParams(lspMessage)
+        .toJson(clientUriConverter: uriConverter);
     var result = await server.send('lsp.handle', params);
     var decoder = ResponseDecoder(null);
     return LspHandleResult.fromJson(

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:kernel/ast.dart';
-import 'package:kernel/transformations/flags.dart';
 
 import '../../base/local_scope.dart';
 import '../../builder/declaration_builders.dart';
@@ -20,7 +19,7 @@ class GetterFragmentBodyBuilderContext extends BodyBuilderContext {
   final SourcePropertyBuilder _builder;
   final GetterFragmentDeclaration _declaration;
 
-  GetterFragmentBodyBuilderContext(
+  new(
     this._builder,
     this._declaration,
     SourceLibraryBuilder libraryBuilder,
@@ -59,7 +58,7 @@ class GetterFragmentBodyBuilderContext extends BodyBuilderContext {
   }
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) => null;
+  FunctionParameter? getTearOffParameter(int index) => null;
 
   @override
   void registerFunctionBody({
@@ -70,14 +69,9 @@ class GetterFragmentBodyBuilderContext extends BodyBuilderContext {
   }) {
     _declaration.registerFunctionBody(
       body: body,
-      scope: scopeProviderInfo
-          // Coverage-ignore(suite): Not run.
-          ?.scope,
       asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
-      thisVariable: scopeProviderInfo
-          // Coverage-ignore(suite): Not run.
-          ?.thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 
@@ -88,6 +82,6 @@ class GetterFragmentBodyBuilderContext extends BodyBuilderContext {
   void registerSuperCall() {
     // TODO(johnniwinther): This should be set on the member built from this
     // fragment and copied to the origin if necessary.
-    _builder.readTarget!.transformerFlags |= TransformerFlag.superCalls;
+    _builder.readTarget!.containsSuperCalls = true;
   }
 }

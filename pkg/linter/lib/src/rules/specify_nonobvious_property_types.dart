@@ -20,7 +20,7 @@ const _desc =
     r'Specify non-obvious type annotations for top-level and static variables.';
 
 class SpecifyNonObviousPropertyTypes extends AnalysisRule {
-  SpecifyNonObviousPropertyTypes()
+  new()
     : super(
         name: LintNames.specify_nonobvious_property_types,
         description: _desc,
@@ -44,11 +44,7 @@ class SpecifyNonObviousPropertyTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFieldDeclaration(FieldDeclaration node) =>
       _visitVariableDeclarationList(

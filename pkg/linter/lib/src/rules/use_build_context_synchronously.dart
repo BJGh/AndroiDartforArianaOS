@@ -782,9 +782,8 @@ class AsyncStateVisitor extends SimpleAstVisitor<AsyncState> {
           // Check for asynchrony in the statements that _follow_ [reference],
           // as they may lead to an async gap before we loop back to
           // [reference].
-          return _inOrderAsyncStateGuardable(
-            statements.skip(index + 1),
-          )?.asynchronousOrNull;
+          return _inOrderAsyncStateGuardable(statements.skip(index + 1))
+              ?.asynchronousOrNull;
         }
         return null;
       }
@@ -927,7 +926,7 @@ class ProtectedFunction {
   /// The list of named parameters that are protected.
   final List<String> named;
 
-  const ProtectedFunction(
+  const new(
     this.library,
     this.type,
     this.name, {
@@ -937,7 +936,7 @@ class ProtectedFunction {
 }
 
 class UseBuildContextSynchronously extends MultiAnalysisRule {
-  UseBuildContextSynchronously()
+  new()
     : super(
         name: LintNames.use_build_context_synchronously,
         description: _desc,
@@ -965,7 +964,7 @@ class UseBuildContextSynchronously extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final MultiAnalysisRule rule) extends SimpleAstVisitor<void> {
   static const mountedName = 'mounted';
 
   static const protectedConstructors = [
@@ -1116,10 +1115,6 @@ class _Visitor extends SimpleAstVisitor<void> {
     ProtectedFunction('dart.async', 'Future', 'forEach', positional: [1]),
     ProtectedFunction('dart.async', 'Future', 'wait', named: ['cleanUp']),
   ];
-
-  final MultiAnalysisRule rule;
-
-  _Visitor(this.rule);
 
   void check(Expression node, Element mountedElement) {
     // Checks each of the statements before `child` for a `mounted` check, and
@@ -1392,7 +1387,7 @@ extension on AstNode {
         self is ContinueStatement) {
       return true;
     }
-    return accept(ExitDetector()) ?? false;
+    return ExitDetector.exits(this);
   }
 }
 
@@ -1457,7 +1452,7 @@ extension on Statement {
     if (self is BreakStatement || self is ContinueStatement) {
       return true;
     }
-    return accept(ExitDetector()) ?? false;
+    return ExitDetector.exits(this);
   }
 }
 

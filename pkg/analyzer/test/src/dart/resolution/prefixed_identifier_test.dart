@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class PrefixedIdentifierResolutionTest extends PubPackageResolutionTest {
   test_class_read() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -27,7 +27,7 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -45,7 +45,7 @@ PrefixedIdentifier
   }
 
   test_class_read_staticMethod_generic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   static void foo<U>(int a, U u) {}
 }
@@ -55,7 +55,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -73,7 +73,7 @@ PrefixedIdentifier
   }
 
   test_class_read_staticMethod_ofGenericClass() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   static void foo(int a) {}
 }
@@ -83,7 +83,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -101,7 +101,7 @@ PrefixedIdentifier
   }
 
   test_class_readWrite_assignment() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -111,10 +111,10 @@ void f(A a) {
 }
 ''');
 
-    var assignment = findNode.assignment('foo += 1');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo += 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -127,7 +127,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: +=
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
     staticType: int
@@ -141,7 +141,7 @@ AssignmentExpression
   }
 
   test_class_write() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -151,10 +151,10 @@ void f(A a) {
 }
 ''');
 
-    var assignment = findNode.assignment('foo = 1');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -167,7 +167,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@class::A::@setter::foo::@formalParameter::value
     staticType: int
@@ -181,7 +181,7 @@ AssignmentExpression
   }
 
   test_enum_read() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   int get foo => 0;
@@ -192,7 +192,7 @@ void f(E e) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -210,7 +210,7 @@ PrefixedIdentifier
   }
 
   test_enum_write() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum E {
   v;
   set foo(int _) {}
@@ -221,10 +221,10 @@ void f(E e) {
 }
 ''');
 
-    var assignment = findNode.assignment('foo = 1');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: e
       element: <testLibrary>::@function::f::@formalParameter::e
@@ -237,7 +237,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@enum::E::@setter::foo::@formalParameter::_
     staticType: int
@@ -251,13 +251,13 @@ AssignmentExpression
   }
 
   test_functionClass_call_read() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Function a) {
   a.call;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -275,13 +275,13 @@ PrefixedIdentifier
   }
 
   test_functionType_call_read() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(int Function(String) a) {
   a.call;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -299,7 +299,7 @@ PrefixedIdentifier
   }
 
   test_hasReceiver_typeAlias_staticGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static int get foo => 0;
 }
@@ -311,7 +311,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('B.foo');
+    var node = result.findNode.prefixed('B.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -336,7 +336,7 @@ class A {
 
 A a;
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart';
 
 int Function() foo() {
@@ -344,7 +344,7 @@ int Function() foo() {
 }
 ''');
 
-    var node = findNode.simple('a;');
+    var node = result.findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -361,7 +361,7 @@ class A {
 
 A? a;
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart';
 
 int Function() foo() {
@@ -371,7 +371,7 @@ int Function() foo() {
 }
 ''');
 
-    var node = findNode.simple('a;');
+    var node = result.findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -385,7 +385,7 @@ SimpleIdentifier
 void foo() {}
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -393,7 +393,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('prefix.');
+    var node = result.findNode.prefixed('prefix.');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -415,7 +415,7 @@ PrefixedIdentifier
 int get foo => 0;
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -423,7 +423,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('prefix.');
+    var node = result.findNode.prefixed('prefix.');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -445,7 +445,7 @@ PrefixedIdentifier
 set foo(int _) {}
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -455,7 +455,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('prefix.foo;');
+    var node = result.findNode.prefixed('prefix.foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -477,7 +477,7 @@ PrefixedIdentifier
 final foo = 0;
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -485,7 +485,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('prefix.');
+    var node = result.findNode.prefixed('prefix.');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -502,88 +502,8 @@ PrefixedIdentifier
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofClass_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  augment int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {
-  int get foo => 0;
-}
-
-void f(A a) {
-  a.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@getter::foo#element
-    staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getterAugmentation::foo
-  element: <testLibraryFragment>::@class::A::@getter::foo#element
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofClass_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {}
-
-void f(A a) {
-  a.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
-    staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
-  staticType: int
-''');
-  }
-
   test_ofClassName_augmentationAugments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static int get foo;
 }
@@ -597,7 +517,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -615,7 +535,7 @@ PrefixedIdentifier
   }
 
   test_ofClassName_augmentationAugments_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo();
 }
@@ -629,7 +549,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -647,7 +567,7 @@ PrefixedIdentifier
   }
 
   test_ofClassName_augmentationAugments_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static set foo(int _);
 }
@@ -661,10 +581,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleAssignmentExpression;
+    var node = result.findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -677,7 +597,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@class::A::@setter::foo::@formalParameter::_
     staticType: int
@@ -690,86 +610,8 @@ AssignmentExpression
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofClassName_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  static int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {}
-
-void f() {
-  A.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@class::A
-    element: <testLibrary>::@class::A
-    staticType: null
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
-    staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@getter::foo#element
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofClassName_augmentationDeclares_method() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  static void foo() {}
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-class A {}
-
-void f() {
-  A.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@class::A
-    element: <testLibrary>::@class::A
-    staticType: null
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-  staticType: void Function()
-''');
-  }
-
   test_ofExtensionType_read() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -779,7 +621,7 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -797,7 +639,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableRepresentation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int? it) {
   int get foo => 0;
 }
@@ -807,7 +649,7 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -825,7 +667,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -837,7 +679,7 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -855,7 +697,7 @@ PrefixedIdentifier
   }
 
   test_ofExtensionType_read_nullableType_nullAware() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -865,10 +707,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -882,7 +724,7 @@ PropertyAccess
   }
 
   test_ofExtensionType_write() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   set foo(int _) {}
 }
@@ -892,10 +734,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleAssignmentExpression;
+    var node = result.findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -908,7 +750,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extensionType::A::@setter::foo::@formalParameter::_
     staticType: int
@@ -921,131 +763,14 @@ AssignmentExpression
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofMixin_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-mixin A {}
-
-void f(A a) {
-  a.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo#element
-    staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo#element
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofMixinName_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  static int get foo => 0;
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-mixin A {}
-
-void f() {
-  A.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@mixin::A
-    element: <testLibrary>::@mixin::A
-    staticType: null
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo#element
-    staticType: int
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@getter::foo#element
-  staticType: int
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_ofMixinName_augmentationDeclares_method() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  static void foo() {}
-}
-''');
-    await assertNoErrorsInCode(r'''
-part 'a.dart';
-
-mixin A {}
-
-void f() {
-  A.foo;
-}
-''');
-
-    var node = findNode.singlePrefixedIdentifier;
-    assertResolvedNodeText(node, r'''
-PrefixedIdentifier
-  prefix: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@mixin::A
-    element: <testLibrary>::@mixin::A
-    staticType: null
-  period: .
-  identifier: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo#element
-    staticType: void Function()
-  staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo
-  element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo#element
-  staticType: void Function()
-''');
-  }
-
   test_read_dynamicIdentifier_hashCode() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   a.hashCode;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -1063,13 +788,13 @@ PrefixedIdentifier
   }
 
   test_read_dynamicIdentifier_identifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(dynamic a) {
   a.foo;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -1087,7 +812,7 @@ PrefixedIdentifier
   }
 
   test_read_interfaceType_unresolved() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(int a) {
   a.foo;
 //  ^^^
@@ -1095,7 +820,7 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.prefixed('foo;');
+    var node = result.findNode.prefixed('foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier

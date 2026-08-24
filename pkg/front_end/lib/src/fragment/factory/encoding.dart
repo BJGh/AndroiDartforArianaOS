@@ -38,6 +38,7 @@ import '../../source/source_member_builder.dart';
 import '../../source/source_type_parameter_builder.dart';
 import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../../type_inference/type_inferrer.dart';
 import '../../type_inference/type_schema.dart';
 
@@ -61,7 +62,7 @@ class FactoryEncoding implements InferredTypeListener {
 
   final ConstructorReferenceBuilder? _redirectionTarget;
 
-  FactoryEncoding(
+  new(
     this._fragment, {
     required this.typeParameters,
     required this.returnType,
@@ -140,6 +141,9 @@ class FactoryEncoding implements InferredTypeListener {
         !_fragment.modifiers.isAbstract &&
         !_fragment.modifiers.isExternal) {
       _procedure.function.registerFunctionBody(extern.createEmptyStatement());
+      // TODO(cstefantsova): Verify that null should be passed for
+      //  scopeProviderInfo in the call below.
+      _procedure.function.registerScopeProviderInfo(null);
     }
     buildTypeParametersAndFormals(
       libraryBuilder,
@@ -304,6 +308,9 @@ class FactoryEncoding implements InferredTypeListener {
           _procedure.function,
         ),
       );
+      // TODO(cstefantsova): Verify that null should be passed for
+      //  scopeProviderInfo in the call below.
+      _procedure.function.registerScopeProviderInfo(null);
       _procedure.function.redirectingFactoryTarget =
           new RedirectingFactoryTarget(target, typeArguments);
     }
@@ -510,6 +517,9 @@ class FactoryEncoding implements InferredTypeListener {
     _procedure.function.registerFunctionBody(
       createRedirectingFactoryBody(target, typeArguments, _procedure.function),
     );
+    // TODO(cstefantsova): Verify that null should be passed for
+    //  scopeProviderInfo in the call below.
+    _procedure.function.registerScopeProviderInfo(null);
     _procedure.function.redirectingFactoryTarget = new RedirectingFactoryTarget(
       target,
       typeArguments,
@@ -536,13 +546,13 @@ class FactoryEncoding implements InferredTypeListener {
   void _setRedirectingFactoryError({required String message}) {
     assert(_redirectionTarget != null);
 
+    // TODO(cstefantsova): Verify that null should be passed for
+    //  scopeProviderInfo in the call below.
     registerFunctionBody(
       body: createRedirectingFactoryErrorBody(message),
-      // TODO(cstefantsova): Pass a scope here.
-      scope: null,
       asyncModifier: AsyncModifier.implicitSync,
       emittedValueType: null,
-      thisVariable: null,
+      scopeProviderInfo: null,
     );
     _procedure.function.redirectingFactoryTarget =
         new RedirectingFactoryTarget.error(message);
@@ -550,6 +560,9 @@ class FactoryEncoding implements InferredTypeListener {
       _tearOff.function.registerFunctionBody(
         createRedirectingFactoryErrorBody(message),
       );
+      // TODO(cstefantsova): Verify that null should be passed for
+      //  scopeProviderInfo in the call below.
+      _tearOff.function.registerScopeProviderInfo(null);
     }
   }
 
@@ -834,10 +847,9 @@ class FactoryEncoding implements InferredTypeListener {
 
   void registerFunctionBody({
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     assert(
       asyncModifier.kind == AsyncMarker.Sync,
@@ -854,8 +866,7 @@ class FactoryEncoding implements InferredTypeListener {
         emittedValueType: emittedValueType,
       );
     }
-    _procedure.function.scope = scope;
-    _procedure.function.thisVariable = thisVariable;
+    _procedure.function.registerScopeProviderInfo(scopeProviderInfo);
   }
 
   void becomeNative(SourceLoader loader) {
@@ -868,7 +879,7 @@ class FactoryEncoding implements InferredTypeListener {
   FunctionSignature get signature =>
       new FunctionNodeSignature(_procedure.function);
 
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     if (_tearOff != null) {
       if (index < _tearOff.function.positionalParameters.length) {
         return _tearOff.function.positionalParameters[index];
@@ -886,7 +897,7 @@ class FactoryEncoding implements InferredTypeListener {
 }
 
 abstract class FactoryEncodingStrategy {
-  factory FactoryEncodingStrategy(DeclarationBuilder declarationBuilder) {
+  factory(DeclarationBuilder declarationBuilder) {
     switch (declarationBuilder) {
       case ClassBuilder():
       case ExtensionTypeDeclarationBuilder():
@@ -909,7 +920,7 @@ abstract class FactoryEncodingStrategy {
 }
 
 class RegularFactoryEncodingStrategy implements FactoryEncodingStrategy {
-  const RegularFactoryEncodingStrategy();
+  const new();
 
   @override
   (List<SourceNominalParameterBuilder>?, TypeBuilder)
@@ -945,7 +956,7 @@ class RegularFactoryEncodingStrategy implements FactoryEncodingStrategy {
 }
 
 class ExtensionFactoryEncodingStrategy implements FactoryEncodingStrategy {
-  const ExtensionFactoryEncodingStrategy();
+  const new();
 
   @override
   (List<SourceNominalParameterBuilder>?, TypeBuilder)

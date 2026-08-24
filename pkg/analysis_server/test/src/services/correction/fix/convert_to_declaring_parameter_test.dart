@@ -216,6 +216,25 @@ class C(var int x) {
 ''');
   }
 
+  Future<void> test_field_withDocComment() async {
+    await resolveTestCode('''
+class C(int x) {
+  /// A comment
+  /// on multiple lines.
+  int x;
+
+  this : x = x;
+}
+''');
+    await assertHasFix('''
+class C(
+  /// A comment
+  /// on multiple lines.
+  var int x) {
+}
+''');
+  }
+
   Future<void> test_optionalNamed_fieldFormalParameter_final() async {
     await resolveTestCode('''
 class C({this.x = 0}) {
@@ -356,6 +375,28 @@ class C(var int _x) {
 ''');
   }
 
+  Future<void> test_privateField_referencedInInitializer() async {
+    await resolveTestCode('''
+class C({required int? i}) {
+  final int? _i;
+  final bool _b;
+
+  this : _i = i, _b = i != null;
+
+  num get use => (_i ?? 0) + (_b ? 1 : 0);
+}
+''');
+    await assertHasFix('''
+class C({required final int? _i}) {
+  final bool _b;
+
+  this : _b = _i != null;
+
+  num get use => (_i ?? 0) + (_b ? 1 : 0);
+}
+''');
+  }
+
   Future<void> test_requiredNamed_fieldFormalParameter_final() async {
     await resolveTestCode('''
 class C({required this.x}) {
@@ -483,6 +524,65 @@ class C(int x) {
 ''');
     await assertHasFix('''
 class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_requiredPositional_simple_nonFinal_sameLine() async {
+    await resolveTestCode('''
+// Header.
+
+class C(int x) { int x; this : x = x; }
+''');
+    await assertHasFix('''
+// Header.
+
+class C(var int x) { }
+''');
+  }
+
+  Future<void>
+  test_requiredPositional_simple_nonFinal_surroundedByMembers() async {
+    await resolveTestCode('''
+class C(int x) {
+  static int count = 0;
+
+  int x;
+
+  this : x = x;
+
+  void f() {}
+}
+''');
+    await assertHasFix('''
+class C(var int x) {
+  static int count = 0;
+
+  void f() {}
+}
+''');
+  }
+
+  Future<void>
+  test_requiredPositional_simple_nonFinal_surroundedByMembers_multipleBlankLines() async {
+    await resolveTestCode('''
+class C(int x) {
+  static int count = 0;
+
+
+
+  int x;
+
+  this : x = x;
+
+  void f() {}
+}
+''');
+    await assertHasFix('''
+class C(var int x) {
+  static int count = 0;
+
+  void f() {}
 }
 ''');
   }
@@ -641,7 +741,6 @@ enum E({int x = 0}) {
     await assertHasFix('''
 enum E({final int x = 0}) {
   a(x: 0);
-
 }
 ''');
   }
@@ -661,7 +760,6 @@ enum E({int x = 0}) {
     await assertHasFix('''
 enum E({final int _x = 0}) {
   a(x: 0);
-
 
   int get y => _x + 1;
 }
@@ -694,11 +792,9 @@ enum E([int x = 0]) {
   this : x = x;
 }
 ''');
-    // TODO(brianwilkerson): It would be nice to remove the extra blank line.
     await assertHasFix('''
 enum E([final int x = 0]) {
   a(0);
-
 }
 ''');
   }
@@ -718,7 +814,6 @@ enum E(int x) {
     await assertHasFix('''
 enum E(final int _x) {
   a(0);
-
 
   int get y => _x + 1;
 }
@@ -754,7 +849,6 @@ enum E({required int x}) {
     await assertHasFix('''
 enum E({required final int x}) {
   a(x: 0);
-
 }
 ''');
   }
@@ -788,7 +882,6 @@ enum E(int x) {
     await assertHasFix('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
   }
@@ -806,9 +899,13 @@ enum E(int x) {
     await assertHasFix('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
+  }
+
+  Future<void> test_requiredPositional_simple_firstLine() async {
+    await resolveTestCode('enum E(int x) { a(0); final int x; this : x = x; }');
+    await assertHasFix('enum E(final int x) { a(0); }');
   }
 
   Future<void> test_withInitializer_simple() async {
@@ -824,7 +921,6 @@ enum E(int x) {
     await assertHasFix('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
   }

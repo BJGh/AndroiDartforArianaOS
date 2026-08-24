@@ -14,6 +14,7 @@
 #include <limits.h>    // NOLINT
 #include <sys/mman.h>  // NOLINT
 #include <sys/stat.h>  // NOLINT
+#include <sys/time.h>  // NOLINT
 #include <unistd.h>    // NOLINT
 #include <utime.h>     // NOLINT
 
@@ -95,9 +96,7 @@ MappedMemory* File::Map(MapType type,
       hint = reinterpret_cast<void*>(&Dart_Initialize);
       prot = PROT_READ | PROT_EXEC;
 #if !defined(DART_HOST_OS_IOS)
-      if (IsAtLeastMacOSX10_14()) {
-        map_flags |= (MAP_JIT | MAP_ANONYMOUS);
-      }
+      map_flags |= (MAP_JIT | MAP_ANONYMOUS);
 #endif
       break;
     case kReadWrite:
@@ -113,7 +112,7 @@ MappedMemory* File::Map(MapType type,
   // Due to codesigning restrictions, we cannot map the file as executable
   // directly. We must first copy it into an anonymous mapping and then mark
   // the mapping as executable.
-  const bool should_copy = (type == kReadExecute) && IsAtLeastMacOSX10_14();
+  const bool should_copy = type == kReadExecute;
 #else
   const bool should_copy = false;
 #endif
@@ -390,6 +389,8 @@ bool File::CreatePipe(Namespace* namespc, File** readPipe, File** writePipe) {
   if (status != 0) {
     return false;
   }
+  FDUtils::SetCloseOnExec(pipe_fds[0]);
+  FDUtils::SetCloseOnExec(pipe_fds[1]);
   *readPipe = OpenFD(pipe_fds[0]);
   *writePipe = OpenFD(pipe_fds[1]);
   return true;
@@ -518,9 +519,15 @@ int64_t File::LengthFromPath(Namespace* namespc, const char* name) {
   return st.st_size;
 }
 
-static int64_t TimespecToMilliseconds(const struct timespec& t) {
-  return static_cast<int64_t>(t.tv_sec) * 1000L +
-         static_cast<int64_t>(t.tv_nsec) / 1000000L;
+static int64_t TimespecToMicroseconds(const struct timespec& t) {
+  return static_cast<int64_t>(t.tv_sec) * kMicrosecondsPerSecond +
+         static_cast<int64_t>(t.tv_nsec) / 1000L;
+}
+
+static void MicrosecondsToTimeval(int64_t micros, struct timeval* t) {
+  ASSERT(t != nullptr);
+  t->tv_sec = micros / kMicrosecondsPerSecond;
+  t->tv_usec = micros % kMicrosecondsPerSecond;
 }
 
 void File::Stat(Namespace* namespc, const char* name, int64_t* data) {
@@ -539,12 +546,9 @@ void File::Stat(Namespace* namespc, const char* name, int64_t* data) {
     } else {
       data[kType] = kDoesNotExist;
     }
-    data[kCreatedTime] = st.st_ctime;
-    data[kModifiedTime] = st.st_mtime;
-    data[kAccessedTime] = st.st_atime;
-    data[kCreatedTime] = TimespecToMilliseconds(st.st_ctimespec);
-    data[kModifiedTime] = TimespecToMilliseconds(st.st_mtimespec);
-    data[kAccessedTime] = TimespecToMilliseconds(st.st_atimespec);
+    data[kCreatedTime] = TimespecToMicroseconds(st.st_ctimespec);
+    data[kModifiedTime] = TimespecToMicroseconds(st.st_mtimespec);
+    data[kAccessedTime] = TimespecToMicroseconds(st.st_atimespec);
     data[kMode] = st.st_mode;
     data[kSize] = st.st_size;
   } else {
@@ -552,25 +556,25 @@ void File::Stat(Namespace* namespc, const char* name, int64_t* data) {
   }
 }
 
-time_t File::LastModified(Namespace* namespc, const char* name) {
+int64_t File::LastModified(Namespace* namespc, const char* name) {
   struct stat st;
   if (!StatHelper(namespc, name, &st)) {
     return -1;
   }
-  return st.st_mtime;
+  return TimespecToMicroseconds(st.st_mtimespec);
 }
 
-time_t File::LastAccessed(Namespace* namespc, const char* name) {
+int64_t File::LastAccessed(Namespace* namespc, const char* name) {
   struct stat st;
   if (!StatHelper(namespc, name, &st)) {
     return -1;
   }
-  return st.st_atime;
+  return TimespecToMicroseconds(st.st_atimespec);
 }
 
 bool File::SetLastAccessed(Namespace* namespc,
                            const char* name,
-                           int64_t millis) {
+                           int64_t micros) {
   // First get the current times.
   struct stat st;
   if (!StatHelper(namespc, name, &st)) {
@@ -578,15 +582,16 @@ bool File::SetLastAccessed(Namespace* namespc,
   }
 
   // Set the new time:
-  struct utimbuf times;
-  times.actime = millis / kMillisecondsPerSecond;
-  times.modtime = st.st_mtime;
-  return utime(name, &times) == 0;
+  struct timeval times[2];
+  MicrosecondsToTimeval(micros, &times[0]);
+  times[1].tv_sec = st.st_mtime;
+  times[1].tv_usec = st.st_mtimespec.tv_nsec / 1000L;
+  return utimes(name, times) == 0;
 }
 
 bool File::SetLastModified(Namespace* namespc,
                            const char* name,
-                           int64_t millis) {
+                           int64_t micros) {
   // First get the current times.
   struct stat st;
   if (!StatHelper(namespc, name, &st)) {
@@ -594,10 +599,11 @@ bool File::SetLastModified(Namespace* namespc,
   }
 
   // Set the new time:
-  struct utimbuf times;
-  times.actime = st.st_atime;
-  times.modtime = millis / kMillisecondsPerSecond;
-  return utime(name, &times) == 0;
+  struct timeval times[2];
+  times[0].tv_sec = st.st_atime;
+  times[0].tv_usec = st.st_atimespec.tv_nsec / 1000L;
+  MicrosecondsToTimeval(micros, &times[1]);
+  return utimes(name, times) == 0;
 }
 
 const char* File::LinkTarget(Namespace* namespc,
@@ -616,7 +622,7 @@ const char* File::LinkTarget(Namespace* namespc,
   // target. The link might have changed before the readlink call.
   const int kBufferSize = 1024;
   char target[kBufferSize];
-  size_t target_size =
+  const ssize_t target_size =
       TEMP_FAILURE_RETRY(readlink(pathname, target, kBufferSize));
   if (target_size <= 0) {
     return nullptr;
@@ -625,7 +631,7 @@ const char* File::LinkTarget(Namespace* namespc,
     dest = DartUtils::ScopedCString(target_size + 1);
   } else {
     ASSERT(dest_size > 0);
-    if (static_cast<size_t>(dest_size) <= target_size) {
+    if (dest_size <= target_size) {
       return nullptr;
     }
   }

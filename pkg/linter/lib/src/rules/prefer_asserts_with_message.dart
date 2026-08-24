@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Prefer asserts with message.';
 
 class PreferAssertsWithMessage extends AnalysisRule {
-  PreferAssertsWithMessage()
+  new()
     : super(name: LintNames.prefer_asserts_with_message, description: _desc);
 
   @override
@@ -32,11 +32,7 @@ class PreferAssertsWithMessage extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitAssertInitializer(AssertInitializer node) {
     if (node.message == null) {

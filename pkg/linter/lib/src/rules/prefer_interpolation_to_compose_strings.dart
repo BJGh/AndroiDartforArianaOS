@@ -17,7 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use interpolation to compose strings and values.';
 
 class PreferInterpolationToComposeStrings extends AnalysisRule {
-  PreferInterpolationToComposeStrings()
+  new()
     : super(
         name: LintNames.prefer_interpolation_to_compose_strings,
         description: _desc,
@@ -36,12 +36,8 @@ class PreferInterpolationToComposeStrings extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   final skippedNodes = <AstNode>{};
-
-  _Visitor(this.rule);
 
   @override
   void visitBinaryExpression(BinaryExpression node) {

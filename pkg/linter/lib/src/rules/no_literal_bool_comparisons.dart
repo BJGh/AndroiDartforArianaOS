@@ -17,7 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't compare boolean expressions to boolean literals.";
 
 class NoLiteralBoolComparisons extends AnalysisRule {
-  NoLiteralBoolComparisons()
+  new()
     : super(name: LintNames.no_literal_bool_comparisons, description: _desc);
 
   @override
@@ -33,12 +33,8 @@ class NoLiteralBoolComparisons extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   bool isBool(DartType? type) =>
       type != null &&
       type.isDartCoreBool &&

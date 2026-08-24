@@ -90,6 +90,7 @@ const LinterLintWithoutArguments alwaysSpecifyTypesAddType =
       name: 'always_specify_types',
       problemMessage: "Missing type annotation.",
       correctionMessage: "Try adding a type annotation.",
+      hasPublishedDocs: true,
       uniqueName: 'always_specify_types_add_type',
       expectedTypes: [],
     );
@@ -337,10 +338,22 @@ annotateRedeclares = LinterLintTemplate(
   problemMessage:
       "The member '{0}' is redeclaring but isn't annotated with '@redeclare'.",
   correctionMessage: "Try adding the '@redeclare' annotation.",
+  hasPublishedDocs: true,
   uniqueName: 'annotate_redeclares',
   withArguments: _withArgumentsAnnotateRedeclares,
   expectedTypes: [ExpectedType.object],
 );
+
+/// No parameters.
+const LinterLintWithoutArguments asyncReturnWithNoAwait =
+    LinterLintWithoutArguments(
+      name: 'async_return_with_no_await',
+      problemMessage: "Returning a 'Future' without 'await'.",
+      correctionMessage: "Try adding an 'await' or making the body non-async.",
+      hasPublishedDocs: true,
+      uniqueName: 'async_return_with_no_await',
+      expectedTypes: [],
+    );
 
 /// No parameters.
 const LinterLintWithoutArguments avoidAnnotatingWithDynamic =
@@ -348,6 +361,7 @@ const LinterLintWithoutArguments avoidAnnotatingWithDynamic =
       name: 'avoid_annotating_with_dynamic',
       problemMessage: "Unnecessary 'dynamic' type annotation.",
       correctionMessage: "Try removing the type 'dynamic'.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_annotating_with_dynamic',
       expectedTypes: [],
     );
@@ -368,6 +382,7 @@ const LinterLintWithoutArguments avoidBoolLiteralsInConditionalExpressions =
           "Conditional expressions with a 'bool' literal can be simplified.",
       correctionMessage:
           "Try rewriting the expression to use either '&&' or '||'.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_bool_literals_in_conditional_expressions',
       expectedTypes: [],
     );
@@ -380,6 +395,7 @@ const LinterLintWithoutArguments avoidCatchesWithoutOnClauses =
           "Catch clause should use 'on' to specify the type of exception being "
           "caught.",
       correctionMessage: "Try adding an 'on' clause before the 'catch'.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_catches_without_on_clauses',
       expectedTypes: [],
     );
@@ -402,8 +418,7 @@ const DiagnosticWithArguments<
 >
 avoidCatchingErrorsSubclass = LinterLintTemplate(
   name: 'avoid_catching_errors',
-  problemMessage:
-      "The type '{0}' should not be caught because it is a subclass of 'Error'.",
+  problemMessage: "The type '{0}' should not be caught because it is a subclass of 'Error'.",
   correctionMessage:
       "Try removing the catch or catching an 'Exception' instead.",
   uniqueName: 'avoid_catching_errors_subclass',
@@ -428,6 +443,7 @@ const LinterLintWithoutArguments avoidDoubleAndIntChecks =
       name: 'avoid_double_and_int_checks',
       problemMessage: "Explicit check for double or int.",
       correctionMessage: "Try removing the check.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_double_and_int_checks',
       expectedTypes: [],
     );
@@ -503,6 +519,7 @@ const LinterLintWithoutArguments avoidFinalParameters =
       name: 'avoid_final_parameters',
       problemMessage: "Parameters should not be marked as 'final'.",
       correctionMessage: "Try removing the keyword 'final'.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_final_parameters',
       expectedTypes: [],
     );
@@ -549,15 +566,15 @@ const LinterLintWithoutArguments avoidInitToNull = LinterLintWithoutArguments(
 );
 
 /// No parameters.
-const LinterLintWithoutArguments
-avoidJsRoundedInts = LinterLintWithoutArguments(
-  name: 'avoid_js_rounded_ints',
-  problemMessage:
-      "Integer literal can't be represented exactly when compiled to JavaScript.",
-  correctionMessage: "Try using a 'BigInt' to represent the value.",
-  uniqueName: 'avoid_js_rounded_ints',
-  expectedTypes: [],
-);
+const LinterLintWithoutArguments avoidJsRoundedInts =
+    LinterLintWithoutArguments(
+      name: 'avoid_js_rounded_ints',
+      problemMessage: "Integer literal can't be represented exactly when compiled to JavaScript.",
+      correctionMessage: "Try using a 'BigInt' to represent the value.",
+      hasPublishedDocs: true,
+      uniqueName: 'avoid_js_rounded_ints',
+      expectedTypes: [],
+    );
 
 /// No parameters.
 const LinterLintWithoutArguments avoidMultipleDeclarationsPerLine =
@@ -586,6 +603,7 @@ const LinterLintWithoutArguments avoidPositionalBooleanParameters =
       name: 'avoid_positional_boolean_parameters',
       problemMessage: "'bool' parameters should be named parameters.",
       correctionMessage: "Try converting the parameter to a named parameter.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_positional_boolean_parameters',
       expectedTypes: [],
     );
@@ -619,6 +637,7 @@ avoidRedundantArgumentValues = LinterLintWithoutArguments(
       "The value of the argument is redundant because it matches the default "
       "value.",
   correctionMessage: "Try removing the argument.",
+  hasPublishedDocs: true,
   uniqueName: 'avoid_redundant_argument_values',
   expectedTypes: [],
 );
@@ -737,8 +756,7 @@ const DiagnosticWithArguments<
 >
 avoidShadowingTypeParameters = LinterLintTemplate(
   name: 'avoid_shadowing_type_parameters',
-  problemMessage:
-      "The type parameter '{0}' shadows a type parameter from the enclosing {1}.",
+  problemMessage: "The type parameter '{0}' shadows a type parameter from the enclosing {1}.",
   correctionMessage: "Try renaming one of the type parameters.",
   hasPublishedDocs: true,
   uniqueName: 'avoid_shadowing_type_parameters',
@@ -811,6 +829,7 @@ const LinterLintWithoutArguments avoidTypesOnClosureParameters =
       problemMessage:
           "Unnecessary type annotation on a function expression parameter.",
       correctionMessage: "Try removing the type annotation.",
+      hasPublishedDocs: true,
       uniqueName: 'avoid_types_on_closure_parameters',
       expectedTypes: [],
     );
@@ -858,6 +877,7 @@ avoidUnusedConstructorParameters = LinterLintTemplate(
   name: 'avoid_unused_constructor_parameters',
   problemMessage: "The parameter '{0}' is not used in the constructor.",
   correctionMessage: "Try using the parameter or removing it.",
+  hasPublishedDocs: true,
   uniqueName: 'avoid_unused_constructor_parameters',
   withArguments: _withArgumentsAvoidUnusedConstructorParameters,
   expectedTypes: [ExpectedType.object],
@@ -893,8 +913,7 @@ const DiagnosticWithArguments<
 >
 awaitOnlyFutures = LinterLintTemplate(
   name: 'await_only_futures',
-  problemMessage:
-      "Uses 'await' on an instance of '{0}', which is not a subtype of 'Future'.",
+  problemMessage: "Uses 'await' on an instance of '{0}', which is not a subtype of 'Future'.",
   correctionMessage: "Try removing the 'await' or changing the expression.",
   hasPublishedDocs: true,
   uniqueName: 'await_only_futures',
@@ -1279,16 +1298,15 @@ const LinterLintWithoutArguments emptyCatches = LinterLintWithoutArguments(
 );
 
 /// No parameters.
-const LinterLintWithoutArguments
-emptyConstructorBodies = LinterLintWithoutArguments(
-  name: 'empty_constructor_bodies',
-  problemMessage:
-      "Empty constructor bodies should be written using a ';' rather than '{}'.",
-  correctionMessage: "Try replacing the constructor body with ';'.",
-  hasPublishedDocs: true,
-  uniqueName: 'empty_constructor_bodies',
-  expectedTypes: [],
-);
+const LinterLintWithoutArguments emptyConstructorBodies =
+    LinterLintWithoutArguments(
+      name: 'empty_constructor_bodies',
+      problemMessage: "Empty constructor bodies should be written using a ';' rather than '{}'.",
+      correctionMessage: "Try replacing the constructor body with ';'.",
+      hasPublishedDocs: true,
+      uniqueName: 'empty_constructor_bodies',
+      expectedTypes: [],
+    );
 
 /// Parameters:
 /// String containerKind: The kind of the container, such as 'class' or
@@ -1301,6 +1319,7 @@ emptyContainerBodies = LinterLintTemplate(
   problemMessage:
       "Empty {0} bodies should be written using a ';' rather than '{}'.",
   correctionMessage: "Try replacing the {0} body with ';'.",
+  hasPublishedDocs: true,
   uniqueName: 'empty_container_bodies',
   withArguments: _withArgumentsEmptyContainerBodies,
   expectedTypes: [ExpectedType.string],
@@ -1326,13 +1345,25 @@ const LinterLintWithoutArguments enableNullSafety = LinterLintWithoutArguments(
 );
 
 /// No parameters.
-const LinterLintWithoutArguments eolAtEndOfFile = LinterLintWithoutArguments(
-  name: 'eol_at_end_of_file',
-  problemMessage: "Missing a newline at the end of the file.",
-  correctionMessage: "Try adding a newline at the end of the file.",
-  uniqueName: 'eol_at_end_of_file',
-  expectedTypes: [],
-);
+const LinterLintWithoutArguments eolAtEndOfFileMissing =
+    LinterLintWithoutArguments(
+      name: 'eol_at_end_of_file',
+      problemMessage: "Missing a newline at the end of the file.",
+      correctionMessage: "Try adding a newline at the end of the file.",
+      uniqueName: 'eol_at_end_of_file_missing',
+      expectedTypes: [],
+    );
+
+/// No parameters.
+const LinterLintWithoutArguments eolAtEndOfFileTooMany =
+    LinterLintWithoutArguments(
+      name: 'eol_at_end_of_file',
+      problemMessage: "Too many newlines at the end of the file.",
+      correctionMessage:
+          "Try removing the extra newlines at the end of the file.",
+      uniqueName: 'eol_at_end_of_file_too_many',
+      expectedTypes: [],
+    );
 
 /// No parameters.
 const LinterLintWithoutArguments
@@ -1354,6 +1385,7 @@ exhaustiveCases = LinterLintTemplate(
   name: 'exhaustive_cases',
   problemMessage: "Missing case clauses for some constants in '{0}'.",
   correctionMessage: "Try adding case clauses for the missing constants.",
+  hasPublishedDocs: true,
   uniqueName: 'exhaustive_cases',
   withArguments: _withArgumentsExhaustiveCases,
   expectedTypes: [ExpectedType.object],
@@ -1383,6 +1415,17 @@ const LinterLintWithoutArguments flutterStyleTodos = LinterLintWithoutArguments(
   problemMessage: "To-do comment doesn't follow the Flutter style.",
   correctionMessage: "Try following the Flutter style for to-do comments.",
   uniqueName: 'flutter_style_todos',
+  expectedTypes: [],
+);
+
+/// No parameters.
+const LinterLintWithoutArguments futureSyncValue = LinterLintWithoutArguments(
+  name: 'future_sync_value',
+  problemMessage:
+      "For synchronous values, `Future.syncValue` is more performant.",
+  correctionMessage: "Try replacing `Future.value` with `Future.syncValue`.",
+  hasPublishedDocs: true,
+  uniqueName: 'future_sync_value',
   expectedTypes: [],
 );
 
@@ -1460,6 +1503,7 @@ const LinterLintWithoutArguments initializeInFieldDeclaration =
       name: 'initialize_in_field_declaration',
       problemMessage: "Field should be initialized in the field declaration.",
       correctionMessage: "Try initializing the field where it's declared.",
+      hasPublishedDocs: true,
       uniqueName: 'initialize_in_field_declaration',
       expectedTypes: [],
     );
@@ -1489,8 +1533,7 @@ invalidRuntimeCheckWithJsInteropTypesCatchClauseJsInteropType = LinterLintTempla
       "Remove the type in the catch clause and try using 'isA' from "
       "'dart:js_interop' within the catch block to check if the value is a "
       "JS interop type.",
-  uniqueName:
-      'invalid_runtime_check_with_js_interop_types_catch_clause_js_interop_type',
+  uniqueName: 'invalid_runtime_check_with_js_interop_types_catch_clause_js_interop_type',
   withArguments:
       _withArgumentsInvalidRuntimeCheckWithJsInteropTypesCatchClauseJsInteropType,
   expectedTypes: [ExpectedType.object],
@@ -1781,6 +1824,20 @@ matchingSuperParameters = LinterLintTemplate(
   expectedTypes: [ExpectedType.object, ExpectedType.object],
 );
 
+/// Parameters:
+/// String libraryName: the name of the deprecated library
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String libraryName})
+>
+migrateDesignWidgets = LinterLintTemplate(
+  name: 'migrate_design_widgets',
+  problemMessage: "The '{0}' library is deprecated.",
+  correctionMessage: "Try using the Material or Cupertino package.",
+  uniqueName: 'migrate_design_widgets',
+  withArguments: _withArgumentsMigrateDesignWidgets,
+  expectedTypes: [ExpectedType.string],
+);
+
 /// No parameters.
 const LinterLintWithoutArguments missingCodeBlockLanguageInDocComment =
     LinterLintWithoutArguments(
@@ -1819,6 +1876,7 @@ const LinterLintWithoutArguments noDefaultCases = LinterLintWithoutArguments(
   problemMessage: "Invalid use of 'default' member in a switch.",
   correctionMessage:
       "Try enumerating all the possible values of the switch expression.",
+  hasPublishedDocs: true,
   uniqueName: 'no_default_cases',
   expectedTypes: [],
 );
@@ -1841,10 +1899,19 @@ noDuplicateCaseValues = LinterLintTemplate(
   expectedTypes: [ExpectedType.object, ExpectedType.object],
 );
 
+/// No parameters.
+const LinterLintWithoutArguments noDynamicCasts = LinterLintWithoutArguments(
+  name: 'no_dynamic_casts',
+  problemMessage: "Implicit cast from 'dynamic'.",
+  correctionMessage: "Try adding an explicit cast or changing the target type.",
+  uniqueName: 'no_dynamic_casts',
+  expectedTypes: [],
+);
+
 /// Parameters:
-/// Object p0: undocumented
+/// String prefix: The library prefix.
 const DiagnosticWithArguments<
-  LocatableDiagnostic Function({required Object p0})
+  LocatableDiagnostic Function({required String prefix})
 >
 noLeadingUnderscoresForLibraryPrefixes = LinterLintTemplate(
   name: 'no_leading_underscores_for_library_prefixes',
@@ -1853,13 +1920,28 @@ noLeadingUnderscoresForLibraryPrefixes = LinterLintTemplate(
   hasPublishedDocs: true,
   uniqueName: 'no_leading_underscores_for_library_prefixes',
   withArguments: _withArgumentsNoLeadingUnderscoresForLibraryPrefixes,
-  expectedTypes: [ExpectedType.object],
+  expectedTypes: [ExpectedType.string],
 );
 
 /// Parameters:
-/// Object p0: undocumented
+/// String prefix: The library prefix.
 const DiagnosticWithArguments<
-  LocatableDiagnostic Function({required Object p0})
+  LocatableDiagnostic Function({required String prefix})
+>
+noLeadingUnderscoresForLibraryPrefixesShadowed = LinterLintTemplate(
+  name: 'no_leading_underscores_for_library_prefixes',
+  problemMessage: "The library prefix '{0}' starts with an underscore.",
+  correctionMessage: "Try renaming the prefix to not start with an underscore.",
+  hasPublishedDocs: true,
+  uniqueName: 'no_leading_underscores_for_library_prefixes_shadowed',
+  withArguments: _withArgumentsNoLeadingUnderscoresForLibraryPrefixesShadowed,
+  expectedTypes: [ExpectedType.string],
+);
+
+/// Parameters:
+/// String variableName: The variable name.
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String variableName})
 >
 noLeadingUnderscoresForLocalIdentifiers = LinterLintTemplate(
   name: 'no_leading_underscores_for_local_identifiers',
@@ -1869,7 +1951,23 @@ noLeadingUnderscoresForLocalIdentifiers = LinterLintTemplate(
   hasPublishedDocs: true,
   uniqueName: 'no_leading_underscores_for_local_identifiers',
   withArguments: _withArgumentsNoLeadingUnderscoresForLocalIdentifiers,
-  expectedTypes: [ExpectedType.object],
+  expectedTypes: [ExpectedType.string],
+);
+
+/// Parameters:
+/// String variableName: The variable name.
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required String variableName})
+>
+noLeadingUnderscoresForLocalIdentifiersShadowed = LinterLintTemplate(
+  name: 'no_leading_underscores_for_local_identifiers',
+  problemMessage: "The local variable '{0}' starts with an underscore.",
+  correctionMessage:
+      "Try renaming the variable to not start with an underscore.",
+  hasPublishedDocs: true,
+  uniqueName: 'no_leading_underscores_for_local_identifiers_shadowed',
+  withArguments: _withArgumentsNoLeadingUnderscoresForLocalIdentifiersShadowed,
+  expectedTypes: [ExpectedType.string],
 );
 
 /// No parameters.
@@ -1919,6 +2017,22 @@ const LinterLintWithoutArguments noopPrimitiveOperations =
       uniqueName: 'noop_primitive_operations',
       expectedTypes: [],
     );
+
+/// Parameters:
+/// Type type: the name of the generic type
+const DiagnosticWithArguments<
+  LocatableDiagnostic Function({required DartType type})
+>
+noRawTypes = LinterLintTemplate(
+  name: 'no_raw_types',
+  problemMessage:
+      "The generic type '{0}' should have explicit type arguments but doesn't.",
+  correctionMessage: "Use explicit type arguments for '{0}'.",
+  hasPublishedDocs: true,
+  uniqueName: 'no_raw_types',
+  withArguments: _withArgumentsNoRawTypes,
+  expectedTypes: [ExpectedType.type],
+);
 
 /// No parameters.
 const LinterLintWithoutArguments noRuntimetypeTostring =
@@ -2123,6 +2237,7 @@ parameterAssignments = LinterLintTemplate(
   name: 'parameter_assignments',
   problemMessage: "Invalid assignment to the parameter '{0}'.",
   correctionMessage: "Try using a local variable in place of the parameter.",
+  hasPublishedDocs: true,
   uniqueName: 'parameter_assignments',
   withArguments: _withArgumentsParameterAssignments,
   expectedTypes: [ExpectedType.object],
@@ -2444,6 +2559,7 @@ const LinterLintWithoutArguments preferIfElementsToConditionalExpressions =
       problemMessage: "Use an 'if' element to conditionally add elements.",
       correctionMessage:
           "Try using an 'if' element rather than a conditional expression.",
+      hasPublishedDocs: true,
       uniqueName: 'prefer_if_elements_to_conditional_expressions',
       expectedTypes: [],
     );
@@ -2516,6 +2632,7 @@ const LinterLintWithoutArguments preferIntLiterals = LinterLintWithoutArguments(
   name: 'prefer_int_literals',
   problemMessage: "Unnecessary use of a 'double' literal.",
   correctionMessage: "Try using an 'int' literal.",
+  hasPublishedDocs: true,
   uniqueName: 'prefer_int_literals',
   expectedTypes: [],
 );
@@ -2532,15 +2649,15 @@ preferIsEmptyAlwaysFalse = LinterLintWithoutArguments(
 );
 
 /// No parameters.
-const LinterLintWithoutArguments
-preferIsEmptyAlwaysTrue = LinterLintWithoutArguments(
-  name: 'prefer_is_empty',
-  problemMessage:
-      "The comparison is always 'true' because the length is always greater than "
-      "or equal to 0.",
-  uniqueName: 'prefer_is_empty_always_true',
-  expectedTypes: [],
-);
+const LinterLintWithoutArguments preferIsEmptyAlwaysTrue =
+    LinterLintWithoutArguments(
+      name: 'prefer_is_empty',
+      problemMessage:
+          "The comparison is always 'true' because the length is always greater than "
+          "or equal to 0.",
+      uniqueName: 'prefer_is_empty_always_true',
+      expectedTypes: [],
+    );
 
 /// No parameters.
 const LinterLintWithoutArguments preferIsEmptyUseIsEmpty =
@@ -2673,6 +2790,7 @@ const LinterLintWithoutArguments preferSpreadCollections =
       problemMessage: "The addition of multiple elements could be inlined.",
       correctionMessage:
           "Try using the spread operator ('...') to inline the addition.",
+      hasPublishedDocs: true,
       uniqueName: 'prefer_spread_collections',
       expectedTypes: [],
     );
@@ -2793,6 +2911,7 @@ const LinterLintWithoutArguments simpleDirectivePaths =
       name: 'simple_directive_paths',
       problemMessage: "Use simple directive paths.",
       correctionMessage: "Try simplifying the directive path.",
+      hasPublishedDocs: true,
       uniqueName: 'simple_directive_paths',
       expectedTypes: [],
     );
@@ -2836,8 +2955,7 @@ const DiagnosticWithArguments<
 >
 sizedBoxShrinkExpand = LinterLintTemplate(
   name: 'sized_box_shrink_expand',
-  problemMessage:
-      "Use 'SizedBox.{0}' to avoid needing to specify the 'height' and 'width'.",
+  problemMessage: "Use 'SizedBox.{0}' to avoid needing to specify the 'height' and 'width'.",
   correctionMessage:
       "Try using 'SizedBox.{0}' and removing the 'height' and 'width' "
       "arguments.",
@@ -3090,6 +3208,7 @@ const LinterLintWithoutArguments unnecessaryAsync = LinterLintWithoutArguments(
   name: 'unnecessary_async',
   problemMessage: "Don't make a function 'async' if it doesn't use 'await'.",
   correctionMessage: "Try removing the 'async' modifier.",
+  hasPublishedDocs: true,
   uniqueName: 'unnecessary_async',
   expectedTypes: [],
 );
@@ -3100,6 +3219,7 @@ const LinterLintWithoutArguments unnecessaryAwaitInReturn =
       name: 'unnecessary_await_in_return',
       problemMessage: "Unnecessary 'await'.",
       correctionMessage: "Try removing the 'await'.",
+      hasPublishedDocs: true,
       uniqueName: 'unnecessary_await_in_return',
       expectedTypes: [],
     );
@@ -3120,6 +3240,7 @@ const LinterLintWithoutArguments unnecessaryBreaks = LinterLintWithoutArguments(
   name: 'unnecessary_breaks',
   problemMessage: "Unnecessary 'break' statement.",
   correctionMessage: "Try removing the 'break'.",
+  hasPublishedDocs: true,
   uniqueName: 'unnecessary_breaks',
   expectedTypes: [],
 );
@@ -3140,6 +3261,7 @@ const LinterLintWithoutArguments unnecessaryConstInEnumConstructor =
       name: 'unnecessary_const_in_enum_constructor',
       problemMessage: "Unnecessary 'const' keyword in an enum constructor.",
       correctionMessage: "Try removing the keyword.",
+      hasPublishedDocs: true,
       uniqueName: 'unnecessary_const_in_enum_constructor',
       expectedTypes: [],
     );
@@ -3281,6 +3403,7 @@ unnecessaryLibraryDirective = LinterLintWithoutArguments(
   problemMessage:
       "Library directives without comments or annotations should be avoided.",
   correctionMessage: "Try deleting the library directive.",
+  hasPublishedDocs: true,
   uniqueName: 'unnecessary_library_directive',
   expectedTypes: [],
 );
@@ -3389,6 +3512,17 @@ const LinterLintWithoutArguments unnecessaryParenthesis =
     );
 
 /// No parameters.
+const LinterLintWithoutArguments unnecessaryPrimaryConstructorBody =
+    LinterLintWithoutArguments(
+      name: 'unnecessary_primary_constructor_body',
+      problemMessage: "Unnecessary primary constructor body.",
+      correctionMessage: "Try removing the body.",
+      hasPublishedDocs: true,
+      uniqueName: 'unnecessary_primary_constructor_body',
+      expectedTypes: [],
+    );
+
+/// No parameters.
 const LinterLintWithoutArguments unnecessaryRawStrings =
     LinterLintWithoutArguments(
       name: 'unnecessary_raw_strings',
@@ -3444,6 +3578,16 @@ const LinterLintWithoutArguments unnecessaryThis = LinterLintWithoutArguments(
 );
 
 /// No parameters.
+const LinterLintWithoutArguments unnecessaryThisAlias =
+    LinterLintWithoutArguments(
+      name: 'unnecessary_this_alias',
+      problemMessage: "Unnecessary 'this' alias.",
+      correctionMessage: "Try removing the variable and using 'this' directly.",
+      uniqueName: 'unnecessary_this_alias',
+      expectedTypes: [],
+    );
+
+/// No parameters.
 const LinterLintWithoutArguments unnecessaryToListInSpreads =
     LinterLintWithoutArguments(
       name: 'unnecessary_to_list_in_spreads',
@@ -3460,6 +3604,7 @@ const LinterLintWithoutArguments unnecessaryTypeNameInConstructor =
       name: 'unnecessary_type_name_in_constructor',
       problemMessage: "Unnecessary type name in a constructor.",
       correctionMessage: "Try removing the type name.",
+      hasPublishedDocs: true,
       uniqueName: 'unnecessary_type_name_in_constructor',
       expectedTypes: [],
     );
@@ -3497,6 +3642,7 @@ unreachableFromMain = LinterLintTemplate(
   name: 'unreachable_from_main',
   problemMessage: "Unreachable member '{0}' in an executable library.",
   correctionMessage: "Try referencing the member or removing it.",
+  hasPublishedDocs: true,
   uniqueName: 'unreachable_from_main',
   withArguments: _withArgumentsUnreachableFromMain,
   expectedTypes: [ExpectedType.object],
@@ -3583,8 +3729,7 @@ unsafeHtmlMethod = LinterLintTemplate(
 /// No parameters.
 const LinterLintWithoutArguments unsafeVariance = LinterLintWithoutArguments(
   name: 'unsafe_variance',
-  problemMessage:
-      "This type is unsafe: a type parameter occurs in a non-covariant position.",
+  problemMessage: "This type is unsafe: a type parameter occurs in a non-covariant position.",
   correctionMessage:
       "Try using a more general type that doesn't contain any type "
       "parameters in such a position.",
@@ -3638,6 +3783,7 @@ const LinterLintWithoutArguments useDeclaringParameters =
       name: 'use_declaring_parameters',
       problemMessage: "Use a declaring parameter.",
       correctionMessage: "Try using a declaring parameter.",
+      hasPublishedDocs: true,
       uniqueName: 'use_declaring_parameters',
       expectedTypes: [],
     );
@@ -3711,6 +3857,7 @@ useIsEvenRatherThanModulo = LinterLintTemplate(
   name: 'use_is_even_rather_than_modulo',
   problemMessage: "Use '{0}' rather than '% 2'.",
   correctionMessage: "Try using '{0}'.",
+  hasPublishedDocs: true,
   uniqueName: 'use_is_even_rather_than_modulo',
   withArguments: _withArgumentsUseIsEvenRatherThanModulo,
   expectedTypes: [ExpectedType.object],
@@ -3920,6 +4067,7 @@ const LinterLintWithoutArguments varWithNoTypeAnnotation =
       correctionMessage:
           "Try removing the keyword 'var' or replacing `var` with a type "
           "annotation.",
+      hasPublishedDocs: true,
       uniqueName: 'var_with_no_type_annotation',
       expectedTypes: [],
     );
@@ -4287,6 +4435,12 @@ LocatableDiagnostic _withArgumentsMatchingSuperParameters({
   return LocatableDiagnosticImpl(diag.matchingSuperParameters, [p0, p1]);
 }
 
+LocatableDiagnostic _withArgumentsMigrateDesignWidgets({
+  required String libraryName,
+}) {
+  return LocatableDiagnosticImpl(diag.migrateDesignWidgets, [libraryName]);
+}
+
 LocatableDiagnostic _withArgumentsNoDuplicateCaseValues({
   required Object p0,
   required Object p1,
@@ -4295,25 +4449,49 @@ LocatableDiagnostic _withArgumentsNoDuplicateCaseValues({
 }
 
 LocatableDiagnostic _withArgumentsNoLeadingUnderscoresForLibraryPrefixes({
-  required Object p0,
+  required String prefix,
 }) {
   return LocatableDiagnosticImpl(diag.noLeadingUnderscoresForLibraryPrefixes, [
-    p0,
+    prefix,
   ]);
 }
 
+LocatableDiagnostic
+_withArgumentsNoLeadingUnderscoresForLibraryPrefixesShadowed({
+  required String prefix,
+}) {
+  return LocatableDiagnosticImpl(
+    diag.noLeadingUnderscoresForLibraryPrefixesShadowed,
+    [prefix],
+  );
+}
+
 LocatableDiagnostic _withArgumentsNoLeadingUnderscoresForLocalIdentifiers({
-  required Object p0,
+  required String variableName,
 }) {
   return LocatableDiagnosticImpl(diag.noLeadingUnderscoresForLocalIdentifiers, [
-    p0,
+    variableName,
   ]);
+}
+
+LocatableDiagnostic
+_withArgumentsNoLeadingUnderscoresForLocalIdentifiersShadowed({
+  required String variableName,
+}) {
+  return LocatableDiagnosticImpl(
+    diag.noLeadingUnderscoresForLocalIdentifiersShadowed,
+    [variableName],
+  );
 }
 
 LocatableDiagnostic _withArgumentsNonConstantIdentifierNames({
   required Object p0,
 }) {
   return LocatableDiagnosticImpl(diag.nonConstantIdentifierNames, [p0]);
+}
+
+LocatableDiagnostic _withArgumentsNoRawTypes({required DartType type}) {
+  return LocatableDiagnosticImpl(diag.noRawTypes, [type]);
 }
 
 LocatableDiagnostic _withArgumentsOneMemberAbstracts({required Object p0}) {

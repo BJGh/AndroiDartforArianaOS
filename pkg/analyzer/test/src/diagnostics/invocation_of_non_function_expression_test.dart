@@ -15,7 +15,7 @@ main() {
 @reflectiveTest
 class InvocationOfNonFunctionExpressionTest extends PubPackageResolutionTest {
   test_literal_int() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   3(5);
 //^
@@ -23,15 +23,15 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: IntegerLiteral
+  function2: IntegerLiteral
     literal: 3
     staticType: int
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 5
         correspondingParameter: <null>

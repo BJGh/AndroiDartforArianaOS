@@ -18,7 +18,7 @@ import '../extensions.dart';
 const _desc = r'Use contains for `List` and `String` instances.';
 
 class PreferContains extends MultiAnalysisRule {
-  PreferContains() : super(name: LintNames.prefer_contains, description: _desc);
+  new() : super(name: LintNames.prefer_contains, description: _desc);
 
   // TODO(brianwilkerson): Both `alwaysFalse` and `alwaysTrue` should be warnings
   //  rather than lints because they represent a bug rather than a style
@@ -40,13 +40,8 @@ class PreferContains extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final PreferContains rule;
-
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final PreferContains rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitBinaryExpression(BinaryExpression node) {
     // This lint rule is only concerned with these operators.

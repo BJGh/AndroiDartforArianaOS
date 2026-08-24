@@ -18,8 +18,7 @@ import '../utils.dart';
 const _desc = r'Prefer using lowerCamelCase for constant names.';
 
 class ConstantIdentifierNames extends AnalysisRule {
-  ConstantIdentifierNames()
-    : super(name: LintNames.constant_identifier_names, description: _desc);
+  new() : super(name: LintNames.constant_identifier_names, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.constantIdentifierNames;
@@ -37,11 +36,7 @@ class ConstantIdentifierNames extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void checkIdentifier(Token id) {
     var name = id.lexeme;
     if (!isLowerCamelCase(name)) {

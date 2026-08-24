@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,14 +17,14 @@ main() {
 @reflectiveTest
 class TopLevelVariableTest extends ParserDiagnosticsTest {
   void test_top_level_variable_const_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const class A {}
+// [diag.constClass][column 1][length 5] Classes can't be declared to be 'const'.
 ''');
-    parseResult.assertErrors([error(diag.constClass, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -37,17 +36,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const const a = 0;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -62,24 +60,23 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_const_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const enum E { v }
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 4),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -101,17 +98,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//   ^
+// [diag.missingIdentifier][column 6][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 0),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -123,17 +119,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const final a = 0;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -148,21 +143,21 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_const_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int f() {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -179,14 +174,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const void f() {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -203,14 +198,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int get a => 0;
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -226,17 +232,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const mixin M {}
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -254,19 +259,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const set a(b) {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -279,17 +290,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const typedef A = B Function(C, D);
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 7),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -307,6 +317,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -319,17 +339,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_const_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const var a;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 3),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -348,14 +367,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a class A {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -374,14 +394,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a const a = 0;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -396,21 +417,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a enum E { v }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -432,14 +454,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -451,14 +474,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a final a = 0;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -473,21 +497,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a int f() {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -511,14 +536,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a void f() {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -542,14 +568,33 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        type: NamedType
+          name: a
+        variables
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -572,17 +617,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a mixin M {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -602,14 +647,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a set a(b) {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: a
@@ -617,6 +662,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -629,14 +680,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a typedef A = B Function(C, D);
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -654,6 +706,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -666,14 +728,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a var a;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -692,17 +755,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, class A {}
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -723,17 +786,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, const a = 0;
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -750,24 +813,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constNameComma_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, enum E { v }
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 4),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -791,17 +854,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a,
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^
+// [diag.missingIdentifier][column 9][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 0),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -815,17 +878,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, final a = 0;
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -842,21 +905,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constNameComma_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, int f() {}
+//       ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -880,17 +944,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, void f() {}
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 4),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -916,14 +980,33 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, int get a => 0;
+//       ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        variables
+          VariableDeclaration
+            name: a
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -946,17 +1029,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, mixin M {}
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -976,17 +1059,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, set a(b) {}
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 3),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1002,6 +1085,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1013,17 +1102,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, typedef A = B Function(C, D);
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 7),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1043,6 +1132,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -1055,17 +1154,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameComma_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, var a;
+//     ^
+// [diag.expectedToken] Expected to find ';'.
+//       ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 3),
-      error(diag.expectedToken, 7, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1086,14 +1185,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b class A {}
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1114,14 +1214,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b const a = 0;
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1138,21 +1239,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constNameCommaName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b enum E { v }
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1176,14 +1278,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1197,14 +1300,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b final a = 0;
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1221,21 +1325,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constNameCommaName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b int f() {}
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1261,14 +1366,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b void f() {}
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1294,14 +1400,35 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b int get a => 0;
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        variables
+          VariableDeclaration
+            name: a
+          VariableDeclaration
+            name: b
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1326,14 +1453,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b mixin M {}
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1353,14 +1481,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b set a(b) {}
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1376,6 +1505,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1387,14 +1522,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b typedef A = B Function(C, D);
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1414,6 +1550,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -1426,14 +1572,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constNameCommaName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const a, b var a;
+//       ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1454,14 +1601,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a class A {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1482,14 +1630,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a const a = 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1506,21 +1655,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a enum E { v }
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1544,14 +1694,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1565,14 +1716,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a final a = 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1589,21 +1741,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a int f() {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1629,14 +1782,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a void f() {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1662,14 +1816,35 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a int get a => 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: a
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1694,14 +1869,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a mixin M {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1721,14 +1897,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a set a(b) {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1744,6 +1921,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1755,14 +1938,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a typedef A = B Function(C, D);
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1782,6 +1966,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -1794,14 +1988,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a var a;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1822,17 +2017,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, class A {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1855,17 +2050,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, const a = 0;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1884,24 +2079,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeNameComma_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, enum E { v }
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 4),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1927,17 +2122,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a,
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//          ^
+// [diag.missingIdentifier][column 13][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 0),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1953,17 +2148,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, final a = 0;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1982,21 +2177,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeNameComma_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, int f() {}
+//           ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2022,17 +2218,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, void f() {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 4),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2060,14 +2256,35 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, int get a => 0;
+//           ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: a
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2092,17 +2309,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, mixin M {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2124,17 +2341,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, set a(b) {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2152,6 +2369,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -2163,17 +2386,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, typedef A = B Function(C, D);
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 7),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2195,6 +2418,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -2207,17 +2440,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameComma_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, var a;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2240,14 +2473,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b class A {}
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2270,14 +2504,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b const a = 0;
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2296,21 +2531,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeNameCommaName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b enum E { v }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2336,14 +2572,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2359,14 +2596,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b final a = 0;
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2385,21 +2623,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_constTypeNameCommaName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b int f() {}
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2427,14 +2666,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b void f() {}
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2462,14 +2702,37 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b int get a => 0;
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: const
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: a
+          VariableDeclaration
+            name: b
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2496,14 +2759,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b mixin M {}
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2525,14 +2789,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b set a(b) {}
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2550,6 +2815,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -2561,14 +2832,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b typedef A = B Function(C, D);
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2590,6 +2862,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -2602,14 +2884,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_constTypeNameCommaName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int a, b var a;
+//           ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -2632,14 +2915,13 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final class A {}
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       finalKeyword: final
       classKeyword: class
@@ -2652,17 +2934,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final const a = 0;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2677,21 +2958,21 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_final_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final enum E { v }
+// [diag.finalEnum][column 1][length 5] Enums can't be declared to be 'final'.
 ''');
-    parseResult.assertErrors([error(diag.finalEnum, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2706,17 +2987,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//   ^
+// [diag.missingIdentifier][column 6][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 0),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2728,17 +3008,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final final a = 0;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2753,21 +3032,21 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_final_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int f() {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'final' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -2784,14 +3063,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final void f() {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'final' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -2808,14 +3087,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int get a => 0;
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'final' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -2831,14 +3121,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final mixin M {}
+// [diag.finalMixin][column 1][length 5] A mixin can't be declared 'final'.
 ''');
-    parseResult.assertErrors([error(diag.finalMixin, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -2849,19 +3139,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final set a(b) {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'final' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -2874,17 +3170,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final typedef A = B Function(C, D);
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 7),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2902,6 +3197,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -2914,17 +3219,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_final_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final var a;
+// [diag.expectedToken][column 1][length 5] Expected to find ';'.
+//    ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 6, 3),
-      error(diag.expectedToken, 0, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2943,14 +3247,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a class A {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2969,14 +3274,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a const a = 0;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -2991,21 +3297,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_finalName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a enum E { v }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3027,14 +3334,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3046,14 +3354,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a final a = 0;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3068,21 +3377,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_finalName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a int f() {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3106,14 +3416,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a void f() {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3137,14 +3448,33 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: final
+        type: NamedType
+          name: a
+        variables
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3167,17 +3497,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a mixin M {}
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3197,14 +3527,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a set a(b) {}
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'final' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: a
@@ -3212,6 +3542,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -3224,14 +3560,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a typedef A = B Function(C, D);
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3249,6 +3586,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -3261,14 +3608,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final a var a;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 6, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3287,14 +3635,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a class A {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3315,14 +3664,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a const a = 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3339,21 +3689,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_finalTypeName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a enum E { v }
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3377,14 +3728,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3398,14 +3750,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a final a = 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3422,21 +3775,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_finalTypeName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a int f() {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3462,14 +3816,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a void f() {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3495,14 +3850,35 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a int get a => 0;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: final
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: a
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3527,14 +3903,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a mixin M {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3554,14 +3931,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a set a(b) {}
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3577,6 +3955,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -3588,14 +3972,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a typedef A = B Function(C, D);
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3615,6 +4000,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -3627,14 +4022,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_finalTypeName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final int a var a;
+//        ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -3655,17 +4051,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int class A {}
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3683,17 +4077,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int const a = 0;
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3707,24 +4099,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_type_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int enum E { v }
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3745,17 +4135,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3766,17 +4154,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int final a = 0;
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3790,21 +4176,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_type_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int int f() {}
+//  ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -3827,17 +4214,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int void f() {}
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3860,14 +4245,32 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int int get a => 0;
+//  ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -3889,17 +4292,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int mixin M {}
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -3918,14 +4320,13 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int set a(b) {}
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -3933,6 +4334,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -3945,17 +4352,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int typedef A = B Function(C, D);
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -3972,6 +4377,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -3984,17 +4399,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_type_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int var a;
+// [diag.missingConstFinalVarOrType][column 1][length 3] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -4012,14 +4425,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a class A {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4039,14 +4453,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a const a = 0;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4062,21 +4477,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_typeName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a enum E { v }
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4099,14 +4515,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4119,14 +4536,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a final a = 0;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4142,21 +4560,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_typeName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a int f() {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4181,14 +4600,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a void f() {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4213,14 +4633,34 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a int get a => 0;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        type: NamedType
+          name: int
+        variables
+          VariableDeclaration
+            name: a
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4244,14 +4684,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a mixin M {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4270,14 +4711,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a set a(b) {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4292,6 +4734,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -4303,14 +4751,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a typedef A = B Function(C, D);
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4329,6 +4778,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -4341,14 +4800,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_typeName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int a var a;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4368,17 +4828,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var class A {}
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4397,17 +4856,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var const a = 0;
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4422,24 +4880,23 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_var_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var enum E { v }
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 4),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4461,17 +4918,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+// ^
+// [diag.missingIdentifier][column 4][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 0),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4483,17 +4939,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var final a = 0;
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4508,21 +4963,21 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_var_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var int f() {}
+// [diag.varReturnType][column 1][length 3] The return type can't be 'var'.
 ''');
-    parseResult.assertErrors([error(diag.varReturnType, 0, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -4539,14 +4994,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var void f() {}
+// [diag.varReturnType][column 1][length 3] The return type can't be 'var'.
 ''');
-    parseResult.assertErrors([error(diag.varReturnType, 0, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -4563,14 +5018,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var int get a => 0;
+// [diag.varReturnType][column 1][length 3] The return type can't be 'var'.
 ''');
-    parseResult.assertErrors([error(diag.varReturnType, 0, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -4586,17 +5052,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var mixin M {}
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4614,19 +5079,25 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var set a(b) {}
+// [diag.varReturnType][column 1][length 3] The return type can't be 'var'.
 ''');
-    parseResult.assertErrors([error(diag.varReturnType, 0, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -4639,17 +5110,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var typedef A = B Function(C, D);
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 7),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4667,6 +5137,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -4679,17 +5159,16 @@ CompilationUnit
   }
 
   void test_top_level_variable_var_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var var a;
+// [diag.expectedToken][column 1][length 3] Expected to find ';'.
+//  ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 3),
-      error(diag.expectedToken, 0, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4708,14 +5187,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a class A {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4734,14 +5214,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a const a = 0;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4756,21 +5237,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_varName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a enum E { v }
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4792,14 +5274,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4811,14 +5294,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a final a = 0;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4833,24 +5317,23 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_varName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a int f() {}
+// [diag.varAndType][column 1][length 3] Variables can't be declared using both 'var' and a type name.
+//    ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.varAndType, 0, 3),
-      error(diag.expectedToken, 6, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4874,14 +5357,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a void f() {}
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4905,17 +5389,34 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a int get a => 0;
+// [diag.varAndType][column 1][length 3] Variables can't be declared using both 'var' and a type name.
+//    ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.varAndType, 0, 3),
-      error(diag.expectedToken, 6, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: var
+        type: NamedType
+          name: a
+        variables
+          VariableDeclaration
+            name: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4938,18 +5439,18 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a mixin M {}
+// [diag.varAndType][column 1][length 3] Variables can't be declared using both 'var' and a type name.
+//  ^
+// [diag.expectedToken] Expected to find ';'.
+//    ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.varAndType, 0, 3),
-      error(diag.missingIdentifier, 6, 5),
-      error(diag.expectedToken, 4, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -4969,14 +5470,14 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a set a(b) {}
+// [diag.varReturnType][column 1][length 3] The return type can't be 'var'.
 ''');
-    parseResult.assertErrors([error(diag.varReturnType, 0, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: a
@@ -4984,6 +5485,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -4996,14 +5503,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a typedef A = B Function(C, D);
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5021,6 +5529,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -5033,14 +5551,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a var a;
+//  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 4, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5059,18 +5578,18 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = class A {}
+//      ^^^^^
+// [diag.expectedIdentifierButGotKeyword] 'class' can't be used as an identifier because it's a keyword.
+// [diag.expectedToken] Expected to find ';'.
+//            ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 8, 5),
-      error(diag.expectedToken, 8, 5),
-      error(diag.missingFunctionParameters, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5078,7 +5597,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: class
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5095,17 +5614,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = const a = 0;
+//      ^^^^^^^^
+// [diag.missingAssignableSelector] Missing selector such as '.identifier' or '[0]'.
+//            ^
+// [diag.expectedToken] Expected to find '('.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.missingAssignableSelector, 8, 8),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5113,7 +5632,20 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: AssignmentExpression
+            initializer2: DirectAssignment
+              target: InvalidExpressionAssignmentTarget
+                expression: ConstructorInvocation
+                  keyword: const
+                  constructorReference: ConstructorReference2
+                    typeReference: ConstructorTypeReference
+                      name: a
+                  argumentList: ArgumentList
+                    leftParenthesis: ( <synthetic>
+                    rightParenthesis: ) <synthetic>
+              operator: =
+              value: IntegerLiteral
+                literal: 0
+            initializer(v1): AssignmentExpression
               leftHandSide: InstanceCreationExpression
                 keyword: const
                 constructorName: ConstructorName
@@ -5130,19 +5662,20 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = enum E { v }
+//      ^^^^
+// [diag.expectedIdentifierButGotKeyword] 'enum' can't be used as an identifier because it's a keyword.
+// [diag.expectedToken] Expected to find ';'.
+//           ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
+//               ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 8, 4),
-      error(diag.expectedToken, 8, 4),
-      error(diag.missingFunctionParameters, 13, 1),
-      error(diag.expectedToken, 17, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5150,7 +5683,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: enum
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5164,7 +5697,7 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: v
                 semicolon: ; <synthetic>
             rightBracket: }
@@ -5172,17 +5705,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a =
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//     ^
+// [diag.missingIdentifier][column 8][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 0),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5190,24 +5723,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: <empty> <synthetic>
       semicolon: ; <synthetic>
 ''');
   }
 
   void test_top_level_variable_varNameEquals_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = final a = 0;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5215,7 +5748,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: <empty> <synthetic>
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration
@@ -5225,24 +5758,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_varNameEquals_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = int f() {}
+//          ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//               ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.namedFunctionExpression, 12, 1),
-      error(diag.expectedToken, 17, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5250,7 +5783,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: FunctionExpression
+            initializer2: FunctionExpression
               parameters: FormalParameterList
                 leftParenthesis: (
                 rightParenthesis: )
@@ -5263,17 +5796,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = void f() {}
+//           ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.namedFunctionExpression, 13, 1),
-      error(diag.expectedToken, 18, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5281,7 +5814,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: FunctionExpression
+            initializer2: FunctionExpression
               parameters: FormalParameterList
                 leftParenthesis: (
                 rightParenthesis: )
@@ -5294,14 +5827,34 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: var
+        variables
+          VariableDeclaration
+            name: a
+            equals: =
+            initializer2: SimpleIdentifier
+              token: int
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5325,17 +5878,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = mixin M {}
+//      ^^^^^
+// [diag.expectedToken] Expected to find ';'.
+//            ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 5),
-      error(diag.missingFunctionParameters, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5343,7 +5896,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: mixin
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5360,14 +5913,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = set a(b) {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5375,13 +5929,19 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: set
       semicolon: ; <synthetic>
     FunctionDeclaration
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -5394,18 +5954,19 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = typedef A = B Function(C, D);
+//      ^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+//                  ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 7),
-      error(diag.missingConstFinalVarOrType, 16, 1),
-      error(diag.expectedToken, 20, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5413,7 +5974,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: typedef
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration
@@ -5422,13 +5983,21 @@ CompilationUnit
           VariableDeclaration
             name: A
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: B
       semicolon: ; <synthetic>
     FunctionDeclaration
       name: Function
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: C
+            RegularFormalParameter
+              name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: C
@@ -5441,17 +6010,17 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEquals_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = var a;
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 3),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5459,7 +6028,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: <empty> <synthetic>
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration
@@ -5473,14 +6042,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b class A {}
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5488,7 +6058,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     ClassDeclaration
@@ -5502,14 +6072,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b const a = 0;
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5517,7 +6088,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration
@@ -5527,21 +6098,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_varNameEqualsExpression_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b enum E { v }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5549,7 +6121,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     EnumDeclaration
@@ -5566,14 +6138,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5581,21 +6154,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
 ''');
   }
 
   void test_top_level_variable_varNameEqualsExpression_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b final a = 0;
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5603,7 +6177,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration
@@ -5613,21 +6187,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_top_level_variable_varNameEqualsExpression_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b int f() {}
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5635,7 +6210,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5654,14 +6229,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b void f() {}
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5669,7 +6245,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5688,14 +6264,36 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b int get a => 0;
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelVariableDeclaration
+      variables: VariableDeclarationList
+        keyword: var
+        variables
+          VariableDeclaration
+            name: a
+            equals: =
+            initializer2: SimpleIdentifier
+              token: b
+      semicolon: ; <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5721,14 +6319,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b mixin M {}
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5736,7 +6335,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     MixinDeclaration
@@ -5749,14 +6348,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b set a(b) {}
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5764,7 +6364,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     FunctionDeclaration
@@ -5772,6 +6372,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -5784,14 +6390,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b typedef A = B Function(C, D);
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5799,7 +6406,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     GenericTypeAlias
@@ -5811,6 +6418,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -5824,14 +6441,15 @@ CompilationUnit
   }
 
   void test_top_level_variable_varNameEqualsExpression_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var a = b var a;
+//      ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -5839,7 +6457,7 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: b
       semicolon: ; <synthetic>
     TopLevelVariableDeclaration

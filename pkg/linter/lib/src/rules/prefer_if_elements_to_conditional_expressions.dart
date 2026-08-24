@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Prefer if elements to conditional expressions where possible.';
 
 class PreferIfElementsToConditionalExpressions extends AnalysisRule {
-  PreferIfElementsToConditionalExpressions()
+  new()
     : super(
         name: LintNames.prefer_if_elements_to_conditional_expressions,
         description: _desc,
@@ -35,11 +35,7 @@ class PreferIfElementsToConditionalExpressions extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitConditionalExpression(ConditionalExpression node) {
     AstNode errorNode = node;

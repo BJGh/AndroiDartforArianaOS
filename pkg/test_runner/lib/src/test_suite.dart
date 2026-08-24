@@ -69,17 +69,26 @@ abstract class TestSuite {
           'DART_CRASHPAD_HANDLER': Uri.base
               .resolve('${configuration.buildDirectory}/crashpad_handler.exe')
               .toFilePath(),
-        if (configuration.chromePath != null)
+        if (configuration.chromePath != null) ...{
           'CHROME_PATH': Uri.base
               .resolve(configuration.chromePath!)
               .toFilePath(),
+          'CHROME_EXECUTABLE': Uri.base
+              .resolve(configuration.chromePath!)
+              .toFilePath(),
+        },
         if (configuration.firefoxPath != null)
           'FIREFOX_PATH': Uri.base
               .resolve(configuration.firefoxPath!)
               .toFilePath(),
         if (configuration.useQemu)
           'QEMU_LD_PREFIX':
+              Platform.environment['QEMU_LD_PREFIX'] ??
               QemuConfig.all[configuration.architecture]!.elfInterpreterPrefix,
+        if (configuration.useQemu)
+          'QEMU_CPU':
+              Platform.environment['QEMU_CPU'] ??
+              QemuConfig.all[configuration.architecture]!.cpu,
       };
 
   Map<String, String> get environmentOverrides => _environmentOverrides;
@@ -239,7 +248,7 @@ abstract class TestSuite {
     String dirname,
     Path testPath,
   ) {
-    var relative = testPath.relativeTo(Repository.dir);
+    var relative = testPath;
     relative = relative.directoryPath.append(relative.filenameWithoutExtension);
     var testUniqueName = TestUtils.getShortName(relative.toString());
 
@@ -248,9 +257,7 @@ abstract class TestSuite {
     ).append('generated_$name').append(dirname).append(testUniqueName);
 
     TestUtils.mkdirRecursive(Path('.'), generatedTestPath);
-    return File(
-      generatedTestPath.toNativePath(),
-    ).absolute.path.replaceAll('\\', '/');
+    return File(generatedTestPath.toNativePath()).path.replaceAll('\\', '/');
   }
 
   /// Create a directories for generated assets (tests, html files,
@@ -330,9 +337,19 @@ class VMTestSuite extends TestSuite {
     if (configuration.useQemu) {
       final config = QemuConfig.all[configuration.architecture]!;
       initialHostArguments.insert(0, hostRunnerPath);
-      initialHostArguments.insertAll(0, ['-L', config.elfInterpreterPrefix]);
+      initialHostArguments.insertAll(0, [
+        '-cpu',
+        config.cpu,
+        '-L',
+        config.elfInterpreterPrefix,
+      ]);
       initialTargetArguments.insert(0, targetRunnerPath);
-      initialTargetArguments.insertAll(0, ['-L', config.elfInterpreterPrefix]);
+      initialTargetArguments.insertAll(0, [
+        '-cpu',
+        config.cpu,
+        '-L',
+        config.elfInterpreterPrefix,
+      ]);
       hostRunnerPath = config.executable;
       targetRunnerPath = config.executable;
     }
@@ -386,7 +403,7 @@ class VMTestSuite extends TestSuite {
             configuration.architecture == Architecture.x64c
         ? '$buildDir/gen/kernel-service.dart.snapshot'
         : '$buildDir/gen/kernel_service.dill';
-    var dfePath = Path(filename).absolute.toNativePath();
+    var dfePath = Path(filename).toNativePath();
     final experiments = [...configuration.experiments];
     var args = [
       ...initialTargetArguments,
@@ -469,9 +486,6 @@ class FfiTestSuite extends TestSuite {
     "arm_android",
     "arm_ios",
     "arm_linux",
-    "ia32_android",
-    "ia32_linux",
-    "ia32_win",
     "x64_fuchsia",
     "x64_ios",
     "x64_linux",
@@ -612,7 +626,7 @@ class StandardTestSuite extends TestSuite {
     bool recursive = false,
   }) : dartDir = Repository.dir,
        listRecursively = recursive,
-       suiteDir = Repository.dir.join(suiteDirectory),
+       suiteDir = suiteDirectory,
        extraVmOptions = configuration.vmOptions,
        super(configuration, suiteName, statusFilePaths) {
     // Initialize _dart2JsBootstrapDependencies.
@@ -1078,22 +1092,22 @@ class StandardTestSuite extends TestSuite {
           Path('$outputDir/$nameNoExt.support.js'),
         );
 
-        content = dart2wasmHtml(
-          testFile.path.toNativePath(),
-          wasmPath,
-          mjsPath,
-          supportJsPath,
-          configuration.isDart2wasmStandalone,
-        );
+        final title = testFile.path.toNativePath();
+        content = configuration.isDart2wasmStandalone
+            ? dart2WasmStandaloneHtml(title, wasmPath)
+            : dart2wasmHtml(
+                testFile.path.toNativePath(),
+                wasmPath,
+                mjsPath,
+                supportJsPath,
+              );
       } else if (configuration.compiler == Compiler.ddc) {
         var ddcConfig =
             configuration.compilerConfiguration as DevCompilerConfiguration;
-        var nameFromModuleRoot = testFile.path.relativeTo(Repository.dir);
+        var nameFromModuleRoot = testFile.path;
         var nameFromModuleRootNoExt =
             "${nameFromModuleRoot.directoryPath}/$nameNoExt";
-        var jsDir = Path(
-          compilationTempDir,
-        ).relativeTo(Repository.dir).toString();
+        var jsDir = Path(compilationTempDir).toString();
         var nativeNonNullAsserts = testFile.ddcOptions.contains(
           '--native-null-assertions',
         );

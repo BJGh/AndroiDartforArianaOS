@@ -18,7 +18,7 @@ import '../util/variance_checker.dart';
 const _desc = r"Avoid using 'FutureOr<void>' as the type of a result.";
 
 class AvoidFutureOrVoid extends AnalysisRule {
-  AvoidFutureOrVoid()
+  new()
     : super(
         name: LintNames.avoid_futureor_void,
         description: _desc,
@@ -53,7 +53,7 @@ class AvoidFutureOrVoid extends AnalysisRule {
 
 class _FutureOrVarianceChecker extends VarianceChecker {
   final AnalysisRule rule;
-  _FutureOrVarianceChecker(this.rule);
+  new(this.rule);
 
   @override
   void checkNamedType(
@@ -73,12 +73,9 @@ class _FutureOrVarianceChecker extends VarianceChecker {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-  final VarianceChecker checker;
-
-  _Visitor(this.rule, this.context) : checker = _FutureOrVarianceChecker(rule);
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
+  final VarianceChecker checker = _FutureOrVarianceChecker(rule);
 
   @override
   void visitAsExpression(AsExpression node) => checker.checkOut(node.type);

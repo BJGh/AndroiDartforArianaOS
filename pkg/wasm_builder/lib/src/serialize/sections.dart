@@ -2,9 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:typed_data';
+
 import '../ir/ir.dart' as ir;
 import 'deserializer.dart';
+import 'printer.dart' show IndentPrinter;
 import 'serializer.dart';
+
+const Set<String> _reservedCustomSectionNames = {
+  NameSection.customSectionName,
+  SourceMapSection.customSectionName,
+  BinaryenRemovableIfUnusedSection.customSectionName,
+  BinaryenInlineHintSection.customSectionName,
+  BinaryenJSCalledSection.customSectionName,
+};
 
 abstract class Section implements Serializable {
   final List<int> watchPoints;
@@ -1094,12 +1105,12 @@ class SourceMapSection extends CustomSection {
   }
 }
 
-class RemovableIfUnusedSection extends CustomSection {
+class BinaryenRemovableIfUnusedSection extends CustomSection {
   static const String customSectionName = 'binaryen.removable.if.unused';
 
   final ir.Functions functions;
 
-  RemovableIfUnusedSection(this.functions) : super([]);
+  BinaryenRemovableIfUnusedSection(this.functions) : super([]);
 
   @override
   void serializeContents(Serializer s) {
@@ -1114,7 +1125,7 @@ class RemovableIfUnusedSection extends CustomSection {
         s.writeUnsigned(function.index);
         s.writeUnsigned(1); // Number of hints
         s.writeUnsigned(0); // Offset (0 == function-level)
-        s.writeUnsigned(0); // always 0
+        s.writeUnsigned(0); // hint length (always 0)
       }
     }
   }
@@ -1140,5 +1151,137 @@ class RemovableIfUnusedSection extends CustomSection {
         functions[functionIndex].isPure = true;
       }
     }
+  }
+}
+
+class BinaryenInlineHintSection extends CustomSection {
+  static const String customSectionName = 'binaryen.inline';
+
+  final ir.Functions functions;
+
+  BinaryenInlineHintSection(this.functions) : super([]);
+
+  @override
+  void serializeContents(Serializer s) {
+    final functionsToAnnotate = [
+      ...functions.imported.where((f) => f.inlineHint != null),
+      ...functions.defined.where((f) => f.inlineHint != null),
+    ];
+    if (functionsToAnnotate.isNotEmpty) {
+      s.writeName(customSectionName);
+      s.writeUnsigned(functionsToAnnotate.length);
+      for (final function in functionsToAnnotate) {
+        final hint = function.inlineHint!;
+        assert(hint >= 0 && hint <= 127);
+        s.writeUnsigned(function.index);
+        s.writeUnsigned(1); // Number of hints
+        s.writeUnsigned(0); // Offset (0 == function-level)
+        s.writeUnsigned(1); // hint length (always 1 for inline hint)
+        s.writeByte(hint);
+      }
+    }
+  }
+
+  static void deserialize(Deserializer? d, ir.Functions functions) {
+    if (d == null) return;
+
+    final count = d.readUnsigned();
+    for (int i = 0; i < count; i++) {
+      final functionIndex = d.readUnsigned();
+      final numHints = d.readUnsigned();
+      for (int j = 0; j < numHints; j++) {
+        final offset = d.readUnsigned(); // Offset (0 == function-level)
+        if (offset != 0) {
+          throw UnsupportedError(
+            'Only function-level ($customSectionName) annotation supported.',
+          );
+        }
+        final hintLength = d.readUnsigned();
+        if (hintLength != 1) {
+          throw StateError('Expected hint length 1 but got $hintLength');
+        }
+        final hint = d.readByte();
+        if (hint < 0 || hint > 127) {
+          throw StateError('Expected hint in range [0..127] but got $hint');
+        }
+        // Stale indices from post-optimized binaries are ignored.
+        if (functionIndex < functions.length) {
+          functions[functionIndex].inlineHint = hint;
+        }
+      }
+    }
+  }
+}
+
+class BinaryenJSCalledSection extends CustomSection {
+  static const String customSectionName = 'binaryen.js.called';
+
+  final ir.Functions functions;
+
+  BinaryenJSCalledSection(this.functions) : super([]);
+
+  @override
+  void serializeContents(Serializer s) {
+    final functionsToAnnotate = [
+      ...functions.imported.where((f) => f.isJSCalled),
+      ...functions.defined.where((f) => f.isJSCalled),
+    ];
+    if (functionsToAnnotate.isNotEmpty) {
+      s.writeName(customSectionName);
+      s.writeUnsigned(functionsToAnnotate.length);
+      for (final function in functionsToAnnotate) {
+        s.writeUnsigned(function.index);
+        s.writeUnsigned(1); // Number of hints
+        s.writeUnsigned(0); // Offset (0 == function-level)
+        s.writeUnsigned(0); // hint length (always 0)
+      }
+    }
+  }
+
+  static void deserialize(Deserializer? d, ir.Functions functions) {
+    if (d == null) return;
+
+    final count = d.readUnsigned();
+    for (int i = 0; i < count; i++) {
+      final functionIndex = d.readUnsigned();
+      final numHints = d.readUnsigned();
+      for (int j = 0; j < numHints; j++) {
+        final offset = d.readUnsigned(); // Offset (0 == function-level)
+        if (offset != 0) {
+          throw UnsupportedError(
+            'Only function-level ($customSectionName) annotation supported.',
+          );
+        }
+        final data = d.readUnsigned(); // always 0
+        if (data != 0) {
+          throw StateError('Expected 0 but got $data');
+        }
+        functions[functionIndex].isJSCalled = true;
+      }
+    }
+  }
+}
+
+class ExtraCustomSection extends CustomSection {
+  final String name;
+  final Uint8List bytes;
+
+  ExtraCustomSection(this.name, this.bytes)
+    : assert(!_reservedCustomSectionNames.contains(name)),
+      super([]);
+
+  factory ExtraCustomSection.deserialize(Deserializer d, String name) {
+    final bytes = d.readBytes(d.length - d.offset);
+    return ExtraCustomSection(name, bytes);
+  }
+
+  @override
+  void serializeContents(Serializer s) {
+    s.writeName(name);
+    s.writeBytes(bytes);
+  }
+
+  void printTo(IndentPrinter ip) {
+    ip.writeln('(custom "$name" (${bytes.length} bytes data))');
   }
 }

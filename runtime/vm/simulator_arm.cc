@@ -256,14 +256,10 @@ static const char* ImageName(uword vm_instructions,
                              uword isolate_instructions,
                              uword pc,
                              intptr_t* offset) {
-  const Image vm_image(vm_instructions);
-  const Image isolate_image(isolate_instructions);
-  if (vm_image.contains(pc)) {
-    *offset = pc - vm_instructions;
-    return kVmSnapshotInstructionsAsmSymbol;
-  } else if (isolate_image.contains(pc)) {
+  const TextImage isolate_image(isolate_instructions);
+  if (isolate_image.contains(pc)) {
     *offset = pc - isolate_instructions;
-    return kIsolateSnapshotInstructionsAsmSymbol;
+    return kSnapshotTextAsmSymbol;
   } else {
     *offset = 0;
     return "<unknown>";
@@ -308,10 +304,9 @@ void SimulatorDebugger::PrintBacktrace() {
   auto const T = Thread::Current();
   auto const Z = T->zone();
 #if defined(DART_PRECOMPILED_RUNTIME)
-  auto const vm_instructions = reinterpret_cast<uword>(
-      Dart::vm_isolate_group()->source()->snapshot_instructions);
-  auto const isolate_instructions = reinterpret_cast<uword>(
-      T->isolate_group()->source()->snapshot_instructions);
+  const uword vm_instructions = 0;
+  const uword isolate_instructions =
+      reinterpret_cast<uword>(T->isolate_group()->source()->snapshot_text);
   OS::PrintErr("vm_instructions=0x%" Px ", isolate_instructions=0x%" Px "\n",
                vm_instructions, isolate_instructions);
 #else
@@ -784,10 +779,6 @@ Simulator::Simulator() : memory_(FLAG_sim_buffer_memory) {
 
 Simulator::~Simulator() {
   delete[] stack_;
-  Isolate* isolate = Isolate::Current();
-  if (isolate != nullptr) {
-    isolate->set_simulator(nullptr);
-  }
 }
 
 // When the generated code calls an external reference we need to catch that in
@@ -887,14 +878,14 @@ uword Simulator::FunctionForRedirect(uword redirect) {
   return Redirection::FunctionForRedirect(redirect);
 }
 
-// Get the active Simulator for the current isolate.
+// Get the active Simulator for the current thread.
 Simulator* Simulator::Current() {
-  Isolate* isolate = Isolate::Current();
-  Simulator* simulator = isolate->simulator();
+  Thread* thread = Thread::Current();
+  Simulator* simulator = thread->simulator();
   if (simulator == nullptr) {
     NoSafepointScope no_safepoint;
     simulator = new Simulator();
-    isolate->set_simulator(simulator);
+    thread->set_simulator(simulator);
   }
   return simulator;
 }
@@ -3414,6 +3405,53 @@ void Simulator::DecodeSIMDDataProcessing(Instr* instr) {
       }
 
       set_dregister_bits(dd, result);
+    } else if ((instr->Bits(8, 4) == 5) && (instr->Bit(7) == 0) &&
+               (instr->Bit(5) == 0) && (instr->Bit(4) == 0) &&
+               (instr->Bits(16, 4) == 0) && (instr->Bits(20, 2) == 3) &&
+               (instr->Bits(23, 5) == 7)) {
+      // Format(instr, "vcnt.8 'dd, 'dm");
+      DRegister dd = instr->DdField();
+      DRegister dm = instr->DmField();
+      uint64_t dm_value = static_cast<uint64_t>(get_dregister_bits(dm));
+      uint64_t result = 0;
+      uint8_t* in = reinterpret_cast<uint8_t*>(&dm_value);
+      uint8_t* out = reinterpret_cast<uint8_t*>(&result);
+      for (int i = 0; i < 8; i++) {
+        out[i] = Utils::CountOneBits32(in[i]);
+      }
+      set_dregister_bits(dd, static_cast<int64_t>(result));
+    } else if ((instr->Bits(8, 4) == 2) && (instr->Bit(7) == 1) &&
+               (instr->Bit(5) == 0) && (instr->Bit(4) == 0) &&
+               (instr->Bits(16, 2) == 0) && (instr->Bits(20, 2) == 3) &&
+               (instr->Bits(23, 5) == 7)) {
+      // Format(instr, "vpaddl.u<sz> 'dd, 'dm");
+      DRegister dd = instr->DdField();
+      DRegister dm = instr->DmField();
+      const int size = instr->Bits(18, 2);
+      uint64_t dm_value = static_cast<uint64_t>(get_dregister_bits(dm));
+      uint64_t result = 0;
+      if (size == 0) {
+        uint8_t* in = reinterpret_cast<uint8_t*>(&dm_value);
+        uint16_t* out = reinterpret_cast<uint16_t*>(&result);
+        for (int i = 0; i < 4; i++) {
+          out[i] = static_cast<uint16_t>(in[2 * i]) +
+                   static_cast<uint16_t>(in[2 * i + 1]);
+        }
+      } else if (size == 1) {
+        uint16_t* in = reinterpret_cast<uint16_t*>(&dm_value);
+        uint32_t* out = reinterpret_cast<uint32_t*>(&result);
+        for (int i = 0; i < 2; i++) {
+          out[i] = static_cast<uint32_t>(in[2 * i]) +
+                   static_cast<uint32_t>(in[2 * i + 1]);
+        }
+      } else if (size == 2) {
+        uint32_t* in = reinterpret_cast<uint32_t*>(&dm_value);
+        result = static_cast<uint64_t>(in[0]) + static_cast<uint64_t>(in[1]);
+      } else {
+        UnimplementedInstruction(instr);
+        return;
+      }
+      set_dregister_bits(dd, static_cast<int64_t>(result));
     } else {
       UnimplementedInstruction(instr);
     }
@@ -3430,6 +3468,9 @@ DART_FORCE_INLINE void Simulator::InstructionDecodeImpl(Instr* instr) {
     } else if (instr->InstructionBits() == static_cast<int32_t>(kDMB_ISH)) {
       // Format(instr, "dmb ish");
       memory_.FlushAll();
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wtsan"
+#endif
       std::atomic_thread_fence(std::memory_order_seq_cst);
     } else if (instr->InstructionBits() == static_cast<int32_t>(kDMB_ISHST)) {
       // Format(instr, "dmb ishst");

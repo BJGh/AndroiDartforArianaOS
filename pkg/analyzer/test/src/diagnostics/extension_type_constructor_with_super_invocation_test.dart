@@ -16,7 +16,7 @@ main() {
 class ExtensionTypeConstructorWithSuperInvocationTest
     extends PubPackageResolutionTest {
   test_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   E.named() : it = 0, super.named();
 //                    ^^^^^
@@ -24,18 +24,21 @@ extension type E(int it) {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
   period: .
   constructorName: SimpleIdentifier
     token: named
     element: <null>
     staticType: null
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
   element: <null>
 ''');
   }
@@ -53,7 +56,7 @@ extension type const E._(int it) {
   }
 
   test_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   E.named() : it = 0, super();
 //                    ^^^^^
@@ -61,7 +64,7 @@ extension type E(int it) {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super

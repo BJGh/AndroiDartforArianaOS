@@ -96,7 +96,7 @@ void f() {
   }
 
   test_new_notGeneric_unnamed_typeParameter2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A<T> = T;
 typedef B<T> = A<T>;
 
@@ -107,9 +107,21 @@ void f() {
 }
 ''');
 
-    var node = findNode.instanceCreation('new B()');
+    var node = result.findNode.constructorInvocation('new B()');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: new
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: B
+      element: <testLibrary>::@typeAlias::B
+      type: InvalidType
+    element: <null>
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: InvalidType
+V1: InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType

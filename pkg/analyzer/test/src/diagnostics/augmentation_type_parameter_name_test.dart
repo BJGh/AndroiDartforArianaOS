@@ -68,7 +68,7 @@ augment extension A<U> {}
   test_extensionType_T_U() async {
     await resolveTestCodeWithDiagnostics(r'''
 extension type A<T>(int it) {}
-augment extension type A<U>(int it) {}
+augment extension type A<U> {}
 //                       ^
 // [diag.augmentationTypeParameterName] The augmentation type parameter must have the same name as the corresponding type parameter of the declaration.
 ''');

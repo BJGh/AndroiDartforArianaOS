@@ -16,6 +16,15 @@ main() {
 
 @reflectiveTest
 class AugmentationTypeParameterBoundTest extends PubPackageResolutionTest {
+  test_class_dynamic_objectQuestion() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A<T extends dynamic> {}
+augment class A<T extends Object?> {}
+//                        ^^^^^^^
+// [diag.augmentationTypeParameterBound] The augmentation type parameter must have the same bound as the corresponding type parameter of the declaration.
+''');
+  }
+
   test_class_method_nothing_num() async {
     await resolveTestCodeWithDiagnostics(r'''
 class A {
@@ -107,6 +116,15 @@ augment class A<T extends Object> {}
 ''');
   }
 
+  test_class_objectQuestion_dynamic() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A<T extends Object?> {}
+augment class A<T extends dynamic> {}
+//                        ^^^^^^^
+// [diag.augmentationTypeParameterBound] The augmentation type parameter must have the same bound as the corresponding type parameter of the declaration.
+''');
+  }
+
   test_enum_nothing_num() async {
     await resolveTestCodeWithDiagnostics(r'''
 enum A<T> {v}
@@ -174,7 +192,7 @@ augment extension A<T extends num> {}
   test_extensionType_nothing_num() async {
     await resolveTestCodeWithDiagnostics(r'''
 extension type A<T>(int it) {}
-augment extension type A<T extends num>(int it) {}
+augment extension type A<T extends num> {}
 //                                 ^^^
 // [diag.augmentationTypeParameterBound] The augmentation type parameter must have the same bound as the corresponding type parameter of the declaration.
 ''');
@@ -183,7 +201,7 @@ augment extension type A<T extends num>(int it) {}
   test_extensionType_num_int() async {
     await resolveTestCodeWithDiagnostics(r'''
 extension type A<T extends num>(int it) {}
-augment extension type A<T extends int>(int it) {}
+augment extension type A<T extends int> {}
 //                                 ^^^
 // [diag.augmentationTypeParameterBound] The augmentation type parameter must have the same bound as the corresponding type parameter of the declaration.
 ''');
@@ -192,14 +210,14 @@ augment extension type A<T extends int>(int it) {}
   test_extensionType_num_nothing() async {
     await resolveTestCodeWithDiagnostics(r'''
 extension type A<T extends num>(int it) {}
-augment extension type A<T>(int it) {}
+augment extension type A<T> {}
 ''');
   }
 
   test_extensionType_num_num() async {
     await resolveTestCodeWithDiagnostics(r'''
 extension type A<T extends num>(int it) {}
-augment extension type A<T extends num>(int it) {}
+augment extension type A<T extends num> {}
 ''');
   }
 

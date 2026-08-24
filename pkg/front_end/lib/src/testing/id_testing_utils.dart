@@ -13,6 +13,7 @@ import '../builder/member_builder.dart';
 import '../builder/type_builder.dart';
 import '../kernel_generator_impl.dart';
 import '../source/source_loader.dart';
+import '../type_inference/type_schema.dart';
 
 /// Helper methods to use in annotated tests.
 
@@ -497,7 +498,7 @@ class ConstantToTextVisitor implements ConstantVisitor<void> {
   final StringBuffer sb;
   final DartTypeToTextVisitor typeToText;
 
-  ConstantToTextVisitor(this.sb, TypeRepresentation typeRepresentation)
+  new(this.sb, TypeRepresentation typeRepresentation)
     : typeToText = new DartTypeToTextVisitor(sb, typeRepresentation);
 
   void visit(Constant node) => node.accept(this);
@@ -717,7 +718,7 @@ class DartTypeToTextVisitor
   final StringBuffer sb;
   final TypeRepresentation typeRepresentation;
 
-  DartTypeToTextVisitor(this.sb, this.typeRepresentation);
+  new(this.sb, this.typeRepresentation);
 
   String get commaText {
     if (typeRepresentation == TypeRepresentation.analyzerNonNullableByDefault) {
@@ -740,9 +741,13 @@ class DartTypeToTextVisitor
 
   @override
   void visitAuxiliaryType(AuxiliaryType node) {
-    throw new UnsupportedError(
-      "Unsupported auxiliary type ${node} (${node.runtimeType}).",
-    );
+    if (node is UnknownType) {
+      sb.write('_');
+    } else {
+      throw new UnsupportedError(
+        "Unsupported auxiliary type ${node} (${node.runtimeType}).",
+      );
+    }
   }
 
   @override

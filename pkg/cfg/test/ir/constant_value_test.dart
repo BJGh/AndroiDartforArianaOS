@@ -11,14 +11,19 @@ import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
 import 'package:kernel/core_types.dart' show CoreTypes;
 import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
+
 import '../test_helpers.dart';
 
 void main() {
   final component = readVmPlatformKernelFile();
   final coreTypes = CoreTypes(component);
+  final coreLibraries = coreTypes.index;
   final classHierarchy = ClassHierarchy(component, coreTypes);
   final typeEnvironment = TypeEnvironment(coreTypes, classHierarchy);
-  final globalContext = GlobalContext(typeEnvironment: typeEnvironment);
+  final globalContext = GlobalContext(
+    typeEnvironment: typeEnvironment,
+    coreLibraries: coreLibraries,
+  );
 
   group('constant values', () {
     setUp(() {
@@ -409,6 +414,7 @@ void main() {
       testOp(UnaryIntOpcode.toDouble, (int v) => v.toDouble());
       testOp(UnaryIntOpcode.abs, (int v) => v.abs());
       testOp(UnaryIntOpcode.sign, (int v) => v.sign);
+      testOp(UnaryIntOpcode.bitLength, (int v) => v.bitLength);
     });
 
     test('binary double op', () {

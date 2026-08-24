@@ -24,7 +24,7 @@ class AlwaysUsePackageImportsTest extends LintRuleTest {
       name: 'internal_package',
       rootFolder: getFolder('$testPackageRootPath/vendor/internal_package'),
     );
-    writeTestPackageConfig(packageConfigBuilder);
+    writeTestPackageConfig2(config: packageConfigBuilder);
 
     newFile('$testPackageRootPath/vendor/internal_package/lib/lib.dart', r'''
 class C {}
@@ -77,13 +77,10 @@ import 'package:test/lib.dart';
     newFile('$testPackageLibPath/lib.dart', r'''
 class C {}
 ''');
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 /// This provides [C].
-import 'lib.dart';
-''',
-      [lint(30, 10)],
-    );
+import [!'lib.dart'!];
+''');
   }
 
   test_samePackage_relativeUri_inPart() async {
@@ -95,14 +92,11 @@ class C {}
 part 'test.dart';
 ''');
 
-    await assertDiagnostics(
-      r'''
+    await assertDiagnosticsFromMarkup(r'''
 part of 'a.dart';
 
 /// This provides [C].
-import 'lib.dart';
-''',
-      [lint(49, 10)],
-    );
+import [!'lib.dart'!];
+''');
   }
 }

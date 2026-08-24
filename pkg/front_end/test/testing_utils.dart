@@ -71,9 +71,6 @@ Future<List<Uri>> computeSourceFiles(Uri repoDir) async {
     'pkg/front_end/test/extensions/data/',
     'pkg/front_end/test/id_testing/data/',
     'pkg/front_end/test/language_versioning/data/',
-    'pkg/front_end/test/macros/application/data/',
-    'pkg/front_end/test/macros/declaration/data/',
-    'pkg/front_end/test/macros/incremental/data/',
     'pkg/front_end/test/patching/data/',
     'pkg/front_end/test/scopes/data/',
     'pkg/front_end/test/static_types/data/',
@@ -82,9 +79,8 @@ Future<List<Uri>> computeSourceFiles(Uri repoDir) async {
   List<Uri> inputs = [];
   for (Uri uri in libUris) {
     Set<Uri> gitFiles = await getGitFiles(uri);
-    List<FileSystemEntity> entities = new Directory.fromUri(
-      uri,
-    ).listSync(recursive: true);
+    List<FileSystemEntity> entities = new Directory.fromUri(uri)
+        .listSync(recursive: true);
     for (FileSystemEntity entity in entities) {
       if (entity is File &&
           entity.path.endsWith(".dart") &&

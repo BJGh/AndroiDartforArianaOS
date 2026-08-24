@@ -32,21 +32,19 @@ TreeNode transformAsExpression(
 
   if (canBeReducedToNullCheckAndCast(node, operandType, env)) {
     // Transform 'x as T' to 'Let tmp = x in (tmp == null) ? tmp as T : tmp'.
-    final tmp = VariableDeclaration(
-      null,
-      initializer: node.operand,
+    final cache = CachedExpression.fromValue(
+      value: node.operand,
       type: operandType,
-      isSynthesized: true,
+      fileOffset: TreeNode.noOffset,
     );
     final dstType = node.type;
-    return Let(
-      tmp,
-      ConditionalExpression(
-        EqualsNull(VariableGet(tmp)),
-        AsExpression(VariableGet(tmp), dstType)
+    return cache.createLet(
+      body: ConditionalExpression(
+        EqualsNull(cache.createRead()),
+        AsExpression(cache.createRead(), dstType)
           ..flags = node.flags
           ..fileOffset = node.fileOffset,
-        VariableGet(tmp, dstType),
+        cache.createRead(promotedType: dstType),
         dstType,
       ),
     );

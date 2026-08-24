@@ -82,7 +82,7 @@ var b = const B();
   }
 
   test_nonConst_factory() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   factory A(int a) => throw 0;
 }
@@ -94,9 +94,26 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleInstanceCreationExpression;
+    var node = result.findNode.singleConstructorInvocation;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: const
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    element: <testLibrary>::@class::A::@constructor::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+        staticType: int
+    rightParenthesis: )
+  staticType: A
+V1: InstanceCreationExpression
   keyword: const
   constructorName: ConstructorName
     type: NamedType
@@ -117,7 +134,7 @@ InstanceCreationExpression
   }
 
   test_nonConst_generative() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -129,9 +146,26 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleInstanceCreationExpression;
+    var node = result.findNode.singleConstructorInvocation;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: const
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    element: <testLibrary>::@class::A::@constructor::new
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+        staticType: int
+    rightParenthesis: )
+  staticType: A
+V1: InstanceCreationExpression
   keyword: const
   constructorName: ConstructorName
     type: NamedType

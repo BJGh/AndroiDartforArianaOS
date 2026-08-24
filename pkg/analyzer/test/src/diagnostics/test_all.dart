@@ -6,7 +6,6 @@ import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/node_text_expectations.dart';
 import 'abi_specific_integer_mapping_test.dart' as abi_specific_integer_mapping;
-import 'abstract_class_member_test.dart' as abstract_class_member;
 import 'abstract_field_constructor_initializer_test.dart'
     as abstract_field_constructor_initializer;
 import 'abstract_field_initializer_test.dart' as abstract_field_initializer;
@@ -17,7 +16,6 @@ import 'ambiguous_extension_member_access_test.dart'
     as ambiguous_extension_member_access;
 import 'ambiguous_import_test.dart' as ambiguous_import;
 import 'ambiguous_set_or_map_literal_test.dart' as ambiguous_set_or_map_literal;
-import 'analysis_options/test_all.dart' as analysis_options;
 import 'annotation_on_pointer_field_test.dart' as annotation_on_pointer_field;
 import 'annotation_syntax_test.dart' as annotation_syntax;
 import 'argument_must_be_a_constant_test.dart' as argument_must_be_a_constant;
@@ -42,6 +40,8 @@ import 'async_keyword_used_as_identifier_test.dart'
     as async_keyword_used_as_identifier;
 import 'augmentation_extends_clause_already_present_test.dart'
     as augmentation_extends_clause_already_present;
+import 'augmentation_formal_parameter_test.dart'
+    as augmentation_formal_parameter;
 import 'augmentation_modifier_extra_test.dart' as augmentation_modifier_extra;
 import 'augmentation_modifier_missing_test.dart'
     as augmentation_modifier_missing;
@@ -57,6 +57,8 @@ import 'augmentation_type_parameter_count_test.dart'
     as augmentation_type_parameter_count;
 import 'augmentation_type_parameter_name_test.dart'
     as augmentation_type_parameter_name;
+import 'augmentation_variable_different_getter_setter_types_test.dart'
+    as augmentation_variable_different_getter_setter_types;
 import 'augmentation_without_declaration_test.dart'
     as augmentation_without_declaration;
 import 'await_in_late_local_variable_initializer_test.dart'
@@ -99,8 +101,6 @@ import 'class_used_as_mixin_declares_generative_constructor_test.dart'
 import 'class_used_as_mixin_test.dart' as class_used_as_mixin;
 import 'concrete_class_has_enum_superinterface_test.dart'
     as concrete_class_has_enum_superinterface;
-import 'concrete_class_with_abstract_member_test.dart'
-    as concrete_class_with_abstract_member;
 import 'conflicting_constructor_and_static_field_test.dart'
     as conflicting_constructor_and_static_field;
 import 'conflicting_constructor_and_static_method_test.dart'
@@ -159,6 +159,7 @@ import 'const_spread_expected_list_or_set_test.dart'
     as const_spread_expected_list_or_set;
 import 'const_spread_expected_map_test.dart' as const_spread_expected_map;
 import 'const_type_parameter_test.dart' as const_type_parameter;
+import 'const_variable_augmentation_test.dart' as const_variable_augmentation;
 import 'const_with_non_const_test.dart' as const_with_non_const;
 import 'const_with_non_constant_argument_test.dart'
     as const_with_non_constant_argument;
@@ -177,6 +178,8 @@ import 'creation_of_struct_or_union_test.dart' as creation_of_struct_or_union;
 import 'creation_with_non_type_test.dart' as creation_with_non_type;
 import 'dead_code_test.dart' as dead_code;
 import 'dead_null_aware_expression_test.dart' as dead_null_aware_expression;
+import 'default_value_already_specified_in_augmentation_chain_test.dart'
+    as default_value_already_specified_in_augmentation_chain;
 import 'default_value_in_function_type_test.dart'
     as default_value_in_function_type;
 import 'default_value_in_redirecting_factory_constructor_test.dart'
@@ -201,6 +204,8 @@ import 'deprecated_mixin_function_test.dart' as deprecated_mixin_function;
 import 'deprecated_mixin_test.dart' as deprecated_mixin;
 import 'deprecated_optional_test.dart' as deprecated_optional;
 import 'deprecated_subclass_test.dart' as deprecated_subclass;
+import 'different_inherited_getter_and_setter_types_test.dart'
+    as different_inherited_getter_and_setter_types;
 import 'doc_directive_argument_wrong_format_test.dart'
     as doc_directive_argument_wrong_format;
 import 'doc_directive_has_extra_arguments_test.dart'
@@ -250,7 +255,6 @@ import 'enum_instantiated_to_bounds_is_not_well_bounded_test.dart'
     as enum_instantiated_to_bounds_is_not_well_bounded;
 import 'enum_mixin_with_instance_variable_test.dart'
     as enum_mixin_with_instance_variable;
-import 'enum_with_abstract_member_test.dart' as enum_with_abstract_member;
 import 'enum_with_name_values_test.dart' as enum_with_name_values;
 import 'enum_without_constants_test.dart' as enum_without_constants;
 import 'equal_elements_in_const_set_test.dart' as equal_elements_in_const_set;
@@ -327,6 +331,7 @@ import 'extraneous_modifier_test.dart' as extraneous_modifier;
 import 'ffi_address_of_cast_test.dart' as ffi_addresss_of_cast;
 import 'ffi_array_test.dart' as ffi_array;
 import 'ffi_async_callback_test.dart' as ffi_async_callback;
+import 'ffi_from_function_test.dart' as ffi_from_function;
 import 'ffi_leaf_call_must_not_use_handle_test.dart'
     as ffi_leaf_call_must_not_use_handle;
 import 'ffi_native_test.dart' as ffi_native;
@@ -413,6 +418,7 @@ import 'inference_failure_on_untyped_parameter_test.dart'
 import 'initializer_for_non_existent_field_test.dart'
     as initializer_for_non_existent_field;
 import 'initializer_for_static_field_test.dart' as initializer_for_static_field;
+import 'initializing_declaring_test.dart' as initializing_declaring;
 import 'initializing_formal_for_non_existent_field_test.dart'
     as initializing_formal_for_non_existent_field;
 import 'instance_access_to_static_member_test.dart'
@@ -472,7 +478,6 @@ import 'invalid_language_override_test.dart' as invalid_language_override;
 import 'invalid_literal_annotation_test.dart' as invalid_literal_annotation;
 import 'invalid_modifier_on_constructor_test.dart'
     as invalid_modifier_on_constructor;
-import 'invalid_modifier_on_setter_test.dart' as invalid_modifier_on_setter;
 import 'invalid_non_virtual_annotation_test.dart'
     as invalid_non_virtual_annotation;
 import 'invalid_null_aware_elements_error_test.dart'
@@ -602,8 +607,6 @@ import 'must_be_immutable_test.dart' as must_be_immutable;
 import 'must_call_super_test.dart' as must_call_super;
 import 'native_clause_in_non_sdk_code_test.dart'
     as native_clause_in_non_sdk_code;
-import 'native_function_body_in_non_sdk_code_test.dart'
-    as native_function_body_in_non_sdk_code;
 import 'new_with_non_type_test.dart' as new_with_non_type;
 import 'new_with_undefined_constructor_test.dart'
     as new_with_undefined_constructor;
@@ -699,8 +702,6 @@ import 'nullable_type_in_on_clause_test.dart' as nullable_type_in_on_clause;
 import 'nullable_type_in_with_clause_test.dart' as nullable_type_in_with_clause;
 import 'number_literals_with_separators_test.dart'
     as number_literals_with_separators;
-import 'object_cannot_extend_another_class_test.dart'
-    as object_cannot_extend_another_class;
 import 'obsolete_colon_for_default_value_test.dart'
     as obsolete_colon_for_default_value;
 import 'on_repeated_test.dart' as on_repeated;
@@ -835,7 +836,6 @@ import 'super_in_extension_type_test.dart' as super_in_extension_type;
 import 'super_in_invalid_context_test.dart' as super_in_invalid_context;
 import 'super_in_redirecting_constructor_test.dart'
     as super_in_redirecting_constructor;
-import 'super_initializer_in_object_test.dart' as super_initializer_in_object;
 import 'super_invocation_not_last_test.dart' as super_invocation_not_last;
 import 'switch_case_completes_normally_test.dart'
     as switch_case_completes_normally;
@@ -961,7 +961,6 @@ import 'yield_of_invalid_type_test.dart' as yield_of_invalid_type;
 main() {
   defineReflectiveSuite(() {
     abi_specific_integer_mapping.main();
-    abstract_class_member.main();
     abstract_field_constructor_initializer.main();
     abstract_field_initializer.main();
     abstract_super_member_reference.main();
@@ -969,7 +968,6 @@ main() {
     ambiguous_extension_member_access.main();
     ambiguous_import.main();
     ambiguous_set_or_map_literal.main();
-    analysis_options.main();
     annotation_on_pointer_field.main();
     annotation_syntax.main();
     argument_must_be_a_constant.main();
@@ -988,6 +986,7 @@ main() {
     async_for_in_wrong_context.main();
     async_keyword_used_as_identifier.main();
     augmentation_extends_clause_already_present.main();
+    augmentation_formal_parameter.main();
     augmentation_modifier_extra.main();
     augmentation_modifier_missing.main();
     augmentation_of_different_declaration_kind.main();
@@ -996,6 +995,7 @@ main() {
     augmentation_type_parameter_bound.main();
     augmentation_type_parameter_count.main();
     augmentation_type_parameter_name.main();
+    augmentation_variable_different_getter_setter_types.main();
     augmentation_without_declaration.main();
     await_in_late_local_variable_initializer.main();
     await_in_wrong_context.main();
@@ -1022,7 +1022,6 @@ main() {
     class_used_as_mixin_declares_generative_constructor.main();
     class_used_as_mixin.main();
     concrete_class_has_enum_superinterface.main();
-    concrete_class_with_abstract_member.main();
     conflicting_constructor_and_static_field.main();
     conflicting_constructor_and_static_method.main();
     conflicting_field_and_method.main();
@@ -1060,6 +1059,7 @@ main() {
     const_spread_expected_list_or_set.main();
     const_spread_expected_map.main();
     const_type_parameter.main();
+    const_variable_augmentation.main();
     const_with_non_const.main();
     const_with_non_constant_argument.main();
     const_with_non_type.main();
@@ -1074,6 +1074,7 @@ main() {
     creation_with_non_type.main();
     dead_code.main();
     dead_null_aware_expression.main();
+    default_value_already_specified_in_augmentation_chain.main();
     default_value_in_function_type.main();
     default_value_in_redirecting_factory_constructor.main();
     default_value_on_required_parameter.main();
@@ -1092,6 +1093,7 @@ main() {
     deprecated_mixin.main();
     deprecated_optional.main();
     deprecated_subclass.main();
+    different_inherited_getter_and_setter_types.main();
     doc_directive_argument_wrong_format.main();
     doc_directive_has_extra_arguments.main();
     doc_directive_has_unexpected_named_argument.main();
@@ -1122,7 +1124,6 @@ main() {
     enum_constant_same_name_as_enclosing.main();
     enum_instantiated_to_bounds_is_not_well_bounded.main();
     enum_mixin_with_instance_variable.main();
-    enum_with_abstract_member.main();
     enum_with_name_values.main();
     enum_without_constants.main();
     equal_elements_in_const_set.main();
@@ -1173,6 +1174,7 @@ main() {
     ffi_addresss_of_cast.main();
     ffi_array.main();
     ffi_async_callback.main();
+    ffi_from_function.main();
     ffi_leaf_call_must_not_use_handle.main();
     ffi_native.main();
     field_initializer_factory_constructor.main();
@@ -1224,6 +1226,7 @@ main() {
     inference_failure_on_untyped_parameter.main();
     initializer_for_non_existent_field.main();
     initializer_for_static_field.main();
+    initializing_declaring.main();
     initializing_formal_for_non_existent_field.main();
     instance_access_to_static_member.main();
     instance_member_access_from_factory.main();
@@ -1262,7 +1265,6 @@ main() {
     invalid_language_override.main();
     invalid_literal_annotation.main();
     invalid_modifier_on_constructor.main();
-    invalid_modifier_on_setter.main();
     invalid_non_virtual_annotation.main();
     invalid_null_aware_elements_error.main();
     invalid_null_aware_operator.main();
@@ -1343,7 +1345,6 @@ main() {
     must_be_immutable.main();
     must_call_super.main();
     native_clause_in_non_sdk_code.main();
-    native_function_body_in_non_sdk_code.main();
     new_with_non_type.main();
     new_with_undefined_constructor.main();
     no_annotation_constructor_arguments.main();
@@ -1410,7 +1411,6 @@ main() {
     nullable_type_in_on_clause.main();
     nullable_type_in_with_clause.main();
     number_literals_with_separators.main();
-    object_cannot_extend_another_class.main();
     obsolete_colon_for_default_value.main();
     on_repeated.main();
     optional_parameter_in_operator.main();
@@ -1492,7 +1492,6 @@ main() {
     super_in_extension_type.main();
     super_in_invalid_context.main();
     super_in_redirecting_constructor.main();
-    super_initializer_in_object.main();
     super_invocation_not_last.main();
     switch_case_completes_normally.main();
     tearoff_of_generative_constructor_of_abstract_class.main();

@@ -89,6 +89,7 @@ Dart_NewConcurrentNativePort(const char* name,
   }
   ENTER_API_CALL_OR_RETURN(ILLEGAL_PORT);
 
+  NoActiveIsolateScope no_active_isolate(/*allow_no_thread=*/true);
   NativeMessageHandler* nmh =
       new NativeMessageHandler(name, handler, max_concurrency);
   Dart_Port port_id = PortMap::CreatePort(nmh);
@@ -98,6 +99,7 @@ Dart_NewConcurrentNativePort(const char* name,
 DART_EXPORT bool Dart_CloseNativePort(Dart_Port native_port_id) {
   ENTER_API_CALL_OR_RETURN(false)
 
+  NoActiveIsolateScope no_active_isolate(/*allow_no_thread=*/true);
   PortHandler* handler = nullptr;
   const bool was_closed = PortMap::ClosePort(native_port_id, &handler);
   if (was_closed) {
@@ -121,6 +123,8 @@ DART_EXPORT bool Dart_InvokeVMServiceMethod(uint8_t* request_json,
 
   Isolate* isolate = Isolate::Current();
   ASSERT(isolate == nullptr || !isolate->is_service_isolate());
+
+  NoActiveIsolateScope no_active_isolate(/*allow_no_thread=*/true);
 
   // We only allow one isolate reload at a time.  If this turns out to be on the
   // critical path, we can change it to have a global datastructure which is
@@ -282,12 +286,11 @@ DART_EXPORT void* Dart_ExecuteInternalCommand(const char* command, void* arg) {
     IsolateGroup::Current()->heap()->CollectAllGarbage(GCReason::kDebugging);
     return nullptr;
 
-  } else if (strcmp(command, "is-thread-in-generated") == 0) {
-    if (Thread::Current()->execution_state() == Thread::kThreadInGenerated) {
+  } else if (strcmp(command, "is-thread-in-native") == 0) {
+    if (Thread::Current()->execution_state() == Thread::kThreadInNative) {
       return reinterpret_cast<void*>(1);
     }
     return nullptr;
-
   } else if (strcmp(command, "is-mutator-blocked-at-safepoint") == 0) {
     Isolate* const isolate = reinterpret_cast<Isolate*>(arg);
     CHECK_ISOLATE(isolate);

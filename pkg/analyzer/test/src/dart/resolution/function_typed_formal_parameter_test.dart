@@ -18,11 +18,11 @@ main() {
 class FunctionTypedFormalParameterResolutionTest
     extends PubPackageResolutionTest {
   test_hasTypeParameters() async {
-    await resolveTestCode('''
+    var result = await resolveTestCode('''
 void f<V>(T p<T, U>(U a, V b)) {}
 ''');
 
-    var node = findNode.firstFormalParameter;
+    var node = result.findNode.firstFormalParameter;
     assertResolvedNodeText(node, r'''
 RegularFormalParameter
   type: NamedType
@@ -44,6 +44,28 @@ RegularFormalParameter
             defaultType: null
       rightBracket: >
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: U
+            element: #E1 U
+            type: U
+          name: a
+          declaredFragment: <testLibraryFragment> a@22
+            element: isPublic
+              type: U
+        RegularFormalParameter
+          type: NamedType
+            name: V
+            element: #E2 V
+            type: V
+          name: b
+          declaredFragment: <testLibraryFragment> b@27
+            element: isPublic
+              type: V
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -71,11 +93,11 @@ RegularFormalParameter
   }
 
   test_simple() async {
-    await resolveTestCode('''
+    var result = await resolveTestCode('''
 void f(void p(int a)) {}
 ''');
 
-    var node = findNode.firstFormalParameter;
+    var node = result.findNode.firstFormalParameter;
     assertResolvedNodeText(node, r'''
 RegularFormalParameter
   type: NamedType
@@ -85,6 +107,19 @@ RegularFormalParameter
   name: p
   functionTypedSuffix: FunctionTypedFormalParameterSuffix
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@18
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType

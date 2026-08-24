@@ -786,7 +786,8 @@ import 'a.dart';
   void _configureToCheckNotResolved({required Set<String> identifiers}) {
     _testResolvedUnit = (resolvedUnitResult) {
       var unit = resolvedUnitResult.parsedUnit;
-      unit.accept(
+      // ignore:experimental_member_use
+      unit.accept2(
         FunctionAstVisitor(
           simpleIdentifier: (node) {
             if (identifiers.contains(node.name) && node.element != null) {
@@ -880,5 +881,5 @@ class _CompletionContext {
   final int line;
   final int character;
 
-  _CompletionContext(this.content, this.offset, this.line, this.character);
+  new(this.content, this.offset, this.line, this.character);
 }

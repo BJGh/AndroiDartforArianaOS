@@ -12,7 +12,7 @@ import 'package:cfg/ir/source_position.dart';
 import 'package:cfg/ir/types.dart';
 import 'package:kernel/ast.dart'
     as ast
-    show DartType, Name, TypeLiteralConstant, VariableDeclaration;
+    show DartType, Name, TypeLiteralConstant, Variable;
 
 /// Helper class to create IR instructions and populate [FlowGraph].
 ///
@@ -111,7 +111,15 @@ class FlowGraphBuilder {
   TargetBlock newTargetBlock() => TargetBlock(graph, currentSourcePosition);
 
   /// Create a new [CatchBlock].
-  CatchBlock newCatchBlock() => CatchBlock(graph, currentSourcePosition);
+  CatchBlock newCatchBlock(
+    List<ast.DartType> guardTypes, {
+    required bool isSynthetic,
+  }) => CatchBlock(
+    graph,
+    currentSourcePosition,
+    guardTypes,
+    isSynthetic: isSynthetic,
+  );
 
   /// Append [Goto] to the graph. Ends current block.
   void addGoto(Block target) {
@@ -287,17 +295,40 @@ class FlowGraphBuilder {
     return instr;
   }
 
+  /// Append [ExternalCall] to the graph.
+  ExternalCall addExternalCall(
+    CFunction target,
+    int inputCount,
+    ArgumentsShape argumentsShape,
+    CType type,
+  ) {
+    final instr = ExternalCall(
+      graph,
+      currentSourcePosition,
+      target,
+      type,
+      inputCount: inputCount,
+      argumentsShape: argumentsShape,
+    );
+    popInputs(instr, 0, inputCount);
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
   /// Add [LocalVariable] to the graph.
   LocalVariable declareLocalVariable(
     String name,
-    ast.VariableDeclaration? declaration,
-    CType type,
-  ) {
+    ast.Variable? declaration,
+    CType type, {
+    bool isCovariant = false,
+  }) {
     final v = LocalVariable(
       name,
       declaration,
       graph.localVariables.length,
       type,
+      isCovariant,
     );
     graph.localVariables.add(v);
     return v;
@@ -395,6 +426,73 @@ class FlowGraphBuilder {
     return instr;
   }
 
+  /// Append [LoadExternalField] to the graph.
+  LoadExternalField addLoadExternalField(
+    CField field, {
+    required bool hasObject,
+  }) {
+    final object = hasObject ? pop() : null;
+    final instr = LoadExternalField(
+      graph,
+      currentSourcePosition,
+      field,
+      object: object,
+    );
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [LoadArrayElement] to the graph.
+  LoadArrayElement addLoadArrayElement(ArrayKind kind, CType type) {
+    final index = pop();
+    final array = pop();
+    final instr = LoadArrayElement(
+      graph,
+      currentSourcePosition,
+      kind,
+      type,
+      array,
+      index,
+    );
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [StoreArrayElement] to the graph.
+  StoreArrayElement addStoreArrayElement(ArrayKind kind) {
+    final value = pop();
+    final index = pop();
+    final array = pop();
+    final instr = StoreArrayElement(
+      graph,
+      currentSourcePosition,
+      kind,
+      array,
+      index,
+      value,
+    );
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [LoadExternalArrayElement] to the graph.
+  LoadExternalArrayElement addLoadExternalArrayElement(CType type) {
+    final index = pop();
+    final array = pop();
+    final instr = LoadExternalArrayElement(
+      graph,
+      currentSourcePosition,
+      type,
+      array,
+      index,
+    );
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
   /// Append [Throw] to the graph.
   /// Ends current block.
   void addThrow(ThrowKind kind, int inputCount) {
@@ -418,10 +516,47 @@ class FlowGraphBuilder {
     return instr;
   }
 
-  /// Append [TypeParameters] taking a parameter as input to the graph.
-  TypeParameters addTypeParameters(TypeParametersKind kind) {
-    final parameter = pop();
-    final instr = TypeParameters(graph, currentSourcePosition, kind, parameter);
+  /// Append [IndexCheck] to the graph.
+  IndexCheck addIndexCheck() {
+    final length = pop();
+    final index = pop();
+    final instr = IndexCheck(graph, currentSourcePosition, index, length);
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [SubtypeCheck] to the graph.
+  SubtypeCheck addSubtypeCheck(
+    CType type,
+    CType bound,
+    String name,
+    List<Definition> typeParameters,
+  ) {
+    final instr = SubtypeCheck(
+      graph,
+      currentSourcePosition,
+      type,
+      bound,
+      name,
+      inputCount: typeParameters.length,
+    );
+    for (var i = 0, n = typeParameters.length; i < n; ++i) {
+      instr.setInputAt(i, typeParameters[i]);
+    }
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [TypeParameters] to the graph.
+  TypeParameters addTypeParameters(TypeParametersKind kind, int inputCount) {
+    final instr = TypeParameters(
+      graph,
+      currentSourcePosition,
+      kind,
+      inputCount: inputCount,
+    );
+    popInputs(instr, 0, inputCount);
     appendInstruction(instr);
     return instr;
   }
@@ -543,6 +678,27 @@ class FlowGraphBuilder {
     return instr;
   }
 
+  /// Append [AllocateArray] to the graph.
+  AllocateArray addAllocateArray(
+    ArrayKind kind,
+    CType type, {
+    bool hasTypeArguments = false,
+  }) {
+    final length = pop();
+    final typeArguments = hasTypeArguments ? pop() : null;
+    final instr = AllocateArray(
+      graph,
+      currentSourcePosition,
+      kind,
+      type,
+      typeArguments,
+      length,
+    );
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
   /// Append [AllocateClosure] to the graph.
   AllocateClosure addAllocateClosure(
     ClosureFunction function,
@@ -623,6 +779,22 @@ class FlowGraphBuilder {
       inputCount: inputCount,
     );
     popInputs(instr, 0, inputCount);
+    push(instr);
+    appendInstruction(instr);
+    return instr;
+  }
+
+  /// Append [InstantiateClosure] to the graph.
+  InstantiateClosure addInstantiateClosure(CType type) {
+    final closure = pop();
+    final typeArguments = pop();
+    final instr = InstantiateClosure(
+      graph,
+      currentSourcePosition,
+      typeArguments,
+      closure,
+      type,
+    );
     push(instr);
     appendInstruction(instr);
     return instr;

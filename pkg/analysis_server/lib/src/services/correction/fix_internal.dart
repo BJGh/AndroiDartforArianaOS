@@ -9,7 +9,6 @@ import 'package:analysis_server/src/services/correction/dart/add_class_modifier.
 import 'package:analysis_server/src/services/correction/dart/add_const.dart';
 import 'package:analysis_server/src/services/correction/dart/add_diagnostic_property_reference.dart';
 import 'package:analysis_server/src/services/correction/dart/add_empty_argument_list.dart';
-import 'package:analysis_server/src/services/correction/dart/add_enum_constant.dart';
 import 'package:analysis_server/src/services/correction/dart/add_eol_at_end_of_file.dart';
 import 'package:analysis_server/src/services/correction/dart/add_explicit_call.dart';
 import 'package:analysis_server/src/services/correction/dart/add_explicit_cast.dart';
@@ -59,7 +58,6 @@ import 'package:analysis_server/src/services/correction/dart/convert_into_is_not
 import 'package:analysis_server/src/services/correction/dart/convert_map_from_iterable_to_for_literal.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_null_check_to_null_aware_element_or_entry.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_quotes.dart';
-import 'package:analysis_server/src/services/correction/dart/convert_related_to_cascade.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_boolean_expression.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_cascade.dart';
 import 'package:analysis_server/src/services/correction/dart/convert_to_constant_pattern.dart';
@@ -94,6 +92,7 @@ import 'package:analysis_server/src/services/correction/dart/create_class.dart';
 import 'package:analysis_server/src/services/correction/dart/create_constructor.dart';
 import 'package:analysis_server/src/services/correction/dart/create_constructor_for_final_fields.dart';
 import 'package:analysis_server/src/services/correction/dart/create_constructor_super.dart';
+import 'package:analysis_server/src/services/correction/dart/create_enum_constant.dart';
 import 'package:analysis_server/src/services/correction/dart/create_extension_member.dart';
 import 'package:analysis_server/src/services/correction/dart/create_field.dart';
 import 'package:analysis_server/src/services/correction/dart/create_file.dart';
@@ -178,6 +177,7 @@ import 'package:analysis_server/src/services/correction/dart/remove_on_clause.da
 import 'package:analysis_server/src/services/correction/dart/remove_operator.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_parameters_in_getter_declaration.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_parentheses_in_getter_invocation.dart';
+import 'package:analysis_server/src/services/correction/dart/remove_primary_constructor_body.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_print.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_question_mark.dart';
 import 'package:analysis_server/src/services/correction/dart/remove_required.dart';
@@ -245,6 +245,7 @@ import 'package:analysis_server/src/services/correction/dart/replace_with_not_nu
 import 'package:analysis_server/src/services/correction/dart/replace_with_not_null_aware_element_or_entry.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_null_aware.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_part_of_uri.dart';
+import 'package:analysis_server/src/services/correction/dart/replace_with_syncvalue.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_tear_off.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_unicode_escape.dart';
 import 'package:analysis_server/src/services/correction/dart/replace_with_var.dart';
@@ -287,6 +288,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.alwaysUsePackageImports: [ConvertToPackageImport.new],
   diag.annotateOverrides: [AddOverride.new],
   diag.annotateRedeclares: [AddRedeclare.new],
+  diag.asyncReturnWithNoAwait: [AddAwait.return_, RemoveAsync.unawaited],
   diag.avoidAnnotatingWithDynamic: [RemoveTypeAnnotation.other],
   diag.avoidBoolLiteralsInConditionalExpressions: [
     ConvertToBooleanExpression.new,
@@ -320,7 +322,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.avoidUnnecessaryContainers: [FlutterRemoveWidget.new],
   diag.avoidVoidAsync: [ReplaceReturnTypeFuture.new],
   diag.awaitOnlyFutures: [RemoveKeyword.awaitKeyword],
-  diag.cascadeInvocations: [ConvertToCascade.new, ConvertRelatedToCascade.new],
+  diag.cascadeInvocations: [ConvertToCascade.new],
   diag.castNullableToNonNullable: [AddNullCheck.withoutAssignabilityCheck],
   diag.combinatorsOrdering: [SortCombinators.new],
   diag.constantIdentifierNames: [RenameToCamelCase.new],
@@ -336,9 +338,11 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.emptyConstructorBodies: [RemoveEmptyConstructorBody.new],
   diag.emptyContainerBodies: [RemoveEmptyContainerBody.new],
   diag.emptyStatements: [RemoveEmptyStatement.new, ReplaceWithBrackets.new],
-  diag.eolAtEndOfFile: [AddEolAtEndOfFile.new],
+  diag.eolAtEndOfFileMissing: [AddEolAtEndOfFile.new],
+  diag.eolAtEndOfFileTooMany: [AddEolAtEndOfFile.new],
   diag.exhaustiveCases: [AddMissingEnumLikeCaseClauses.new],
   diag.flutterStyleTodos: [ConvertToFlutterStyleTodo.new],
+  diag.futureSyncValue: [ReplaceWithSyncValue.new],
   diag.hashAndEquals: [CreateMethod.equalityOrHashCode],
   diag.implicitCallTearoffs: [AddExplicitCall.new],
   diag.implicitReopen: [AddReopen.new],
@@ -472,6 +476,7 @@ final _builtInLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.unnecessaryOverrides: [RemoveMethodDeclaration.new],
   diag.unnecessaryParenthesis: [RemoveUnnecessaryParentheses.new],
+  diag.unnecessaryPrimaryConstructorBody: [RemovePrimaryConstructorBody.new],
   diag.unnecessaryRawStrings: [RemoveUnnecessaryRawString.new],
   diag.unnecessaryStringEscapes: [RemoveUnnecessaryStringEscape.new],
   diag.unnecessaryStringInterpolations: [
@@ -513,6 +518,7 @@ final _builtInLintMultiGenerators = {
   diag.commentReferences: [ImportLibrary.forType, ImportLibrary.forExtension],
   diag.deprecatedMemberUseFromSamePackageWithoutMessage: [DataDriven.new],
   diag.deprecatedMemberUseFromSamePackageWithMessage: [DataDriven.new],
+  diag.migrateDesignWidgets: [DataDriven.new],
 };
 
 final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
@@ -554,10 +560,10 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.deprecatedFactoryMethod: [AddReturnType.new],
   diag.dotShorthandUndefinedGetter: [
-    AddEnumConstant.new,
     ChangeTo.getterOrSetter,
-    CreateGetter.new,
+    CreateEnumConstant.new,
     CreateField.new,
+    CreateGetter.new,
   ],
   diag.dotShorthandUndefinedInvocation: [
     ChangeTo.method,
@@ -729,7 +735,14 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.nonExhaustiveSwitchStatementPrivate: [AddMissingSwitchCases.new],
   diag.nonFinalFieldInEnum: [MakeFinal.new],
   diag.notAType: [ChangeTo.classOrMixin],
-  diag.notInitializedNonNullableInstanceField: [AddLate.new],
+  diag.notInitializedNonNullableInstanceField: [
+    AddLate.new,
+    MakeVariableNullable.new,
+  ],
+  diag.notInitializedNonNullableVariable: [
+    AddLate.new,
+    MakeVariableNullable.new,
+  ],
   diag.nullableTypeInExtendsClause: [RemoveQuestionMark.new],
   diag.nullableTypeInImplementsClause: [RemoveQuestionMark.new],
   diag.nullableTypeInOnClause: [RemoveQuestionMark.new],
@@ -739,7 +752,10 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
     ConvertIntoBlockBody.missingBody,
   ],
   diag.recordLiteralOnePositionalNoTrailingCommaByType: [AddTrailingComma.new],
-  diag.representationFieldModifier: [RemoveKeyword.varKeyword],
+  diag.representationFieldModifier: [
+    AddTypeAnnotation.forRepresentationField,
+    RemoveKeyword.varKeyword,
+  ],
   diag.returnOfInvalidTypeFromClosure: [AddAsync.wrongReturnType],
   diag.returnOfInvalidTypeFromFunction: [
     AddAsync.wrongReturnType,
@@ -809,7 +825,9 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.undefinedClass: [ChangeTo.classOrMixin],
   diag.undefinedClassBoolean: [ReplaceBooleanWithBool.new],
   diag.undefinedEnumConstant: [
-    AddEnumConstant.new,
+    CreateEnumConstant.new,
+    CreateField.new,
+    CreateGetter.new,
     ChangeTo.getterOrSetter,
     CreateMethodOrFunction.new,
   ],
@@ -843,6 +861,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   ],
   diag.undefinedIdentifier: [
     ChangeTo.getterOrSetter,
+    CreateEnumConstant.new,
     CreateField.new,
     CreateGetter.new,
     CreateLocalVariable.new,
@@ -1011,6 +1030,7 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.duplicateImport: [RemoveUnusedImport.new],
   diag.duplicateShownName: [RemoveNameFromCombinator.new],
   diag.invalidAnnotationTarget: [RemoveAnnotation.new],
+  diag.invalidExportOfInternalElement: [RemoveNameFromCombinator.new],
   diag.invalidInternalAnnotation: [RemoveAnnotation.new],
   diag.invalidLiteralAnnotation: [RemoveAnnotation.new],
   diag.invalidNonVirtualAnnotation: [RemoveAnnotation.new],
@@ -1067,7 +1087,10 @@ final _builtInNonLintGenerators = <DiagnosticCode, List<ProducerGenerator>>{
   diag.unusedCatchClause: [RemoveUnusedCatchClause.new],
   diag.unusedCatchStack: [RemoveUnusedCatchStack.new],
   diag.unusedElement: [RemoveUnusedElement.new],
-  diag.unusedElementParameter: [RemoveUnusedParameter.new],
+  diag.unusedElementParameter: [
+    ConvertToWildcardVariable.new,
+    RemoveUnusedParameter.new,
+  ],
   diag.unusedField: [RemoveUnusedField.new],
   diag.unusedImport: [RemoveUnusedImport.new],
   diag.unusedLabel: [RemoveUnusedLabel.new],

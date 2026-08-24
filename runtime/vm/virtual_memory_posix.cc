@@ -20,6 +20,7 @@
 #endif
 
 #if defined(DART_HOST_OS_MACOS)
+#include <mach/mach_error.h>
 #include <mach/mach_init.h>
 #include <mach/vm_map.h>
 #endif
@@ -64,7 +65,6 @@ DECLARE_FLAG(bool, generate_perf_jitdump);
 #endif
 
 uword VirtualMemory::page_size_ = 0;
-VirtualMemory* VirtualMemory::compressed_heap_ = nullptr;
 
 #if defined(DART_ENABLE_RX_WORKAROUNDS)
 bool VirtualMemory::should_dual_map_executable_pages_ = false;
@@ -302,7 +302,13 @@ class ScopedExcBadAccessHandler {
     auto arm_new_state =
         reinterpret_cast<arm_unified_thread_state_t*>(new_state);
     arm_new_state->ts_64.__x[0] = kExceptionalReturnValue;
+#if defined(HOST_ARCH_ARM64E)
+    __darwin_arm_thread_state64_set_pc_fptr(
+        arm_new_state->ts_64,
+        __darwin_arm_thread_state64_get_lr_fptr(arm_new_state->ts_64));
+#else
     arm_new_state->ts_64.__pc = arm_new_state->ts_64.__lr;
+#endif
     return KERN_SUCCESS;
   }
 
@@ -325,9 +331,15 @@ class ScopedExcBadAccessHandler {
   // inside, so we split it into two chunks each ending with a corresponding
   // variadic array.
 #define TRAILING_ARRAY(Type, name, count, max_count)                           \
-  Type* name() { return reinterpret_cast<Type*>(this + 1); }                   \
-  bool IsValid() const { return count <= max_count; }                          \
-  mach_msg_size_t Size() const { return sizeof(*this) + sizeof(Type) * count; }
+  Type* name() {                                                               \
+    return reinterpret_cast<Type*>(this + 1);                                  \
+  }                                                                            \
+  bool IsValid() const {                                                       \
+    return count <= max_count;                                                 \
+  }                                                                            \
+  mach_msg_size_t Size() const {                                               \
+    return sizeof(*this) + sizeof(Type) * count;                               \
+  }
 
   // A helper method for parsing a message which contains variadic arrays
   // inside. Such message is split into separate chunks each ending with
@@ -468,7 +480,7 @@ bool CheckIfRXWorks() {
   // Try creating executable VirtualMemory.
   std::unique_ptr<VirtualMemory> mem{
       VirtualMemory::Allocate(VirtualMemory::PageSize(), /*is_executable=*/true,
-                              /*is_compressed=*/false, /*name=*/nullptr)};
+                              /*name=*/nullptr)};
   if (mem == nullptr) {
     Syslog::PrintErr("Failed to map a test RX page");
     return false;
@@ -562,21 +574,6 @@ void VirtualMemory::Init() {
 #endif
 #endif
 
-#if defined(DART_COMPRESSED_POINTERS)
-  ASSERT(compressed_heap_ == nullptr);
-  compressed_heap_ = Reserve(kGuardRegionSize * 2 + kCompressedHeapSize,
-                             kCompressedHeapAlignment);
-  if (compressed_heap_ == nullptr) {
-    int error = errno;
-    const int kBufferSize = 1024;
-    char error_buf[kBufferSize];
-    FATAL("Failed to reserve region for compressed heap: %d (%s)", error,
-          Utils::StrError(error, error_buf, kBufferSize));
-  }
-  VirtualMemoryCompressedHeap::Init(
-      reinterpret_cast<void*>(compressed_heap_->start() + kGuardRegionSize),
-      kCompressedHeapSize);
-#endif  // defined(DART_COMPRESSED_POINTERS)
 #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
   FILE* fp = fopen("/proc/sys/vm/max_map_count", "r");
   if (fp != nullptr) {
@@ -598,20 +595,12 @@ void VirtualMemory::Init() {
 }
 
 void VirtualMemory::Cleanup() {
-#if defined(DART_COMPRESSED_POINTERS)
-  delete compressed_heap_;
-#endif  // defined(DART_COMPRESSED_POINTERS)
   page_size_ = 0;
-#if defined(DART_COMPRESSED_POINTERS)
-  compressed_heap_ = nullptr;
-  VirtualMemoryCompressedHeap::Cleanup();
-#endif  // defined(DART_COMPRESSED_POINTERS)
 }
 
 VirtualMemory* VirtualMemory::AllocateAligned(intptr_t size,
                                               intptr_t alignment,
                                               bool is_executable,
-                                              bool is_compressed,
                                               const char* name) {
   // When FLAG_write_protect_code is active, code memory (indicated by
   // is_executable = true) is allocated as non-executable and later
@@ -621,18 +610,11 @@ VirtualMemory* VirtualMemory::AllocateAligned(intptr_t size,
   ASSERT(Utils::IsAligned(alignment, PageSize()));
   ASSERT(name != nullptr);
 
-#if defined(DART_COMPRESSED_POINTERS)
-  if (is_compressed) {
-    RELEASE_ASSERT(!is_executable);
-    MemoryRegion region =
-        VirtualMemoryCompressedHeap::Allocate(size, alignment);
-    if (region.pointer() == nullptr) {
-      return nullptr;
-    }
-    Commit(region.pointer(), region.size());
-    return new VirtualMemory(region, region);
+  // Ignore executable for gen_snapshot/simulator, but still let the heap
+  // track code and data pages separately.
+  if (!VirtualMemory::ExecutesGeneratedCode()) {
+    is_executable = false;
   }
-#endif  // defined(DART_COMPRESSED_POINTERS)
 
   const intptr_t allocated_size = size + alignment - PageSize();
 
@@ -649,12 +631,11 @@ VirtualMemory* VirtualMemory::AllocateAligned(intptr_t size,
 #endif
 
   int map_flags = MAP_PRIVATE | MAP_ANONYMOUS;
-#if (defined(DART_HOST_OS_MACOS) && !defined(DART_HOST_OS_IOS))
-  if (is_executable && IsAtLeastMacOSX10_14() &&
-      !ShouldDualMapExecutablePages()) {
+#if defined(DART_HOST_OS_MACOS) && !defined(DART_HOST_OS_IOS)
+  if (is_executable && !ShouldDualMapExecutablePages()) {
     map_flags |= MAP_JIT;
   }
-#endif  // defined(DART_HOST_OS_MACOS)
+#endif  // defined(DART_HOST_OS_MACOS) && !defined(DART_HOST_OS_IOS)
 
   void* hint = nullptr;
   // Some 64-bit microarchitectures store only the low 32-bits of targets as
@@ -772,10 +753,8 @@ void VirtualMemory::Decommit(void* address, intptr_t size) {
 
 VirtualMemory::~VirtualMemory() {
 #if defined(DART_COMPRESSED_POINTERS)
-  if (VirtualMemoryCompressedHeap::Contains(reserved_.pointer()) &&
-      (this != compressed_heap_)) {
-    Decommit(reserved_.pointer(), reserved_.size());
-    VirtualMemoryCompressedHeap::Free(reserved_.pointer(), reserved_.size());
+  if (cage_ != nullptr) {
+    cage_->Free(reserved_.pointer(), reserved_.size());
     return;
   }
 #endif  // defined(DART_COMPRESSED_POINTERS)
@@ -790,12 +769,6 @@ VirtualMemory::~VirtualMemory() {
 }
 
 bool VirtualMemory::FreeSubSegment(void* address, intptr_t size) {
-#if defined(DART_COMPRESSED_POINTERS)
-  // Don't free the sub segment if it's managed by the compressed pointer heap.
-  if (VirtualMemoryCompressedHeap::Contains(address)) {
-    return false;
-  }
-#endif  // defined(DART_COMPRESSED_POINTERS)
   const uword start = reinterpret_cast<uword>(address);
   Unmap(start, start + size);
   return true;
@@ -863,7 +836,6 @@ void VirtualMemory::DontNeed(void* address, intptr_t size) {
 }
 
 #if defined(DART_HOST_OS_MACOS)
-// TODO(52579): Reenable on Fuchsia.
 bool VirtualMemory::DuplicateRX(VirtualMemory* target) {
   const intptr_t aligned_size = Utils::RoundUp(size(), PageSize());
   ASSERT_LESS_OR_EQUAL(aligned_size, target->size());
@@ -887,6 +859,7 @@ bool VirtualMemory::DuplicateRX(VirtualMemory* target) {
       /*copy=*/true, &current_protection, &max_protection,
       /*inheritance=*/VM_INHERIT_NONE);
   if (status != KERN_SUCCESS) {
+    OS::PrintErr("DuplicateRX failed: %s\n", mach_error_string(status));
     return false;
   }
   ASSERT(reinterpret_cast<void*>(target_address) == target->address());

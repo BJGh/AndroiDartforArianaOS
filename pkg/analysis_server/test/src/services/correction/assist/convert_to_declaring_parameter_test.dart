@@ -180,6 +180,91 @@ class C(var int x) {
 ''');
   }
 
+  Future<void> test_field_alreadyDeclaringParameter() async {
+    await resolveTestCode('''
+class C(var int x) {
+  late int y^;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_field_fieldFormalParameter() async {
+    await resolveTestCode('''
+class C(this.x) {
+  int x^;
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_field_initializerList() async {
+    await resolveTestCode('''
+class C(int x) {
+  int x^;
+
+  this : x = x;
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_field_noConstructor() async {
+    await resolveTestCode('''
+class C {
+  late int x^;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_field_notInitialized() async {
+    await resolveTestCode('''
+class C(int y) {
+  late int x^;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_field_typeMismatch() async {
+    await resolveTestCode('''
+class C(int x) {
+  num x^;
+
+  this : x = x;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_field_withInitializer() async {
+    await resolveTestCode('''
+class C(int x) {
+  int x^ = DateTime.now().millisecondsSinceEpoch;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_field_withType() async {
+    await resolveTestCode('''
+class C(this.x) {
+  final int x^;
+}
+''');
+    await assertHasAssist('''
+class C(final int x) {
+}
+''');
+  }
+
   Future<void> test_first() async {
     await resolveTestCode('''
 class C(int x^, int y) {
@@ -583,6 +668,65 @@ class C(num x^) {
     await assertNoAssist();
   }
 
+  Future<void> test_requiredPositional_simple_nonFinal_sameLine() async {
+    await resolveTestCode('''
+// Header.
+
+class C(int x^) { int x; this : x = x; }
+''');
+    await assertHasAssist('''
+// Header.
+
+class C(var int x) { }
+''');
+  }
+
+  Future<void>
+  test_requiredPositional_simple_nonFinal_surroundedByMembers() async {
+    await resolveTestCode('''
+class C(int x^) {
+  static int count = 0;
+
+  int x;
+
+  this : x = x;
+
+  void f() {}
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+  static int count = 0;
+
+  void f() {}
+}
+''');
+  }
+
+  Future<void>
+  test_requiredPositional_simple_nonFinal_surroundedByMembers_multipleBlankLines() async {
+    await resolveTestCode('''
+class C(int x^) {
+  static int count = 0;
+
+
+
+  int x;
+
+  this : x = x;
+
+  void f() {}
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+  static int count = 0;
+
+  void f() {}
+}
+''');
+  }
+
   Future<void> test_requiredPositional_simple_nonFinal_widerField() async {
     await resolveTestCode('''
 class C(int x^) {
@@ -610,6 +754,69 @@ class C(super.x^) extends B {
 
 class B {
   B(int x);
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_selection_default() async {
+    await resolveTestCode('''
+class C([this.x = 0^]) {
+  int x;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_selection_name() async {
+    await resolveTestCode('''
+class C(this.x^) {
+  int x;
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_selection_period() async {
+    await resolveTestCode('''
+class C(this^.x) {
+  int x;
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_selection_required() async {
+    await resolveTestCode('''
+class C({re^quired this.x}) {
+  int x;
+}
+''');
+    await assertNoAssist();
+  }
+
+  Future<void> test_selection_thisKeyword() async {
+    await resolveTestCode('''
+class C(th^is.x) {
+  int x;
+}
+''');
+    await assertHasAssist('''
+class C(var int x) {
+}
+''');
+  }
+
+  Future<void> test_selection_type() async {
+    await resolveTestCode('''
+class C(in^t this.x) {
+  int x;
 }
 ''');
     await assertNoAssist();
@@ -705,19 +912,16 @@ class C(int x^) {
 const a = 0;
 const b = 1;
 ''');
-    await assertNoAssist();
-    // TODO(brianwilkerson): Do we want to support this case? Doing so would add
-    //  the annotation to the parameter, which might not be what the user wants.
-    //     await assertHasAssist('''
-    // class C(
-    //   @a
-    //   @b
-    //   var int x) {
-    // }
+    await assertHasAssist('''
+class C(
+  @a
+  @b
+  var int x) {
+}
 
-    // const a = 0;
-    // const b = 1;
-    // ''');
+const a = 0;
+const b = 1;
+''');
   }
 
   Future<void> test_withAnnotations_onFieldAndParam() async {
@@ -738,23 +942,21 @@ const b = 1;
 const c = 2;
 const d = 3;
 ''');
-    await assertNoAssist();
-    // TODO(brianwilkerson): Do we want to support this case? Doing so would add
-    //  the annotation to the parameter, which might not be what the user wants.
-    //     await assertHasAssist('''
-    // class C(
-    //   @a
-    //   @b
-    //   @c
-    //   @d
-    //   var int x) {
-    // }
 
-    // const a = 0;
-    // const b = 1;
-    // const c = 2;
-    // const d = 3;
-    // ''');
+    await assertHasAssist('''
+class C(
+  @c
+  @d
+  @a
+  @b
+  var int x) {
+}
+
+const a = 0;
+const b = 1;
+const c = 2;
+const d = 3;
+''');
   }
 
   Future<void> test_withAnnotations_onParam() async {
@@ -771,19 +973,16 @@ class C(
 const a = 0;
 const b = 1;
 ''');
-    await assertNoAssist();
-    // TODO(brianwilkerson): Do we want to support this case? Doing so would add
-    //  the annotation to the parameter, which might not be what the user wants.
-    //     await assertHasAssist('''
-    // class C(
-    //   @a
-    //   @b
-    //   var int x) {
-    // }
+    await assertHasAssist('''
+class C(
+  @a
+  @b
+  var int x) {
+}
 
-    // const a = 0;
-    // const b = 1;
-    // ''');
+const a = 0;
+const b = 1;
+''');
   }
 
   Future<void> test_withDocComment() async {
@@ -796,7 +995,13 @@ class C(int x^) {
   this : x = x;
 }
 ''');
-    await assertNoAssist();
+    await assertHasAssist('''
+class C(
+  /// A comment
+  /// on multiple lines.
+  var int x) {
+}
+''');
   }
 
   Future<void> test_withDocCommentAndAnnotations() async {
@@ -814,7 +1019,41 @@ class C(int x^) {
 const a = 0;
 const b = 1;
 ''');
-    await assertNoAssist();
+    await assertHasAssist('''
+class C(
+  /// A comment
+  /// on multiple lines.
+  @a
+  @b
+  var int x) {
+}
+
+const a = 0;
+const b = 1;
+''');
+  }
+
+  Future<void> test_withRequiredAndAnnotation() async {
+    await resolveTestCode('''
+class C({required int x^}) {
+  /// comment
+  @a
+  final int x;
+
+  this : x = x;
+}
+
+const int a = 0;
+''');
+    await assertHasAssist('''
+class C({
+  /// comment
+  @a
+  required final int x}) {
+}
+
+const int a = 0;
+''');
   }
 }
 
@@ -925,7 +1164,6 @@ enum E({int x^ = 0}) {
     await assertHasAssist('''
 enum E({final int x = 0}) {
   a(x: 0);
-
 }
 ''');
   }
@@ -943,7 +1181,6 @@ enum E({int x^ = 0}) {
     await assertHasAssist('''
 enum E({final int _x = 0}) {
   a(x: 0);
-
 }
 ''');
   }
@@ -974,11 +1211,9 @@ enum E([int x^ = 0]) {
   this : x = x;
 }
 ''');
-    // TODO(brianwilkerson): It would be nice to remove the extra blank line.
     await assertHasAssist('''
 enum E([final int x = 0]) {
   a(0);
-
 }
 ''');
   }
@@ -996,7 +1231,6 @@ enum E(int x^) {
     await assertHasAssist('''
 enum E(final int _x) {
   a(0);
-
 }
 ''');
   }
@@ -1030,7 +1264,6 @@ enum E({required int x^}) {
     await assertHasAssist('''
 enum E({required final int x}) {
   a(x: 0);
-
 }
 ''');
   }
@@ -1064,7 +1297,6 @@ enum E(int x^) {
     await assertHasAssist('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
   }
@@ -1082,9 +1314,15 @@ enum E(int x^) {
     await assertHasAssist('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
+  }
+
+  Future<void> test_requiredPositional_simple_firstLine() async {
+    await resolveTestCode(
+      'enum E(int x^) { a(0); final int x; this : x = x; }',
+    );
+    await assertHasAssist('enum E(final int x) { a(0); }');
   }
 
   Future<void>
@@ -1161,21 +1399,17 @@ enum E(int x^) {
 const a = 0;
 const b = 1;
 ''');
-    await assertNoAssist();
-    // TODO(brianwilkerson): Do we want to support this case? Doing so would add
-    //  the annotation to the parameter, which might not be what the user wants.
-    //     await assertHasAssist('''
-    // enum E(
-    //   @a
-    //   @b
-    //   final int x) {
-    //   e(0);
+    await assertHasAssist('''
+enum E(
+  @a
+  @b
+  final int x) {
+  e(0);
+}
 
-    // }
-
-    // const a = 0;
-    // const b = 1;
-    // ''');
+const a = 0;
+const b = 1;
+''');
   }
 
   Future<void> test_withDocComment() async {
@@ -1190,7 +1424,14 @@ enum E(int x^) {
   this : x = x;
 }
 ''');
-    await assertNoAssist();
+    await assertHasAssist('''
+enum E(
+  /// A comment
+  /// on multiple lines.
+  final int x) {
+  a(0);
+}
+''');
   }
 
   Future<void> test_withDocCommentAndAnnotations() async {
@@ -1210,7 +1451,19 @@ enum E(int x^) {
 const a = 0;
 const b = 1;
 ''');
-    await assertNoAssist();
+    await assertHasAssist('''
+enum E(
+  /// A comment
+  /// on multiple lines.
+  @a
+  @b
+  final int x) {
+  a(0);
+}
+
+const a = 0;
+const b = 1;
+''');
   }
 
   Future<void> test_withInitializer_complex() async {
@@ -1239,7 +1492,6 @@ enum E(int x^) {
     await assertHasAssist('''
 enum E(final int x) {
   a(0);
-
 }
 ''');
   }

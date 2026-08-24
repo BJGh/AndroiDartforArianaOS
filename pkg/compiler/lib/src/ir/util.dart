@@ -21,12 +21,12 @@ String nodeToDebugString(ir.Node node, [int textLength = 40]) {
 
 /// Comparator for the canonical order for named parameters.
 // TODO(johnniwinther): Remove this when named parameters are sorted in dill.
-int namedOrdering(ir.VariableDeclaration a, ir.VariableDeclaration b) {
-  return a.name!.compareTo(b.name!);
+int namedOrdering(ir.NamedParameter a, ir.NamedParameter b) {
+  return a.parameterName.compareTo(b.parameterName);
 }
 
 /// Comparator for the declaration order of parameters.
-int nativeOrdering(ir.VariableDeclaration a, ir.VariableDeclaration b) {
+int nativeOrdering(ir.Variable a, ir.Variable b) {
   return a.fileOffset.compareTo(b.fileOffset);
 }
 
@@ -132,7 +132,7 @@ ir.LibraryDependency? getDeferredImport(ir.TreeNode node) {
   }
 
   if (parent is ir.Let) {
-    var initializer = parent.variable.initializer;
+    var initializer = parent.value;
     if (initializer is ir.CheckLibraryIsLoaded) {
       return initializer.import;
     }

@@ -33,7 +33,7 @@ Expression? _getExpressionFromReturnStatement(Statement node) =>
     node is ReturnStatement ? node.expression : null;
 
 class JoinReturnWithAssignment extends AnalysisRule {
-  JoinReturnWithAssignment()
+  new()
     : super(name: LintNames.join_return_with_assignment, description: _desc);
 
   @override
@@ -49,11 +49,7 @@ class JoinReturnWithAssignment extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitBlock(Block node) {
     var statements = node.statements;

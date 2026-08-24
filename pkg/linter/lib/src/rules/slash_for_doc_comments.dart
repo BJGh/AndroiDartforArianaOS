@@ -18,8 +18,7 @@ bool isJavaStyle(Comment comment) =>
     comment.tokens.isNotEmpty && comment.tokens.first.lexeme.startsWith('/**');
 
 class SlashForDocComments extends AnalysisRule {
-  SlashForDocComments()
-    : super(name: LintNames.slash_for_doc_comments, description: _desc);
+  new() : super(name: LintNames.slash_for_doc_comments, description: _desc);
 
   @override
   bool get canUseParsedResult => true;
@@ -52,11 +51,7 @@ class SlashForDocComments extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void checkComment(Comment? comment) {
     if (comment != null && isJavaStyle(comment)) {
       rule.reportAtNode(comment);

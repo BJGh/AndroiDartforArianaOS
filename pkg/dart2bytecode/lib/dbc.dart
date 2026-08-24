@@ -7,13 +7,13 @@ library;
 
 /// Version of bytecode format
 /// (should match runtime/vm/constants_kbc.h).
-const int bytecodeFormatVersion = 2;
+const int bytecodeFormatVersion = 3;
 
 enum Opcode {
   kTrap,
-  kUnused00,
 
   // Prologue and stack management.
+  kDup,
   kEntry,
   kEntry_Wide,
   kEntryOptional,
@@ -222,6 +222,14 @@ enum Opcode {
   // FFI
   kFfiCall,
   kFfiCall_Wide,
+
+  // Coverage
+  kRecordCoverage,
+  kRecordCoverage_Wide,
+
+  // More FFI
+  kResolveNativeFunction,
+  kResolveNativeFunction_Wide,
 }
 
 /// Compact variants of opcodes are always even.
@@ -769,6 +777,21 @@ const Map<Opcode, Format> BytecodeFormats = const {
     Operand.none,
   ]),
   Opcode.kFfiCall: const Format(Encoding.kD, const [
+    Operand.lit,
+    Operand.none,
+    Operand.none,
+  ]),
+  Opcode.kRecordCoverage: const Format(Encoding.kAE, const [
+    Operand.imm,
+    Operand.imm,
+    Operand.none,
+  ]),
+  Opcode.kDup: const Format(Encoding.k0, const [
+    Operand.none,
+    Operand.none,
+    Operand.none,
+  ]),
+  Opcode.kResolveNativeFunction: const Format(Encoding.kD, const [
     Operand.lit,
     Operand.none,
     Operand.none,

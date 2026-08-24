@@ -17,6 +17,7 @@ import '../../builder/type_builder.dart';
 import '../../kernel/body_builder_context.dart';
 import '../../kernel/hierarchy/class_member.dart';
 import '../../kernel/hierarchy/members_builder.dart';
+import '../../kernel/internal_ast.dart';
 import '../../kernel/type_algorithms.dart';
 import '../../source/name_scheme.dart';
 import '../../source/source_class_builder.dart';
@@ -26,6 +27,7 @@ import '../../source/source_member_builder.dart';
 import '../../source/source_method_builder.dart';
 import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../../type_inference/type_schema.dart';
 import '../fragment.dart';
 import 'body_builder_context.dart';
@@ -98,7 +100,7 @@ class MethodDeclarationImpl
   final MethodFragment _fragment;
   late final MethodEncoding _encoding;
 
-  MethodDeclarationImpl(this._fragment) {
+  new(this._fragment) {
     _fragment.declaration = this;
   }
 
@@ -135,7 +137,7 @@ class MethodDeclarationImpl
   List<TypeParameter>? get thisTypeParameters => _encoding.thisTypeParameters;
 
   @override
-  VariableDeclaration? get thisVariable => _encoding.thisVariable;
+  InternalVariable? get thisVariable => _encoding.thisVariable;
 
   @override
   void becomeNative(SourceLoader loader) {
@@ -260,13 +262,6 @@ class MethodDeclarationImpl
         fileUri: fileUri,
         nameOffset: _fragment.nameOffset,
         nameLength: _fragment.name.length,
-        isClosureContextLoweringEnabled: enclosingClassBuilder
-            .libraryBuilder
-            .loader
-            .target
-            .backendTarget
-            .flags
-            .isClosureContextLoweringEnabled,
       );
     }
     _encoding.ensureTypes(
@@ -276,24 +271,22 @@ class MethodDeclarationImpl
   }
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     return _encoding.getTearOffParameter(index);
   }
 
   @override
   void registerFunctionBody({
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     _encoding.registerFunctionBody(
       body: body,
-      scope: scope,
       asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
-      thisVariable: thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 
@@ -314,10 +307,9 @@ abstract class MethodFragmentDeclaration {
 
   void registerFunctionBody({
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   });
 
   DartType get returnTypeContext;
@@ -328,7 +320,7 @@ abstract class MethodFragmentDeclaration {
 
   List<TypeParameter>? get thisTypeParameters;
 
-  VariableDeclaration? get thisVariable;
+  InternalVariable? get thisVariable;
 
   void becomeNative(SourceLoader loader);
 
@@ -336,5 +328,5 @@ abstract class MethodFragmentDeclaration {
 
   LocalScope createFormalParameterScope(LookupScope typeParameterScope);
 
-  VariableDeclaration? getTearOffParameter(int index);
+  FunctionParameter? getTearOffParameter(int index);
 }

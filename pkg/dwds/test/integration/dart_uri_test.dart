@@ -2,17 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-@TestOn('vm')
-@Timeout(Duration(minutes: 2))
-library;
-
 import 'package:dwds/src/utilities/dart_uri.dart';
+import 'package:dwds_test_common/fixtures/fakes.dart';
+import 'package:dwds_test_common/fixtures/utilities.dart';
 import 'package:dwds_test_common/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
-
-import 'fixtures/fakes.dart';
-import 'fixtures/utilities.dart';
 
 class TestStrategy extends FakeStrategy {
   TestStrategy(super.assetReader);
@@ -100,25 +95,17 @@ void main() {
 
       tearDownAll(DartUri.clear);
 
-      test(
-        'can resolve uris',
-        () {
-          final resolved = DartUri.toResolvedUri('dart:io');
-          expect(resolved, 'org-dartlang-sdk:///sdk/lib/io/io.dart');
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('can resolve uris', () {
+        final resolved = DartUri.toResolvedUri('dart:io');
+        expect(resolved, 'org-dartlang-sdk:///sdk/lib/io/io.dart');
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
 
-      test(
-        'can un-resolve uris',
-        () {
-          final unresolved = DartUri.toPackageUri(
-            'org-dartlang-sdk:///sdk/lib/io/io.dart',
-          );
-          expect(unresolved, 'dart:io');
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('can un-resolve uris', () {
+        final unresolved = DartUri.toPackageUri(
+          'org-dartlang-sdk:///sdk/lib/io/io.dart',
+        );
+        expect(unresolved, 'dart:io');
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
     });
 
     group('initialized with other SDK directory', () {
@@ -131,25 +118,17 @@ void main() {
         DartUri.clear();
       });
 
-      test(
-        'can resolve uris',
-        () {
-          final resolved = DartUri.toResolvedUri('dart:io');
-          expect(resolved, 'org-dartlang-sdk:///sdk/lib/io/io.dart');
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('can resolve uris', () {
+        final resolved = DartUri.toResolvedUri('dart:io');
+        expect(resolved, 'org-dartlang-sdk:///sdk/lib/io/io.dart');
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
 
-      test(
-        'can unresolve uris',
-        () {
-          final unresolved = DartUri.toPackageUri(
-            'org-dartlang-sdk:///sdk/lib/io/io.dart',
-          );
-          expect(unresolved, 'dart:io');
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('can unresolve uris', () {
+        final unresolved = DartUri.toPackageUri(
+          'org-dartlang-sdk:///sdk/lib/io/io.dart',
+        );
+        expect(unresolved, 'dart:io');
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
     });
 
     group('initialized with other SDK directory with no libraries spec', () {
@@ -181,25 +160,17 @@ void main() {
         DartUri.clear();
       });
 
-      test(
-        'cannot resolve uris',
-        () {
-          final resolved = DartUri.toResolvedUri('dart:io');
-          expect(resolved, null);
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('cannot resolve uris', () {
+        final resolved = DartUri.toResolvedUri('dart:io');
+        expect(resolved, null);
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
 
-      test(
-        'cannot unresolve uris',
-        () {
-          final unresolved = DartUri.toPackageUri(
-            'org-dartlang-sdk:///sdk/lib/io/io.dart',
-          );
-          expect(unresolved, null);
-        },
-        skip: 'https://github.com/dart-lang/webdev/issues/1584',
-      );
+      test('cannot unresolve uris', () {
+        final unresolved = DartUri.toPackageUri(
+          'org-dartlang-sdk:///sdk/lib/io/io.dart',
+        );
+        expect(unresolved, null);
+      }, skip: 'https://github.com/dart-lang/webdev/issues/1584');
     });
   });
 

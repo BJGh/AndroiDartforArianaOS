@@ -2,31 +2,61 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
+import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(InvalidUseOfNeverTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class InvalidUseOfNeverTest extends PubPackageResolutionTest {
   test_binaryExpression_eqEq() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   (throw '') == 1 + 2;
+//^^^^^^^^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//           ^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 13, 10), error(diag.deadCode, 24, 8)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.binary('=='), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('==');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: ThrowExpression
+      throwKeyword: throw
+      expression2: SimpleStringLiteral
+        literal: ''
+      staticType: Never
+    rightParenthesis: )
+    staticType: Never
+  operator: ==
+  rightOperand: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  binaryOperator: equal
+  element: <null>
+  staticType: Never
+V1: BinaryExpression
   leftOperand: ParenthesizedExpression
     leftParenthesis: (
     expression: ThrowExpression
@@ -46,7 +76,6 @@ BinaryExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
@@ -57,17 +86,41 @@ BinaryExpression
   }
 
   test_binaryExpression_never_eqEq() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x == 1 + 2;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 22, 8)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.binary('x =='), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('x ==');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never
+  operator: ==
+  rightOperand: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  binaryOperator: equal
+  element: <null>
+  staticType: Never
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -82,7 +135,6 @@ BinaryExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
@@ -93,17 +145,57 @@ BinaryExpression
   }
 
   test_binaryExpression_never_plus() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x + (1 + 2);
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 22, 9)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.binary('x +'), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('x +');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never
+  operator: +
+  rightOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: BinaryOperatorInvocation
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      binaryOperator: add
+      element: dart:core::@class::num::@method::+
+      staticType: int
+    expression(v1): BinaryExpression
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      element: dart:core::@class::num::@method::+
+      staticInvokeType: num Function(num)
+      staticType: int
+    rightParenthesis: )
+    correspondingParameter: <null>
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  staticType: Never
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -133,14 +225,37 @@ BinaryExpression
   }
 
   test_binaryExpression_neverQ_eqEq() async {
-    await assertNoErrorsInCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x == 1 + 2;
 }
 ''');
 
-    assertResolvedNodeText(findNode.binary('x =='), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('x ==');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never?
+  operator: ==
+  rightOperand: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: dart:core::@class::Object::@method::==::@formalParameter::other
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  binaryOperator: equal
+  element: dart:core::@class::Object::@method::==
+  staticType: bool
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -155,7 +270,6 @@ BinaryExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: dart:core::@class::Object::@method::==::@formalParameter::other
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
@@ -166,17 +280,55 @@ BinaryExpression
   }
 
   test_binaryExpression_neverQ_plus() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x + (1 + 2);
+//  ^
+// [diag.uncheckedOperatorInvocationOfNullableValue] The operator '+' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedOperatorInvocationOfNullableValue, 23, 1)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.binary('x +'), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('x +');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never?
+  operator: +
+  rightOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: BinaryOperatorInvocation
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      binaryOperator: add
+      element: dart:core::@class::num::@method::+
+      staticType: int
+    expression(v1): BinaryExpression
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      element: dart:core::@class::num::@method::+
+      staticInvokeType: num Function(num)
+      staticType: int
+    rightParenthesis: )
+    correspondingParameter: <null>
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  staticType: InvalidType
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -206,17 +358,62 @@ BinaryExpression
   }
 
   test_binaryExpression_plus() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   (throw '') + (1 + 2);
+//^^^^^^^^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//           ^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 13, 10), error(diag.deadCode, 24, 9)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.binary('+ ('), r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ (');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: ThrowExpression
+      throwKeyword: throw
+      expression2: SimpleStringLiteral
+        literal: ''
+      staticType: Never
+    rightParenthesis: )
+    staticType: Never
+  operator: +
+  rightOperand: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: BinaryOperatorInvocation
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      binaryOperator: add
+      element: dart:core::@class::num::@method::+
+      staticType: int
+    expression(v1): BinaryExpression
+      leftOperand: IntegerLiteral
+        literal: 1
+        staticType: int
+      operator: +
+      rightOperand: IntegerLiteral
+        literal: 2
+        correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+        staticType: int
+      element: dart:core::@class::num::@method::+
+      staticInvokeType: num Function(num)
+      staticType: int
+    rightParenthesis: )
+    correspondingParameter: <null>
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  staticType: Never
+V1: BinaryExpression
   leftOperand: ParenthesizedExpression
     leftParenthesis: (
     expression: ThrowExpression
@@ -249,11 +446,11 @@ BinaryExpression
   staticType: Never
 ''');
 
-    assertType(findNode.binary('1 + 2'), 'int');
+    assertType(result.findNode.binaryOperatorInvocation('1 + 2'), 'int');
   }
 
   test_conditionalExpression_falseBranch() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(bool c, Never x) {
   c ? 0 : x;
 }
@@ -261,7 +458,7 @@ void f(bool c, Never x) {
   }
 
   test_conditionalExpression_trueBranch() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(bool c, Never x) {
   c ? x : 0;
 }
@@ -269,39 +466,54 @@ void f(bool c, Never x) {
   }
 
   test_functionExpressionInvocation_never() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x();
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+// ^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 21, 3)],
-    );
+''');
   }
 
   test_functionExpressionInvocation_neverQ() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x();
+//^
+// [diag.uncheckedInvocationOfNullableValue] The function can't be unconditionally invoked because it can be 'null'.
 }
-''',
-      [error(diag.uncheckedInvocationOfNullableValue, 21, 1)],
-    );
+''');
   }
 
   test_indexExpression_never_read() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x[0];
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 22, 3)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.index('x[0]'), r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('x[0]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <null>
+    staticType: int
+  rightBracket: ]
+  resolution: <null>
+  staticType: Never
+V1: IndexExpression
   target: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -317,19 +529,98 @@ IndexExpression
 ''');
   }
 
+  test_indexExpression_never_read_nullAware() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+void f(Never x) {
+  x?[0];
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+// ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?[' is unnecessary.
+//   ^^^
+// [diag.deadCode] Dead code.
+}
+''');
+
+    var node = result.findNode.indexExpression2('x?[0]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never
+  question: ?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <null>
+    staticType: int
+  rightBracket: ]
+  resolution: <null>
+  staticType: Never
+V1: IndexExpression
+  target: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never
+  question: ?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <null>
+    staticType: int
+  rightBracket: ]
+  element: <null>
+  staticType: Never
+''');
+  }
+
   test_indexExpression_never_readWrite() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x[0] += 1 + 2;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 22, 12)],
-    );
+''');
 
-    var assignment = findNode.assignment('[0] +=');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.compoundAssignment('[0] +=');
+    assertResolvedNodeText(node, r'''
+CompoundAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: <null>
+  operator: +=
+  value: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  operatorResultType: Never
+  staticType: Never
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
@@ -353,31 +644,61 @@ AssignmentExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
-  readType: InvalidType
+  readType: Never
   writeElement: <null>
   writeType: InvalidType
   element: <null>
-  staticType: InvalidType
+  staticType: Never
 ''');
   }
 
   test_indexExpression_never_write() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x[0] = 1 + 2;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 22, 11)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.assignment('x[0]'), r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('x[0]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: <null>
+  operator: =
+  value: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  staticType: Never
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
@@ -401,31 +722,180 @@ AssignmentExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
   readElement: <null>
   readType: null
   writeElement: <null>
+  writeType: null
+  element: <null>
+  staticType: Never
+''');
+  }
+
+  test_indexExpression_neverAlias_ifNull() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+typedef N = Never;
+
+void f(N x) {
+  x[0] ??= 1;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^^
+// [diag.deadCode] Dead code.
+}
+''');
+
+    var node = result.findNode.ifNullAssignment('[0] ??= 1');
+    assertResolvedNodeText(node, r'''
+IfNullAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+        alias: <testLibrary>::@typeAlias::N
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: <null>
+  operator: ??=
+  value: IntegerLiteral
+    literal: 1
+    correspondingParameter: <null>
+    staticType: int
+  staticType: Never
+V1: AssignmentExpression
+  leftHandSide: IndexExpression
+    target: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+        alias: <testLibrary>::@typeAlias::N
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    element: <null>
+    staticType: null
+  operator: ??=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    correspondingParameter: <null>
+    staticType: int
+  readElement: <null>
+  readType: Never
+    alias: <testLibrary>::@typeAlias::N
+  writeElement: <null>
   writeType: InvalidType
   element: <null>
-  staticType: int
+  staticType: Never
+''');
+  }
+
+  test_indexExpression_neverAlias_readWrite() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+typedef N = Never;
+
+void f(N x) {
+  x[0] += 1;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//  ^^^^^^^^
+// [diag.deadCode] Dead code.
+}
+''');
+
+    var node = result.findNode.compoundAssignment('[0] += 1');
+    assertResolvedNodeText(node, r'''
+CompoundAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+        alias: <testLibrary>::@typeAlias::N
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: <null>
+  operator: +=
+  value: IntegerLiteral
+    literal: 1
+    correspondingParameter: <null>
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  operatorResultType: Never
+  staticType: Never
+V1: AssignmentExpression
+  leftHandSide: IndexExpression
+    target: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never
+        alias: <testLibrary>::@typeAlias::N
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    element: <null>
+    staticType: null
+  operator: +=
+  rightHandSide: IntegerLiteral
+    literal: 1
+    correspondingParameter: <null>
+    staticType: int
+  readElement: <null>
+  readType: Never
+    alias: <testLibrary>::@typeAlias::N
+  writeElement: <null>
+  writeType: InvalidType
+  element: <null>
+  staticType: Never
 ''');
   }
 
   test_indexExpression_neverQ_read() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x[0];
+// ^
+// [diag.uncheckedMethodInvocationOfNullableValue] The method '[]' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedMethodInvocationOfNullableValue, 22, 1)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.index('x[0]'), r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('x[0]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: x
+    element: <testLibrary>::@function::f::@formalParameter::x
+    staticType: Never?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <null>
+    staticType: int
+  rightBracket: ]
+  resolution: InvalidIndexReadResolution
+    type: InvalidType
+    recovery: <null>
+  staticType: InvalidType
+V1: IndexExpression
   target: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -442,18 +912,53 @@ IndexExpression
   }
 
   test_indexExpression_neverQ_readWrite() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x[0] += 1 + 2;
+// ^
+// [diag.uncheckedMethodInvocationOfNullableValue] The method '[]' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedMethodInvocationOfNullableValue, 22, 1)],
-    );
+''');
 
-    var assignment = findNode.assignment('[0] +=');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.compoundAssignment('[0] +=');
+    assertResolvedNodeText(node, r'''
+CompoundAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never?
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: InvalidIndexReadResolution
+      type: InvalidType
+      recovery: <null>
+    write: InvalidIndexWriteResolution
+      acceptedType: InvalidType
+      recovery: <null>
+  operator: +=
+  value: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  operatorResultType: InvalidType
+  staticType: InvalidType
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
@@ -477,7 +982,6 @@ AssignmentExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
@@ -491,17 +995,48 @@ AssignmentExpression
   }
 
   test_indexExpression_neverQ_write() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x[0] = 1 + 2;
+// ^
+// [diag.uncheckedMethodInvocationOfNullableValue] The method '[]' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedMethodInvocationOfNullableValue, 22, 1)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.assignment('x[0]'), r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('x[0]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: Never?
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: <null>
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: InvalidIndexWriteResolution
+      acceptedType: InvalidType
+      recovery: <null>
+  operator: =
+  value: BinaryOperatorInvocation
+    leftOperand: IntegerLiteral
+      literal: 1
+      staticType: int
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 2
+      correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+      staticType: int
+    correspondingParameter: <null>
+    binaryOperator: add
+    element: dart:core::@class::num::@method::+
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: x
@@ -525,7 +1060,6 @@ AssignmentExpression
       literal: 2
       correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
       staticType: int
-    correspondingParameter: <null>
     element: dart:core::@class::num::@method::+
     staticInvokeType: num Function(num)
     staticType: int
@@ -539,7 +1073,7 @@ AssignmentExpression
   }
 
   test_invocationArgument() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(g, Never x) {
   g(x);
 }
@@ -547,19 +1081,20 @@ void f(g, Never x) {
   }
 
   test_methodInvocation_never() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.foo(1 + 2);
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//     ^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 25, 8)],
-    );
+''');
 
-    var node = findNode.methodInvocation('.foo(1 + 2)');
+    var node = result.findNode.methodInvocation('.foo(1 + 2)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Never
@@ -570,7 +1105,21 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -591,19 +1140,20 @@ MethodInvocation
   }
 
   test_methodInvocation_never_toString() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.toString(1 + 2);
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//          ^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1), error(diag.deadCode, 30, 8)],
-    );
+''');
 
-    var node = findNode.methodInvocation('.toString(1 + 2)');
+    var node = result.findNode.methodInvocation('.toString(1 + 2)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Never
@@ -614,7 +1164,21 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -635,19 +1199,18 @@ MethodInvocation
   }
 
   test_methodInvocation_neverQ_toString() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x.toString(1 + 2);
+//           ^^^^^
+// [diag.extraPositionalArguments] Too many positional arguments: 0 expected, but 1 found.
 }
-''',
-      [error(diag.extraPositionalArguments, 32, 5)],
-    );
+''');
 
-    var node = findNode.methodInvocation('.toString(1 + 2)');
+    var node = result.findNode.methodInvocation('.toString(1 + 2)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Never?
@@ -658,7 +1221,21 @@ MethodInvocation
     staticType: String Function()
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -679,23 +1256,24 @@ MethodInvocation
   }
 
   test_methodInvocation_toString() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   (throw '').toString();
+//^^^^^^^^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//                   ^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.receiverOfTypeNever, 13, 10), error(diag.deadCode, 32, 3)],
-    );
+''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ParenthesizedExpression
+  target2: ParenthesizedExpression
     leftParenthesis: (
-    expression: ThrowExpression
+    expression2: ThrowExpression
       throwKeyword: throw
-      expression: SimpleStringLiteral
+      expression2: SimpleStringLiteral
         literal: ''
       staticType: Never
     rightParenthesis: )
@@ -713,18 +1291,31 @@ MethodInvocation
 ''');
   }
 
-  test_postfixExpression_never_plusPlus() async {
-    await assertErrorsInCode(
-      r'''
+  test_postfixIncrement_never() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x++;
+//^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
 }
-''',
-      [error(diag.receiverOfTypeNever, 20, 1)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.postfix('x++'), r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('x++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: x
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      type: Never
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      acceptedType: Never
+  operator: ++
+  element: <null>
+  operatorResultType: Never
+  staticType: Never
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -739,18 +1330,31 @@ PostfixExpression
 ''');
   }
 
-  test_postfixExpression_neverQ_plusPlus() async {
-    await assertErrorsInCode(
-      r'''
+  test_postfixIncrement_neverQ() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x++;
+// ^^
+// [diag.uncheckedMethodInvocationOfNullableValue] The method '+' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedMethodInvocationOfNullableValue, 22, 2)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.postfix('x++'), r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('x++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: x
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      type: Never?
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      acceptedType: Never?
+  operator: ++
+  element: <null>
+  operatorResultType: dynamic
+  staticType: Never?
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
@@ -767,17 +1371,30 @@ PostfixExpression
 
   test_prefixExpression_never_plusPlus() async {
     // Reports 'undefined operator'
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   ++x;
+//  ^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
 }
-''',
-      [error(diag.receiverOfTypeNever, 22, 1)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.prefix('++x'), r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++x');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: x
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      type: Never
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      acceptedType: Never
+  element: <null>
+  operatorResultType: Never
+  staticType: Never
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: x
@@ -793,17 +1410,30 @@ PrefixExpression
   }
 
   test_prefixExpression_neverQ_plusPlus() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   ++x;
+//^^
+// [diag.uncheckedMethodInvocationOfNullableValue] The method '+' can't be unconditionally invoked because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedMethodInvocationOfNullableValue, 21, 2)],
-    );
+''');
 
-    assertResolvedNodeText(findNode.prefix('++x'), r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++x');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: x
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      type: Never?
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::x
+      acceptedType: Never?
+  element: <null>
+  operatorResultType: InvalidType
+  staticType: InvalidType
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: x
@@ -819,16 +1449,15 @@ PrefixExpression
   }
 
   test_propertyAccess_never_read() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.foo;
+//  ^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.deadCode, 22, 4)],
-    );
+''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -846,16 +1475,15 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_never_read_hashCode() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.hashCode;
+//  ^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.deadCode, 22, 9)],
-    );
+''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -873,19 +1501,18 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_never_readWrite() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.foo += 0;
+//         ^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.deadCode, 29, 2)],
-    );
+''');
 
-    var assignment = findNode.assignment('foo += 0');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo += 0');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
@@ -898,7 +1525,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: +=
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <null>
     staticType: int
@@ -912,16 +1539,15 @@ AssignmentExpression
   }
 
   test_propertyAccess_never_tearOff_toString() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.toString;
+//  ^^^^^^^^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.deadCode, 22, 9)],
-    );
+''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -939,19 +1565,18 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_never_write() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x.foo = 0;
+//        ^^
+// [diag.deadCode] Dead code.
 }
-''',
-      [error(diag.deadCode, 28, 2)],
-    );
+''');
 
-    var assignment = findNode.assignment('foo = 0');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo = 0');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
@@ -964,7 +1589,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <null>
     staticType: int
@@ -978,16 +1603,15 @@ AssignmentExpression
   }
 
   test_propertyAccess_neverQ_read() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x.foo;
+//  ^^^
+// [diag.uncheckedPropertyAccessOfNullableValue] The property 'foo' can't be unconditionally accessed because the receiver can be 'null'.
 }
-''',
-      [error(diag.uncheckedPropertyAccessOfNullableValue, 23, 3)],
-    );
+''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -1005,13 +1629,13 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_neverQ_read_hashCode() async {
-    await assertNoErrorsInCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x.hashCode;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -1029,13 +1653,13 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_neverQ_tearOff_toString() async {
-    await assertNoErrorsInCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x.toString;
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -1053,18 +1677,31 @@ PrefixedIdentifier
   }
 
   test_propertyAccess_toString() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   (throw '').toString;
+//^^^^^^^^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
 }
-''',
-      [error(diag.deadCode, 24, 9)],
-    );
+''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singleReceiverPropertyExtraction;
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: ThrowExpression
+      throwKeyword: throw
+      expression2: SimpleStringLiteral
+        literal: ''
+      staticType: Never
+    rightParenthesis: )
+    staticType: Never
+  operator: .
+  propertyName: toString
+  resolution: <null>
+  staticType: Never
+V1: PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: ThrowExpression
@@ -1077,25 +1714,78 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: toString
-    element: dart:core::@class::Object::@method::toString
-    staticType: String Function()
-  staticType: String Function()
+    element: <null>
+    staticType: Never
+  staticType: Never
+''');
+  }
+
+  test_propertyAssignment_direct_never_alias() async {
+    await resolveTestCodeWithDiagnostics(r'''
+typedef N = Never;
+
+void f(N x) {
+  (x).foo = 0;
+//^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//          ^^
+// [diag.deadCode] Dead code.
+}
+''');
+  }
+
+  test_propertyAssignment_readWrite_never_alias() async {
+    await resolveTestCodeWithDiagnostics(r'''
+typedef N = Never;
+
+void f(N x) {
+  (x).foo += 0;
+//^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+//           ^^
+// [diag.deadCode] Dead code.
+}
+''');
+  }
+
+  test_propertyExtraction_never_alias() async {
+    await resolveTestCodeWithDiagnostics(r'''
+typedef N = Never;
+
+void f(N x) {
+  (x).foo;
+//^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
+}
 ''');
   }
 
   test_throw_getter_hashCode() async {
-    await assertErrorsInCode(
-      r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   (throw '').hashCode;
+//^^^^^^^^^^
+// [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
 }
-''',
-      [error(diag.deadCode, 24, 9)],
-    );
+''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singleReceiverPropertyExtraction;
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: ThrowExpression
+      throwKeyword: throw
+      expression2: SimpleStringLiteral
+        literal: ''
+      staticType: Never
+    rightParenthesis: )
+    staticType: Never
+  operator: .
+  propertyName: hashCode
+  resolution: <null>
+  staticType: Never
+V1: PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: ThrowExpression
@@ -1108,9 +1798,9 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: hashCode
-    element: dart:core::@class::Object::@getter::hashCode
-    staticType: int
-  staticType: int
+    element: <null>
+    staticType: Never
+  staticType: Never
 ''');
   }
 }

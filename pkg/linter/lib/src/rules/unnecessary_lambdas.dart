@@ -27,8 +27,7 @@ Set<Element?> _extractElementsOfSimpleIdentifiers(AstNode node) =>
     _IdentifierVisitor().extractElements(node);
 
 class UnnecessaryLambdas extends AnalysisRule {
-  UnnecessaryLambdas()
-    : super(name: LintNames.unnecessary_lambdas, description: _desc);
+  new() : super(name: LintNames.unnecessary_lambdas, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.unnecessaryLambdas;
@@ -46,7 +45,7 @@ class UnnecessaryLambdas extends AnalysisRule {
 class _FinalExpressionChecker {
   final Set<FormalParameterElement?> parameters;
 
-  _FinalExpressionChecker(this.parameters);
+  new(this.parameters);
 
   bool isFinalNode(Expression? node_) {
     if (node_ == null) {
@@ -83,7 +82,7 @@ class _FinalExpressionChecker {
 class _IdentifierVisitor extends RecursiveAstVisitor<void> {
   final _elements = <Element?>{};
 
-  _IdentifierVisitor();
+  new();
 
   Set<Element?> extractElements(AstNode node) {
     node.accept(this);
@@ -97,16 +96,13 @@ class _IdentifierVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final bool constructorTearOffsEnabled;
-  final AnalysisRule rule;
-  final TypeSystem typeSystem;
+class _Visitor(final AnalysisRule rule, RuleContext context)
+    extends SimpleAstVisitor<void> {
+  final bool constructorTearOffsEnabled = context.isFeatureEnabled(
+    Feature.constructor_tearoffs,
+  );
 
-  _Visitor(this.rule, RuleContext context)
-    : constructorTearOffsEnabled = context.isFeatureEnabled(
-        Feature.constructor_tearoffs,
-      ),
-      typeSystem = context.typeSystem;
+  final TypeSystem typeSystem = context.typeSystem;
 
   bool parametersMatch(DartType invocationType, FunctionType nodeType) {
     if (invocationType is! FunctionType) {

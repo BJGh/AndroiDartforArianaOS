@@ -38,6 +38,7 @@ import '../../source/source_loader.dart';
 import '../../source/source_member_builder.dart';
 import '../../source/source_type_parameter_builder.dart';
 import '../../source/type_parameter_factory.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../fragment.dart';
 import 'encoding.dart';
 
@@ -149,7 +150,19 @@ mixin _ConstructorDeclarationMixin
 
   LookupScope get _typeParameterScope;
 
-  abstract Token? _beginInitializers;
+  /// Returns `true` if initializers should be built for the outline.
+  ///
+  /// Const constructors will have their initializers compiled and
+  /// written into the outline, and  super initializers are required to infer
+  /// the types of super parameters.
+  bool get _buildInitializersForOutline;
+
+  /// The `:` token starting the initializers of this constructor, if any.
+  Token? get _initializersStartToken;
+
+  /// Clears any cached [_initializersStartToken] to avoid holding on to tokens
+  /// after building the outline.
+  void _clearInitializersStartToken();
 
   List<SourceNominalParameterBuilder>? get _typeParameters;
 
@@ -260,9 +273,8 @@ mixin _ConstructorDeclarationMixin
     List<DelayedDefaultValueCloner> delayedDefaultValueCloners,
   ) {
     if (_hasSuperInitializingFormals) {
-      List<Initializer>? initializers;
-      Token? beginInitializers = this._beginInitializers;
-      if (beginInitializers != null) {
+      List<InternalInitializer>? initializers;
+      if (_buildInitializersForOutline) {
         Resolver resolver = libraryBuilder.loader.createResolver();
         initializers = resolver.buildInitializersUnfinished(
           libraryBuilder: libraryBuilder,
@@ -270,7 +282,7 @@ mixin _ConstructorDeclarationMixin
           extensionScope: _extensionScope,
           typeParameterScope: _typeParameterScope,
           fileUri: fileUri,
-          beginInitializers: beginInitializers,
+          beginInitializers: _initializersStartToken,
           isConst: isConst,
         );
       }
@@ -289,7 +301,7 @@ mixin _ConstructorDeclarationMixin
     DeclarationBuilder declarationBuilder,
     ClassHierarchyBase hierarchy,
     List<DelayedDefaultValueCloner> delayedDefaultValueCloners,
-    List<Initializer>? initializers,
+    List<InternalInitializer>? initializers,
   ) {
     if (formals == null) return;
     if (!_hasSuperInitializingFormals) return;
@@ -305,17 +317,33 @@ mixin _ConstructorDeclarationMixin
       }
     }
 
+    Member? superTarget = null;
+    bool isInvalid = false;
+    if (initializers != null) {
+      InternalInitializer? lastInitializer = initializers.isNotEmpty
+          ? initializers.last
+          : null;
+      if (lastInitializer is InternalSuperInitializer) {
+        superTarget = lastInitializer.target;
+      } else if (lastInitializer is InternalInvalidInitializer &&
+          // Coverage-ignore(suite): Not run.
+          lastInitializer.isSuperInitializer) {
+        // Erroneous super initializer.
+        isInvalid = true;
+      }
+    }
+
     ConstructorBuilder? superTargetBuilder = _computeSuperTargetBuilder(
       libraryBuilder,
       declarationBuilder,
-      initializers,
+      superTarget: superTarget,
+      isInvalid: isInvalid,
     );
 
     if (superTargetBuilder is SourceConstructorBuilder) {
       superTargetBuilder.inferFormalTypes(hierarchy);
     }
 
-    Member superTarget;
     FunctionSignature? superConstructorSignature;
     if (superTargetBuilder != null) {
       superTarget = superTargetBuilder.invokeTarget;
@@ -358,7 +386,7 @@ mixin _ConstructorDeclarationMixin
       if (formal.isSuperInitializingFormal) {
         superInitializingFormalIndex++;
         bool hasImmediatelyDeclaredInitializer =
-            formal.hasImmediatelyDeclaredInitializer;
+            formal.hasImmediatelyDeclaredDefaultValue;
 
         DartType? correspondingSuperFormalType;
         if (formal.isPositional) {
@@ -366,9 +394,9 @@ mixin _ConstructorDeclarationMixin
             ParameterInfo parameterInfo =
                 positionalSuperInfo[superInitializingFormalIndex];
             if (formal.isOptional) {
-              formal.hasDeclaredInitializer =
+              formal.hasDeclaredDefaultValue =
                   hasImmediatelyDeclaredInitializer ||
-                  parameterInfo.hasDeclaredInitializer;
+                  parameterInfo.hasDeclaredDefaultValue;
             }
             correspondingSuperFormalType = parameterInfo.type;
             if (!hasImmediatelyDeclaredInitializer &&
@@ -392,9 +420,9 @@ mixin _ConstructorDeclarationMixin
           ParameterInfo? parameterInfo = namedSuperInfo[formal.name];
           if (parameterInfo != null) {
             if (formal.isOptional) {
-              formal.hasDeclaredInitializer =
+              formal.hasDeclaredDefaultValue =
                   hasImmediatelyDeclaredInitializer ||
-                  parameterInfo.hasDeclaredInitializer;
+                  parameterInfo.hasDeclaredDefaultValue;
             }
             correspondingSuperFormalType = parameterInfo.type;
             if (!hasImmediatelyDeclaredInitializer && !formal.isRequiredNamed) {
@@ -412,7 +440,8 @@ mixin _ConstructorDeclarationMixin
           }
           formal.type.registerInferredType(type ?? const DynamicType());
         }
-        formal.variable.hasDeclaredInitializer = formal.hasDeclaredInitializer;
+        formal.variable.hasDeclaredDefaultValue =
+            formal.hasDeclaredDefaultValue;
       }
     }
 
@@ -437,15 +466,15 @@ mixin _ConstructorDeclarationMixin
 
   ConstructorBuilder? _computeSuperTargetBuilder(
     SourceLibraryBuilder libraryBuilder,
-    DeclarationBuilder declarationBuilder,
-    List<Initializer>? initializers,
-  ) {
+    DeclarationBuilder declarationBuilder, {
+    required Member? superTarget,
+    required bool isInvalid,
+  }) {
     if (declarationBuilder is! SourceClassBuilder) {
       return null;
     }
     SourceClassBuilder classBuilder = declarationBuilder;
 
-    Member superTarget;
     ClassBuilder superclassBuilder;
 
     TypeBuilder? supertype = classBuilder.supertypeBuilder;
@@ -464,24 +493,9 @@ mixin _ConstructorDeclarationMixin
       return null;
     }
 
-    Initializer? lastInitializer =
-        initializers != null && initializers.isNotEmpty
-        ? initializers.last
-        : null;
-    // TODO(johnniwinther): This method is currently called with initializers
-    // in an uninferred state for non-const constructors with super parameters
-    // and in an inferred state for const constructors with super parameters.
-    // Avoid this inconsistency by calling this before inference.
-    if (lastInitializer is SuperInitializer) {
-      superTarget = lastInitializer.target;
-    } else if (lastInitializer is InternalSuperInitializer) {
-      superTarget = lastInitializer.target;
-    } else if (lastInitializer is InvalidInitializer &&
-        // Coverage-ignore(suite): Not run.
-        lastInitializer.isSuperInitializer) {
-      // Erroneous super initializer.
+    if (isInvalid) {
       return null;
-    } else {
+    } else if (superTarget == null) {
       MemberLookupResult? result = superclassBuilder.findConstructorOrFactory(
         "",
         libraryBuilder,
@@ -534,7 +548,7 @@ mixin _ConstructorDeclarationMixin
   ) {
     if (!_hasSuperInitializingFormals) return;
 
-    if (_beginInitializers != null && initializers.isNotEmpty) {
+    if (_buildInitializersForOutline && initializers.isNotEmpty) {
       // If the initializers aren't built yet, we can't compute the super
       // target. The synthetic initializers should be excluded, since they can
       // be built separately from formal field initializers.
@@ -545,11 +559,26 @@ mixin _ConstructorDeclarationMixin
           break;
         }
       }
+      Member? superTarget;
+      bool isInvalid = false;
+      Initializer? lastInitializer = initializers.isNotEmpty
+          ? initializers.last
+          : null;
+      if (lastInitializer is SuperInitializer) {
+        superTarget = lastInitializer.target;
+      }
+      // Coverage-ignore(suite): Not run.
+      else if (lastInitializer is InvalidInitializer &&
+          lastInitializer.isSuperInitializer) {
+        // Erroneous super initializer.
+        isInvalid = true;
+      }
       if (!allInitializersAreSynthetic) {
         ConstructorBuilder? superTargetBuilder = _computeSuperTargetBuilder(
           libraryBuilder,
           declarationBuilder,
-          initializers,
+          superTarget: superTarget,
+          isInvalid: isInvalid,
         );
         if (superTargetBuilder is SourceConstructorBuilder) {
           superTargetBuilder.addSuperParameterDefaultValueCloners(
@@ -579,7 +608,7 @@ mixin _ConstructorDeclarationMixin
     SourceLibraryBuilder libraryBuilder,
     SourceConstructorBuilder constructorBuilder,
   ) {
-    if (_beginInitializers != null) {
+    if (_buildInitializersForOutline) {
       final LocalScope? formalParameterScope;
       if (isConst) {
         // We're going to fully build the constructor so we need scopes.
@@ -598,7 +627,7 @@ mixin _ConstructorDeclarationMixin
         formalParameterScope: formalParameterScope,
         bodyBuilderContext: createBodyBuilderContext(constructorBuilder),
         fileUri: fileUri,
-        beginInitializers: _beginInitializers!,
+        beginInitializers: _initializersStartToken,
         isConst: isConst,
         forPrimaryConstructor: _isPrimaryConstructor,
       );
@@ -674,7 +703,7 @@ mixin _ConstructorDeclarationMixin
       declarationBuilder,
       delayedDefaultValueCloners,
     );
-    _beginInitializers = null;
+    _clearInitializersStartToken();
   }
 
   @override
@@ -745,7 +774,7 @@ mixin _ConstructorEncodingMixin
   }
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     return _encoding.getTearOffParameter(index);
   }
 
@@ -755,27 +784,27 @@ mixin _ConstructorEncodingMixin
   }
 
   @override
-  VariableDeclaration? get thisVariable => _encoding.thisVariable;
+  InternalVariable? get thisVariable => _encoding.thisVariable;
 
   @override
   List<TypeParameter>? get thisTypeParameters => _encoding.thisTypeParameters;
 
   @override
   void registerFunctionBody(
-    Statement? body,
-    Scope? scope,
-    VariableDeclaration? thisVariable,
-  ) {
+    Statement? body, {
+    required ScopeProviderInfo? scopeProviderInfo,
+  }) {
     _encoding.registerFunctionBody(
       body: body,
-      scope: scope,
-      thisVariable: thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 
   @override
-  void registerNoBodyConstructor() {
-    _encoding.registerNoBodyConstructor();
+  void registerNoBodyConstructor({
+    required ScopeProviderInfo? scopeProviderInfo,
+  }) {
+    _encoding.registerNoBodyConstructor(scopeProviderInfo: scopeProviderInfo);
   }
 
   @override
@@ -894,11 +923,20 @@ class RegularConstructorDeclaration
   late final List<SourceNominalParameterBuilder>? _typeParameters;
 
   @override
-  Token? _beginInitializers;
+  Token? _initializersStartToken;
 
-  RegularConstructorDeclaration(this._fragment)
-    : _beginInitializers = _fragment.beginInitializers {
+  new(this._fragment)
+    : _initializersStartToken = _fragment.initializersStartToken {
     _fragment.declaration = this;
+  }
+
+  @override
+  bool get _buildInitializersForOutline =>
+      _fragment.buildInitializersForOutline;
+
+  @override
+  void _clearInitializersStartToken() {
+    _initializersStartToken = null;
   }
 
   @override
@@ -1080,10 +1118,7 @@ class DefaultEnumConstructorDeclaration
   /// The scope in which to build the formal parameters.
   final LookupScope _lookupScope;
 
-  @override
-  Token? _beginInitializers;
-
-  DefaultEnumConstructorDeclaration({
+  new({
     required this.returnType,
     required this.formals,
     required Uri fileUri,
@@ -1093,11 +1128,16 @@ class DefaultEnumConstructorDeclaration
   }) : fileUri = fileUri,
        fileOffset = fileOffset,
        _extensionScope = extensionScope,
-       _lookupScope = lookupScope,
-       // Trick the constructor to be built during the outline phase.
-       // TODO(johnniwinther): Avoid relying on [beginInitializers] to
-       // ensure building constructors creation during the outline phase.
-       _beginInitializers = new Token.eof(-1);
+       _lookupScope = lookupScope;
+
+  @override
+  Token? get _initializersStartToken => null;
+
+  @override
+  bool get _buildInitializersForOutline => true;
+
+  @override
+  void _clearInitializersStartToken() {}
 
   @override
   void createEncoding({
@@ -1227,11 +1267,20 @@ class PrimaryConstructorDeclaration
   late final ConstructorEncoding _encoding;
 
   @override
-  Token? _beginInitializers;
+  Token? _initializersStartToken;
 
-  PrimaryConstructorDeclaration(this._fragment, this._bodyFragment)
-    : _beginInitializers = _fragment.beginInitializers {
+  new(this._fragment, this._bodyFragment)
+    : _initializersStartToken = _bodyFragment?.beginInitializers {
     _fragment.declaration = this;
+  }
+
+  @override
+  bool get _buildInitializersForOutline =>
+      _fragment.buildInitializersForOutline;
+
+  @override
+  void _clearInitializersStartToken() {
+    _initializersStartToken = null;
   }
 
   @override
@@ -1469,22 +1518,23 @@ abstract class ConstructorFragmentDeclaration {
   );
 
   void registerFunctionBody(
-    Statement? body,
-    Scope? scope,
-    VariableDeclaration? thisVariable,
-  );
+    Statement? body, {
+    required ScopeProviderInfo? scopeProviderInfo,
+  });
 
-  void registerNoBodyConstructor();
+  void registerNoBodyConstructor({
+    required ScopeProviderInfo? scopeProviderInfo,
+  });
 
-  VariableDeclaration? get thisVariable;
+  InternalVariable? get thisVariable;
 
   List<TypeParameter>? get thisTypeParameters;
 
   void becomeNative(SourceLoader loader);
 
-  /// Returns the [VariableDeclaration] for the tear off, if any, of the
+  /// Returns the [Variable] for the tear off, if any, of the
   /// [index]th formal parameter declared in the constructor.
-  VariableDeclaration? getTearOffParameter(int index);
+  FunctionParameter? getTearOffParameter(int index);
 
   LocalScope computeFormalParameterScope(LookupScope parent);
 
@@ -1638,7 +1688,7 @@ class DefaultConstructorDeclaration
   @override
   final Procedure? _constructorTearOff;
 
-  DefaultConstructorDeclaration({
+  new({
     required Constructor constructor,
     required Procedure? constructorTearOff,
   }) : this._constructor = constructor,
@@ -1704,7 +1754,7 @@ class ForwardingConstructorDeclaration
   DelayedDefaultValueCloner? _delayedDefaultValueCloner;
   TypeDependency? _typeDependency;
 
-  ForwardingConstructorDeclaration({
+  new({
     required Constructor constructor,
     required Procedure? constructorTearOff,
     required MemberBuilder definingConstructor,

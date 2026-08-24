@@ -59,11 +59,18 @@ void FormatMessageIntoBuffer(DWORD code, wchar_t* buffer, int buffer_length) {
   buffer[Utils::Minimum<int>(message_size, buffer_length - 1)] = 0;
 }
 
-FILETIME GetFiletimeFromMillis(int64_t millis) {
-  const int64_t kTimeScaler = 10000;  // 100 ns to ms.
+FILETIME GetFiletimeFromMicros(int64_t micros) {
+  const int64_t kTimeScaler = 10;  // 100 ns to us.
   TimeStamp t;
-  t.t_ = millis * kTimeScaler + kFileTimeEpoch;
+  t.t_ = micros * kTimeScaler + kFileTimeEpoch;
   return t.ft_;
+}
+
+int64_t FileTimeToMicroseconds(const FILETIME& ft) {
+  const int64_t kTimeScaler = 10;  // 100 ns to us.
+  TimeStamp t;
+  t.ft_ = ft;
+  return (t.t_ - kFileTimeEpoch) / kTimeScaler;
 }
 
 OSError::OSError() : sub_system_(kSystem), code_(0), message_(nullptr) {
@@ -328,6 +335,40 @@ int64_t TimerUtils::GetCurrentMonotonicMicros() {
 
 void TimerUtils::Sleep(int64_t millis) {
   ::Sleep(millis);
+}
+
+void DeleteTempDirDetached(const wchar_t* temp_dir_w) {
+  size_t len = wcslen(temp_dir_w);
+  auto clean_dir = std::make_unique<wchar_t[]>(len + 1);
+  wcscpy(clean_dir.get(), temp_dir_w);
+  while (len > 0 &&
+         (clean_dir[len - 1] == L'\\' || clean_dir[len - 1] == L'/')) {
+    clean_dir[len - 1] = L'\0';
+    len--;
+  }
+
+  const wchar_t* cmd_fmt =
+      L"cmd.exe /c (for /l %%i in (1,1,10) do (rmdir /s /q \"%s\" 2>&1 && "
+      L"exit /b 0 || timeout /t 1 /nobreak)) > NUL 2>&1";
+  size_t cmd_len = wcslen(cmd_fmt) + wcslen(clean_dir.get()) + 100;
+  wchar_t* cmd_line = new wchar_t[cmd_len];
+  swprintf(cmd_line, cmd_len, cmd_fmt, clean_dir.get());
+
+  STARTUPINFOW si;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(pi));
+
+  if (CreateProcessW(
+          nullptr, cmd_line, nullptr, nullptr, FALSE,
+          CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB,
+          nullptr, nullptr, &si, &pi)) {
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  }
+
+  delete[] cmd_line;
 }
 
 std::unique_ptr<wchar_t[]> Utf8ToWideChar(const char* path) {

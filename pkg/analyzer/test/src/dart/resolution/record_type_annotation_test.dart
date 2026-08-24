@@ -16,14 +16,90 @@ main() {
 
 @reflectiveTest
 class RecordTypeAnnotationResolutionTest extends PubPackageResolutionTest {
+  test_beforeRecords_named() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+void f(({int f1, String f2}) x) {}
+//     ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+''');
+
+    var node = result.findNode.singleFormalParameterList;
+    assertResolvedNodeText(node, r'''
+FormalParameterList
+  leftParenthesis: (
+  requiredPositionalFormalParameters
+    RegularFormalParameter
+      type: NamedType
+        name: <empty> <synthetic>
+        element: <null>
+        type: InvalidType
+      name: x
+      declaredFragment: <testLibraryFragment> x@45
+        element: isPublic
+          type: InvalidType
+  rightParenthesis: )
+FormalParameterList(v1)
+  leftParenthesis: (
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: <empty> <synthetic>
+      element: <null>
+      type: InvalidType
+    name: x
+    declaredFragment: <testLibraryFragment> x@45
+      element: isPublic
+        type: InvalidType
+  rightParenthesis: )
+''');
+  }
+
+  test_beforeRecords_positional() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+void f((int, String) x) {}
+//     ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+''');
+
+    var node = result.findNode.singleFormalParameterList;
+    assertResolvedNodeText(node, r'''
+FormalParameterList
+  leftParenthesis: (
+  requiredPositionalFormalParameters
+    RegularFormalParameter
+      type: NamedType
+        name: <empty> <synthetic>
+        element: <null>
+        type: InvalidType
+      name: x
+      declaredFragment: <testLibraryFragment> x@37
+        element: isPublic
+          type: InvalidType
+  rightParenthesis: )
+FormalParameterList(v1)
+  leftParenthesis: (
+  parameter: RegularFormalParameter
+    type: NamedType
+      name: <empty> <synthetic>
+      element: <null>
+      type: InvalidType
+    name: x
+    declaredFragment: <testLibraryFragment> x@37
+      element: isPublic
+        type: InvalidType
+  rightParenthesis: )
+''');
+  }
+
   test_class_method_formalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo((int, String) a) {}
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -44,13 +120,13 @@ RecordTypeAnnotation
   }
 
   test_class_method_returnType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   (int, String) foo() => throw 0;
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -70,65 +146,15 @@ RecordTypeAnnotation
 ''');
   }
 
-  test_language219_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-void f(({int f1, String f2}) x) {}
-//     ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-''');
-
-    var node = findNode.singleFormalParameterList;
-    assertResolvedNodeText(node, r'''
-FormalParameterList
-  leftParenthesis: (
-  parameter: RegularFormalParameter
-    type: NamedType
-      name: <empty> <synthetic>
-      element: <null>
-      type: InvalidType
-    name: x
-    declaredFragment: <testLibraryFragment> x@45
-      element: isPublic
-        type: InvalidType
-  rightParenthesis: )
-''');
-  }
-
-  test_language219_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-void f((int, String) x) {}
-//     ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-''');
-
-    var node = findNode.singleFormalParameterList;
-    assertResolvedNodeText(node, r'''
-FormalParameterList
-  leftParenthesis: (
-  parameter: RegularFormalParameter
-    type: NamedType
-      name: <empty> <synthetic>
-      element: <null>
-      type: InvalidType
-    name: x
-    declaredFragment: <testLibraryFragment> x@37
-      element: isPublic
-        type: InvalidType
-  rightParenthesis: )
-''');
-  }
-
   test_localFunction_formalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_element
   void g((int, String) a) {}
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -149,14 +175,14 @@ RecordTypeAnnotation
   }
 
   test_localFunction_returnType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_element
   (int, String) g() => throw 0;
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -177,14 +203,14 @@ RecordTypeAnnotation
   }
 
   test_localVariable_mixed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_local_variable
   (int, String, {bool f3}) x;
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -215,14 +241,14 @@ RecordTypeAnnotation
   }
 
   test_localVariable_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_local_variable
   ({int f1, String f2}) x;
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('({int');
+    var node = result.findNode.recordTypeAnnotation('({int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -248,14 +274,14 @@ RecordTypeAnnotation
   }
 
   test_localVariable_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_local_variable
   (int, String) x;
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -276,11 +302,11 @@ RecordTypeAnnotation
   }
 
   test_topFunction_formalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) a) {}
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -301,11 +327,11 @@ RecordTypeAnnotation
   }
 
   test_topFunction_nullable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 (int, String)? f() => throw 0;
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -327,11 +353,11 @@ RecordTypeAnnotation
   }
 
   test_topFunction_returnType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 (int, String) f() => throw 0;
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (
@@ -352,14 +378,14 @@ RecordTypeAnnotation
   }
 
   test_typeArgument() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_local_variable
   final x = <(int, String)>[];
 }
 ''');
 
-    var node = findNode.recordTypeAnnotation('(int');
+    var node = result.findNode.recordTypeAnnotation('(int');
     assertResolvedNodeText(node, r'''
 RecordTypeAnnotation
   leftParenthesis: (

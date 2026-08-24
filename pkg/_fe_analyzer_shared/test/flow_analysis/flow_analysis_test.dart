@@ -9,6 +9,7 @@ import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis_operations.dart';
 import 'package:_fe_analyzer_shared/src/flow_analysis/flow_link.dart';
 import 'package:_fe_analyzer_shared/src/type_inference/assigned_variables.dart';
+import 'package:_fe_analyzer_shared/src/type_inference/promotion_key_store.dart';
 import 'package:_fe_analyzer_shared/src/types/shared_type.dart';
 import 'package:test/test.dart';
 
@@ -607,9 +608,10 @@ main() {
         h.typeOperations,
         AssignedVariables<Node, Var>(),
         typeAnalyzerOptions: h.computeTypeAnalyzerOptions(),
+        enableLog: true,
       );
-      flow.ifStatement_conditionBegin();
-      flow.ifStatement_thenBegin(null, s);
+      flow.ifStatement_conditionBegin(offset: 1);
+      flow.ifStatement_thenBegin(null, s, offset: 2);
       expect(() => flow.finish(), _asserts);
     });
 
@@ -2146,13 +2148,179 @@ main() {
       ]);
     });
 
+    group('suspension:', () {
+      group('await:', () {
+        test('demotes variables written to in an outer function', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              await_(expr('Future<void>')),
+              checkNotPromoted(x),
+            ]),
+            x.write(expr('Object?')),
+          ]);
+        });
+
+        test(
+          'unnecessary to demote variables written to in an inner function',
+          () {
+            // No demotion is necessary in this case because it's not sound to
+            // promote the variable in the first place.
+            var x = Var('x');
+            h.run([
+              declare(x, initializer: expr('Object?')),
+              localFunction([
+                x.as_('int'),
+                // As far as flow analysis knows, evaluation of any nontrivial
+                // expression in this local function could potentially cause
+                // another instance of this local function to be invoked, which
+                // could in turn potentially write to `x`. So it's not sound to
+                // promote `x` to `int`.
+                checkNotPromoted(x),
+                await_(expr('Future<void>')),
+                checkNotPromoted(x),
+                x.write(expr('Object?')),
+                checkNotPromoted(x),
+              ]),
+            ]);
+          },
+        );
+
+        test('demotes after the await operand', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              await_(second(checkPromoted(x, 'int'), expr('Future<void>'))),
+              checkNotPromoted(x),
+            ]),
+            x.write(expr('Object?')),
+          ]);
+        });
+
+        test('does not demote variables declared in the current function', () {
+          var x = Var('x');
+          h.run([
+            localFunction([
+              declare(x, initializer: expr('Object?')),
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              await_(expr('Future<void>')),
+              checkPromoted(x, 'int'),
+              x.write(expr('Object?')),
+            ]),
+          ]);
+        });
+
+        test('does not demote variables that are not written anywhere', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              await_(expr('Future<void>')),
+              checkPromoted(x, 'int'),
+            ]),
+          ]);
+        });
+      });
+
+      group('yield:', () {
+        test('demotes variables written to in an outer function', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              yield_(expr('Future<void>')),
+              checkNotPromoted(x),
+            ]),
+            x.write(expr('Object?')),
+          ]);
+        });
+
+        test(
+          'unnecessary to demote variables written to in an inner function',
+          () {
+            // No demotion is necessary in this case because it's not sound to
+            // promote the variable in the first place.
+            var x = Var('x');
+            h.run([
+              declare(x, initializer: expr('Object?')),
+              localFunction([
+                x.as_('int'),
+                // As far as flow analysis knows, evaluation of any nontrivial
+                // expression in this local function could potentially cause
+                // another instance of this local function to be invoked, which
+                // could in turn potentially write to `x`. So it's not sound to
+                // promote `x` to `int`.
+                checkNotPromoted(x),
+                yield_(expr('Future<void>')),
+                checkNotPromoted(x),
+                x.write(expr('Object?')),
+                checkNotPromoted(x),
+              ]),
+            ]);
+          },
+        );
+
+        test('demotes after the yield operand', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              yield_(second(checkPromoted(x, 'int'), expr('Future<void>'))),
+              checkNotPromoted(x),
+            ]),
+            x.write(expr('Object?')),
+          ]);
+        });
+
+        test('does not demote variables declared in the current function', () {
+          var x = Var('x');
+          h.run([
+            localFunction([
+              declare(x, initializer: expr('Object?')),
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              yield_(expr('Future<void>')),
+              checkPromoted(x, 'int'),
+              x.write(expr('Object?')),
+            ]),
+          ]);
+        });
+
+        test('does not demote variables that are not written anywhere', () {
+          var x = Var('x');
+          h.run([
+            declare(x, initializer: expr('Object?')),
+            localFunction([
+              x.as_('int'),
+              checkPromoted(x, 'int'),
+              yield_(expr('Future<void>')),
+              checkPromoted(x, 'int'),
+            ]),
+          ]);
+        });
+      });
+    });
+
     test('switchExpression throw in scrutinee makes all cases unreachable', () {
       h.run([
         switchExpr(throw_(expr('C')), [
           intLiteral(
             0,
           ).pattern.thenExpr(second(checkReachable(false), intLiteral(1))),
-          default_.thenExpr(second(checkReachable(false), intLiteral(2))),
+          wildcard().thenExpr(second(checkReachable(false), intLiteral(2))),
         ]),
         checkReachable(false),
       ]);
@@ -2162,7 +2330,7 @@ main() {
       h.run([
         switchExpr(expr('int'), [
           intLiteral(0).pattern.thenExpr(throw_(expr('C'))),
-          default_.thenExpr(second(checkReachable(true), intLiteral(2))),
+          wildcard().thenExpr(second(checkReachable(true), intLiteral(2))),
         ]),
         checkReachable(true),
       ]);
@@ -2172,7 +2340,7 @@ main() {
       h.run([
         switchExpr(expr('int'), [
           intLiteral(0).pattern.thenExpr(throw_(expr('C'))),
-          default_.thenExpr(throw_(expr('C'))),
+          wildcard().thenExpr(throw_(expr('C'))),
         ]),
         checkReachable(false),
       ]);
@@ -4968,10 +5136,10 @@ main() {
   });
 
   group('join', () {
-    late int x;
-    late int y;
-    late int z;
-    late int w;
+    late PromotionKey x;
+    late PromotionKey y;
+    late PromotionKey z;
+    late PromotionKey w;
     late Type intType;
     late Type intQType;
     late Type stringType;
@@ -5228,7 +5396,7 @@ main() {
   });
 
   group('inheritTested', () {
-    late int x;
+    late PromotionKey x;
     late Type intType;
     late Type stringType;
 
@@ -5283,6 +5451,12 @@ main() {
   });
 
   group('why not promoted', () {
+    test('documentation links use HTTPS', () {
+      for (var link in NonPromotionDocumentationLink.values) {
+        expect(link.url, startsWith('https://'));
+      }
+    });
+
     test('due to assignment', () {
       var x = Var('x');
       late Expression writeExpression;
@@ -5295,7 +5469,7 @@ main() {
         x.whyNotPromoted((reasons) {
           expect(reasons.keys, unorderedEquals([Type('int')]));
           var nonPromotionReason =
-              reasons.values.single as DemoteViaExplicitWrite<Var>;
+              reasons.values.single as DemoteViaExplicitWrite<Var, Node>;
           expect(nonPromotionReason.node, same(writeExpression));
           expect(
             nonPromotionReason.documentationLink,
@@ -5322,7 +5496,7 @@ main() {
             SharedTypeView(Type('int?')),
           ]) {
             var nonPromotionReason =
-                reasons[type] as DemoteViaExplicitWrite<Var>;
+                reasons[type] as DemoteViaExplicitWrite<Var, Node>;
             expect(nonPromotionReason.node, same(writeExpression));
             expect(
               nonPromotionReason.documentationLink,
@@ -5330,6 +5504,56 @@ main() {
             );
           }
         }),
+      ]);
+    });
+
+    test('due to await', () {
+      var x = Var('x');
+      late Expression awaitExpression;
+      h.run([
+        declare(x, type: 'int?', initializer: expr('int?')),
+        localFunction([
+          if_(x.eq(nullLiteral), [return_()]),
+          checkPromoted(x, 'int'),
+          (awaitExpression = await_(expr('Object?'))),
+          checkNotPromoted(x),
+          x.whyNotPromoted((reasons) {
+            expect(reasons.keys, unorderedEquals([Type('int')]));
+            var nonPromotionReason =
+                reasons.values.single as DemoteViaSuspension<Var, Node>;
+            expect(nonPromotionReason.node, same(awaitExpression));
+            expect(
+              nonPromotionReason.documentationLink,
+              NonPromotionDocumentationLink.suspension,
+            );
+          }),
+        ]),
+        x.write(expr('int?')),
+      ]);
+    });
+
+    test('due to yield', () {
+      var x = Var('x');
+      late Statement yieldStatement;
+      h.run([
+        declare(x, type: 'int?', initializer: expr('int?')),
+        localFunction([
+          if_(x.eq(nullLiteral), [return_()]),
+          checkPromoted(x, 'int'),
+          (yieldStatement = yield_(expr('Object?'))),
+          checkNotPromoted(x),
+          x.whyNotPromoted((reasons) {
+            expect(reasons.keys, unorderedEquals([Type('int')]));
+            var nonPromotionReason =
+                reasons.values.single as DemoteViaSuspension<Var, Node>;
+            expect(nonPromotionReason.node, same(yieldStatement));
+            expect(
+              nonPromotionReason.documentationLink,
+              NonPromotionDocumentationLink.suspension,
+            );
+          }),
+        ]),
+        x.write(expr('int?')),
       ]);
     });
 
@@ -5345,7 +5569,7 @@ main() {
         x.whyNotPromoted((reasons) {
           expect(reasons.keys, unorderedEquals([Type('int')]));
           var nonPromotionReason =
-              reasons.values.single as DemoteViaExplicitWrite<Var>;
+              reasons.values.single as DemoteViaExplicitWrite<Var, Node>;
           expect(nonPromotionReason.node, same(writePattern));
           expect(
             nonPromotionReason.documentationLink,
@@ -5368,7 +5592,7 @@ main() {
         x.whyNotPromoted((reasons) {
           expect(reasons.keys, unorderedEquals([Type('int')]));
           var nonPromotionReason =
-              reasons.values.single as DemoteViaExplicitWrite<Var>;
+              reasons.values.single as DemoteViaExplicitWrite<Var, Node>;
           expect(nonPromotionReason.node, same(writeExpression));
           expect(
             nonPromotionReason.documentationLink,
@@ -5392,7 +5616,7 @@ main() {
         x.whyNotPromoted((reasons) {
           var nonPromotionReason =
               reasons[SharedTypeView(Type('int'))]
-                  as DemoteViaExplicitWrite<Var>;
+                  as DemoteViaExplicitWrite<Var, Node>;
           expect(nonPromotionReason.node, same(writeExpression));
           expect(
             nonPromotionReason.documentationLink,
@@ -5471,6 +5695,7 @@ main() {
 
     group('because this', () {
       test('explicit', () {
+        h.disableThisPromotion();
         h.thisType = 'C';
         h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
         h.addSuperInterfaces('C', (_) => [Type('Object')]);
@@ -5488,6 +5713,7 @@ main() {
       });
 
       test('implicit', () {
+        h.disableThisPromotion();
         h.thisType = 'C';
         h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
         h.addSuperInterfaces('C', (_) => [Type('Object')]);
@@ -5501,6 +5727,105 @@ main() {
               NonPromotionDocumentationLink.this_,
             );
           }),
+        ]);
+      });
+    });
+
+    group('this promotion', () {
+      test('promotes this', () {
+        h.thisType = 'C';
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          if_(this_.isNot('D'), [return_()]),
+          checkPromoted(this_, 'D'),
+          this_.checkType('D'),
+          this_.whyNotPromoted((reasons) {
+            expect(reasons, isEmpty);
+          }),
+        ]);
+      });
+
+      test('implicit this whyNotPromoted is empty', () {
+        h.thisType = 'C';
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          if_(this_.isNot('D'), [return_()]),
+          implicitThis_whyNotPromoted('C', (reasons) {
+            expect(reasons, isEmpty);
+          }),
+        ]);
+      });
+
+      test('switchStatement this promotes', () {
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          switch_(this_, [
+            wildcard(type: 'D').then([checkPromoted(this_, 'D')]),
+          ]),
+        ]);
+      });
+
+      test('switchStatement this does not promote when disabled', () {
+        h.disableThisPromotion();
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          switch_(this_, [
+            wildcard(type: 'D').then([checkNotPromoted(this_)]),
+          ]),
+        ]);
+      });
+
+      test('switchExpression this promotes', () {
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          switchExpr(this_, [
+            wildcard(type: 'D').thenExpr(checkPromoted(this_, 'D')),
+          ]),
+        ]);
+      });
+
+      test('switchExpression this does not promote when disabled', () {
+        h.disableThisPromotion();
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          switchExpr(this_, [
+            wildcard(type: 'D').thenExpr(checkNotPromoted(this_)),
+          ]),
+        ]);
+      });
+
+      test('ifCase this promotes', () {
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          ifCase(this_, wildcard(type: 'D'), [checkPromoted(this_, 'D')]),
+        ]);
+      });
+
+      test('ifCase this does not promote when disabled', () {
+        h.disableThisPromotion();
+        h.thisType = 'C';
+        h.addExhaustiveness('C', false);
+        h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+        h.addSuperInterfaces('C', (_) => [Type('Object')]);
+        h.run([
+          ifCase(this_, wildcard(type: 'D'), [checkNotPromoted(this_)]),
         ]);
       });
     });
@@ -7103,7 +7428,9 @@ main() {
             wildcard().as_('num').when(expr('bool')).then([
               checkPromoted(c.property('_property'), 'num'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             wildcard().as_('int').then([
               checkNotPromoted(c.property('_property')),
             ]),
@@ -8120,7 +8447,9 @@ main() {
             listPattern([]).when(expr('bool')).then([
               checkPromoted(c.property('_property'), 'List<Object?>'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             listPattern([]).then([checkNotPromoted(c.property('_property'))]),
           ]),
         ]);
@@ -8361,7 +8690,9 @@ main() {
             ]).when(expr('bool')).then([
               checkPromoted(c.property('_property'), 'Map<Object?, Object?>'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             mapPattern([
               mapPatternEntry(intLiteral(0), wildcard()),
             ]).then([checkNotPromoted(c.property('_property'))]),
@@ -8468,9 +8799,9 @@ main() {
                 wildcard().nullAssert.when(expr('bool')).then([
                   checkPromoted(c.property('_property'), 'int'),
                 ]),
-                wildcard()
-                    .when(second(c.write(expr('C')), expr('bool')))
-                    .then([]),
+                wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+                  break_(),
+                ]),
                 (wildcard().nullAssert..errorId = 'SECOND_NULL_ASSERT').then([
                   checkNotPromoted(c.property('_property')),
                 ]),
@@ -8638,9 +8969,9 @@ main() {
               wildcard().nullCheck.when(expr('bool')).then([
                 checkPromoted(c.property('_property'), 'int'),
               ]),
-              wildcard()
-                  .when(second(c.write(expr('C')), expr('bool')))
-                  .then([]),
+              wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+                break_(),
+              ]),
               wildcard().nullCheck.then([
                 checkNotPromoted(c.property('_property')),
               ]),
@@ -8825,7 +9156,9 @@ main() {
             objectPattern(requiredType: 'int', fields: [])
                 .when(expr('bool'))
                 .then([checkPromoted(c.property('_property'), 'int')]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             objectPattern(
               requiredType: 'int',
               fields: [],
@@ -9054,7 +9387,9 @@ main() {
             recordPattern([]).when(expr('bool')).then([
               checkPromoted(c.property('_property'), '()'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             recordPattern([]).then([checkNotPromoted(c.property('_property'))]),
           ]),
         ]);
@@ -9373,6 +9708,22 @@ main() {
                 expr('String'),
               ),
             ),
+          ]),
+        ]);
+      });
+
+      test('guarded with logical or join', () {
+        var x1 = Var('x', identity: 'x1');
+        var x2 = Var('x', identity: 'x2');
+        var x = PatternVariableJoin('x', expectedComponents: [x1, x2]);
+        h.run([
+          switchExpr(expr('int?'), [
+            x1
+                .pattern(type: 'int?')
+                .nullCheck
+                .or(x2.pattern(type: 'int?'))
+                .when(expr('bool'))
+                .thenExpr(checkNotPromoted(x)),
           ]),
         ]);
       });
@@ -10317,7 +10668,9 @@ main() {
             x.pattern(type: 'int').when(expr('bool')).then([
               checkPromoted(c.property('_property'), 'int'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             y.pattern(type: 'int').then([
               checkNotPromoted(c.property('_property')),
             ]),
@@ -10505,7 +10858,9 @@ main() {
             wildcard(type: 'int').when(expr('bool')).then([
               checkPromoted(c.property('_property'), 'int'),
             ]),
-            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([]),
+            wildcard().when(second(c.write(expr('C')), expr('bool'))).then([
+              break_(),
+            ]),
             wildcard(
               type: 'int',
             ).then([checkNotPromoted(c.property('_property'))]),
@@ -12970,7 +13325,7 @@ main() {
             .invokeAnonymousMethod(isParameterless: false, parameter: p, [
               checkNotPromoted(p.property('_subField')),
               p.property('_subField').as_('int'),
-        ], returnType: 'void'),
+            ], returnType: 'void'),
         checkPromoted(this_.property('_field').property('_subField'), 'num'),
       ]);
     });
@@ -12980,11 +13335,52 @@ main() {
       h.run([
         declare(x, type: 'int?', initializer: expr('int?')),
         x.eq(nullLiteral).not.invokeAnonymousMethod(isParameterless: true, [
-          this_.conditional(
-            checkPromoted(x, 'int'),
-            expr('bool'),
-          ),
+          this_.conditional(checkPromoted(x, 'int'), expr('bool')),
         ], returnType: 'bool'),
+      ]);
+    });
+
+    test('Anonymous method this promotion tracked independently', () {
+      h.addSuperInterfaces('C', (_) => [Type('Object')]);
+      h.addSuperInterfaces('D', (_) => [Type('C'), Type('Object')]);
+      h.addSuperInterfaces('E', (_) => [Type('C'), Type('Object')]);
+      h.thisType = 'C';
+      h.run([
+        this_.as_('D'),
+        checkPromoted(this_, 'D'),
+        expr('C').invokeAnonymousMethod([
+          checkNotPromoted(this_),
+          this_.as_('E'),
+          checkPromoted(this_, 'E'),
+        ], returnType: 'void'),
+        checkPromoted(this_, 'D'),
+      ]);
+    });
+  });
+
+  group('Horizontal inference:', () {
+    test('Two arguments, second argument analyzed before first', () {
+      h.addMember('C', 'm', 'void Function(void Function(), int)');
+      var x = Var('x');
+      var y = Var('y');
+      h.run([
+        declare(x, type: 'num', initializer: expr('num')),
+        declare(y, type: 'num', initializer: expr('num')),
+        // Promote y so that there will be an observable state change when the
+        // write capture it becomes live.
+        y.as_('int'),
+        expr('C').invokeMethod(
+          'm',
+          [
+            localFunction([
+              checkPromoted(x, 'int'),
+              checkNotPromoted(y),
+              y.write(expr('num')),
+            ]),
+            x.as_('int'),
+          ],
+          argumentVisitOrder: [1, 0],
+        ),
       ]);
     });
   });
@@ -13107,7 +13503,7 @@ extension on FlowModel {
 
   FlowModel _setInfo(
     FlowAnalysisTestHarness h,
-    Map<int, PromotionModel> newInfo,
+    Map<PromotionKey, PromotionModel> newInfo,
   ) {
     var result = this;
     for (var core.MapEntry(:key, :value) in newInfo.entries) {
@@ -13131,7 +13527,7 @@ extension on FlowModel {
     SharedTypeView(Type(type)),
   );
 
-  int _varRef(FlowAnalysisTestHarness h, Var variable) =>
+  PromotionKey _varRef(FlowAnalysisTestHarness h, Var variable) =>
       h.promotionKeyStore.keyForVariable(variable);
 
   TrivialVariableReference _varRefWithType(
@@ -13167,9 +13563,9 @@ extension on FlowModel {
 }
 
 extension on PromotionInfo? {
-  Map<int, PromotionModel> unwrap(FlowAnalysisTestHarness h) => {
+  Map<PromotionKey, PromotionModel> unwrap(FlowAnalysisTestHarness h) => {
     for (var FlowLinkDiffEntry(:int key, right: second!)
         in h.reader.diff(null, this).entries)
-      key: second.model,
+      PromotionKey(key): second.model,
   };
 }

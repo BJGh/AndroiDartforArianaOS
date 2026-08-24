@@ -129,6 +129,8 @@ Future<void> assembleSnapshot(
     shared = '-dynamiclib';
     if (buildDir.endsWith('ARM64')) {
       ccFlags.add('--target=arm64-apple-darwin');
+    } else if (buildDir.endsWith('ARM64E')) {
+      ccFlags.add('--target=arm64e-apple-darwin');
     } else {
       ccFlags.add('--target=x86_64-apple-darwin');
     }
@@ -283,10 +285,10 @@ Future<List<String>> runError(
 
 const keepTempKey = 'KEEP_TEMPORARY_DIRECTORIES';
 
-Future<void> withTempDir(String name, Future<void> fun(String dir)) async {
+Future<R> withTempDir<R>(String name, Future<R> fun(String dir)) async {
   final tempDir = Directory.systemTemp.createTempSync(name);
   try {
-    await fun(tempDir.path);
+    return await fun(tempDir.path);
   } finally {
     if (!Platform.environment.containsKey(keepTempKey) ||
         Platform.environment[keepTempKey]!.isEmpty) {

@@ -18,8 +18,7 @@ import '../extensions.dart';
 const _desc = r"Don't explicitly initialize variables to `null`.";
 
 class AvoidInitToNull extends AnalysisRule {
-  AvoidInitToNull()
-    : super(name: LintNames.avoid_init_to_null, description: _desc);
+  new() : super(name: LintNames.avoid_init_to_null, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.avoidInitToNull;
@@ -37,12 +36,8 @@ class AvoidInitToNull extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   bool isNullable(DartType type) => context.typeSystem.isNullable(type);
 
   @override

@@ -194,6 +194,13 @@ main() {
 ''');
   }
 
+  test_class_isUsed_tearOff() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class _A {}
+var f = _A.new;
+''');
+  }
+
   test_class_isUsed_typeArgument() async {
     await resolveTestCodeWithDiagnostics(r'''
 class _A {}
@@ -1236,7 +1243,7 @@ void foo() {
   C._();
 }
 ''');
-    await resolveTestFile();
+    var result = await resolveTestFile();
     expect(result.diagnostics, isNotEmpty);
   }
 
@@ -1432,6 +1439,15 @@ mixin _$Foo on Foo {
 }
 
 class _Foo = Foo with _$Foo;
+''');
+  }
+
+  test_constructor_isUsed_tearOff() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  A._named({int? optional});
+}
+var f = A._named;
 ''');
   }
 
@@ -2135,6 +2151,7 @@ typedef A = E;
 ''');
   }
 
+  // TODO(fshcheglov): Think why on constructor, not extension type as a whole?
   test_extensionTypePrivate_publicConstructor() async {
     await resolveTestCodeWithDiagnostics('''
 extension type _E(int i) {
@@ -2193,6 +2210,17 @@ main() {
   print(() {});
 }
 print(x) {}
+''');
+  }
+
+  test_functionLocal_isUsed_invalidAssignment() async {
+    await resolveTestCodeWithDiagnostics(r'''
+main() {
+  f(int value) {}
+  f = 0;
+//^
+// [diag.assignmentToFunction] Functions can't be assigned a value.
+}
 ''');
   }
 
@@ -2281,6 +2309,18 @@ typedef _F(a, b);
 //      ^^
 // [diag.unusedElement] The declaration '_F' isn't referenced.
 main() {
+}
+''');
+  }
+
+  test_getter_isUsed_invalidAssignment() async {
+    await resolveTestCodeWithDiagnostics(r'''
+int get _g => 0;
+
+void f() {
+  _g = 1;
+//^^
+// [diag.assignmentToFinal] '_g' can't be used as a setter because it's final.
 }
 ''');
   }
@@ -2451,10 +2491,9 @@ m() {
 ''');
   }
 
-  test_localFunction_inFunction_wildcard_preWildCards() async {
+  test_localFunction_inFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 main() {
   _(){}
@@ -2488,10 +2527,9 @@ class C {
 ''');
   }
 
-  test_localFunction_inMethod_wildcard_preWildCards() async {
+  test_localFunction_inMethod_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class C {
   m() {
@@ -2796,6 +2834,30 @@ extension _A on bool {
 }
 void main() {
   false[3];
+}
+''');
+  }
+
+  test_method_isUsed_privateExtension_indexOperators_compound() async {
+    await resolveTestCodeWithDiagnostics(r'''
+extension _A on bool {
+  int operator [](int index) => 7;
+  void operator []=(int index, int value) {}
+}
+void main() {
+  false[3] += 1;
+}
+''');
+  }
+
+  test_method_isUsed_privateExtension_indexOperators_ifNull() async {
+    await resolveTestCodeWithDiagnostics(r'''
+extension _A on bool {
+  int? operator [](int index) => 7;
+  void operator []=(int index, int value) {}
+}
+void main() {
+  false[3] ??= 1;
 }
 ''');
   }
@@ -3266,6 +3328,30 @@ f() => A()._m(0);
 ''');
   }
 
+  test_parameter_isUsed_superParameter_inPrimaryConstructor_optionalNamed() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class _BaseNamedOptional({final int? value});
+
+class SubNamedOptional({super.value}) extends _BaseNamedOptional;
+
+void main() {
+  print(SubNamedOptional(value: 42));
+}
+''');
+  }
+
+  test_parameter_isUsed_superParameter_inPrimaryConstructor_optionalPositional() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class _BaseOptional([final int? value]);
+
+class SubOptional(super.value) extends _BaseOptional;
+
+void main() {
+  print(SubOptional(42));
+}
+''');
+  }
+
   test_parameter_isUsed_topLevel() async {
     await resolveTestCodeWithDiagnostics(r'''
 void _m([int? a]) {}
@@ -3326,7 +3412,7 @@ void foo() {
   _f();
 }
 ''');
-    await resolveTestFile();
+    var result = await resolveTestFile();
     expect(result.diagnostics, isNotEmpty);
   }
 
@@ -3341,7 +3427,7 @@ void foo() {
   C()._m();
 }
 ''');
-    await resolveTestFile();
+    var result = await resolveTestFile();
     expect(result.diagnostics, isNotEmpty);
   }
 
@@ -3353,6 +3439,33 @@ class A {
 // [diag.unusedElementParameter] A value for optional parameter 'a' isn't ever given.
 }
 f() => A()._m();
+''');
+  }
+
+  @FailingTest() // TODO(scheglov): Report omitted optional parameters.
+  test_parameter_notUsed_namedRedirectingConstructorInvocation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  A() : this._named(b: 0);
+  A._named({int a = 0, int b = 0});
+//              ^
+// [diag.unusedElementParameter] A value for optional parameter 'a' isn't ever given.
+}
+''');
+  }
+
+  @FailingTest() // TODO(scheglov): Report omitted optional parameters.
+  test_parameter_notUsed_namedSuperConstructorInvocation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class _A {
+  _A._named({int a = 0, int b = 0});
+//               ^
+// [diag.unusedElementParameter] A value for optional parameter 'a' isn't ever given.
+}
+
+class B extends _A {
+  B() : super._named(b: 0);
+}
 ''');
   }
 

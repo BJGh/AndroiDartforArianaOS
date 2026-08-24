@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use truncating division.';
 
 class UseTruncatingDivision extends AnalysisRule {
-  UseTruncatingDivision()
-    : super(name: LintNames.use_truncating_division, description: _desc);
+  new() : super(name: LintNames.use_truncating_division, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.useTruncatingDivision;
@@ -32,11 +31,7 @@ class UseTruncatingDivision extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitBinaryExpression(BinaryExpression node) {
     if (node.operator.type != TokenType.SLASH) return;

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/dart/element/element.dart';
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -24,23 +23,24 @@ class PartDirectiveResolutionTest extends PubPackageResolutionTest {
 part of 'test.dart';
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 ''');
     expect(
-      (findNode.part('part').partInclude! as PartIncludeImpl).libraryFragment,
-      same(findNode.unit.declaredFragment),
+      (result.findNode.part('part').partInclude! as PartIncludeImpl)
+          .libraryFragment,
+      same(result.findNode.unit.declaredFragment),
     );
   }
 
   test_inLibrary_fileDoesNotExist() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 //   ^^^^^^^^
 // [diag.uriDoesNotExist] Target of URI doesn't exist: 'package:test/a.dart'.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -62,13 +62,13 @@ part 'part.g.dart';
   }
 
   test_inLibrary_noRelativeUri() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part ':net';
 //   ^^^^^^
 // [diag.invalidUri] Invalid URI syntax: ':net'.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -82,13 +82,13 @@ PartDirective
   }
 
   test_inLibrary_noRelativeUriStr() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part '${'foo'}.dart';
 //   ^^^^^^^^^^^^^^^
 // [diag.uriWithInterpolation] URIs can't use string interpolation.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -98,7 +98,7 @@ PartDirective
         contents: '
       InterpolationExpression
         leftBracket: ${
-        expression: SimpleStringLiteral
+        expression2: SimpleStringLiteral
           literal: 'foo'
         rightBracket: }
       InterpolationString
@@ -112,13 +112,13 @@ PartDirective
   }
 
   test_inLibrary_noSource() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'foo:bar';
 //   ^^^^^^^^^
 // [diag.uriDoesNotExist] Target of URI doesn't exist: 'foo:bar'.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -131,25 +131,23 @@ PartDirective
 ''');
   }
 
-  test_inLibrary_withPart_partOfName() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
+  test_inLibrary_withPart_partOfName_beforeEnhancedParts() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
+// %before-language-feature: enhanced-parts
 library my.lib;
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
+''',
+      b: r'''
+// %before-language-feature: enhanced-parts
 part of my.lib;
-''');
+''',
+    });
+    var result = results[a]!;
 
-    await resolveFile2(b);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -162,56 +160,25 @@ PartDirective
 ''');
   }
 
-  test_inLibrary_withPart_partOfName_preEnhancedParts() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
-library my.lib;
-part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-part of my.lib;
-''');
-
-    await resolveFile2(b);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-
-    var node = findNode.singlePartDirective;
-    assertResolvedNodeText(node, r'''
-PartDirective
-  partKeyword: part
-  uri: SimpleStringLiteral
-    literal: 'b.dart'
-  semicolon: ;
-  partInclude: PartInclude
-    uri: DirectiveUriWithUnit
-      uri: package:test/b.dart
-''');
-  }
-
-  test_inLibrary_withPart_partOfName_preEnhancedParts_different() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
+  test_inLibrary_withPart_partOfName_beforeEnhancedParts_different() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
+// %before-language-feature: enhanced-parts
 library foo;
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
+//   ^^^^^^^^
+// [diag.partOfDifferentLibrary] Expected this library to be part of 'foo', not 'bar'.
+''',
+      b: r'''
+// %before-language-feature: enhanced-parts
 part of bar;
-''');
+''',
+    });
+    var result = results[a]!;
 
-    await resolveFile2(b);
-    assertNoErrorsInResult();
-
-    await resolveFile2(a);
-    assertErrorsInResult([error(diag.partOfDifferentLibrary, 33, 8)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -229,11 +196,11 @@ PartDirective
 part of 'test.dart';
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -251,13 +218,13 @@ PartDirective
 part of 'x.dart';
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 //   ^^^^^^^^
 // [diag.partOfDifferentLibrary] Expected this library to be part of 'package:test/test.dart', not 'package:test/a.dart'.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -280,14 +247,12 @@ PartDirective
 part of 'foo.dart';
 ''');
 
-    var foo = newFile('$testPackageRootPath/lib/foo.dart', '''
+    var foo = getFile('$testPackageRootPath/lib/foo.dart');
+    var result = await resolveFileWithDiagnostics(foo, '''
 part 'foo.g.dart';
 ''');
 
-    await resolveFile2(foo);
-    assertErrorsInResolvedUnit(result, const []);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -303,13 +268,13 @@ PartDirective
   test_inLibrary_withSource_notPart_library() async {
     newFile('$testPackageLibPath/a.dart', '');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 part 'a.dart';
 //   ^^^^^^^^
 // [diag.partOfNonPart] The included part 'package:test/a.dart' must have a part-of directive.
 ''');
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -323,19 +288,22 @@ PartDirective
   }
 
   test_inPart_fileDoesNotExist() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'c.dart';
-''');
+//   ^^^^^^^^
+// [diag.uriDoesNotExist] Target of URI doesn't exist: 'package:test/c.dart'.
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.uriDoesNotExist, 23, 8)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -349,19 +317,22 @@ PartDirective
   }
 
   test_inPart_noRelativeUri() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part ':net';
-''');
+//   ^^^^^^
+// [diag.invalidUri] Invalid URI syntax: ':net'.
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.invalidUri, 23, 6)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -375,19 +346,22 @@ PartDirective
   }
 
   test_inPart_noRelativeUriStr() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part '${'foo'}.dart';
-''');
+//   ^^^^^^^^^^^^^^^
+// [diag.uriWithInterpolation] URIs can't use string interpolation.
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.uriWithInterpolation, 23, 15)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -397,7 +371,7 @@ PartDirective
         contents: '
       InterpolationExpression
         leftBracket: ${
-        expression: SimpleStringLiteral
+        expression2: SimpleStringLiteral
           literal: 'foo'
         rightBracket: }
       InterpolationString
@@ -411,19 +385,22 @@ PartDirective
   }
 
   test_inPart_noSource() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'foo:bar';
-''');
+//   ^^^^^^^^^
+// [diag.uriDoesNotExist] Target of URI doesn't exist: 'foo:bar'.
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.uriDoesNotExist, 23, 9)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -437,27 +414,28 @@ PartDirective
   }
 
   test_inPart_withPart_partOfName() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var c = getFile('$testPackageLibPath/c.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'c.dart';
-''');
-
-    var c = newFile('$testPackageLibPath/c.dart', r'''
+''',
+      c: r'''
 part of my.lib;
-''');
-
-    await resolveFile2(c);
-    assertErrorsInResult([error(diag.partOfName, 8, 6)]);
+//      ^^^^^^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
+''',
+    });
 
     // We already reported an error above.
-    await resolveFile2(b);
-    assertNoErrorsInResult();
+    var result = results[b]!;
 
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -471,23 +449,24 @@ PartDirective
   }
 
   test_inPart_withPart_partOfUri() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var c = getFile('$testPackageLibPath/c.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'c.dart';
-''');
-
-    newFile('$testPackageLibPath/c.dart', r'''
+''',
+      c: r'''
 part of 'b.dart';
-''');
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertNoErrorsInResult();
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -501,23 +480,26 @@ PartDirective
   }
 
   test_inPart_withPart_partOfUri_different() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var c = getFile('$testPackageLibPath/c.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'c.dart';
-''');
-
-    newFile('$testPackageLibPath/c.dart', r'''
+//   ^^^^^^^^
+// [diag.partOfDifferentLibrary] Expected this library to be part of 'package:test/b.dart', not 'package:test/c.dart'.
+''',
+      c: r'''
 part of 'a.dart';
-''');
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.partOfDifferentLibrary, 23, 8)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part
@@ -531,21 +513,24 @@ PartDirective
   }
 
   test_inPart_withSource_notPart_library() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var c = getFile('$testPackageLibPath/c.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 part 'c.dart';
-''');
+//   ^^^^^^^^
+// [diag.partOfNonPart] The included part 'package:test/c.dart' must have a part-of directive.
+''',
+      c: '',
+    });
+    var result = results[b]!;
 
-    newFile('$testPackageLibPath/c.dart', '');
-
-    await resolveFile2(b);
-    assertErrorsInResult([error(diag.partOfNonPart, 23, 8)]);
-
-    var node = findNode.singlePartDirective;
+    var node = result.findNode.singlePartDirective;
     assertResolvedNodeText(node, r'''
 PartDirective
   partKeyword: part

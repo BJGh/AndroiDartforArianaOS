@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Prefer generic function type aliases.';
 
 class PreferGenericFunctionTypeAliases extends AnalysisRule {
-  PreferGenericFunctionTypeAliases()
+  new()
     : super(
         name: LintNames.prefer_generic_function_type_aliases,
         description: _desc,
@@ -37,11 +37,7 @@ class PreferGenericFunctionTypeAliases extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFunctionTypeAlias(FunctionTypeAlias node) {
     //https://github.com/dart-lang/linter/issues/2777

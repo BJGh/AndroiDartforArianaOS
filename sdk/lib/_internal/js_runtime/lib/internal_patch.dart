@@ -11,10 +11,6 @@ import 'dart:_foreign_helper'
     show JS, JS_GET_FLAG, createJsSentinel, isJsSentinel;
 import 'dart:typed_data' show Uint8List;
 
-@patch
-@pragma('dart2js:tryInline')
-bool typeAcceptsNull<T>() => null is T;
-
 /// No-op in dart2js.
 ///
 /// Only used in DDC for hot restart correctness.
@@ -96,7 +92,7 @@ Future<Object?> loadDynamicModule({Uri? uri, Uint8List? bytes}) =>
 @pragma("vm:entry-point")
 abstract interface class IsolateGroup {
   @patch
-  static Object _runSync(Object computation) =>
+  static Object? _runSync(Object computation) =>
       throw UnsupportedError("_runSync");
 }
 

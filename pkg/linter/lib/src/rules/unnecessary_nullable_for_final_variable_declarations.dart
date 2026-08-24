@@ -19,7 +19,7 @@ const _desc =
     'with a non-nullable value.';
 
 class UnnecessaryNullableForFinalVariableDeclarations extends AnalysisRule {
-  UnnecessaryNullableForFinalVariableDeclarations()
+  new()
     : super(
         name: LintNames.unnecessary_nullable_for_final_variable_declarations,
         description: _desc,
@@ -42,12 +42,8 @@ class UnnecessaryNullableForFinalVariableDeclarations extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  final RuleContext context;
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   void check(AstNode node) {
     if (node is! DeclaredVariablePattern) return;
     var type = node.declaredFragment?.element.type;

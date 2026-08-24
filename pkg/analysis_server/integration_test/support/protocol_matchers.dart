@@ -6,6 +6,9 @@
 // To regenerate the file, use the script
 // "pkg/analysis_server/tool/spec/generate_files".
 
+// ignore_for_file: unnecessary_ignore, duplicate_ignore
+// ignore_for_file: unnecessary_type_name_in_constructor
+
 /// Matchers for data types defined in the analysis server API.
 library;
 
@@ -347,19 +350,21 @@ final Matcher isCompletionSuggestion = LazyMatcher(
 ///       PARAMETER
 ///       PACKAGE_NAME
 ///     }
-final Matcher isCompletionSuggestionKind =
-    MatchesEnum('CompletionSuggestionKind', [
-      'ARGUMENT_LIST',
-      'IMPORT',
-      'IDENTIFIER',
-      'INVOCATION',
-      'KEYWORD',
-      'NAMED_ARGUMENT',
-      'OPTIONAL_ARGUMENT',
-      'OVERRIDE',
-      'PARAMETER',
-      'PACKAGE_NAME',
-    ]);
+final Matcher isCompletionSuggestionKind = MatchesEnum(
+  'CompletionSuggestionKind',
+  [
+    'ARGUMENT_LIST',
+    'IMPORT',
+    'IDENTIFIER',
+    'INVOCATION',
+    'KEYWORD',
+    'NAMED_ARGUMENT',
+    'OPTIONAL_ARGUMENT',
+    'OVERRIDE',
+    'PARAMETER',
+    'PACKAGE_NAME',
+  ],
+);
 
 /// ContextData
 ///
@@ -1060,6 +1065,7 @@ final Matcher isHighlightRegionType = MatchesEnum('HighlightRegionType', [
 ///       "containingLibraryPath": optional String
 ///       "containingLibraryName": optional String
 ///       "containingClassDescription": optional String
+///       "containingExecutableDescriptions": optional List<String>
 ///       "dartdoc": optional String
 ///       "elementDescription": optional String
 ///       "elementKind": optional String
@@ -1076,6 +1082,7 @@ final Matcher isHoverInformation = LazyMatcher(
       'containingLibraryPath': isString,
       'containingLibraryName': isString,
       'containingClassDescription': isString,
+      'containingExecutableDescriptions': isListOf(isString),
       'dartdoc': isString,
       'elementDescription': isString,
       'elementKind': isString,

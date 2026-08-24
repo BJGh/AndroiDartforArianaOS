@@ -21,7 +21,7 @@ const _desc =
     r'Prefer final for parameter declarations if they are not reassigned.';
 
 class PreferFinalParameters extends AnalysisRule {
-  PreferFinalParameters()
+  new()
     : super(
         name: LintNames.prefer_final_parameters,
         description: _desc,
@@ -54,11 +54,7 @@ class PreferFinalParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) =>
       _reportApplicableParameters(node.parameters, node.body);

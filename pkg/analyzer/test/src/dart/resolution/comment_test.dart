@@ -23,7 +23,7 @@ class CommentResolutionTest_PrefixedIdentifier
     // TODO(srawlins): improve coverage regarding constructors, operators, the
     // 'new' keyword, and members on an extension on a type variable
     // (`extension <T> on T`).
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A.named();
 }
@@ -32,9 +32,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.named]'), r'''
+    var node = result.findNode.commentReference('A.named]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -50,7 +51,7 @@ CommentReference
   }
 
   test_class_constructor_unnamedViaNew() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A();
 }
@@ -59,9 +60,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.new]'), r'''
+    var node = result.findNode.commentReference('A.new]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -77,7 +79,7 @@ CommentReference
   }
 
   test_class_instanceGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int get foo => 0;
 }
@@ -86,9 +88,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -104,7 +107,7 @@ CommentReference
   }
 
   test_class_instanceGetter_onTypedef() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int get foo => 0;
 }
@@ -114,9 +117,10 @@ typedef B = A;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('B.foo]'), r'''
+    var node = result.findNode.commentReference('B.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
       element: <testLibrary>::@typeAlias::B
@@ -132,7 +136,7 @@ CommentReference
   }
 
   test_class_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo() {}
 }
@@ -141,9 +145,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -159,7 +164,7 @@ CommentReference
   }
 
   test_class_instanceSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   set foo(int _) {}
 }
@@ -168,9 +173,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -186,7 +192,7 @@ CommentReference
   }
 
   test_class_invalid_ambiguousExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 /// [foo]
 class A {}
 
@@ -199,9 +205,10 @@ extension E2 on A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <null>
     staticType: null
@@ -209,14 +216,15 @@ CommentReference
   }
 
   test_class_invalid_unresolved() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 /// [foo]
 class A {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <null>
     staticType: null
@@ -224,7 +232,7 @@ CommentReference
   }
 
   test_class_staticGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static int get foo => 0;
 }
@@ -233,9 +241,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -251,7 +260,7 @@ CommentReference
   }
 
   test_class_staticGetter_onTypedef() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static int get foo => 0;
 }
@@ -262,9 +271,10 @@ typedef B = A;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('B.foo]'), r'''
+    var node = result.findNode.commentReference('B.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: B
       element: <testLibrary>::@typeAlias::B
@@ -280,7 +290,7 @@ CommentReference
   }
 
   test_class_staticMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static void foo() {}
 }
@@ -289,9 +299,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -307,7 +318,7 @@ CommentReference
   }
 
   test_class_staticSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static set foo(int _) {}
 }
@@ -316,9 +327,10 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -339,7 +351,7 @@ class A {
   A.named();
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -347,9 +359,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.named]'), r'''
+    var node = result.findNode.commentReference('A.named]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -370,7 +383,7 @@ class A {
   A();
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -378,9 +391,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.new]'), r'''
+    var node = result.findNode.commentReference('A.new]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -401,7 +415,7 @@ class A {
   int get foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -409,9 +423,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -432,7 +447,7 @@ class A {
   void foo() {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -440,9 +455,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -463,7 +479,7 @@ class A {
   static int get foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -471,9 +487,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -494,7 +511,7 @@ class A {
   static void foo() {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -502,9 +519,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -525,7 +543,7 @@ class A {
   static set foo(int _) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -533,9 +551,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -556,7 +575,7 @@ extension E on int {
   int get foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -564,9 +583,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -587,7 +607,7 @@ extension E on int {
   void foo() {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -595,9 +615,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -618,7 +639,7 @@ extension E on int {
   set foo(int _) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -626,9 +647,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -649,7 +671,7 @@ extension E on int {
   static int get foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -657,9 +679,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -680,7 +703,7 @@ extension E on int {
   static void foo() {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -688,9 +711,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -711,7 +735,7 @@ extension E on int {
   static set foo(int _) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -719,9 +743,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: package:test/foo.dart::@extension::E
@@ -737,7 +762,7 @@ CommentReference
   }
 
   test_extension_instanceGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   int get foo => 0;
 }
@@ -746,9 +771,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -764,7 +790,7 @@ CommentReference
   }
 
   test_extension_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   void foo() {}
 }
@@ -773,9 +799,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -791,7 +818,7 @@ CommentReference
   }
 
   test_extension_instanceSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   set foo(int _) {}
 }
@@ -800,9 +827,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -818,7 +846,7 @@ CommentReference
   }
 
   test_extension_staticGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   static int get foo => 0;
 }
@@ -827,9 +855,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -845,7 +874,7 @@ CommentReference
   }
 
   test_extension_staticMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   static void foo() {}
 }
@@ -854,9 +883,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -872,7 +902,7 @@ CommentReference
   }
 
   test_extension_staticSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   static set foo(int _) {}
 }
@@ -881,9 +911,10 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -902,7 +933,7 @@ CommentReference
 @reflectiveTest
 class CommentResolutionTest_PropertyAccess extends PubPackageResolutionTest {
   test_class_constructor_named() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   A.named();
@@ -913,10 +944,11 @@ void f() {}
 ''');
 
     // TODO(srawlins): Set the type of named, and test it, here and below.
-    assertResolvedNodeText(findNode.commentReference('A.named]'), r'''
+    var node = result.findNode.commentReference('A.named]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -938,7 +970,7 @@ CommentReference
   }
 
   test_class_constructor_unnamedViaNew() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   A();
@@ -948,10 +980,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.new]'), r'''
+    var node = result.findNode.commentReference('A.new]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -973,7 +1006,7 @@ CommentReference
   }
 
   test_class_instanceGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   int get foo => 0;
@@ -983,10 +1016,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1008,7 +1042,7 @@ CommentReference
   }
 
   test_class_instanceGetter_onTypedef() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   int get foo => 0;
@@ -1019,10 +1053,11 @@ typedef B = A;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('B.foo]'), r'''
+    var node = result.findNode.commentReference('B.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1044,7 +1079,7 @@ CommentReference
   }
 
   test_class_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   void foo() {}
@@ -1054,10 +1089,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1079,7 +1115,7 @@ CommentReference
   }
 
   test_class_instanceSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   set foo(int value) {}
@@ -1089,10 +1125,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1114,7 +1151,7 @@ CommentReference
   }
 
   test_class_staticGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   static int get foo => 0;
@@ -1124,10 +1161,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1149,7 +1187,7 @@ CommentReference
   }
 
   test_class_staticGetter_onTypedef() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   static int get foo => 0;
@@ -1160,10 +1198,11 @@ typedef B = A;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('B.foo]'), r'''
+    var node = result.findNode.commentReference('B.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1185,7 +1224,7 @@ CommentReference
   }
 
   test_class_staticMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   static void foo() {}
@@ -1195,10 +1234,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1220,7 +1260,7 @@ CommentReference
   }
 
   test_class_staticSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 class A {
   static set foo(int value) {}
@@ -1230,10 +1270,11 @@ class A {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.foo]'), r'''
+    var node = result.findNode.commentReference('A.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1255,7 +1296,7 @@ CommentReference
   }
 
   test_extension_instanceGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   int get foo => 0;
@@ -1265,10 +1306,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1290,7 +1332,7 @@ CommentReference
   }
 
   test_extension_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   void foo() {}
@@ -1300,10 +1342,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1325,7 +1368,7 @@ CommentReference
   }
 
   test_extension_instanceSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   set foo(int value) {}
@@ -1335,10 +1378,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1360,7 +1404,7 @@ CommentReference
   }
 
   test_extension_staticGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   static int get foo => 0;
@@ -1370,10 +1414,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1395,7 +1440,7 @@ CommentReference
   }
 
   test_extension_staticMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   static void foo() {}
@@ -1405,10 +1450,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1430,7 +1476,7 @@ CommentReference
   }
 
   test_extension_staticSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import '' as self;
 extension E on int {
   static set foo(int value) {}
@@ -1440,10 +1486,11 @@ extension E on int {
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('E.foo]'), r'''
+    var node = result.findNode.commentReference('E.foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: self
         element: <testLibraryFragment>::@prefix::self
@@ -1468,7 +1515,7 @@ CommentReference
 @reflectiveTest
 class CommentResolutionTest_SimpleIdentifier extends PubPackageResolutionTest {
   test_associatedSetterAndGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 int get foo => 0;
 
 set foo(int value) {}
@@ -1477,9 +1524,10 @@ set foo(int value) {}
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: null
@@ -1487,7 +1535,7 @@ CommentReference
   }
 
   test_associatedSetterAndGetter_setterInScope() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E1 on int {
   int get foo => 0;
 }
@@ -1498,9 +1546,10 @@ extension E2 on int {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extension::E2::@setter::foo
     staticType: null
@@ -1508,16 +1557,17 @@ CommentReference
   }
 
   test_beforeClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [foo]
 class A {
   foo() {}
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: null
@@ -1525,7 +1575,7 @@ CommentReference
   }
 
   test_beforeConstructor_fieldParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int p;
 
@@ -1534,9 +1584,10 @@ class A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: <testLibrary>::@class::A::@constructor::new::@formalParameter::p
     staticType: null
@@ -1544,15 +1595,16 @@ CommentReference
   }
 
   test_beforeConstructor_normalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   /// [p]
   A(int p);
 }''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: <testLibrary>::@class::A::@constructor::new::@formalParameter::p
     staticType: null
@@ -1560,7 +1612,7 @@ CommentReference
   }
 
   test_beforeConstructor_superParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int p);
 }
@@ -1571,9 +1623,10 @@ class B extends A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: <testLibrary>::@class::B::@constructor::new::@formalParameter::p
     staticType: null
@@ -1581,7 +1634,7 @@ CommentReference
   }
 
   test_beforeEnum() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// This is the [Samurai] kind.
 enum Samurai {
   /// Use [int].
@@ -1590,25 +1643,28 @@ enum Samurai {
   WITHOUT_SWORD
 }''');
 
-    assertResolvedNodeText(findNode.commentReference('Samurai]'), r'''
+    var node1 = result.findNode.commentReference('Samurai]');
+    assertResolvedNodeText(node1, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: Samurai
     element: <testLibrary>::@enum::Samurai
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('int]'), r'''
+    var node2 = result.findNode.commentReference('int]');
+    assertResolvedNodeText(node2, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: int
     element: dart:core::@class::int
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('WITH_SWORD]'), r'''
+    var node3 = result.findNode.commentReference('WITH_SWORD]');
+    assertResolvedNodeText(node3, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: WITH_SWORD
     element: <testLibrary>::@enum::Samurai::@getter::WITH_SWORD
     staticType: null
@@ -1616,12 +1672,12 @@ CommentReference
   }
 
   test_beforeFunction_blockBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [p]
 foo(int p) {}
 ''');
 
-    var node = findNode.simple('p]');
+    var node = result.findNode.simple('p]');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: p
@@ -1631,14 +1687,15 @@ SimpleIdentifier
   }
 
   test_beforeFunction_expressionBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [p]
 foo(int p) => null;
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: <testLibrary>::@function::foo::@formalParameter::p
     staticType: null
@@ -1646,14 +1703,15 @@ CommentReference
   }
 
   test_beforeFunctionTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [p]
 typedef Foo(int p);
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: p@24
     staticType: null
@@ -1661,30 +1719,33 @@ CommentReference
   }
 
   test_beforeGenericTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// Can resolve [T], [S], and [p].
 typedef Foo<T> = Function<S>(int p);
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('T]'), r'''
+    var node1 = result.findNode.commentReference('T]');
+    assertResolvedNodeText(node1, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: T
     element: #E0 T
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('S]'), r'''
+    var node2 = result.findNode.commentReference('S]');
+    assertResolvedNodeText(node2, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: S
     element: #E0 S
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p]'), r'''
+    var node3 = result.findNode.commentReference('p]');
+    assertResolvedNodeText(node3, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p
     element: p@68
     staticType: null
@@ -1692,12 +1753,12 @@ CommentReference
   }
 
   test_beforeGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [int]
 get g => null;
 ''');
 
-    var node = findNode.simple('int]');
+    var node = result.findNode.simple('int]');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: int
@@ -1707,7 +1768,7 @@ SimpleIdentifier
   }
 
   test_beforeMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   /// [p1]
   ma(int p1);
@@ -1723,49 +1784,55 @@ abstract class A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p1]'), r'''
+    var node1 = result.findNode.commentReference('p1]');
+    assertResolvedNodeText(node1, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p1
     element: <testLibrary>::@class::A::@method::ma::@formalParameter::p1
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p2]'), r'''
+    var node2 = result.findNode.commentReference('p2]');
+    assertResolvedNodeText(node2, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p2
     element: <testLibrary>::@class::A::@method::mb::@formalParameter::p2
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p3]'), r'''
+    var node3 = result.findNode.commentReference('p3]');
+    assertResolvedNodeText(node3, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p3
     element: <testLibrary>::@class::A::@method::mc::@formalParameter::p3
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p4]'), r'''
+    var node4 = result.findNode.commentReference('p4]');
+    assertResolvedNodeText(node4, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p4
     element: <testLibrary>::@class::A::@method::mc::@formalParameter::p4
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p5]'), r'''
+    var node5 = result.findNode.commentReference('p5]');
+    assertResolvedNodeText(node5, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p5
     element: <testLibrary>::@class::A::@method::md::@formalParameter::p5
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('p6]'), r'''
+    var node6 = result.findNode.commentReference('p6]');
+    assertResolvedNodeText(node6, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: p6
     element: <testLibrary>::@class::A::@method::md::@formalParameter::p6
     staticType: null
@@ -1778,7 +1845,7 @@ int get foo => 0;
 
 set foo(int value) {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1786,9 +1853,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: package:test/foo.dart::@getter::foo
     staticType: null
@@ -1801,7 +1869,7 @@ extension E1 on int {
   int get foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1811,9 +1879,10 @@ extension E2 on int {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extension::E2::@setter::foo
     staticType: null
@@ -1827,7 +1896,7 @@ class C {}
     newFile('$testPackageLibPath/two.dart', r'''
 export 'one.dart';
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'two.dart';
 library;
 
@@ -1835,9 +1904,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('C]'), r'''
+    var node = result.findNode.commentReference('C]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: C
     element: package:test/one.dart::@class::C
     staticType: null
@@ -1851,7 +1921,7 @@ class A {
   A.named();
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1863,19 +1933,21 @@ library;
 main() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A]'), r'''
+    var node1 = result.findNode.commentReference('A]');
+    assertResolvedNodeText(node1, r'''
 CommentReference
   newKeyword: new
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: A
     element: package:test/foo.dart::@class::A::@constructor::new
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.named]'), r'''
+    var node2 = result.findNode.commentReference('A.named]');
+    assertResolvedNodeText(node2, r'''
 CommentReference
   newKeyword: new
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/foo.dart::@class::A
@@ -1894,7 +1966,7 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 void foo() {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1905,9 +1977,10 @@ enum E {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: package:test/foo.dart::@function::foo
     staticType: null
@@ -1918,7 +1991,7 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 void foo() {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1926,9 +1999,10 @@ library;
 extension type ET(int it) {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: package:test/foo.dart::@function::foo
     staticType: null
@@ -1939,7 +2013,7 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 class A {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 class C {
@@ -1948,9 +2022,10 @@ class C {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A]'), r'''
+    var node = result.findNode.commentReference('A]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: A
     element: package:test/foo.dart::@class::A
     staticType: null
@@ -1961,16 +2036,17 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 class A {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 ///
 /// Text [A].
 library;
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A]'), r'''
+    var node = result.findNode.commentReference('A]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: A
     element: package:test/foo.dart::@class::A
     staticType: null
@@ -1981,7 +2057,7 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 void foo() {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -1989,9 +2065,10 @@ library;
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: package:test/foo.dart::@function::foo
     staticType: null
@@ -2002,16 +2079,17 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 class A {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 /// Text [A].
 int x = 1;
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A]'), r'''
+    var node = result.findNode.commentReference('A]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: A
     element: package:test/foo.dart::@class::A
     staticType: null
@@ -2022,7 +2100,7 @@ CommentReference
     newFile('$testPackageLibPath/foo.dart', r'''
 void foo() {}
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// @docImport 'foo.dart';
 library;
 
@@ -2030,9 +2108,10 @@ library;
 typedef T = int;
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: package:test/foo.dart::@function::foo
     staticType: null
@@ -2040,7 +2119,7 @@ CommentReference
   }
 
   test_newKeyword() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A();
   A.named();
@@ -2054,19 +2133,21 @@ class A {
 main() {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A]'), r'''
+    var node1 = result.findNode.commentReference('A]');
+    assertResolvedNodeText(node1, r'''
 CommentReference
   newKeyword: new
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::A::@constructor::new
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('A.named]'), r'''
+    var node2 = result.findNode.commentReference('A.named]');
+    assertResolvedNodeText(node2, r'''
 CommentReference
   newKeyword: new
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -2083,7 +2164,7 @@ CommentReference
 
   test_onFieldFormalParameter() async {
     // TODO(scheglov): add tests for references to nested formal parameters
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   A({
@@ -2093,10 +2174,10 @@ class A {
 }
 ''');
 
-    var node = findNode.commentReference('int]');
+    var node = result.findNode.commentReference('int]');
     assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: int
     element: dart:core::@class::int
     staticType: null
@@ -2104,17 +2185,17 @@ CommentReference
   }
 
   test_onFunctionTypedFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(
   /// [int]
   void g(int a),
 ) {}
 ''');
 
-    var node = findNode.commentReference('int]');
+    var node = result.findNode.commentReference('int]');
     assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: int
     element: dart:core::@class::int
     staticType: null
@@ -2123,14 +2204,15 @@ CommentReference
 
   test_onFunctionTypedFormalParameter_self() async {
     // TODO(scheglov): add tests for references to nested formal parameters
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 /// [bar]
 void f(int bar()) {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('bar]'), r'''
+    var node = result.findNode.commentReference('bar]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: bar
     element: <testLibrary>::@function::f::@formalParameter::bar
     staticType: null
@@ -2138,17 +2220,17 @@ CommentReference
   }
 
   test_onSimpleFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(
   /// [int]
   int x,
 ) {}
 ''');
 
-    var node = findNode.commentReference('int]');
+    var node = result.findNode.commentReference('int]');
     assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: int
     element: dart:core::@class::int
     staticType: null
@@ -2157,7 +2239,7 @@ CommentReference
 
   test_onSuperFormalParameter() async {
     // TODO(scheglov): add tests for references to nested formal parameters
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A({required int f});
 }
@@ -2170,10 +2252,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.commentReference('int]');
+    var node = result.findNode.commentReference('int]');
     assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: int
     element: dart:core::@class::int
     staticType: null
@@ -2181,7 +2263,7 @@ CommentReference
   }
 
   test_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   /// [x] in A
   mA() {}
@@ -2194,17 +2276,19 @@ class B extends A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('x] in A'), r'''
+    var node1 = result.findNode.commentReference('x] in A');
+    assertResolvedNodeText(node1, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@setter::x
     staticType: null
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('x] in B'), r'''
+    var node2 = result.findNode.commentReference('x] in B');
+    assertResolvedNodeText(node2, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@setter::x
     staticType: null
@@ -2212,7 +2296,7 @@ CommentReference
   }
 
   test_unqualifiedReferenceToNonLocalStaticMember() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static void foo() {}
 }
@@ -2221,9 +2305,10 @@ class A {
 class B extends A {}
 ''');
 
-    assertResolvedNodeText(findNode.commentReference('foo]'), r'''
+    var node = result.findNode.commentReference('foo]');
+    assertResolvedNodeText(node, r'''
 CommentReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: null

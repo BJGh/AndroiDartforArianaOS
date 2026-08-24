@@ -19,7 +19,7 @@ main() {
 @reflectiveTest
 class MethodInvocationResolutionTest extends PubPackageResolutionTest {
   test_arguments_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     g(super);
@@ -31,7 +31,7 @@ class A {
 void g(Object a) {}
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -40,7 +40,7 @@ MethodInvocation
     staticType: void Function(Object)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SuperExpression
         superKeyword: super
         staticType: A
@@ -51,7 +51,7 @@ MethodInvocation
   }
 
   test_arguments_synthetics() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   g(,,);
 //  ^
@@ -63,7 +63,7 @@ void f() {
 void g(int a, int b) {}
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -72,7 +72,7 @@ MethodInvocation
     staticType: void Function(int, int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: <empty> <synthetic>
         correspondingParameter: <testLibrary>::@function::g::@formalParameter::a
@@ -89,8 +89,61 @@ MethodInvocation
 ''');
   }
 
+  test_cascade_propertyCall_argumentCount() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+typedef F = void Function<X extends int?>() Function();
+
+T id<T>() => throw 0;
+
+void consume(F Function() callback) {}
+
+void f() {
+  consume(() => id()..call.call(''));
+//                              ^^
+// [diag.extraPositionalArguments] Too many positional arguments: 0 expected, but 1 found.
+}
+''');
+
+    var node = result.findNode.methodInvocation("call('')");
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target2: CascadePropertyExtraction
+    propertyName: call
+    resolution: FunctionCallTearOffResolution
+      type: void Function<X extends int?>() Function()
+        alias: <testLibrary>::@typeAlias::F
+      associatedFunctionType: void Function<X extends int?>() Function()
+        alias: <testLibrary>::@typeAlias::F
+    staticType: void Function<X extends int?>() Function()
+      alias: <testLibrary>::@typeAlias::F
+  target(v1): PropertyAccess
+    operator: ..
+    propertyName: SimpleIdentifier
+      token: call
+      element: <null>
+      staticType: void Function<X extends int?>() Function()
+        alias: <testLibrary>::@typeAlias::F
+    staticType: void Function<X extends int?>() Function()
+      alias: <testLibrary>::@typeAlias::F
+  operator: .
+  methodName: SimpleIdentifier
+    token: call
+    element: <null>
+    staticType: dynamic
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      SimpleStringLiteral
+        literal: ''
+    rightParenthesis: )
+  staticInvokeType: void Function<X extends int?>() Function()
+    alias: <testLibrary>::@typeAlias::F
+  staticType: void Function<X extends int?>()
+''');
+  }
+
   test_cascadeExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
   void bar() {}
@@ -101,13 +154,38 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleCascadeExpression;
+    var node = result.findNode.singleCascadeExpression;
     assertResolvedNodeText(node, r'''
 CascadeExpression
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
+  sections
+    CascadeSection
+      body: MethodInvocation
+        operator: ..
+        methodName: SimpleIdentifier
+          token: foo
+          element: <testLibrary>::@class::A::@method::foo
+          staticType: void Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: void Function()
+        staticType: void
+    CascadeSection
+      body: MethodInvocation
+        operator: ..
+        methodName: SimpleIdentifier
+          token: bar
+          element: <testLibrary>::@class::A::@method::bar
+          staticType: void Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: void Function()
+        staticType: void
   cascadeSections
     MethodInvocation
       operator: ..
@@ -136,7 +214,7 @@ CascadeExpression
   }
 
   test_clamp_double_context_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(double a) {
   h(a.clamp(f(), f()));
@@ -144,7 +222,7 @@ g(double a) {
 h(double x) {}
 ''');
 
-    var node = findNode.methodInvocation('h(a');
+    var node = result.findNode.methodInvocation('h(a');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -153,9 +231,9 @@ MethodInvocation
     staticType: dynamic Function(double)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
-        target: SimpleIdentifier
+        target2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::g::@formalParameter::a
           staticType: double
@@ -166,7 +244,7 @@ MethodInvocation
           staticType: num Function(num, num)
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             MethodInvocation
               methodName: SimpleIdentifier
                 token: f
@@ -204,7 +282,7 @@ MethodInvocation
   }
 
   test_clamp_double_context_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(double a) {
   h(a.clamp(f(), f()));
@@ -214,7 +292,7 @@ g(double a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('h(a');
+    var node = result.findNode.methodInvocation('h(a');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -223,9 +301,9 @@ MethodInvocation
     staticType: dynamic Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
-        target: SimpleIdentifier
+        target2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::g::@formalParameter::a
           staticType: double
@@ -236,7 +314,7 @@ MethodInvocation
           staticType: num Function(num, num)
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             MethodInvocation
               methodName: SimpleIdentifier
                 token: f
@@ -274,17 +352,17 @@ MethodInvocation
   }
 
   test_clamp_double_context_none() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(double a) {
   a.clamp(f(), f());
 }
 ''');
 
-    var node = findNode.methodInvocation('a.clamp');
+    var node = result.findNode.methodInvocation('a.clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::g::@formalParameter::a
     staticType: double
@@ -295,7 +373,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
         methodName: SimpleIdentifier
           token: f
@@ -329,16 +407,16 @@ MethodInvocation
   }
 
   test_clamp_double_double_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(double a, double b, double c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: double
@@ -349,7 +427,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -367,16 +445,16 @@ MethodInvocation
   }
 
   test_clamp_double_double_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(double a, double b, int c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: double
@@ -387,7 +465,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -405,16 +483,16 @@ MethodInvocation
   }
 
   test_clamp_double_int_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(double a, int b, double c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: double
@@ -425,7 +503,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -443,16 +521,16 @@ MethodInvocation
   }
 
   test_clamp_double_int_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(double a, int b, int c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: double
@@ -463,7 +541,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -481,7 +559,7 @@ MethodInvocation
   }
 
   test_clamp_int_context_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a.clamp(f(), f()));
@@ -491,7 +569,7 @@ g(int a) {
 h(double x) {}
 ''');
 
-    var node = findNode.methodInvocation('h(a');
+    var node = result.findNode.methodInvocation('h(a');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -500,9 +578,9 @@ MethodInvocation
     staticType: dynamic Function(double)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
-        target: SimpleIdentifier
+        target2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::g::@formalParameter::a
           staticType: int
@@ -513,7 +591,7 @@ MethodInvocation
           staticType: num Function(num, num)
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             MethodInvocation
               methodName: SimpleIdentifier
                 token: f
@@ -551,7 +629,7 @@ MethodInvocation
   }
 
   test_clamp_int_context_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a.clamp(f(), f()));
@@ -559,7 +637,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('h(a');
+    var node = result.findNode.methodInvocation('h(a');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -568,9 +646,9 @@ MethodInvocation
     staticType: dynamic Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
-        target: SimpleIdentifier
+        target2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::g::@formalParameter::a
           staticType: int
@@ -581,7 +659,7 @@ MethodInvocation
           staticType: num Function(num, num)
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             MethodInvocation
               methodName: SimpleIdentifier
                 token: f
@@ -619,17 +697,17 @@ MethodInvocation
   }
 
   test_clamp_int_context_none() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   a.clamp(f(), f());
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::g::@formalParameter::a
     staticType: int
@@ -640,7 +718,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
         methodName: SimpleIdentifier
           token: f
@@ -674,16 +752,16 @@ MethodInvocation
   }
 
   test_clamp_int_double_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, double b, double c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -694,7 +772,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -712,16 +790,16 @@ MethodInvocation
   }
 
   test_clamp_int_double_dynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, double b, dynamic c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -732,7 +810,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -750,16 +828,16 @@ MethodInvocation
   }
 
   test_clamp_int_double_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, double b, int c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -770,7 +848,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -788,16 +866,16 @@ MethodInvocation
   }
 
   test_clamp_int_dynamic_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, dynamic b, double c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -808,7 +886,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -826,16 +904,16 @@ MethodInvocation
   }
 
   test_clamp_int_dynamic_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, dynamic b, int c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -846,7 +924,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -864,16 +942,16 @@ MethodInvocation
   }
 
   test_clamp_int_int_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b, double c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -884,7 +962,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -902,16 +980,16 @@ MethodInvocation
   }
 
   test_clamp_int_int_dynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b, dynamic c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -922,7 +1000,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -940,16 +1018,16 @@ MethodInvocation
   }
 
   test_clamp_int_int_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b, int c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -960,7 +1038,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -978,13 +1056,13 @@ MethodInvocation
   }
 
   test_clamp_int_int_int_from_cascade() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b, int c) {
   a..clamp(b, c).isEven;
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   operator: ..
@@ -994,7 +1072,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -1012,7 +1090,7 @@ MethodInvocation
   }
 
   test_clamp_int_int_int_via_extension_explicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   String clamp(int x, int y) => '';
 }
@@ -1021,14 +1099,14 @@ f(int a, int b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp(b');
+    var node = result.findNode.methodInvocation('clamp(b');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -1045,7 +1123,7 @@ MethodInvocation
     staticType: String Function(int, int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <testLibrary>::@extension::E::@method::clamp::@formalParameter::x
@@ -1063,16 +1141,16 @@ MethodInvocation
   }
 
   test_clamp_int_int_never() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b, Never c) {
   a.clamp(b, c);
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -1083,7 +1161,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -1101,7 +1179,7 @@ MethodInvocation
   }
 
   test_clamp_int_never_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, Never b, int c) {
   a.clamp(b, c);
 //           ^^^
@@ -1109,10 +1187,10 @@ f(int a, Never b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -1123,7 +1201,7 @@ MethodInvocation
     staticType: num Function(num, num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::clamp::@formalParameter::lowerLimit
@@ -1141,7 +1219,7 @@ MethodInvocation
   }
 
   test_clamp_never_int_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(Never a, int b, int c) {
   a.clamp(b, c);
 //^
@@ -1151,10 +1229,10 @@ f(Never a, int b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp');
+    var node = result.findNode.methodInvocation('clamp');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: Never
@@ -1165,7 +1243,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <null>
@@ -1183,7 +1261,7 @@ MethodInvocation
   }
 
   test_clamp_other_context_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   num clamp(String x, String y);
 }
@@ -1196,7 +1274,7 @@ g(A a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('h(a');
+    var node = result.findNode.methodInvocation('h(a');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1205,9 +1283,9 @@ MethodInvocation
     staticType: dynamic Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
-        target: SimpleIdentifier
+        target2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::g::@formalParameter::a
           staticType: A
@@ -1218,7 +1296,7 @@ MethodInvocation
           staticType: num Function(String, String)
         argumentList: ArgumentList
           leftParenthesis: (
-          arguments
+          arguments2
             MethodInvocation
               methodName: SimpleIdentifier
                 token: f
@@ -1256,7 +1334,7 @@ MethodInvocation
   }
 
   test_clamp_other_int_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   String clamp(int x, int y);
 }
@@ -1265,10 +1343,10 @@ f(A a, int b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp(b');
+    var node = result.findNode.methodInvocation('clamp(b');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -1279,7 +1357,7 @@ MethodInvocation
     staticType: String Function(int, int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <testLibrary>::@class::A::@method::clamp::@formalParameter::x
@@ -1297,7 +1375,7 @@ MethodInvocation
   }
 
   test_clamp_other_int_int_via_extension_explicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String clamp(int x, int y) => '';
@@ -1307,14 +1385,14 @@ f(A a, int b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp(b');
+    var node = result.findNode.methodInvocation('clamp(b');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -1331,7 +1409,7 @@ MethodInvocation
     staticType: String Function(int, int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <testLibrary>::@extension::E::@method::clamp::@formalParameter::x
@@ -1349,7 +1427,7 @@ MethodInvocation
   }
 
   test_clamp_other_int_int_via_extension_implicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String clamp(int x, int y) => '';
@@ -1359,10 +1437,10 @@ f(A a, int b, int c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('clamp(b');
+    var node = result.findNode.methodInvocation('clamp(b');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -1373,7 +1451,7 @@ MethodInvocation
     staticType: String Function(int, int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <testLibrary>::@extension::E::@method::clamp::@formalParameter::x
@@ -1390,192 +1468,41 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_class_explicitThis_inAugmentation_augmentationDeclares() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  void foo() {}
-
-  void f() {
-    this.foo();
-  }
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var results = await resolveFilesWithDiagnostics({
+      testFile: r'''
 part 'a.dart';
 
 void foo() {}
 
 class A {}
-''');
-
-    await resolveFile2(a);
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: ThisExpression
-    thisKeyword: this
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_class_explicitThis_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
+''',
+      a: r'''
+part of 'test.dart';
 
 augment class A {
   void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
 
-void foo() {}
-
-class A {
   void f() {
     this.foo();
   }
 }
-''');
+''',
+    });
 
-    var node = findNode.singleMethodInvocation;
+    var result = results[a]!;
+
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ThisExpression
+  target2: ThisExpression
     thisKeyword: this
     staticType: A
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_class_implicitStatic_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  static void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-void foo() {}
-
-class A {
-  void f() {
-    foo();
-  }
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_class_implicitThis_inDeclaration_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  augment void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-class A {
-  void foo() {}
-
-  void f() {
-    foo();
-  }
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@methodAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_class_implicitThis_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-void foo() {}
-
-class A {
-  void f() {
-    foo();
-  }
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
+    element: <testLibrary>::@class::A::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -1586,7 +1513,7 @@ MethodInvocation
   }
 
   test_demoteType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void test<T>(T t) {}
 
 void f<S>(S s) {
@@ -1597,7 +1524,7 @@ void f<S>(S s) {
 
 ''');
 
-    var node = findNode.methodInvocation('test(s)');
+    var node = result.findNode.methodInvocation('test(s)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1606,10 +1533,10 @@ MethodInvocation
     staticType: void Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: s
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::test::@formalParameter::t
           substitution: {T: S}
         element: <testLibrary>::@function::f::@formalParameter::s
@@ -1630,7 +1557,7 @@ void foo(int _) {}
 void foo(int _) {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 import 'b.dart';
 
@@ -1641,7 +1568,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -1652,7 +1579,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: package:test/a.dart::@function::foo::@formalParameter::_
@@ -1671,7 +1598,7 @@ void foo(int _) {}
 void foo(int _) {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as p;
 import 'b.dart' as p;
 
@@ -1682,10 +1609,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: p
     element: <testLibraryFragment>::@prefix::p
     staticType: null
@@ -1698,7 +1625,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: package:test/a.dart::@function::foo::@formalParameter::_
@@ -1710,7 +1637,7 @@ MethodInvocation
   }
 
   test_error_instanceAccessToStaticMember_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo(int _) {}
 }
@@ -1722,10 +1649,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo(0)');
+    var node = result.findNode.methodInvocation('a.foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -1736,7 +1663,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -1748,7 +1675,7 @@ MethodInvocation
   }
 
   test_error_invocationOfNonFunction_interface_hasCall_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   void Function() call = throw Error();
 }
@@ -1760,10 +1687,10 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('c();');
+    var node = result.findNode.functionExpressionInvocation('c();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -1777,7 +1704,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_OK_dynamicGetter_instance() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   var foo;
 }
@@ -1787,11 +1714,11 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -1811,7 +1738,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_OK_dynamicGetter_superClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   var foo;
 }
@@ -1823,10 +1750,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: dynamic
@@ -1840,7 +1767,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_OK_dynamicGetter_thisClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   var foo;
 
@@ -1850,10 +1777,10 @@ class C {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::C::@getter::foo
     staticType: dynamic
@@ -1867,22 +1794,22 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_OK_Function() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(Function foo) {
   foo(1, 2);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(1, 2);');
+    var node = result.findNode.functionExpressionInvocation('foo(1, 2);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::f::@formalParameter::foo
     staticType: Function
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <null>
@@ -1899,7 +1826,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_OK_functionTypeTypeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef MyFunction = double Function(int _);
 
 class C<T extends MyFunction> {
@@ -1912,18 +1839,18 @@ class C<T extends MyFunction> {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@class::C::@getter::foo
       substitution: {T: T}
     staticType: T
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: _@null
@@ -1937,7 +1864,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_parameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main(Object foo) {
   foo();
 //^^^
@@ -1945,10 +1872,10 @@ main(Object foo) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::main::@formalParameter::foo
     staticType: Object
@@ -1962,16 +1889,16 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_parameter_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main(foo) {
   foo();
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::main::@formalParameter::foo
     staticType: dynamic
@@ -1985,7 +1912,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_static_hasTarget() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static int foo = 0;
 }
@@ -1997,11 +1924,11 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: C
       element: <testLibrary>::@class::C
       staticType: null
@@ -2021,7 +1948,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_static_noTarget() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static int foo = 0;
 
@@ -2033,10 +1960,10 @@ class C {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::C::@getter::foo
     staticType: int
@@ -2050,7 +1977,7 @@ FunctionExpressionInvocation
   }
 
   test_error_invocationOfNonFunction_super_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo => 0;
 }
@@ -2064,11 +1991,11 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: B
     operator: .
@@ -2091,7 +2018,7 @@ FunctionExpressionInvocation
 void foo() {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 main() {
@@ -2101,10 +2028,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo();');
+    var node = result.findNode.methodInvocation('foo();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: prefix
     element: <testLibraryFragment>::@prefix::prefix
     staticType: null
@@ -2122,7 +2049,7 @@ MethodInvocation
   }
 
   test_error_prefixIdentifierNotFollowedByDot_deferred() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' deferred as math;
 
 main() {
@@ -2132,10 +2059,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('loadLibrary()');
+    var node = result.findNode.methodInvocation('loadLibrary()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: math
     element: <testLibraryFragment>::@prefix::math
     staticType: null
@@ -2153,7 +2080,7 @@ MethodInvocation
   }
 
   test_error_prefixIdentifierNotFollowedByDot_invoke() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as foo;
 
 main() {
@@ -2163,7 +2090,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo()');
+    var node = result.findNode.methodInvocation('foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2178,8 +2105,111 @@ MethodInvocation
 ''');
   }
 
+  test_error_staticAccessToInstanceMember_class_genericGetter_topLevel() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+class A<T> {
+  T Function() get foo => throw 0;
+}
+
+var x = A.foo();
+//        ^^^
+// [diag.staticAccessToInstanceMember] Instance member 'foo' can't be accessed using static access.
+''');
+
+    var node = result.findNode.variableDeclaration('x =').initializer2!;
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target2: SimpleIdentifier
+    token: A
+    element: <testLibrary>::@class::A
+    staticType: null
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@class::A::@getter::foo
+    staticType: InvalidType
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
+  test_error_staticAccessToInstanceMember_class_genericMethod_topLevel() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+class A<T> {
+  T foo() => throw 0;
+}
+
+var x = A.foo(a: 0);
+//        ^^^
+// [diag.staticAccessToInstanceMember] Instance member 'foo' can't be accessed using static access.
+//            ^
+// [diag.undefinedNamedParameter] The named parameter 'a' isn't defined.
+''');
+
+    var node = result.findNode.variableDeclaration('x =').initializer2!;
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target2: SimpleIdentifier
+    token: A
+    element: <testLibrary>::@class::A
+    staticType: null
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@class::A::@method::foo
+    staticType: InvalidType
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      NamedArgument
+        name: a
+        colon: :
+        argumentExpression2: IntegerLiteral
+          literal: 0
+          staticType: int
+        correspondingParameter: <null>
+    rightParenthesis: )
+  staticInvokeType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
+  test_error_staticAccessToInstanceMember_extension_genericMethod_topLevel() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+extension E<T> on List<T> {
+  T foo() => throw 0;
+}
+
+var x = E.foo();
+//        ^^^
+// [diag.staticAccessToInstanceMember] Instance member 'foo' can't be accessed using static access.
+''');
+
+    var node = result.findNode.variableDeclaration('x =').initializer2!;
+    assertResolvedNodeText(node, r'''
+MethodInvocation
+  target2: SimpleIdentifier
+    token: E
+    element: <testLibrary>::@extension::E
+    staticType: null
+  operator: .
+  methodName: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@extension::E::@method::foo
+    staticType: InvalidType
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticInvokeType: InvalidType
+  staticType: InvalidType
+''');
+  }
+
   test_error_undefinedFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   foo(0);
 //^^^
@@ -2187,7 +2217,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2196,7 +2226,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2208,7 +2238,7 @@ MethodInvocation
   }
 
   test_error_undefinedFunction_hasTarget_importPrefix() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as math;
 
 main() {
@@ -2218,10 +2248,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: math
     element: <testLibraryFragment>::@prefix::math
     staticType: null
@@ -2232,7 +2262,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2244,7 +2274,7 @@ MethodInvocation
   }
 
   test_error_undefinedIdentifier_target() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   bar.foo(0);
 //^^^
@@ -2252,10 +2282,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: bar
     element: <null>
     staticType: InvalidType
@@ -2266,7 +2296,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2278,7 +2308,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_class() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {}
 main() {
   C.foo(0);
@@ -2287,10 +2317,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -2301,7 +2331,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2313,7 +2343,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_class_arguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {}
 
 int x = 0;
@@ -2324,10 +2354,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(x);');
+    var node = result.findNode.methodInvocation('foo(x);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -2338,7 +2368,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: x
         correspondingParameter: <null>
@@ -2351,7 +2381,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_class_inSuperclass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class S {
   static void foo(int _) {}
 }
@@ -2365,10 +2395,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -2379,7 +2409,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2391,7 +2421,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_class_typeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {}
 
 main() {
@@ -2401,10 +2431,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo<int>();');
+    var node = result.findNode.methodInvocation('foo<int>();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -2432,7 +2462,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_class_typeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C<T> {
   static main() => C.T();
 //                   ^
@@ -2440,10 +2470,10 @@ class C<T> {
 }
 ''');
 
-    var node = findNode.methodInvocation('C.T();');
+    var node = result.findNode.methodInvocation('C.T();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -2461,7 +2491,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_instance() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   42.foo(0);
 //   ^^^
@@ -2469,10 +2499,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 42
     staticType: int
   operator: .
@@ -2482,7 +2512,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2494,7 +2524,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_hasTarget_localVariable_function() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   var v = () {};
   v.foo(0);
@@ -2503,10 +2533,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: v
     element: v@15
     staticType: Null Function()
@@ -2517,7 +2547,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2529,7 +2559,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_noTarget() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   main() {
     foo(0);
@@ -2539,7 +2569,7 @@ class C {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2548,7 +2578,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2560,7 +2590,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_noTarget_synthetic_class() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class {
 //    ^
 // [diag.missingIdentifier] Expected an identifier.
@@ -2570,7 +2600,7 @@ class {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2579,7 +2609,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2591,7 +2621,7 @@ MethodInvocation
   }
 
   test_error_undefinedMethod_null() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   null.foo();
 //     ^^^
@@ -2599,10 +2629,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo();');
+    var node = result.findNode.methodInvocation('foo();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: NullLiteral
+  target2: NullLiteral
     literal: null
     staticType: Null
   operator: .
@@ -2634,7 +2664,7 @@ class A {
   void _foo(int _) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 
 class B extends A {
@@ -2646,7 +2676,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('_foo(0);');
+    var node = result.findNode.methodInvocation('_foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2655,7 +2685,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2694,7 +2724,7 @@ main() {
   }
 
   test_error_unqualifiedReferenceToNonLocalStaticMember_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo() {}
 }
@@ -2710,7 +2740,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2719,7 +2749,7 @@ MethodInvocation
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -2734,7 +2764,7 @@ MethodInvocation
   /// single error generated when the only problem is that an imported file
   /// does not exist.
   test_error_uriDoesNotExist_prefixed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'missing.dart' as p;
 //     ^^^^^^^^^^^^^^
 // [diag.uriDoesNotExist] Target of URI doesn't exist: 'missing.dart'.
@@ -2745,10 +2775,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(1);');
+    var node = result.findNode.methodInvocation('foo(1);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: p
     element: <testLibraryFragment>::@prefix::p
     staticType: null
@@ -2759,7 +2789,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <null>
@@ -2774,7 +2804,7 @@ MethodInvocation
   /// single error generated when the only problem is that an imported file
   /// does not exist.
   test_error_uriDoesNotExist_show() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'missing.dart' show foo, bar;
 //     ^^^^^^^^^^^^^^
 // [diag.uriDoesNotExist] Target of URI doesn't exist: 'missing.dart'.
@@ -2785,7 +2815,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(1);');
+    var node = result.findNode.methodInvocation('foo(1);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2794,7 +2824,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <null>
@@ -2806,7 +2836,7 @@ MethodInvocation
   }
 
   test_error_useOfVoidResult_name_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C<T>{
   T foo;
   C(this.foo);
@@ -2819,18 +2849,18 @@ void f(C<void> c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C<void>
     operator: .
     propertyName: SimpleIdentifier
       token: foo
-      element: GetterMember
+      element: SubstitutedGetterElementImpl
         baseElement: <testLibrary>::@class::C::@getter::foo
         substitution: {T: void}
       staticType: void
@@ -2845,7 +2875,7 @@ FunctionExpressionInvocation
   }
 
   test_error_useOfVoidResult_name_localVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   void foo;
   foo();
@@ -2854,10 +2884,10 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: foo@16
     staticType: void
@@ -2871,7 +2901,7 @@ FunctionExpressionInvocation
   }
 
   test_error_useOfVoidResult_name_topFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo() {}
 
 main() {
@@ -2881,7 +2911,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo()()');
+    var node = result.findNode.methodInvocation('foo()()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -2897,7 +2927,7 @@ MethodInvocation
   }
 
   test_error_useOfVoidResult_name_topVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo;
 
 main() {
@@ -2907,10 +2937,10 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo();');
+    var node = result.findNode.functionExpressionInvocation('foo();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: void
@@ -2924,7 +2954,7 @@ FunctionExpressionInvocation
   }
 
   test_error_useOfVoidResult_receiver() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   void foo;
   foo.toString();
@@ -2933,10 +2963,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: foo@16
     staticType: void
@@ -2954,7 +2984,7 @@ MethodInvocation
   }
 
   test_error_useOfVoidResult_receiver_cascade() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   void foo;
   foo..toString();
@@ -2963,7 +2993,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   operator: ..
@@ -2980,7 +3010,7 @@ MethodInvocation
   }
 
   test_error_useOfVoidResult_receiver_withNull() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   void foo;
   foo?.toString();
@@ -2989,10 +3019,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: foo@16
     staticType: void
@@ -3010,7 +3040,7 @@ MethodInvocation
   }
 
   test_error_wrongNumberOfTypeArgumentsMethod_01() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo() {}
 
 main() {
@@ -3020,7 +3050,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo<int>()');
+    var node = result.findNode.methodInvocation('foo<int>()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -3044,7 +3074,7 @@ MethodInvocation
   }
 
   test_error_wrongNumberOfTypeArgumentsMethod_21() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 Map<T, U> foo<T extends num, U>() => throw Error();
 
 main() {
@@ -3054,7 +3084,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo<int>()');
+    var node = result.findNode.methodInvocation('foo<int>()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -3081,16 +3111,16 @@ MethodInvocation
   }
 
   test_expression_functionType_explicitCall() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(double Function(int p) g) {
   g.call(0);
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: g
     element: <testLibrary>::@function::f::@formalParameter::g
     staticType: double Function(int)
@@ -3101,7 +3131,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: p@27
@@ -3113,7 +3143,7 @@ MethodInvocation
   }
 
   test_expression_interfaceType_explicitCall() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   double call(int p) => 0.0;
 }
@@ -3123,10 +3153,10 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -3137,7 +3167,7 @@ MethodInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@method::call::@formalParameter::p
@@ -3149,7 +3179,7 @@ MethodInvocation
   }
 
   test_extensionType_explicitThis() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   void foo() {}
 
@@ -3159,10 +3189,10 @@ extension type A(int it) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ThisExpression
+  target2: ThisExpression
     thisKeyword: this
     staticType: A
   operator: .
@@ -3179,7 +3209,7 @@ MethodInvocation
   }
 
   test_extensionType_implicitThis() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   void foo() {}
 
@@ -3189,7 +3219,7 @@ extension type A(int it) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -3205,7 +3235,7 @@ MethodInvocation
   }
 
   test_hasReceiver_class_staticGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static double Function(int) get foo => throw Error();
 }
@@ -3215,11 +3245,11 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: C
       element: <testLibrary>::@class::C
       staticType: null
@@ -3231,7 +3261,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -3244,7 +3274,7 @@ FunctionExpressionInvocation
   }
 
   test_hasReceiver_class_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static void foo(int _) {}
 }
@@ -3254,10 +3284,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
@@ -3268,7 +3298,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@method::foo::@formalParameter::_
@@ -3279,92 +3309,8 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_className_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  augment static void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-class A {
-  static void foo() {}
-}
-
-void f() {
-  A.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@class::A
-    element: <testLibrary>::@class::A
-    staticType: null
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@methodAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_className_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  static void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-class A {}
-
-void f() {
-  A.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@class::A
-    element: <testLibrary>::@class::A
-    staticType: null
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
   test_hasReceiver_deferredImportPrefix_loadLibrary() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' deferred as math;
 //     ^^^^^^^^^^^
 // [diag.unusedImport] Unused import: 'dart:math'.
@@ -3374,10 +3320,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('loadLibrary()');
+    var node = result.findNode.methodInvocation('loadLibrary()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: math
     element: <testLibraryFragment>::@prefix::math
     staticType: null
@@ -3395,7 +3341,7 @@ MethodInvocation
   }
 
   test_hasReceiver_deferredImportPrefix_loadLibrary_extraArgument() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' deferred as math;
 //     ^^^^^^^^^^^
 // [diag.unusedImport] Unused import: 'dart:math'.
@@ -3407,10 +3353,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('loadLibrary(1 + 2)');
+    var node = result.findNode.methodInvocation('loadLibrary(1 + 2)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: math
     element: <testLibraryFragment>::@prefix::math
     staticType: null
@@ -3421,7 +3367,21 @@ MethodInvocation
     staticType: Future<dynamic> Function()
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -3442,16 +3402,16 @@ MethodInvocation
   }
 
   test_hasReceiver_dynamic_hash() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(dynamic a) {
   a.hash(0, 1);
 }
 ''');
 
-    var node = findNode.methodInvocation('hash(');
+    var node = result.findNode.methodInvocation('hash(');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: dynamic
@@ -3462,7 +3422,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -3478,7 +3438,7 @@ MethodInvocation
   }
 
   test_hasReceiver_extension_staticGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension A on int {
   static double Function(int) get foo => throw Error();
 }
@@ -3488,11 +3448,11 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: A
       element: <testLibrary>::@extension::A
       staticType: null
@@ -3504,7 +3464,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -3516,53 +3476,8 @@ FunctionExpressionInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_extension_staticGetter_inAugmentation() async {
-    await resolveTestCodeWithDiagnostics(r'''
-extension A on int {}
-
-augment extension A {
-  static double Function(int) get foo => throw Error();
-}
-
-void f() {
-  A.foo(0);
-}
-''');
-
-    var node = findNode.singleFunctionExpressionInvocation;
-    assertResolvedNodeText(node, r'''
-FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
-      token: A
-      staticElement: <testLibraryFragment>::@extension::A
-      element: <testLibrary>::@extension::A
-      staticType: null
-    operator: .
-    propertyName: SimpleIdentifier
-      token: foo
-      staticElement: <testLibraryFragment>::@extensionAugmentation::A::@getter::foo
-      element: <testLibraryFragment>::@extensionAugmentation::A::@getter::foo#element
-      staticType: double Function(int)
-    staticType: double Function(int)
-  argumentList: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 0
-        parameter: root::@parameter::
-        staticType: int
-    rightParenthesis: )
-  staticElement: <null>
-  element: <null>
-  staticInvokeType: double Function(int)
-  staticType: double
-''');
-  }
-
   test_hasReceiver_extension_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension A on int {
   static void foo(int _) {}
 }
@@ -3572,10 +3487,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: A
     element: <testLibrary>::@extension::A
     staticType: null
@@ -3586,7 +3501,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@extension::A::@method::foo::@formalParameter::_
@@ -3597,49 +3512,8 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_extension_staticMethod_inAugmentation() async {
-    await resolveTestCodeWithDiagnostics(r'''
-extension A on int {}
-
-augment extension A {
-  static void foo(int _) {}
-}
-
-void f() {
-  A.foo(0);
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: A
-    staticElement: <testLibraryFragment>::@extension::A
-    element: <testLibrary>::@extension::A
-    staticType: null
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibraryFragment>::@extensionAugmentation::A::@method::foo
-    element: <testLibraryFragment>::@extensionAugmentation::A::@method::foo#element
-    staticType: void Function(int)
-  argumentList: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 0
-        parameter: <testLibraryFragment>::@extensionAugmentation::A::@method::foo::@parameter::_
-        staticType: int
-    rightParenthesis: )
-  staticInvokeType: void Function(int)
-  staticType: void
-''');
-  }
-
   test_hasReceiver_extensionTypeName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   static void foo() {}
 }
@@ -3649,10 +3523,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: A
     element: <testLibrary>::@extensionType::A
     staticType: null
@@ -3670,7 +3544,7 @@ MethodInvocation
   }
 
   test_hasReceiver_functionTyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo(int _) {}
 
 main() {
@@ -3678,10 +3552,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::foo
     staticType: void Function(int)
@@ -3692,7 +3566,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::_
@@ -3704,7 +3578,7 @@ MethodInvocation
   }
 
   test_hasReceiver_functionTyped_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo<T>(T _) {}
 
 main() {
@@ -3712,10 +3586,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::foo
     staticType: void Function<T>(T)
@@ -3726,10 +3600,10 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::foo::@formalParameter::_
           substitution: {T: int}
         staticType: int
@@ -3746,7 +3620,7 @@ MethodInvocation
 T foo<T extends num>(T a, T b) => a;
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 main() {
@@ -3754,10 +3628,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(1, 2)');
+    var node = result.findNode.methodInvocation('foo(1, 2)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: prefix
     element: <testLibraryFragment>::@prefix::prefix
     staticType: null
@@ -3768,16 +3642,16 @@ MethodInvocation
     staticType: T Function<T extends num>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@function::foo::@formalParameter::a
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@function::foo::@formalParameter::b
           substitution: {T: int}
         staticType: int
@@ -3794,7 +3668,7 @@ MethodInvocation
 T Function<T>(T a, T b) get foo => null;
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 main() {
@@ -3802,10 +3676,10 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(1, 2);');
+    var node = result.findNode.functionExpressionInvocation('foo(1, 2);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -3819,16 +3693,16 @@ FunctionExpressionInvocation
     staticType: T Function<T>(T, T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: a@null
           substitution: {T: int}
         staticType: int
       IntegerLiteral
         literal: 2
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: b@null
           substitution: {T: int}
         staticType: int
@@ -3842,7 +3716,7 @@ FunctionExpressionInvocation
   }
 
   test_hasReceiver_instance_Function_call_localVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Function getFunction()) {
   Function foo = getFunction();
 
@@ -3850,10 +3724,10 @@ void f(Function getFunction()) {
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: foo@44
     staticType: Function
@@ -3864,7 +3738,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -3876,7 +3750,7 @@ MethodInvocation
   }
 
   test_hasReceiver_instance_Function_call_topVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 Function foo = throw Error();
 
 void main() {
@@ -3884,10 +3758,10 @@ void main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('call(0)');
+    var node = result.findNode.methodInvocation('call(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: Function
@@ -3898,7 +3772,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -3910,7 +3784,7 @@ MethodInvocation
   }
 
   test_hasReceiver_instance_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   double Function(int) get foo => throw Error();
 }
@@ -3920,11 +3794,11 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -3936,7 +3810,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -3958,18 +3832,22 @@ FunctionExpressionInvocation
   /// we should be aware that it is not a stand-alone identifier, but a
   /// cascade section.
   test_hasReceiver_instance_getter_cascade() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   double Function(int) get foo => 0;
+//                                ^
+// [diag.returnOfInvalidTypeFromFunction] A value of type 'int' can't be returned from the function 'foo' because it has a return type of 'double Function(int)'.
 }
 
 var v = C()..foo(0) = 0;
+//         ^^^^^^^^
+// [diag.missingAssignableSelector] Missing selector such as '.identifier' or '[0]'.
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
+  function2: PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: foo
@@ -3978,7 +3856,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -3991,7 +3869,7 @@ FunctionExpressionInvocation
   }
 
   test_hasReceiver_instance_getter_switchStatementExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   int Function() get foo => throw Error();
 }
@@ -4004,11 +3882,11 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo()');
+    var node = result.findNode.functionExpressionInvocation('foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -4028,7 +3906,7 @@ FunctionExpressionInvocation
   }
 
   test_hasReceiver_instance_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   void foo(int _) {}
 }
@@ -4038,10 +3916,10 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -4052,7 +3930,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@method::foo::@formalParameter::_
@@ -4064,7 +3942,7 @@ MethodInvocation
   }
 
   test_hasReceiver_instance_method_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   T foo<T>(T a) {
     return a;
@@ -4076,10 +3954,10 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -4090,10 +3968,10 @@ MethodInvocation
     staticType: T Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::C::@method::foo::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -4106,7 +3984,7 @@ MethodInvocation
   }
 
   test_hasReceiver_instance_method_issue30552() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class I1 {
   void foo(int i);
 }
@@ -4126,10 +4004,10 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.methodInvocation("foo('hi')");
+    var node = result.findNode.methodInvocation("foo('hi')");
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -4140,7 +4018,7 @@ MethodInvocation
     staticType: void Function(Object)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleStringLiteral
         literal: 'hi'
     rightParenthesis: )
@@ -4150,7 +4028,7 @@ MethodInvocation
   }
 
   test_hasReceiver_instance_typeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo(int _) {}
 }
@@ -4165,12 +4043,12 @@ class C<T extends A> {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@class::C::@getter::a
       substitution: {T: T}
     staticType: T
@@ -4181,7 +4059,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -4193,16 +4071,16 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceQ_Function_call_checked() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Function? foo) {
   foo?.call();
 }
 ''');
 
-    var node = findNode.methodInvocation('foo?.call()');
+    var node = result.findNode.methodInvocation('foo?.call()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::f::@formalParameter::foo
     staticType: Function?
@@ -4220,7 +4098,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceQ_Function_call_unchecked() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Function? foo) {
   foo.call();
 //    ^^^^
@@ -4228,10 +4106,10 @@ void f(Function? foo) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo.call()');
+    var node = result.findNode.methodInvocation('foo.call()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::f::@formalParameter::foo
     staticType: Function?
@@ -4249,7 +4127,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceQ_nullShorting() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C foo() => throw 0;
   C bar() => throw 0;
@@ -4260,11 +4138,11 @@ void testShort(C? c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('bar();');
+    var node = result.findNode.methodInvocation('bar();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: MethodInvocation
-    target: SimpleIdentifier
+  target2: MethodInvocation
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::testShort::@formalParameter::c
       staticType: C?
@@ -4292,7 +4170,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceQ_nullShorting_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   void Function(C) get foo;
 }
@@ -4302,11 +4180,11 @@ void f(C? c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(c);');
+    var node = result.findNode.functionExpressionInvocation('foo(c);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C?
@@ -4318,7 +4196,7 @@ FunctionExpressionInvocation
     staticType: void Function(C)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: c
         correspondingParameter: <null-name>@null
@@ -4331,92 +4209,8 @@ FunctionExpressionInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_interfaceType_class_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  augment void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-class A {
-  void foo() {}
-}
-
-void f(A a) {
-  a.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@methodAugmentation::foo
-    element: <testLibraryFragment>::@class::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_interfaceType_class_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment class A {
-  void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-class A {}
-
-void f(A a) {
-  a.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@classAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
   test_hasReceiver_interfaceType_enum() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   void foo() {}
@@ -4427,10 +4221,10 @@ void f(E e) {
 }
 ''');
 
-    var node = findNode.methodInvocation('e.foo()');
+    var node = result.findNode.methodInvocation('e.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: e
     element: <testLibrary>::@function::f::@formalParameter::e
     staticType: E
@@ -4448,7 +4242,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_enum_fromMixin() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M on Enum {
   void foo() {}
 }
@@ -4462,10 +4256,10 @@ void f(E e) {
 }
 ''');
 
-    var node = findNode.methodInvocation('e.foo()');
+    var node = result.findNode.methodInvocation('e.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: e
     element: <testLibrary>::@function::f::@formalParameter::e
     staticType: E
@@ -4483,7 +4277,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_declared() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   void foo() {}
 }
@@ -4493,10 +4287,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -4514,7 +4308,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_declared_nullableRepresentation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int? it) {
   void foo() {}
 }
@@ -4524,10 +4318,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -4545,7 +4339,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_declared_nullableType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int foo() => 0;
 }
@@ -4557,10 +4351,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -4578,7 +4372,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_declared_nullableType_nullAware() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int foo() => 0;
 }
@@ -4588,10 +4382,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -4609,7 +4403,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_exposed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -4623,10 +4417,10 @@ void f(X x) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: X
@@ -4644,7 +4438,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_notExposed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 class B extends A {
@@ -4660,10 +4454,10 @@ void f(X x) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: X
@@ -4681,7 +4475,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_extensionType_redeclared() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -4695,10 +4489,10 @@ void f(X x) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: X
@@ -4716,7 +4510,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_inheritedMethod_ofGenericClass_usesTypeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   T foo() => throw 0;
 }
@@ -4728,17 +4522,17 @@ void f(B b) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: B
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@class::A::@method::foo
       substitution: {T: int}
     staticType: int Function()
@@ -4751,7 +4545,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceType_inheritedMethod_ofGenericClass_usesTypeParameterNot() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   double foo() => throw 0;
 }
@@ -4763,10 +4557,10 @@ void f(B b) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: B
@@ -4783,92 +4577,8 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_interfaceType_mixin_augmentationAugments() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  augment void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-mixin A {
-  void foo() {}
-}
-
-void f(A a) {
-  a.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@methodAugmentation::foo
-    element: <testLibraryFragment>::@mixin::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_interfaceType_mixin_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-mixin A {}
-
-void f(A a) {
-  a.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: SimpleIdentifier
-    token: a
-    staticElement: <testLibraryFragment>::@function::f::@parameter::a
-    element: <testLibraryFragment>::@function::f::@parameter::a#element
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
   test_hasReceiver_interfaceType_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   void foo() {}
 }
@@ -4878,10 +4588,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 0
     staticType: int
   operator: .
@@ -4897,48 +4607,8 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_hasReceiver_interfaceType_ofExtension_augmentation() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
-
-augment extension E {
-  vois foo() {}
-}
-''');
-
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-extension E on int {}
-
-void f() {
-  0.foo();
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: IntegerLiteral
-    literal: 0
-    staticType: int
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@extensionAugmentation::E::@method::foo#element
-    staticType: InvalidType Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: InvalidType Function()
-  staticType: InvalidType
-''');
-  }
-
   test_hasReceiver_interfaceType_switchExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 Object f(Object? x) {
   return switch (x) {
     _ => 0,
@@ -4946,13 +4616,13 @@ Object f(Object? x) {
 }
 ''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SwitchExpression
+  target2: SwitchExpression
     switchKeyword: switch
     leftParenthesis: (
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object?
@@ -4965,7 +4635,7 @@ MethodInvocation
             name: _
             matchedValueType: Object?
         arrow: =>
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
     rightBracket: }
@@ -4984,7 +4654,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_defined() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -4996,10 +4666,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5017,7 +4687,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_defined_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -5033,10 +4703,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5054,7 +4724,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_defined_extensionQ() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -5068,10 +4738,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5089,7 +4759,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_defined_extensionQ2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E<T> on T? {
   T foo() => throw 0;
 }
@@ -5099,17 +4769,17 @@ void f(int? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int?
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: int}
     staticType: int Function()
@@ -5122,7 +4792,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_notDefined() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A? a) {
@@ -5132,10 +4802,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5153,7 +4823,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_notDefined_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -5167,10 +4837,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5188,7 +4858,7 @@ MethodInvocation
   }
 
   test_hasReceiver_interfaceTypeQ_notDefined_extensionQ() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A? {
@@ -5200,10 +4870,10 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
@@ -5221,7 +4891,7 @@ MethodInvocation
   }
 
   test_hasReceiver_neverQuestion_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Never? a) {
   a?.foo();
 //   ^^^^^
@@ -5229,10 +4899,10 @@ void f(Never? a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo');
+    var node = result.findNode.methodInvocation('foo');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: Never?
@@ -5256,7 +4926,7 @@ class C {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 main() {
@@ -5264,11 +4934,11 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -5288,7 +4958,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -5307,7 +4977,7 @@ class C {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 main() {
@@ -5315,10 +4985,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -5337,7 +5007,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: package:test/a.dart::@class::C::@method::foo::@formalParameter::_
@@ -5349,7 +5019,7 @@ MethodInvocation
   }
 
   test_hasReceiver_record_defined_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on (int, String) {
   void foo(int a) {}
 }
@@ -5359,10 +5029,10 @@ void f((int, String) r) {
 }
 ''');
 
-    var node = findNode.methodInvocation('r.foo(0)');
+    var node = result.findNode.methodInvocation('r.foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: r
     element: <testLibrary>::@function::f::@formalParameter::r
     staticType: (int, String)
@@ -5373,7 +5043,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@extension::E::@method::foo::@formalParameter::a
@@ -5385,7 +5055,7 @@ MethodInvocation
   }
 
   test_hasReceiver_recordQ_defined_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on (int, String)? {
   void foo(int a) {}
 }
@@ -5395,10 +5065,10 @@ void f((int, String)? r) {
 }
 ''');
 
-    var node = findNode.methodInvocation('r.foo(0)');
+    var node = result.findNode.methodInvocation('r.foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: r
     element: <testLibrary>::@function::f::@formalParameter::r
     staticType: (int, String)?
@@ -5409,7 +5079,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@extension::E::@method::foo::@formalParameter::a
@@ -5421,7 +5091,7 @@ MethodInvocation
   }
 
   test_hasReceiver_recordQ_notDefined_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on (int, String) {
   void foo(int a) {}
 }
@@ -5433,10 +5103,10 @@ void f((int, String)? r) {
 }
 ''');
 
-    var node = findNode.methodInvocation('r.foo(0)');
+    var node = result.findNode.methodInvocation('r.foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: r
     element: <testLibrary>::@function::f::@formalParameter::r
     staticType: (int, String)?
@@ -5447,7 +5117,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -5459,7 +5129,7 @@ MethodInvocation
   }
 
   test_hasReceiver_super_class_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int foo() => 0;
 }
@@ -5469,10 +5139,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('super.foo()');
+    var node = result.findNode.methodInvocation('super.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
@@ -5489,7 +5159,7 @@ MethodInvocation
   }
 
   test_hasReceiver_super_class_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -5501,10 +5171,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('super.foo()');
+    var node = result.findNode.methodInvocation('super.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
@@ -5520,9 +5190,11 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_hasReceiver_super_classAugmentation() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
@@ -5530,9 +5202,8 @@ class A {
 }
 
 class B extends A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
@@ -5540,21 +5211,21 @@ augment class B {
     super.foo();
   }
 }
-''');
+''',
+    });
 
-    await resolveFile2(b);
+    var result = results[b]!;
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: package:test/a.dart::<fragment>::@class::A::@method::foo
-    element: package:test/a.dart::<fragment>::@class::A::@method::foo#element
+    element: package:test/a.dart::@class::A::@method::foo
     staticType: void Function()
   argumentList: ArgumentList
     leftParenthesis: (
@@ -5564,46 +5235,50 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_hasReceiver_super_classAugmentation_noDeclaration() async {
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
   void foo() {}
 }
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
+// [diag.augmentationWithoutDeclaration][column 1][length 7] The declaration being augmented doesn't exist.
   void bar() {
     super.foo(0);
+//        ^^^
+// [diag.undefinedSuperMethod] The method 'foo' isn't defined in a superclass of 'B'.
   }
 }
-''');
+''',
+    });
 
-    await resolveFile2(b);
+    var result = results[b]!;
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    staticElement: <null>
     element: <null>
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        parameter: <null>
+        correspondingParameter: <null>
         staticType: int
     rightParenthesis: )
   staticInvokeType: InvalidType
@@ -5612,7 +5287,7 @@ MethodInvocation
   }
 
   test_hasReceiver_super_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   double Function(int) get foo => throw Error();
 }
@@ -5624,11 +5299,11 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: B
     operator: .
@@ -5639,7 +5314,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -5652,7 +5327,7 @@ FunctionExpressionInvocation
   }
 
   test_hasReceiver_super_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo(int _) {}
 }
@@ -5664,10 +5339,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
@@ -5677,7 +5352,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -5689,7 +5364,7 @@ MethodInvocation
   }
 
   test_hasReceiver_super_mixin_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int foo() => 0;
 }
@@ -5699,10 +5374,10 @@ mixin M on A {
 }
 ''');
 
-    var node = findNode.methodInvocation('super.foo()');
+    var node = result.findNode.methodInvocation('super.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: M
   operator: .
@@ -5719,7 +5394,7 @@ MethodInvocation
   }
 
   test_hasReceiver_super_mixin_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -5731,10 +5406,10 @@ mixin M on A {
 }
 ''');
 
-    var node = findNode.methodInvocation('super.foo()');
+    var node = result.findNode.methodInvocation('super.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: M
   operator: .
@@ -5751,7 +5426,7 @@ MethodInvocation
   }
 
   test_hasReceiver_typeAlias_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo(int _) {}
 }
@@ -5763,10 +5438,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: B
     element: <testLibrary>::@typeAlias::B
     staticType: null
@@ -5777,7 +5452,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -5789,7 +5464,7 @@ MethodInvocation
   }
 
   test_hasReceiver_typeAlias_staticMethod_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   static void foo(int _) {}
 }
@@ -5801,10 +5476,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: B
     element: <testLibrary>::@typeAlias::B
     staticType: null
@@ -5815,7 +5490,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -5827,7 +5502,7 @@ MethodInvocation
   }
 
   test_hasReceiver_typeParameter_promotedToNonNullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f<T>(T? t) {
   if (t is int) {
     t.abs();
@@ -5835,10 +5510,10 @@ void f<T>(T? t) {
 }
 ''');
 
-    var node = findNode.methodInvocation('t.abs()');
+    var node = result.findNode.methodInvocation('t.abs()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: t
     element: <testLibrary>::@function::f::@formalParameter::t
     staticType: T & int
@@ -5856,7 +5531,7 @@ MethodInvocation
   }
 
   test_hasReceiver_typeParameter_promotedToOtherTypeParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {}
 
 abstract class B extends A {
@@ -5870,10 +5545,10 @@ void f<T extends A, U extends B>(T a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: T & U
@@ -5891,7 +5566,7 @@ MethodInvocation
   }
 
   test_identifier_class_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final foo = 0;
 
@@ -5903,16 +5578,16 @@ class A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: int
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -5925,7 +5600,7 @@ FunctionExpressionInvocation
   }
 
   test_identifier_class_field_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   dynamic foo;
 
@@ -5935,16 +5610,16 @@ class A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -5957,7 +5632,7 @@ FunctionExpressionInvocation
   }
 
   test_identifier_class_getter_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   dynamic get foo => null;
 
@@ -5967,16 +5642,16 @@ class A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -5989,22 +5664,22 @@ FunctionExpressionInvocation
   }
 
   test_identifier_formalParameter_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(foo) {
   foo(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::f::@formalParameter::foo
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -6017,7 +5692,7 @@ FunctionExpressionInvocation
   }
 
   test_identifier_topLevelFunction_arguments_duplicateNamed() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 final a = 0;
 
 void foo({int? p}) {}
@@ -6029,7 +5704,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6038,18 +5713,18 @@ MethodInvocation
     staticType: void Function({int? p})
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       NamedArgument
         name: p
         colon: :
-        argumentExpression: IntegerLiteral
+        argumentExpression2: IntegerLiteral
           literal: 0
           staticType: int
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::p
       NamedArgument
         name: p
         colon: :
-        argumentExpression: SimpleIdentifier
+        argumentExpression2: SimpleIdentifier
           token: a
           element: <testLibrary>::@getter::a
           staticType: int
@@ -6061,7 +5736,7 @@ MethodInvocation
   }
 
   test_identifier_topLevelVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final foo = 0;
 
 void f() {
@@ -6071,16 +5746,16 @@ void f() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: int
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -6093,7 +5768,7 @@ FunctionExpressionInvocation
   }
 
   test_identifier_topLevelVariable_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 dynamic foo;
 
 void f() {
@@ -6101,16 +5776,16 @@ void f() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0)');
+    var node = result.findNode.functionExpressionInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -6123,7 +5798,7 @@ FunctionExpressionInvocation
   }
 
   test_inClass_inInstanceMethod_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo(int p) {}
 
@@ -6133,7 +5808,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6142,7 +5817,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::p
@@ -6154,7 +5829,7 @@ MethodInvocation
   }
 
   test_inClass_inInstanceMethod_staticMethod_generic_contextTypeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   static E foo<E>(A<E> p) => throw 0;
 
@@ -6164,7 +5839,7 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6173,10 +5848,10 @@ MethodInvocation
     staticType: E Function<E>(A<E>)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       ThisExpression
         thisKeyword: this
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@method::foo::@formalParameter::p
           substitution: {E: T}
         staticType: A<T>
@@ -6189,7 +5864,7 @@ MethodInvocation
   }
 
   test_inFunction_topLevelFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo(int a) {}
 
 void f() {
@@ -6197,7 +5872,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6206,7 +5881,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::a
@@ -6218,7 +5893,7 @@ MethodInvocation
   }
 
   test_inFunction_topLevelFunction_generic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void f() {
@@ -6226,7 +5901,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6235,10 +5910,10 @@ MethodInvocation
     staticType: void Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::foo::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -6251,14 +5926,16 @@ MethodInvocation
   }
 
   test_invalid_inDefaultValue_nullAware() async {
-    await assertInvalidTestCode('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f({a = b?.foo()}) {}
+//          ^
+// [diag.undefinedIdentifier] Undefined name 'b'.
 ''');
 
-    var node = findNode.methodInvocation('?.foo()');
+    var node = result.findNode.methodInvocation('?.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <null>
     staticType: InvalidType
@@ -6276,14 +5953,18 @@ MethodInvocation
   }
 
   test_invalid_inDefaultValue_nullAware2() async {
-    await assertInvalidTestCode('''
+    var result = await resolveTestCodeWithDiagnostics('''
 typedef void F({a = b?.foo()});
+//                ^
+// [diag.defaultValueInFunctionType] Parameters in a function type can't have default values.
+//                  ^
+// [diag.undefinedIdentifier] Undefined name 'b'.
 ''');
 
-    var node = findNode.methodInvocation('?.foo()');
+    var node = result.findNode.methodInvocation('?.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <null>
     staticType: InvalidType
@@ -6301,7 +5982,7 @@ MethodInvocation
   }
 
   test_invalidConst_class_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static int foo(int _) => 0;
 }
@@ -6312,10 +5993,10 @@ const b = A.foo(a);
 // [diag.constEvalMethodInvocation] Methods can't be invoked in constant expressions.
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::A
     staticType: null
@@ -6326,7 +6007,7 @@ MethodInvocation
     staticType: int Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -6339,17 +6020,17 @@ MethodInvocation
   }
 
   test_invalidConst_expression_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 const b = 'abc'.codeUnitAt(a);
 //        ^^^^^^^^^^^^^^^^^^^
 // [diag.constEvalMethodInvocation] Methods can't be invoked in constant expressions.
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleStringLiteral
+  target2: SimpleStringLiteral
     literal: 'abc'
   operator: .
   methodName: SimpleIdentifier
@@ -6358,7 +6039,7 @@ MethodInvocation
     staticType: int Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: dart:core::@class::String::@method::codeUnitAt::@formalParameter::index
@@ -6371,14 +6052,14 @@ MethodInvocation
   }
 
   test_localFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   double g(int a, String b) => throw 0;
   g(1, '2');
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6387,7 +6068,7 @@ MethodInvocation
     staticType: double Function(int, String)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: a@26
@@ -6401,14 +6082,14 @@ MethodInvocation
   }
 
   test_localFunction_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   T g<T, U>(T a, U b) => throw 0;
   g(1, '2');
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6417,10 +6098,10 @@ MethodInvocation
     staticType: T Function<T, U>(T, U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: a@25
           substitution: {T: int, U: String}
         staticType: int
@@ -6436,14 +6117,14 @@ MethodInvocation
   }
 
   test_localFunction_generic_formalParameters_optionalPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   T g<T>([T? a]) => throw 0;
   g(0);
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6452,10 +6133,10 @@ MethodInvocation
     staticType: T Function<T>([T?])
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: a@24
           substitution: {T: int}
         staticType: int
@@ -6468,14 +6149,14 @@ MethodInvocation
   }
 
   test_localFunction_generic_formalParameters_requiredNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   T g<T>({required T a}) => throw 0;
   g(a: 0);
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6484,14 +6165,14 @@ MethodInvocation
     staticType: T Function<T>({required T a})
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       NamedArgument
         name: a
         colon: :
-        argumentExpression: IntegerLiteral
+        argumentExpression2: IntegerLiteral
           literal: 0
           staticType: int
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: a@32
           substitution: {T: int}
     rightParenthesis: )
@@ -6502,86 +6183,8 @@ MethodInvocation
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_mixin_explicitThis_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-void foo() {}
-
-mixin A {
-  void f() {
-    this.foo();
-  }
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  target: ThisExpression
-    thisKeyword: this
-    staticType: A
-  operator: .
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
-  @SkippedTest() // TODO(scheglov): implement augmentation
-  test_mixin_implicitThis_inDeclaration_augmentationDeclares() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart'
-
-augment mixin A {
-  void foo() {}
-}
-''');
-    await resolveTestCodeWithDiagnostics(r'''
-part 'a.dart';
-
-void foo() {}
-
-mixin A {
-  void f() {
-    foo();
-  }
-}
-''');
-
-    var node = findNode.singleMethodInvocation;
-    assertResolvedNodeText(node, r'''
-MethodInvocation
-  methodName: SimpleIdentifier
-    token: foo
-    staticElement: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo
-    element: <testLibrary>::@fragment::package:test/a.dart::@mixinAugmentation::A::@method::foo#element
-    staticType: void Function()
-  argumentList: ArgumentList
-    leftParenthesis: (
-    rightParenthesis: )
-  staticInvokeType: void Function()
-  staticType: void
-''');
-  }
-
   test_namedArgument() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo({int? a, bool? b}) {}
 
 main() {
@@ -6589,7 +6192,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(b:');
+    var node = result.findNode.methodInvocation('foo(b:');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6598,18 +6201,18 @@ MethodInvocation
     staticType: void Function({int? a, bool? b})
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       NamedArgument
         name: b
         colon: :
-        argumentExpression: BooleanLiteral
+        argumentExpression2: BooleanLiteral
           literal: false
           staticType: bool
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::b
       NamedArgument
         name: a
         colon: :
-        argumentExpression: IntegerLiteral
+        argumentExpression2: IntegerLiteral
           literal: 0
           staticType: int
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::a
@@ -6620,7 +6223,7 @@ MethodInvocation
   }
 
   test_namedArgument_anywhere() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 class B {}
 class C {}
@@ -6638,7 +6241,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(g');
+    var node = result.findNode.methodInvocation('foo(g');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6647,7 +6250,7 @@ MethodInvocation
     staticType: void Function(A, B, {C? c, D? d})
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       MethodInvocation
         methodName: SimpleIdentifier
           token: g1
@@ -6664,7 +6267,7 @@ MethodInvocation
       NamedArgument
         name: c
         colon: :
-        argumentExpression: MethodInvocation
+        argumentExpression2: MethodInvocation
           methodName: SimpleIdentifier
             token: g3
             element: <testLibrary>::@function::g3
@@ -6693,7 +6296,7 @@ MethodInvocation
       NamedArgument
         name: d
         colon: :
-        argumentExpression: MethodInvocation
+        argumentExpression2: MethodInvocation
           methodName: SimpleIdentifier
             token: g4
             element: <testLibrary>::@function::g4
@@ -6713,7 +6316,7 @@ MethodInvocation
   }
 
   test_noReceiver_call_extension_on_FunctionType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int Function() {
   void f() {
     call();
@@ -6721,7 +6324,7 @@ extension E on int Function() {
 }
 ''');
 
-    var node = findNode.methodInvocation('call()');
+    var node = result.findNode.methodInvocation('call()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6737,7 +6340,7 @@ MethodInvocation
   }
 
   test_noReceiver_call_extension_on_FunctionType_bounded() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E<T extends int Function()> on T {
   void f() {
     call();
@@ -6745,7 +6348,7 @@ extension E<T extends int Function()> on T {
 }
 ''');
 
-    var node = findNode.methodInvocation('call()');
+    var node = result.findNode.methodInvocation('call()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6761,7 +6364,7 @@ MethodInvocation
   }
 
   test_noReceiver_getter_superClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   double Function(int) get foo => throw Error();
 }
@@ -6773,16 +6376,16 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -6795,7 +6398,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_getter_thisClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   double Function(int) get foo => throw Error();
 
@@ -6805,16 +6408,16 @@ class C {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::C::@getter::foo
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -6827,7 +6430,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_importPrefix() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as math;
 
 main() {
@@ -6837,7 +6440,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('math()');
+    var node = result.findNode.methodInvocation('math()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6853,7 +6456,7 @@ MethodInvocation
   }
 
   test_noReceiver_localFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   void foo(int _) {}
 
@@ -6861,7 +6464,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6870,7 +6473,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: _@24
@@ -6882,7 +6485,7 @@ MethodInvocation
   }
 
   test_noReceiver_localVariable_call() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   void call(int _) {}
 }
@@ -6892,16 +6495,16 @@ void f(C c) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('c(0);');
+    var node = result.findNode.functionExpressionInvocation('c(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@method::call::@formalParameter::_
@@ -6914,7 +6517,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_localVariable_promoted() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   var foo;
   if (foo is void Function(int)) {
@@ -6923,16 +6526,16 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: foo@15
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -6945,7 +6548,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_method_superClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo(int _) {}
 }
@@ -6957,7 +6560,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6966,7 +6569,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::_
@@ -6978,7 +6581,7 @@ MethodInvocation
   }
 
   test_noReceiver_method_thisClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   void foo(int _) {}
 
@@ -6988,7 +6591,7 @@ class C {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -6997,7 +6600,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@method::foo::@formalParameter::_
@@ -7009,22 +6612,22 @@ MethodInvocation
   }
 
   test_noReceiver_parameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(void Function(int) foo) {
   foo(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::f::@formalParameter::foo
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -7037,7 +6640,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_parameter_call_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 double Function(int)? foo;
 
 main() {
@@ -7045,10 +6648,10 @@ main() {
 }
     ''');
 
-    var node = findNode.methodInvocation('call(1)');
+    var node = result.findNode.methodInvocation('call(1)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: double Function(int)?
@@ -7059,7 +6662,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: <null-name>@null
@@ -7071,7 +6674,7 @@ MethodInvocation
   }
 
   test_noReceiver_parameter_functionTyped_typedef() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef F = void Function();
 
 void f(F a) {
@@ -7079,10 +6682,10 @@ void f(F a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a();');
+    var node = result.findNode.functionExpressionInvocation('a();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: void Function()
@@ -7098,7 +6701,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_topFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo(int _) {}
 
 main() {
@@ -7106,7 +6709,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7115,7 +6718,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::_
@@ -7127,7 +6730,7 @@ MethodInvocation
   }
 
   test_noReceiver_topGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 double Function(int) get foo => throw Error();
 
 main() {
@@ -7135,16 +6738,16 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -7157,7 +6760,7 @@ FunctionExpressionInvocation
   }
 
   test_noReceiver_topVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void Function(int) foo = throw Error();
 
 main() {
@@ -7165,16 +6768,16 @@ main() {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('foo(0);');
+    var node = result.findNode.functionExpressionInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@getter::foo
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -7187,7 +6790,7 @@ FunctionExpressionInvocation
   }
 
   test_nullShorting_cascade_firstMethodInvocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int foo() => 0;
   int bar() => 0;
@@ -7198,13 +6801,38 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.cascade('a?..');
+    var node = result.findNode.cascade('a?..');
     assertResolvedNodeText(node, r'''
 CascadeExpression
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
+  sections
+    CascadeSection
+      body: MethodInvocation
+        operator: ?..
+        methodName: SimpleIdentifier
+          token: foo
+          element: <testLibrary>::@class::A::@method::foo
+          staticType: int Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: int Function()
+        staticType: int
+    CascadeSection
+      body: MethodInvocation
+        operator: ..
+        methodName: SimpleIdentifier
+          token: bar
+          element: <testLibrary>::@class::A::@method::bar
+          staticType: int Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: int Function()
+        staticType: int
   cascadeSections
     MethodInvocation
       operator: ?..
@@ -7233,7 +6861,7 @@ CascadeExpression
   }
 
   test_nullShorting_cascade_firstPropertyAccess() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo => 0;
   int bar() => 0;
@@ -7244,13 +6872,35 @@ void f(A? a) {
 }
 ''');
 
-    var node = findNode.cascade('a?..');
+    var node = result.findNode.cascade('a?..');
     assertResolvedNodeText(node, r'''
 CascadeExpression
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A?
+  sections
+    CascadeSection
+      operator: ?..
+      body: CascadePropertyExtraction
+        propertyName: foo
+        resolution: GetterInvocationResolution
+          element: <testLibrary>::@class::A::@getter::foo
+          invokeType: int Function()
+          type: int
+        staticType: int
+    CascadeSection
+      body: MethodInvocation
+        operator: ..
+        methodName: SimpleIdentifier
+          token: bar
+          element: <testLibrary>::@class::A::@method::bar
+          staticType: int Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: int Function()
+        staticType: int
   cascadeSections
     PropertyAccess
       operator: ?..
@@ -7275,7 +6925,7 @@ CascadeExpression
   }
 
   test_nullShorting_cascade_nullAwareInside() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int? foo() => 0;
 }
@@ -7286,10 +6936,21 @@ main() {
 }
 ''');
 
-    var node = findNode.cascade('A()..');
+    var node = result.findNode.cascade('A()..');
     assertResolvedNodeText(node, r'''
 CascadeExpression
-  target: InstanceCreationExpression
+  target2: ConstructorInvocation
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: A
+        element: <testLibrary>::@class::A
+        type: A
+      element: <testLibrary>::@class::A::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: A
+  target(v1): InstanceCreationExpression
     constructorName: ConstructorName
       type: NamedType
         name: A
@@ -7300,6 +6961,30 @@ CascadeExpression
       leftParenthesis: (
       rightParenthesis: )
     staticType: A
+  sections
+    CascadeSection
+      body: MethodInvocation
+        target2: MethodInvocation
+          operator: ..
+          methodName: SimpleIdentifier
+            token: foo
+            element: <testLibrary>::@class::A::@method::foo
+            staticType: int? Function()
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+          staticInvokeType: int? Function()
+          staticType: int?
+        operator: ?.
+        methodName: SimpleIdentifier
+          token: abs
+          element: dart:core::@class::int::@method::abs
+          staticType: int Function()
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticInvokeType: int Function()
+        staticType: int?
   cascadeSections
     MethodInvocation
       target: MethodInvocation
@@ -7328,16 +7013,16 @@ CascadeExpression
   }
 
   test_objectMethodOnDynamic_argumentsDontMatch() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(a, int b) {
   a.toString(b);
 }
 ''');
 
-    var node = findNode.methodInvocation('toString(b)');
+    var node = result.findNode.methodInvocation('toString(b)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: dynamic
@@ -7348,7 +7033,7 @@ MethodInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: <null>
@@ -7361,16 +7046,16 @@ MethodInvocation
   }
 
   test_objectMethodOnDynamic_argumentsMatch() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(a) {
   a.toString();
 }
 ''');
 
-    var node = findNode.methodInvocation('toString()');
+    var node = result.findNode.methodInvocation('toString()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: dynamic
@@ -7388,7 +7073,7 @@ MethodInvocation
   }
 
   test_objectMethodOnFunction() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {}
 
 main() {
@@ -7396,10 +7081,10 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('toString();');
+    var node = result.findNode.methodInvocation('toString();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::f
     staticType: void Function()
@@ -7418,7 +7103,7 @@ MethodInvocation
 
   test_parameterMember_source() async {
     // See https://github.com/dart-lang/sdk/issues/50660
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo<T>({int? a}) {}
 
 void f() {
@@ -7428,13 +7113,13 @@ void f() {
 
     // See https://github.com/dart-lang/sdk/issues/54669 for why we check for
     // isNotNull despite #50660 suggesting the source would be null.
-    var element = findNode.namedArgument('a:').correspondingParameter!;
+    var element = result.findNode.namedArgument('a:').correspondingParameter!;
     var libraryFragment2 = element.firstFragment.libraryFragment!;
     expect(libraryFragment2.source, isNotNull);
   }
 
   test_remainder_int_context_cascaded() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a..remainder(f()));
@@ -7442,7 +7127,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7461,7 +7146,7 @@ MethodInvocation
   }
 
   test_remainder_int_context_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   h(a.remainder(f()));
@@ -7469,7 +7154,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7488,7 +7173,7 @@ MethodInvocation
   }
 
   test_remainder_int_context_int_target_rewritten() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int Function() a) {
   h(a().remainder(f()));
@@ -7496,7 +7181,7 @@ g(int Function() a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7515,7 +7200,7 @@ MethodInvocation
   }
 
   test_remainder_int_context_int_via_extension_explicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   String remainder(num x) => '';
 }
@@ -7528,7 +7213,7 @@ g(int a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7547,14 +7232,14 @@ MethodInvocation
   }
 
   test_remainder_int_context_none() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 T f<T>() => throw Error();
 g(int a) {
   a.remainder(f());
 }
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7573,16 +7258,16 @@ MethodInvocation
   }
 
   test_remainder_int_double() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, double b) {
   a.remainder(b);
 }
 ''');
 
-    var node = findNode.methodInvocation('remainder');
+    var node = result.findNode.methodInvocation('remainder');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -7593,7 +7278,7 @@ MethodInvocation
     staticType: num Function(num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::remainder::@formalParameter::other
@@ -7606,16 +7291,16 @@ MethodInvocation
   }
 
   test_remainder_int_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int a, int b) {
   a.remainder(b);
 }
 ''');
 
-    var node = findNode.methodInvocation('remainder');
+    var node = result.findNode.methodInvocation('remainder');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int
@@ -7626,7 +7311,7 @@ MethodInvocation
     staticType: num Function(num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::remainder::@formalParameter::other
@@ -7639,17 +7324,17 @@ MethodInvocation
   }
 
   test_remainder_int_int_target_rewritten() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(int Function() a, int b) {
   a().remainder(b);
 }
 ''');
 
-    var node = findNode.methodInvocation('remainder');
+    var node = result.findNode.methodInvocation('remainder');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  target2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -7666,7 +7351,7 @@ MethodInvocation
     staticType: num Function(num)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: b
         correspondingParameter: dart:core::@class::num::@method::remainder::@formalParameter::other
@@ -7679,7 +7364,7 @@ MethodInvocation
   }
 
   test_remainder_other_context_int_via_extension_explicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String remainder(num x) => '';
@@ -7693,7 +7378,7 @@ g(A a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7712,7 +7397,7 @@ MethodInvocation
   }
 
   test_remainder_other_context_int_via_extension_implicit() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 extension E on A {
   String remainder(num x) => '';
@@ -7726,7 +7411,7 @@ g(A a) {
 h(int x) {}
 ''');
 
-    var node = findNode.methodInvocation('f()');
+    var node = result.findNode.methodInvocation('f()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -7745,7 +7430,7 @@ MethodInvocation
   }
 
   test_rewrite_nullShorting() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   const A(this.content);
   final String Function() content;
@@ -7760,11 +7445,34 @@ void main() {
   (null as B?)?.a.content();
 }
 ''');
-    var node = findNode.functionExpressionInvocation('content()');
+    var node = result.findNode.functionExpressionInvocation('content()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: PropertyAccess
+  function2: PropertyAccess
+    target2: ReceiverPropertyExtraction
+      receiver: ParenthesizedExpression
+        leftParenthesis: (
+        expression2: AsExpression
+          expression2: NullLiteral
+            literal: null
+            staticType: Null
+          asOperator: as
+          type: NamedType
+            name: B
+            question: ?
+            element: <testLibrary>::@class::B
+            type: B?
+          staticType: B?
+        rightParenthesis: )
+        staticType: B?
+      operator: ?.
+      propertyName: a
+      resolution: GetterInvocationResolution
+        element: <testLibrary>::@class::B::@getter::a
+        invokeType: A Function()
+        type: A
+      staticType: A
+    target(v1): PropertyAccess
       target: ParenthesizedExpression
         leftParenthesis: (
         expression: AsExpression
@@ -7802,24 +7510,24 @@ FunctionExpressionInvocation
   }
 
   test_rewrite_with_target() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 test<T extends Function>(List<T> x) {
   x.first();
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('x.first()');
+    var node = result.findNode.functionExpressionInvocation('x.first()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::test::@formalParameter::x
       staticType: List<T>
     operator: .
     propertyName: SimpleIdentifier
       token: first
-      element: GetterMember
+      element: SubstitutedGetterElementImpl
         baseElement: dart:core::@class::Iterable::@getter::first
         substitution: {E: T}
       staticType: T
@@ -7834,7 +7542,7 @@ FunctionExpressionInvocation
   }
 
   test_rewrite_without_target() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E<T extends Function> on List<T> {
   test() {
     first();
@@ -7842,12 +7550,12 @@ extension E<T extends Function> on List<T> {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('first()');
+    var node = result.findNode.functionExpressionInvocation('first()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: first
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: dart:core::@class::Iterable::@getter::first
       substitution: {E: T}
     staticType: T
@@ -7861,7 +7569,7 @@ FunctionExpressionInvocation
   }
 
   test_superQualifier_identifier_methodOfMixin_inEnum() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   void foo() {}
 }
@@ -7874,10 +7582,10 @@ enum E with M {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo();');
+    var node = result.findNode.methodInvocation('foo();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: E
   operator: .
@@ -7894,7 +7602,7 @@ MethodInvocation
   }
 
   test_superQualifier_identifier_unresolved_inClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 class B extends A {
@@ -7906,10 +7614,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: B
   operator: .
@@ -7919,7 +7627,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -7931,7 +7639,7 @@ MethodInvocation
   }
 
   test_superQualifier_identifier_unresolved_inEnum() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   void f() {
@@ -7942,10 +7650,10 @@ enum E {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: E
   operator: .
@@ -7955,7 +7663,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -7967,7 +7675,7 @@ MethodInvocation
   }
 
   test_superQualifier_identifier_unresolved_inMixin() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 mixin M on A {
@@ -7979,10 +7687,10 @@ mixin M on A {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: M
   operator: .
@@ -7992,7 +7700,7 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -8007,7 +7715,7 @@ MethodInvocation
     // This code is invalid, and the constructor initializer has a method
     // invocation with a synthetic name. But we should still resolve the
     // invocation, and resolve all its arguments.
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A() : B(1 + 2, [0]);
 //      ^
@@ -8017,7 +7725,7 @@ class A {
 }
 ''');
 
-    var node = findNode.methodInvocation(');');
+    var node = result.findNode.methodInvocation(');');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8026,7 +7734,30 @@ MethodInvocation
     staticType: InvalidType
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+      ListLiteral
+        leftBracket: [
+        elements2
+          IntegerLiteral
+            literal: 0
+            staticType: int
+        rightBracket: ]
+        correspondingParameter: <null>
+        staticType: List<int>
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -8054,12 +7785,12 @@ MethodInvocation
   staticType: InvalidType
 ''');
 
-    assertType(findNode.binary('1 + 2'), 'int');
-    assertType(findNode.listLiteral('[0]'), 'List<int>');
+    assertType(result.findNode.binaryOperatorInvocation('1 + 2'), 'int');
+    assertType(result.findNode.listLiteral('[0]'), 'List<int>');
   }
 
   test_topLevelFunction_notGeneric_arguments_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo(int a, {required bool b}) {}
 
 void f() {
@@ -8067,7 +7798,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8076,7 +7807,7 @@ MethodInvocation
     staticType: void Function(int, {required bool b})
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::a
@@ -8084,7 +7815,7 @@ MethodInvocation
       NamedArgument
         name: b
         colon: :
-        argumentExpression: BooleanLiteral
+        argumentExpression2: BooleanLiteral
           literal: true
           staticType: bool
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::b
@@ -8095,7 +7826,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_inferred() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 U foo<T, U>(T a) => throw Error();
 
 main() {
@@ -8105,7 +7836,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8114,10 +7845,10 @@ MethodInvocation
     staticType: U Function<T, U>(T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::foo::@formalParameter::a
           substitution: {T: int, U: bool}
         staticType: int
@@ -8131,7 +7862,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_inferred_leftTop_dynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T extends Object>(T? value) {}
 
 void f(dynamic o) {
@@ -8139,7 +7870,7 @@ void f(dynamic o) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(o)');
+    var node = result.findNode.methodInvocation('foo(o)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8148,10 +7879,10 @@ MethodInvocation
     staticType: void Function<T extends Object>(T?)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: o
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::foo::@formalParameter::value
           substitution: {T: Object}
         element: <testLibrary>::@function::f::@formalParameter::o
@@ -8165,7 +7896,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_inferred_leftTop_void() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T extends Object>(List<T?> value) {}
 
 void f(List<void> o) {
@@ -8173,7 +7904,7 @@ void f(List<void> o) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(o)');
+    var node = result.findNode.methodInvocation('foo(o)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8182,10 +7913,10 @@ MethodInvocation
     staticType: void Function<T extends Object>(List<T?>)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: o
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::foo::@formalParameter::value
           substitution: {T: Object}
         element: <testLibrary>::@function::f::@formalParameter::o
@@ -8199,7 +7930,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_instantiateToBounds() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo<T extends num>() {}
 
 main() {
@@ -8207,7 +7938,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo();');
+    var node = result.findNode.methodInvocation('foo();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8225,7 +7956,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_typeArguments_notBounds() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo<T extends num>() {}
 
 main() {
@@ -8235,7 +7966,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo<bool>();');
+    var node = result.findNode.methodInvocation('foo<bool>();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8261,7 +7992,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_generic_typeArguments_wrongNumber() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo<T>() {}
 
 main() {
@@ -8271,7 +8002,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo<int, double>();');
+    var node = result.findNode.methodInvocation('foo<int, double>();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8301,7 +8032,7 @@ MethodInvocation
   }
 
   test_typeArgumentTypes_notGeneric() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void foo(int a) {}
 
 main() {
@@ -8309,7 +8040,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo(0)');
+    var node = result.findNode.methodInvocation('foo(0)');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -8318,7 +8049,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@function::foo::@formalParameter::a

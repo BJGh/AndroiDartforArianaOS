@@ -68,13 +68,11 @@ class RuntimeFinalizer {
         case JsCodeData(:final jsCode):
           final importName = _interopMemberNamer.getImportName(p)!.itemName;
           usedJSMethods.add((importName: importName, jsCode: jsCode));
-        case JsTrampolineWrapperData(:final trampoline):
+        case JsTrampolineWrapperData():
           final importName = _interopMemberNamer.getImportName(p)!.itemName;
           usedJSMethods.add((
             importName: importName,
-            jsCode: annotationInfo.jsCode(
-              _interopMemberNamer.getExportName(trampoline)!,
-            ),
+            jsCode: annotationInfo.jsCode(),
           ));
         case JsTrampolineData():
         // do nothing
@@ -105,10 +103,7 @@ class RuntimeFinalizer {
     return jsMethods.toString();
   }
 
-  String _generateInternalizedStrings(
-    bool requireJsBuiltin,
-    List<String> constantStrings,
-  ) {
+  String _generateInternalizedStrings(List<String> constantStrings) {
     final sb = StringBuffer();
     String indent = '';
     if (constantStrings.isNotEmpty) {
@@ -119,11 +114,7 @@ class RuntimeFinalizer {
       }
       sb.writeln('$indent],');
     }
-    if (!requireJsBuiltin) {
-      sb.writeln(
-        '$indent"": new Proxy({}, { get(_, prop) { return prop; } }),',
-      );
-    }
+    sb.writeln('$indent"": new Proxy({}, { get(_, prop) { return prop; } }),');
     return '$sb';
   }
 
@@ -131,25 +122,20 @@ class RuntimeFinalizer {
     String mainModuleName,
     Iterable<Procedure> translatedProcedures,
     List<String> constantStrings,
-    bool requireJsBuiltin,
     bool supportsAdditionalModuleLoading,
+    bool supportsES6Modules,
   ) {
     final jsMethods = generateJsMethods(translatedProcedures);
 
     final builtins = [
       'builtins: [\'js-string\']',
-      if (requireJsBuiltin) 'importedStringConstants: \'\'',
+      'importedStringConstants: \'\'',
     ];
 
-    String internalizedStrings = _generateInternalizedStrings(
-      requireJsBuiltin,
-      constantStrings,
-    );
+    String internalizedStrings = _generateInternalizedStrings(constantStrings);
 
     final jsStringBuiltinPolyfillImportVars = {
-      'JS_POLYFILL_IMPORT': requireJsBuiltin
-          ? ''
-          : '"wasm:js-string": jsStringPolyfill,',
+      'JS_POLYFILL_IMPORT': '"wasm:js-string": jsStringPolyfill,',
     };
     final moduleLoadingImportVars = {
       'MODULE_LOADING_IMPORT': supportsAdditionalModuleLoading
@@ -161,22 +147,36 @@ class RuntimeFinalizer {
         ? moduleLoadingHelperTemplate.instantiate({
             ...jsStringBuiltinPolyfillImportVars,
             'MAIN_MODULE_NAME': mainModuleName,
-            'THIS_MODULE_SETTER_NAME': _interopMemberNamer.thisModuleSetterName,
           })
         : '';
+    final result = StringBuffer();
 
-    return jsRuntimeBlobTemplate.instantiate({
-      ...jsStringBuiltinPolyfillImportVars,
-      ...moduleLoadingImportVars,
-      'BUILTINS_MAP_BODY': builtins.join(', '),
-      'JS_METHODS': jsMethods,
-      'THIS_MODULE_SETTER_NAME': _interopMemberNamer.thisModuleSetterName,
-      'INTERNAL_IMPORTS_MODULE_NAME':
-          _interopMemberNamer.interopHelperModuleName,
-      'IMPORTED_JS_STRINGS_IN_MJS': internalizedStrings,
-      'JS_STRING_POLYFILL_METHODS': requireJsBuiltin ? '' : jsPolyFillMethods,
-      'DEFERRED_LIBRARY_HELPER_METHODS': moduleLoadingHelperMethods,
-    });
+    final moduleTemplate = supportsES6Modules
+        ? es6MjsTemplate
+        : nonEs6MjsTemplate;
+    result.write(
+      moduleTemplate.instantiate({
+        'COMPILE_STREAMING': compileStreamingTemplate.instantiate({
+          'BUILTINS_MAP_BODY': builtins.join(', '),
+        }),
+        'COMPILE': compileTemplate.instantiate({
+          'BUILTINS_MAP_BODY': builtins.join(', '),
+        }),
+        'REST': jsRuntimeBlobTemplate.instantiate({
+          ...jsStringBuiltinPolyfillImportVars,
+          ...moduleLoadingImportVars,
+          'BUILTINS_MAP_BODY': builtins.join(', '),
+          'JS_METHODS': jsMethods,
+          'INTERNAL_IMPORTS_MODULE_NAME':
+              _interopMemberNamer.interopHelperModuleName,
+          'IMPORTED_JS_STRINGS_IN_MJS': internalizedStrings,
+          'JS_STRING_POLYFILL_METHODS': jsPolyFillMethods,
+          'DEFERRED_LIBRARY_HELPER_METHODS': moduleLoadingHelperMethods,
+        }),
+      }),
+    );
+
+    return result.toString();
   }
 }
 

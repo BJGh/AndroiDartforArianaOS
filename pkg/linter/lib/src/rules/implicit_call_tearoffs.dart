@@ -16,8 +16,7 @@ const _desc =
     r'Explicitly tear-off `call` methods when using an object as a Function.';
 
 class ImplicitCallTearoffs extends AnalysisRule {
-  ImplicitCallTearoffs()
-    : super(name: LintNames.implicit_call_tearoffs, description: _desc);
+  new() : super(name: LintNames.implicit_call_tearoffs, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.implicitCallTearoffs;
@@ -32,11 +31,7 @@ class ImplicitCallTearoffs extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitImplicitCallReference(ImplicitCallReference node) {
     rule.reportAtNode(node);

@@ -19,7 +19,7 @@ import '../extensions.dart';
 const _desc = r'No default cases.';
 
 class NoDefaultCases extends AnalysisRule {
-  NoDefaultCases()
+  new()
     : super(
         name: LintNames.no_default_cases,
         description: _desc,
@@ -39,11 +39,7 @@ class NoDefaultCases extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitSwitchStatement(SwitchStatement statement) {
     var expressionType = statement.expression.staticType;

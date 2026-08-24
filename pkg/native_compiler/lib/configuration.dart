@@ -2,17 +2,21 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:cfg/ir/flow_graph_checker.dart';
 import 'package:cfg/ir/functions.dart';
+import 'package:cfg/ir/ir_to_text.dart';
 import 'package:cfg/ir/ssa_computation.dart';
 import 'package:cfg/passes/constant_propagation.dart';
 import 'package:cfg/passes/control_flow_optimizations.dart';
 import 'package:cfg/passes/pass.dart';
 import 'package:cfg/passes/simplification.dart';
 import 'package:cfg/passes/value_numbering.dart';
+import 'package:native_compiler/back_end/arm64/asm_intrinsics.dart';
 import 'package:native_compiler/back_end/arm64/code_generator.dart';
 import 'package:native_compiler/back_end/arm64/constraints.dart';
 import 'package:native_compiler/back_end/arm64/stack_frame.dart';
 import 'package:native_compiler/back_end/arm64/stub_code_generator.dart';
+import 'package:native_compiler/back_end/asm_intrinsics.dart';
 import 'package:native_compiler/back_end/back_end_state.dart';
 import 'package:native_compiler/back_end/code.dart';
 import 'package:native_compiler/back_end/code_generator.dart';
@@ -45,21 +49,17 @@ enum ImageFormat {
   static ImageFormat fromName(String name) => values.byName(name);
 }
 
-abstract base class Configuration {
-  final TargetCPU targetCPU;
-  final ImageFormat imageFormat;
-  final bool enableAsserts;
-  final bool useAstScopes;
-  final String outputLibraryName;
-
-  Configuration(
-    this.targetCPU,
-    this.imageFormat, {
-    required this.enableAsserts,
-    required this.useAstScopes,
-    required this.outputLibraryName,
-  });
-
+abstract base class Configuration(
+  final TargetCPU targetCPU,
+  final ImageFormat imageFormat, {
+  required final bool enableAsserts,
+  required final bool compilePlatform,
+  required final bool useAstScopes,
+  required final String outputLibraryName,
+  required final String? printFlowGraph,
+  required final bool printFlowGraphAfterEveryPass,
+  required final bool printRegisterAllocation,
+}) {
   VMOffsets get vmOffsets;
 
   ObjectLayout get objectLayout;
@@ -68,11 +68,12 @@ abstract base class Configuration {
     CFunction function,
     FunctionRegistry functionRegistry,
     StubFactory stubFactory,
+    AsmIntrinsics asmIntrinsics,
     CodeConsumer consumeGeneratedCode,
   );
 
-  Constraints createConstraints() => switch (targetCPU) {
-    TargetCPU.arm64 => Arm64Constraints(),
+  Constraints createConstraints(StackFrame stackFrame) => switch (targetCPU) {
+    TargetCPU.arm64 => Arm64Constraints(stackFrame),
   };
 
   StackFrame createStackFrame(CFunction function) => switch (targetCPU) {
@@ -81,9 +82,14 @@ abstract base class Configuration {
 
   CodeGenerator createCodeGenerator(
     BackEndState backEndState,
+    AsmIntrinsics asmIntrinsics,
     FunctionRegistry functionRegistry,
   ) => switch (targetCPU) {
-    TargetCPU.arm64 => Arm64CodeGenerator(backEndState, functionRegistry),
+    TargetCPU.arm64 => Arm64CodeGenerator(
+      backEndState,
+      asmIntrinsics,
+      functionRegistry,
+    ),
   };
 
   StubFactory createStubFactory(CodeConsumer consumeGeneratedCode) =>
@@ -95,9 +101,21 @@ abstract base class Configuration {
         ),
       };
 
+  AsmIntrinsics createAsmIntrinsics(FunctionRegistry functionRegistry) =>
+      switch (targetCPU) {
+        TargetCPU.arm64 => Arm64AsmIntrinsics(
+          functionRegistry,
+          vmOffsets,
+          objectLayout,
+        ),
+      };
+
   ImageWriter createImageWriter() => switch (imageFormat) {
     ImageFormat.macho => MachoImageWriter(targetCPU, outputLibraryName),
   };
+
+  bool printFlowGraphFor(CFunction function) =>
+      printFlowGraph != null && function.toString().contains(printFlowGraph!);
 }
 
 final class DevelopmentCompilerConfiguration extends Configuration {
@@ -105,8 +123,12 @@ final class DevelopmentCompilerConfiguration extends Configuration {
     super.targetCPU,
     super.imageFormat, {
     required super.enableAsserts,
+    required super.compilePlatform,
     required super.useAstScopes,
     required super.outputLibraryName,
+    required super.printFlowGraph,
+    required super.printFlowGraphAfterEveryPass,
+    required super.printRegisterAllocation,
   });
 
   @override
@@ -128,17 +150,38 @@ final class DevelopmentCompilerConfiguration extends Configuration {
     CFunction function,
     FunctionRegistry functionRegistry,
     StubFactory stubFactory,
+    AsmIntrinsics asmIntrinsics,
     CodeConsumer consumeGeneratedCode,
   ) {
-    final unboxing = Unboxing();
+    final unboxing = Unboxing(objectLayout);
+    final stackFrame = createStackFrame(function);
     final backEndState = BackEndState();
     backEndState.vmOffsets = vmOffsets;
     backEndState.objectLayout = objectLayout;
     backEndState.stubFactory = stubFactory;
     backEndState.unboxing = unboxing;
-    backEndState.stackFrame = createStackFrame(function);
+    backEndState.stackFrame = stackFrame;
     backEndState.consumeGeneratedCode = consumeGeneratedCode;
-    final constraints = createConstraints();
+    final constraints = createConstraints(stackFrame);
+
+    void Function(Pass)? afterPass;
+    if (printFlowGraphFor(function)) {
+      afterPass = (Pass pass) {
+        if ((printFlowGraphAfterEveryPass && pass is! FlowGraphChecker) ||
+            pass is CodeGenerator) {
+          var annotator = pass.errorContext.annotator;
+          if (printRegisterAllocation && pass is CodeGenerator) {
+            annotator = RegisterAllocationPrinter(
+              backEndState,
+              constraints,
+            ).print;
+          }
+          print('CFG IR of $function after ${pass.name}');
+          print(IrToText(pass.graph, annotator: annotator));
+        }
+      };
+    }
+
     return Pipeline([
       SSAComputation(),
       ValueNumbering(simplification: Simplification()),
@@ -150,7 +193,7 @@ final class DevelopmentCompilerConfiguration extends Configuration {
       ReorderBlocks(backEndState),
       LinearScanRegisterAllocator(backEndState, constraints),
       RegisterAllocationChecker(backEndState, constraints),
-      createCodeGenerator(backEndState, functionRegistry),
-    ]);
+      createCodeGenerator(backEndState, asmIntrinsics, functionRegistry),
+    ], afterPass: afterPass);
   }
 }

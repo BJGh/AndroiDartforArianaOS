@@ -22,10 +22,6 @@
 #include "vm/type_testing_stubs.h"
 #include "vm/v8_snapshot_writer.h"
 
-#if defined(DEBUG)
-#define SNAPSHOT_BACKTRACE
-#endif
-
 namespace dart {
 
 // Forward declarations.
@@ -36,17 +32,31 @@ class Instructions;
 class Object;
 class SharedObjectWriter;
 
-class Image : ValueObject {
- public:
+template <typename T>
+static T* Auth(T* ptr) {
+#if defined(HOST_ARCH_ARM64E)
+  return ptrauth_auth_data(ptr, ptrauth_key_function_pointer, 0);
+#else
+  return ptr;
+#endif
+}
+
+static uword Auth(uword ptr) {
+  return reinterpret_cast<uword>(Auth(reinterpret_cast<void*>(ptr)));
+}
+
+class Image : public ValueObject {
+ protected:
   explicit Image(const void* raw_memory)
       : Image(reinterpret_cast<uword>(raw_memory)) {}
   explicit Image(const uword raw_memory)
       : raw_memory_(raw_memory),
         snapshot_size_(FieldValue(raw_memory, HeaderField::ImageSize)),
-        extra_info_(ExtraInfo(raw_memory_, snapshot_size_)) {
+        extra_info_(ExtraInfo(raw_memory, snapshot_size_)) {
     ASSERT(Utils::IsAligned(raw_memory, kObjectStartAlignment));
   }
 
+ public:
   // Even though an Image is read-only memory, we must return a void* here.
   // All objects in an Image are pre-marked, though, so the GC will not attempt
   // to change the returned memory.
@@ -64,6 +74,9 @@ class Image : ValueObject {
   // Returns the address of the BSS section, or nullptr if one is not available.
   // Only has meaning for instructions images from precompiled snapshots.
   uword* bss() const;
+
+  // Returns the instructions address with any auth data stripped.
+  uword instructions_address() const { return raw_memory_; }
 
   // Returns the relocated address of the isolate's instructions, or 0 if
   // one is not available. Only has meaning for instructions images from
@@ -166,6 +179,20 @@ class Image : ValueObject {
   DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
+class DataImage : public Image {
+ public:
+  explicit DataImage(const void* raw_memory) : Image(raw_memory) {}
+  explicit DataImage(const uword raw_memory) : Image(raw_memory) {}
+  DISALLOW_COPY_AND_ASSIGN(DataImage);
+};
+
+class TextImage : public Image {
+ public:
+  explicit TextImage(const void* raw_memory) : Image(Auth(raw_memory)) {}
+  explicit TextImage(const uword raw_memory) : Image(Auth(raw_memory)) {}
+  DISALLOW_COPY_AND_ASSIGN(TextImage);
+};
+
 class ImageReader : public ZoneObject {
  public:
   ImageReader(const uint8_t* data_image, const uint8_t* instructions_image);
@@ -180,6 +207,7 @@ class ImageReader : public ZoneObject {
  private:
   const uint8_t* data_image_;
   const uint8_t* instructions_image_;
+  const uint8_t* instructions_image_authed_;
 
   DISALLOW_COPY_AND_ASSIGN(ImageReader);
 };
@@ -422,9 +450,7 @@ class ImageWriter : public ValueObject {
   void PrepareForSerialization(GrowableArray<ImageWriterCommand>* commands);
 
   bool IsROSpace() const {
-    return offset_space_ == IdSpace::kVmData ||
-           offset_space_ == IdSpace::kVmText ||
-           offset_space_ == IdSpace::kIsolateData ||
+    return offset_space_ == IdSpace::kIsolateData ||
            offset_space_ == IdSpace::kIsolateText;
   }
   int32_t GetTextOffsetFor(InstructionsPtr instructions, CodePtr code);
@@ -436,7 +462,7 @@ class ImageWriter : public ValueObject {
 
   uint32_t AddBytesToData(uint8_t* bytes, intptr_t length);
 
-  void Write(NonStreamingWriteStream* clustered_stream, bool vm);
+  void Write(NonStreamingWriteStream* clustered_stream);
   intptr_t data_size() const { return next_data_offset_; }
   intptr_t text_size() const { return next_text_offset_; }
   intptr_t GetTextObjectCount() const;
@@ -476,17 +502,14 @@ class ImageWriter : public ValueObject {
   // Returns a predetermined label for the given section in the VM isolate
   // (if vm is true) or application isolate (otherwise) section. Some sections
   // are shared by both.
-  static constexpr intptr_t SectionLabel(ProgramSection section, bool vm) {
+  static constexpr intptr_t SectionLabel(ProgramSection section) {
     switch (section) {
       case ProgramSection::Text:
-        return vm ? SharedObjectWriter::kVmInstructionsLabel
-                  : SharedObjectWriter::kIsolateInstructionsLabel;
+        return SharedObjectWriter::kIsolateInstructionsLabel;
       case ProgramSection::Data:
-        return vm ? SharedObjectWriter::kVmDataLabel
-                  : SharedObjectWriter::kIsolateDataLabel;
+        return SharedObjectWriter::kIsolateDataLabel;
       case ProgramSection::Bss:
-        return vm ? SharedObjectWriter::kVmBssLabel
-                  : SharedObjectWriter::kIsolateBssLabel;
+        return SharedObjectWriter::kIsolateBssLabel;
       case ProgramSection::BuildId:
         // Both vm and isolate share the build id section.
         return SharedObjectWriter::kBuildIdLabel;
@@ -504,14 +527,12 @@ class ImageWriter : public ValueObject {
   virtual void Finalize() = 0;
 
  protected:
-  virtual void WriteBss(bool vm) = 0;
-  virtual void WriteROData(NonStreamingWriteStream* clustered_stream, bool vm);
-  void WriteText(bool vm);
+  virtual void WriteBss() = 0;
+  virtual void WriteROData(NonStreamingWriteStream* clustered_stream);
+  void WriteText();
 
-  // Returns the standard Dart dynamic symbol name for the given VM isolate (if
-  // vm is true) or application isolate (otherwise) section. Some sections are
-  // shared by both.
-  static const char* SectionSymbol(ProgramSection section, bool vm);
+  // Returns the standard Dart dynamic symbol name for the section.
+  static const char* SectionSymbol(ProgramSection section);
 
   static uword GetMarkedTags(classid_t cid,
                              intptr_t size,
@@ -609,16 +630,14 @@ class ImageWriter : public ValueObject {
 
   // Methods abstracting out the particulars of the underlying concrete writer.
 
-  // Marks the entrance into a particular ProgramSection for either the VM
-  // isolate (if vm is true) or application isolate (if not). Returns false if
+  // Marks the entrance into a particular ProgramSection. Returns false if
   // this section should not be written.
   virtual bool EnterSection(ProgramSection name,
-                            bool vm,
                             intptr_t alignment,
                             intptr_t* alignment_padding = nullptr) = 0;
   // Marks the exit from a particular ProgramSection, allowing subclasses to
   // do any post-writing work.
-  virtual void ExitSection(ProgramSection name, bool vm, intptr_t size) = 0;
+  virtual void ExitSection(ProgramSection name, intptr_t size) = 0;
   // Writes a prologue to the text section that describes how to interpret
   // Dart stack frames using DWARF's Call Frame Information (CFI).
   virtual void FrameUnwindPrologue() = 0;
@@ -769,20 +788,10 @@ class ImageWriter : public ValueObject {
 };
 
 #if defined(DART_PRECOMPILER)
-static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::Bss,
-                                        /*vm=*/true) ==
-                  SharedObjectWriter::kVmBssLabel,
-              "unexpected label for VM BSS section");
-static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::Bss,
-                                        /*vm=*/false) ==
+static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::Bss) ==
                   SharedObjectWriter::kIsolateBssLabel,
               "unexpected label for isolate BSS section");
-static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::BuildId,
-                                        /*vm=*/true) ==
-                  SharedObjectWriter::kBuildIdLabel,
-              "unexpected label for build id section");
-static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::BuildId,
-                                        /*vm=*/false) ==
+static_assert(ImageWriter::SectionLabel(ImageWriter::ProgramSection::BuildId) ==
                   SharedObjectWriter::kBuildIdLabel,
               "unexpected label for build id section");
 
@@ -836,14 +845,13 @@ class AssemblyImageWriter : public ImageWriter {
   virtual void Finalize();
 
  private:
-  virtual void WriteBss(bool vm);
-  virtual void WriteROData(NonStreamingWriteStream* clustered_stream, bool vm);
+  virtual void WriteBss();
+  virtual void WriteROData(NonStreamingWriteStream* clustered_stream);
 
   virtual bool EnterSection(ProgramSection section,
-                            bool vm,
                             intptr_t alignment,
                             intptr_t* alignment_padding = nullptr);
-  virtual void ExitSection(ProgramSection name, bool vm, intptr_t size);
+  virtual void ExitSection(ProgramSection name, intptr_t size);
   virtual intptr_t WriteTargetWord(word value);
   virtual intptr_t WriteBytes(const void* bytes, intptr_t size);
   virtual intptr_t Align(intptr_t alignment,
@@ -889,16 +897,14 @@ class BlobImageWriter : public ImageWriter {
  public:
 #if defined(DART_PRECOMPILER)
   BlobImageWriter(Thread* thread,
-                  NonStreamingWriteStream* vm_instructions,
-                  NonStreamingWriteStream* isolate_instructions,
+                  NonStreamingWriteStream* instructions,
                   const Trie<const char>* deobfuscation_trie = nullptr,
                   SharedObjectWriter* debug_so = nullptr,
                   SharedObjectWriter* so = nullptr,
                   bool needs_unique_names = false);
 #else
   BlobImageWriter(Thread* thread,
-                  NonStreamingWriteStream* vm_instructions,
-                  NonStreamingWriteStream* isolate_instructions,
+                  NonStreamingWriteStream* instructions,
                   SharedObjectWriter* debug_so = nullptr,
                   SharedObjectWriter* so = nullptr,
                   bool needs_unique_names = false);
@@ -907,14 +913,13 @@ class BlobImageWriter : public ImageWriter {
   virtual void Finalize();
 
  private:
-  virtual void WriteBss(bool vm);
-  virtual void WriteROData(NonStreamingWriteStream* clustered_stream, bool vm);
+  virtual void WriteBss();
+  virtual void WriteROData(NonStreamingWriteStream* clustered_stream);
 
   virtual bool EnterSection(ProgramSection section,
-                            bool vm,
                             intptr_t alignment,
                             intptr_t* alignment_padding = nullptr);
-  virtual void ExitSection(ProgramSection name, bool vm, intptr_t size);
+  virtual void ExitSection(ProgramSection name, intptr_t size);
   virtual intptr_t WriteTargetWord(word value);
   virtual intptr_t WriteBytes(const void* bytes, intptr_t size);
   virtual intptr_t Align(intptr_t alignment,
@@ -948,8 +953,7 @@ class BlobImageWriter : public ImageWriter {
   SharedObjectWriter::SymbolDataArray* current_symbols_ = nullptr;
 #endif
 
-  NonStreamingWriteStream* const vm_instructions_;
-  NonStreamingWriteStream* const isolate_instructions_;
+  NonStreamingWriteStream* const instructions_;
   SharedObjectWriter* const so_;
   SharedObjectWriter* const debug_so_;
 

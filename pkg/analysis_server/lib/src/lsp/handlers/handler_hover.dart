@@ -18,7 +18,7 @@ typedef StaticOptions = Either2<bool, HoverOptions>;
 
 class HoverHandler
     extends SharedMessageHandler<TextDocumentPositionParams, Hover?> {
-  HoverHandler(super.server);
+  new(super.server);
 
   @override
   Method get handlesMessage => Method.textDocument_hover;
@@ -88,6 +88,18 @@ class HoverHandler
     }
 
     var declaredInDescription = StringBuffer();
+    if (hover.containingExecutableDescriptions
+        case List(isNotEmpty: true) && var list) {
+      for (var executableDescription in list) {
+        if (executableDescription.isEmpty) {
+          continue;
+        }
+        declaredInDescription
+          ..write(' in `')
+          ..write(executableDescription)
+          ..write('`');
+      }
+    }
     if (hover.containingClassDescription?.isNotEmpty ?? false) {
       declaredInDescription
         ..write(' in `')
@@ -146,7 +158,7 @@ class HoverHandler
 
 class HoverRegistrations extends FeatureRegistration
     with SingleDynamicRegistration, StaticRegistration<StaticOptions> {
-  HoverRegistrations(super.info);
+  new(super.info);
 
   @override
   ToJsonable? get options =>

@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/dart/analysis/unlinked_api_signature.dart';
+import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -169,11 +170,15 @@ class C {
       r'''
 class C {
   C.foo() : ;
+//        ^
+// [diag.missingInitializer] Expected an initializer.
 }
 ''',
       r'''
 class C {
   C.foo() : f;
+//          ^
+// [diag.missingAssignmentInInitializer] Expected an assignment after the field name.
 }
 ''',
     );
@@ -380,6 +385,8 @@ class A {
       r'''
 class A {
   factory A() =;
+//             ^
+// [diag.missingIdentifier] Expected an identifier.
 }
 ''',
     );
@@ -485,6 +492,8 @@ class A {
 class A {
   factory A() =
   static void foo<U>() {}
+//^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 }
 ''',
     );
@@ -525,12 +534,16 @@ augment class A {
       r'''
 class A {
   static f = Object();
+//       ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
 }
 ''',
       r'''
 class A {
   const
   static f = Object();
+//^^^^^^
+// [diag.modifierOutOfOrder] The modifier 'static' should be before the modifier 'const'.
 }
 ''',
     );
@@ -729,6 +742,9 @@ static final f = Object();
       r'''
 const
 static final f = Object();
+// [diag.modifierOutOfOrder][column 1][length 6] The modifier 'static' should be before the modifier 'const'.
+//     ^^^^^
+// [diag.constAndFinal] Members can't be declared to be both 'const' and 'final'.
 ''',
     );
   }
@@ -1866,10 +1882,20 @@ class A {}
       r'''
 foo
 Future<List<int>> bar() {}
+// [diag.missingFunctionParameters][column 1][length 6] Functions must have an explicit list of parameters.
+//     ^^^^
+// [diag.expectedToken] Expected to find '>'.
+//                ^^^
+// [diag.missingFunctionBody] A function body must be provided.
 ''',
       r'''
 foo
 Future<List<int>> bar(int x) {}
+// [diag.missingFunctionParameters][column 1][length 6] Functions must have an explicit list of parameters.
+//     ^^^^
+// [diag.expectedToken] Expected to find '>'.
+//                ^^^
+// [diag.missingFunctionBody] A function body must be provided.
 ''',
     );
   }
@@ -1989,6 +2015,44 @@ mixin M {
   void foo() {
     super[0];
     super[0] = 0;
+  }
+}
+''',
+    );
+  }
+
+  test_mixin_superInvokedNames_indexRead_compoundAssignment() {
+    _assertNotSameSignature(
+      r'''
+mixin M {
+  void foo() {
+    super[0] = 0;
+  }
+}
+''',
+      r'''
+mixin M {
+  void foo() {
+    super[0] += 0;
+  }
+}
+''',
+    );
+  }
+
+  test_mixin_superInvokedNames_indexRead_ifNullAssignment() {
+    _assertNotSameSignature(
+      r'''
+mixin M {
+  void foo() {
+    super[0] = 0;
+  }
+}
+''',
+      r'''
+mixin M {
+  void foo() {
+    super[0] ??= 0;
   }
 }
 ''',
@@ -2132,6 +2196,28 @@ int foo() {
     );
   }
 
+  test_topLevelVariable_abstract_add() {
+    _assertNotSameSignature(
+      r'''
+int foo;
+''',
+      r'''
+abstract int foo;
+''',
+    );
+  }
+
+  test_topLevelVariable_abstract_remove() {
+    _assertNotSameSignature(
+      r'''
+abstract int foo;
+''',
+      r'''
+int foo;
+''',
+    );
+  }
+
   test_topLevelVariable_augment_add() {
     _assertNotSameSignature(
       r'''
@@ -2201,10 +2287,10 @@ var a = 2;
   test_topLevelVariable_withoutType2() {
     _assertNotSameSignature(
       r'''
-var a = 1, b = 2, c, d = 4;;
+var a = 1, b = 2, c, d = 4;
 ''',
       r'''
-var a = 1, b, c = 3, d = 4;;
+var a = 1, b, c = 3, d = 4;
 ''',
     );
   }
@@ -2300,12 +2386,12 @@ typedef F = void Function(double);
   }
 
   void _assertSignature(String oldCode, String newCode, {required bool same}) {
-    var oldResult = parseStringWithErrors(oldCode);
-    var oldUnit = oldResult.unit;
+    var oldResult = parseTestCodeWithDiagnostics(oldCode);
+    var oldUnit = oldResult.unit as CompilationUnitImpl;
     var oldSignature = computeUnlinkedApiSignature(oldUnit);
 
-    var newResult = parseStringWithErrors(newCode);
-    var newUnit = newResult.unit;
+    var newResult = parseTestCodeWithDiagnostics(newCode);
+    var newUnit = newResult.unit as CompilationUnitImpl;
     var newSignature = computeUnlinkedApiSignature(newUnit);
 
     if (same) {

@@ -28,7 +28,7 @@ class EquivalenceVisitorStrategy extends Visitor1Strategy {
   Map<AstClass, String> _classStrategyMembers = {};
   Map<AstField, String> _fieldStrategyMembers = {};
 
-  EquivalenceVisitorStrategy();
+  new();
 
   @override
   String get generatorCommand =>
@@ -404,6 +404,8 @@ class EquivalenceVisitorStrategy extends Visitor1Strategy {
     sb.writeln('''
 $preamble
 
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:kernel/ast.dart';
 import 'package:kernel/src/printer.dart';
 import 'union_find.dart';
@@ -422,7 +424,7 @@ class $visitorName$visitorTypeParameters
     implements Visitor1<$returnType, $argumentType> {
   final $strategyName strategy;
 
-  $visitorName({
+  new({
       this.strategy = const $strategyName()});
 ''');
   }
@@ -838,7 +840,7 @@ EquivalenceResult checkEquivalence(
 /// Custom strategies can be made by extending this strategy and override
 /// methods where exceptions to the structural equivalence are needed.
 class $strategyName {
-  const $strategyName();
+  const new();
 ''');
     _classStrategyMembers.forEach((key, value) {
       sb.write(value);

@@ -3349,6 +3349,7 @@ void Assembler::TsanLoadAcquire(Register dst,
       lx(TMP2, compiler::Address(
                    THR, kTsanAtomic64LoadRuntimeEntry.OffsetFromThread()));
       break;
+    case kFourBytes:
     case kUnsignedFourBytes:
       lx(TMP2, compiler::Address(
                    THR, kTsanAtomic32LoadRuntimeEntry.OffsetFromThread()));
@@ -3362,7 +3363,7 @@ void Assembler::TsanLoadAcquire(Register dst,
   LoadImmediate(TMP2, VMTag::kDartTagId);
   sx(TMP2, compiler::Address(THR, target::Thread::vm_tag_offset()));
 
-  MoveRegister(dst, A0);
+  ExtendValue(dst, A0, size);
 
   subi(SP, FP, registers.SpillSize() + 4 * target::kWordSize);
   PopRegisters(registers);
@@ -4130,6 +4131,18 @@ void Assembler::AddImmediate(Register rd,
   if ((imm == 0) && (rd == rs1)) {
     return;
   }
+#if XLEN > 32
+  if (sz == kFourBytes) {
+    if (IsITypeImm(imm)) {
+      addiw(rd, rs1, imm);
+    } else {
+      ASSERT(rs1 != TMP2);
+      LoadImmediate(TMP2, imm);
+      addw(rd, rs1, TMP2);
+    }
+    return;
+  }
+#endif
   if (IsITypeImm(imm)) {
     addi(rd, rs1, imm);
   } else {
@@ -5573,7 +5586,7 @@ void Assembler::TryAllocateObject(intptr_t cid,
   ASSERT(temp_reg != kNoRegister);
   ASSERT(Utils::IsAligned(instance_size,
                           target::ObjectAlignment::kObjectAlignment));
-  if (FLAG_inline_alloc &&
+  if (UseInlineAllocation() &&
       target::Heap::IsAllocatableInNewSpace(instance_size)) {
     // If this allocation is traced, program will jump to failure path
     // (i.e. the allocation stub) which will allocate the object and trace the
@@ -5613,7 +5626,7 @@ void Assembler::TryAllocateArray(intptr_t cid,
                                  Register end_address,
                                  Register temp1,
                                  Register temp2) {
-  if (FLAG_inline_alloc &&
+  if (UseInlineAllocation() &&
       target::Heap::IsAllocatableInNewSpace(instance_size)) {
     // If this allocation is traced, program will jump to failure path
     // (i.e. the allocation stub) which will allocate the object and trace the

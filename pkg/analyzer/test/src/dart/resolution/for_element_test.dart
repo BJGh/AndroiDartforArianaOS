@@ -26,13 +26,13 @@ main() {
 class ForElementResolutionTest_ForEachPartsWithDeclaration
     extends PubPackageResolutionTest {
   test_async_loopVariable_var_stream() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Stream<int> values) async {
   <int>[await for (var v in values) v];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -46,12 +46,12 @@ ForElement
         element: hasImplicitType isPublic
           type: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: values
       element: <testLibrary>::@function::f::@formalParameter::values
       staticType: Stream<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: v
     element: v@58
     staticType: int
@@ -59,23 +59,23 @@ ForElement
   }
 
   test_sync_loopVariable_var_iterable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   <int>[for (var i in [1]) i]; // 1
   <double>[for (var i in [1.1]) i]; // 2
 }
 ''');
 
-    var node_1 = findNode.simple('i]; // 1');
-    assertResolvedNodeText(node_1, r'''
+    var node1 = result.findNode.simple('i]; // 1');
+    assertResolvedNodeText(node1, r'''
 SimpleIdentifier
   token: i
   element: i@26
   staticType: int
 ''');
 
-    var node_2 = findNode.simple('i]; // 2');
-    assertResolvedNodeText(node_2, r'''
+    var node2 = result.findNode.simple('i]; // 2');
+    assertResolvedNodeText(node2, r'''
 SimpleIdentifier
   token: i
   element: i@65
@@ -88,29 +88,33 @@ SimpleIdentifier
 class ForElementResolutionTest_ForEachPartsWithIdentifier
     extends PubPackageResolutionTest {
   test_async_iterable_stream() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(v, Stream<int> values) async {
   <int>[await for (v in values) v];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: v
+    identifier(v1): SimpleIdentifier
       token: v
       element: <testLibrary>::@function::f::@formalParameter::v
       staticType: dynamic
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: values
       element: <testLibrary>::@function::f::@formalParameter::values
       staticType: Stream<int>
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::v
+      acceptedType: dynamic
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: v
     element: <testLibrary>::@function::f::@formalParameter::v
     staticType: dynamic
@@ -118,7 +122,7 @@ ForElement
   }
 
   test_sync_iterable_contextType_fromInstanceSetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 T g<T>() => throw 0;
 
 class C {
@@ -130,18 +134,19 @@ class C {
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: x
+    identifier(v1): SimpleIdentifier
       token: x
       element: <testLibrary>::@class::C::@setter::x
       staticType: int
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -153,15 +158,18 @@ ForElement
       staticType: Iterable<int>
       typeArgumentTypes
         Iterable<int>
+    write: SetterInvocationResolution
+      element: <testLibrary>::@class::C::@setter::x
+      acceptedType: int
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_sync_iterable_contextType_fromTopLevelSetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 T g<T>() => throw 0;
 
 set x(int value) {}
@@ -171,18 +179,19 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: x
+    identifier(v1): SimpleIdentifier
       token: x
       element: <testLibrary>::@setter::x
       staticType: int
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -194,36 +203,43 @@ ForElement
       staticType: Iterable<int>
       typeArgumentTypes
         Iterable<int>
+    write: SetterInvocationResolution
+      element: <testLibrary>::@setter::x
+      acceptedType: int
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_sync_iterable_list() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(v, List<int> values) {
   [for (v in values) v];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: v
+    identifier(v1): SimpleIdentifier
       token: v
       element: <testLibrary>::@function::f::@formalParameter::v
       staticType: dynamic
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: values
       element: <testLibrary>::@function::f::@formalParameter::values
       staticType: List<int>
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::v
+      acceptedType: dynamic
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: v
     element: <testLibrary>::@function::f::@formalParameter::v
     staticType: dynamic
@@ -231,7 +247,7 @@ ForElement
   }
 
   test_sync_iterable_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A implements Iterable<int> {
   void f(v) {
     [for (v in super) 0];
@@ -240,49 +256,54 @@ abstract class A implements Iterable<int> {
   }
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: v
+    identifier(v1): SimpleIdentifier
       token: v
       element: <testLibrary>::@class::A::@method::f::@formalParameter::v
       staticType: dynamic
     inKeyword: in
-    iterable: SuperExpression
+    iterable2: SuperExpression
       superKeyword: super
       staticType: A
+    write: VariableWriteResolution
+      element: <testLibrary>::@class::A::@method::f::@formalParameter::v
+      acceptedType: dynamic
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_sync_iterable_topLevelVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 int v = 0;
 main() {
   <int>[for (v in [1, 2, 3]) v];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: v
+    identifier(v1): SimpleIdentifier
       token: v
       element: <testLibrary>::@setter::v
       staticType: int
     inKeyword: in
-    iterable: ListLiteral
+    iterable2: ListLiteral
       leftBracket: [
-      elements
+      elements2
         IntegerLiteral
           literal: 1
           staticType: int
@@ -294,8 +315,11 @@ ForElement
           staticType: int
       rightBracket: ]
       staticType: List<int>
+    write: SetterInvocationResolution
+      element: <testLibrary>::@setter::v
+      acceptedType: int
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: v
     element: <testLibrary>::@getter::v
     staticType: int
@@ -303,29 +327,33 @@ ForElement
   }
 
   test_sync_scope_iterable_uses_outer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(dynamic v) {
   [for (v in v) 0];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForEachPartsWithIdentifier
-    identifier: SimpleIdentifier
+    identifier2: v
+    identifier(v1): SimpleIdentifier
       token: v
       element: <testLibrary>::@function::f::@formalParameter::v
       staticType: dynamic
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: v
       element: <testLibrary>::@function::f::@formalParameter::v
       staticType: dynamic
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::v
+      acceptedType: dynamic
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
@@ -336,14 +364,14 @@ ForElement
 class ForElementResolutionTest_ForEachPartsWithPattern
     extends PubPackageResolutionTest {
   test_sync_iterable_contextType_patternVariable_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   [for (var (int a) in g()) a];
 }
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -365,7 +393,7 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -378,7 +406,7 @@ ForElement
       typeArgumentTypes
         Iterable<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@28
     staticType: int
@@ -386,14 +414,14 @@ ForElement
   }
 
   test_sync_iterable_contextType_patternVariable_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   [for (var (a) in g()) a];
 }
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -411,7 +439,7 @@ ForElement
       rightParenthesis: )
       matchedValueType: Object?
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -424,7 +452,7 @@ ForElement
       typeArgumentTypes
         Iterable<Object?>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@24
     staticType: Object?
@@ -432,12 +460,12 @@ ForElement
   }
 
   test_sync_iterable_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x) {
   [for (var (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -455,12 +483,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: dynamic
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: dynamic
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@25
     staticType: dynamic
@@ -468,12 +496,12 @@ ForElement
   }
 
   test_sync_iterable_list() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(List<int> x) {
   [for (var (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -491,12 +519,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: List<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@35
     staticType: int
@@ -504,14 +532,14 @@ ForElement
   }
 
   test_sync_iterable_object() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) {
   [for (var (a) in x) a];
 //                 ^
 // [diag.forInOfInvalidType] The type 'Object' used in the 'for' loop must implement 'Iterable'.
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -529,12 +557,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: InvalidType
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@32
     staticType: InvalidType
@@ -542,12 +570,12 @@ ForElement
   }
 
   test_sync_keyword_final_patternVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(List<int> x) {
   [for (final (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -565,12 +593,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: List<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@37
     staticType: int
@@ -578,12 +606,12 @@ ForElement
   }
 
   test_sync_pattern_patternVariable_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(List<int> x) {
   [for (var (num a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -605,12 +633,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: List<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@39
     staticType: num
@@ -618,11 +646,11 @@ ForElement
   }
 
   test_sync_scope_topLevelVariableInitializer_uses_outer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = [0, 1, 2];
 final y = [ for (var (x) in x) x ];
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -640,12 +668,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@getter::x
       staticType: List<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: x
     element: x@43
     staticType: int
@@ -653,11 +681,11 @@ ForElement
   }
 
   test_sync_topLevelVariableInitializer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = [0, 1, 2];
 final y = [ for (var (a) in x) a ];
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -675,12 +703,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@getter::x
       staticType: List<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@43
     staticType: int
@@ -692,14 +720,14 @@ ForElement
 class ForElementResolutionTest_ForEachPartsWithPattern_await
     extends PubPackageResolutionTest {
   test_async_iterable_contextType_patternVariable_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() async {
   [await for (var (int a) in g()) a];
 }
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -722,7 +750,7 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -735,7 +763,7 @@ ForElement
       typeArgumentTypes
         Stream<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@40
     staticType: int
@@ -743,14 +771,14 @@ ForElement
   }
 
   test_async_iterable_contextType_patternVariable_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() async {
   [await for (var (a) in g()) a];
 }
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -769,7 +797,7 @@ ForElement
       rightParenthesis: )
       matchedValueType: Object?
     inKeyword: in
-    iterable: MethodInvocation
+    iterable2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -782,7 +810,7 @@ ForElement
       typeArgumentTypes
         Stream<Object?>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@36
     staticType: Object?
@@ -790,12 +818,12 @@ ForElement
   }
 
   test_async_iterable_dynamic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x) async {
   [await for (var (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -814,12 +842,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: dynamic
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: dynamic
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@37
     staticType: dynamic
@@ -827,14 +855,14 @@ ForElement
   }
 
   test_async_iterable_object() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) async {
   [await for (var (a) in x) a];
 //                       ^
 // [diag.forInOfInvalidType] The type 'Object' used in the 'for' loop must implement 'Iterable'.
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -853,12 +881,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: InvalidType
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@44
     staticType: InvalidType
@@ -866,12 +894,12 @@ ForElement
   }
 
   test_async_iterable_stream() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Stream<int> x) async {
   [await for (var (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -890,12 +918,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Stream<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@49
     staticType: int
@@ -903,12 +931,12 @@ ForElement
   }
 
   test_async_keyword_final_patternVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Stream<int> x) async {
   [await for (final (a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -927,12 +955,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Stream<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@51
     staticType: int
@@ -940,12 +968,12 @@ ForElement
   }
 
   test_async_pattern_patternVariable_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Stream<int> x) async {
   [await for (var (num a) in x) a];
 }
 ''');
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   awaitKeyword: await
@@ -968,12 +996,12 @@ ForElement
       rightParenthesis: )
       matchedValueType: int
     inKeyword: in
-    iterable: SimpleIdentifier
+    iterable2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Stream<int>
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@53
     staticType: num
@@ -985,16 +1013,16 @@ ForElement
 class ForElementResolutionTest_ForPartsWithDeclarations
     extends PubPackageResolutionTest {
   test_condition_rewrite() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(bool Function() b) {
   <int>[for (; b(); ) 0];
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('b()');
+    var node = result.findNode.functionExpressionInvocation('b()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: bool Function()
@@ -1008,23 +1036,23 @@ FunctionExpressionInvocation
   }
 
   test_scope_initializerVariable_visibleInBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   <int>[for (var i = 1; i < 10; i += 3) i]; // 1
   <double>[for (var i = 1.1; i < 10; i += 5) i]; // 2
 }
 ''');
 
-    var node_1 = findNode.simple('i]; // 1');
-    assertResolvedNodeText(node_1, r'''
+    var node1 = result.findNode.simple('i]; // 1');
+    assertResolvedNodeText(node1, r'''
 SimpleIdentifier
   token: i
   element: i@26
   staticType: int
 ''');
 
-    var node_2 = findNode.simple('i]; // 2');
-    assertResolvedNodeText(node_2, r'''
+    var node2 = result.findNode.simple('i]; // 2');
+    assertResolvedNodeText(node2, r'''
 SimpleIdentifier
   token: i
   element: i@78
@@ -1033,7 +1061,7 @@ SimpleIdentifier
   }
 
   test_scope_variables_initializer_uses_outer_sameName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int i) {
   [for (var i = i; i < 1; i++) i];
 //          ^
@@ -1043,7 +1071,7 @@ void f(int i) {
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1055,7 +1083,7 @@ ForElement
         VariableDeclaration
           name: i
           equals: =
-          initializer: SimpleIdentifier
+          initializer2: SimpleIdentifier
             token: i
             element: i@28
             staticType: dynamic
@@ -1063,7 +1091,20 @@ ForElement
             element: hasImplicitType isPublic
               type: dynamic
     leftSeparator: ;
-    condition: BinaryExpression
+    condition2: BinaryOperatorInvocation
+      leftOperand: SimpleIdentifier
+        token: i
+        element: i@28
+        staticType: dynamic
+      operator: <
+      rightOperand: IntegerLiteral
+        literal: 1
+        correspondingParameter: <null>
+        staticType: int
+      binaryOperator: lessThan
+      element: <null>
+      staticType: dynamic
+    condition(v1): BinaryExpression
       leftOperand: SimpleIdentifier
         token: i
         element: i@28
@@ -1077,7 +1118,21 @@ ForElement
       staticInvokeType: null
       staticType: dynamic
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixIncrement
+        target: UnqualifiedNameAssignmentTarget
+          name: i
+          read: VariableReadResolution
+            element: i@28
+            type: dynamic
+          write: VariableWriteResolution
+            element: i@28
+            acceptedType: dynamic
+        operator: ++
+        element: <null>
+        operatorResultType: dynamic
+        staticType: dynamic
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: i
@@ -1091,7 +1146,7 @@ ForElement
         element: <null>
         staticType: dynamic
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: i
     element: i@28
     staticType: dynamic
@@ -1099,13 +1154,13 @@ ForElement
   }
 
   test_scope_variables_uses_outer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int i) {
   [for (var i2 = i; i2 < 10; ++i2) i2];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1117,7 +1172,7 @@ ForElement
         VariableDeclaration
           name: i2
           equals: =
-          initializer: SimpleIdentifier
+          initializer2: SimpleIdentifier
             token: i
             element: <testLibrary>::@function::f::@formalParameter::i
             staticType: int
@@ -1125,7 +1180,20 @@ ForElement
             element: hasImplicitType isPublic
               type: int
     leftSeparator: ;
-    condition: BinaryExpression
+    condition2: BinaryOperatorInvocation
+      leftOperand: SimpleIdentifier
+        token: i2
+        element: i2@28
+        staticType: int
+      operator: <
+      rightOperand: IntegerLiteral
+        literal: 10
+        correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+        staticType: int
+      binaryOperator: lessThan
+      element: dart:core::@class::num::@method::<
+      staticType: bool
+    condition(v1): BinaryExpression
       leftOperand: SimpleIdentifier
         token: i2
         element: i2@28
@@ -1139,7 +1207,21 @@ ForElement
       staticInvokeType: bool Function(num)
       staticType: bool
     rightSeparator: ;
-    updaters
+    updaters2
+      PrefixIncrement
+        operator: ++
+        target: UnqualifiedNameAssignmentTarget
+          name: i2
+          read: VariableReadResolution
+            element: i2@28
+            type: int
+          write: VariableWriteResolution
+            element: i2@28
+            acceptedType: int
+        element: dart:core::@class::num::@method::+
+        operatorResultType: int
+        staticType: int
+    updaters(v1)
       PrefixExpression
         operator: ++
         operand: SimpleIdentifier
@@ -1153,7 +1235,7 @@ ForElement
         element: dart:core::@class::num::@method::+
         staticType: int
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: i2
     element: i2@28
     staticType: int
@@ -1161,13 +1243,13 @@ ForElement
   }
 
   test_scope_variables_visibleInNextVariableInitializer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   [for (var i = 0, j = i; j < 1; j++) j];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1179,7 +1261,7 @@ ForElement
         VariableDeclaration
           name: i
           equals: =
-          initializer: IntegerLiteral
+          initializer2: IntegerLiteral
             literal: 0
             staticType: int
           declaredFragment: isPublic i@23
@@ -1188,7 +1270,7 @@ ForElement
         VariableDeclaration
           name: j
           equals: =
-          initializer: SimpleIdentifier
+          initializer2: SimpleIdentifier
             token: i
             element: i@23
             staticType: int
@@ -1196,7 +1278,20 @@ ForElement
             element: hasImplicitType isPublic
               type: int
     leftSeparator: ;
-    condition: BinaryExpression
+    condition2: BinaryOperatorInvocation
+      leftOperand: SimpleIdentifier
+        token: j
+        element: j@30
+        staticType: int
+      operator: <
+      rightOperand: IntegerLiteral
+        literal: 1
+        correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+        staticType: int
+      binaryOperator: lessThan
+      element: dart:core::@class::num::@method::<
+      staticType: bool
+    condition(v1): BinaryExpression
       leftOperand: SimpleIdentifier
         token: j
         element: j@30
@@ -1210,7 +1305,21 @@ ForElement
       staticInvokeType: bool Function(num)
       staticType: bool
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixIncrement
+        target: UnqualifiedNameAssignmentTarget
+          name: j
+          read: VariableReadResolution
+            element: j@30
+            type: int
+          write: VariableWriteResolution
+            element: j@30
+            acceptedType: int
+        operator: ++
+        element: dart:core::@class::num::@method::+
+        operatorResultType: int
+        staticType: int
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: j
@@ -1224,7 +1333,7 @@ ForElement
         element: dart:core::@class::num::@method::+
         staticType: int
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: j
     element: j@30
     staticType: int
@@ -1236,20 +1345,20 @@ ForElement
 class ForElementResolutionTest_ForPartsWithExpression
     extends PubPackageResolutionTest {
   test_initialization_patternAssignment() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   int a;
   [for ((a) = 0;;) a];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
   leftParenthesis: (
   forLoopParts: ForPartsWithExpression
-    initialization: PatternAssignment
+    initialization2: PatternAssignment
       pattern: ParenthesizedPattern
         leftParenthesis: (
         pattern: AssignedVariablePattern
@@ -1259,7 +1368,7 @@ ForElement
         rightParenthesis: )
         matchedValueType: int
       equals: =
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       patternTypeSchema: int
@@ -1267,7 +1376,7 @@ ForElement
     leftSeparator: ;
     rightSeparator: ;
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: a
     element: a@17
     staticType: int
@@ -1275,7 +1384,7 @@ ForElement
   }
 
   test_update_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     [for (;; super) 0];
@@ -1285,7 +1394,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1293,12 +1402,12 @@ ForElement
   forLoopParts: ForPartsWithExpression
     leftSeparator: ;
     rightSeparator: ;
-    updaters
+    updaters2
       SuperExpression
         superKeyword: super
         staticType: A
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
@@ -1309,13 +1418,13 @@ ForElement
 class ForElementResolutionTest_ForPartsWithPattern
     extends PubPackageResolutionTest {
   test_scope_body_uses_outer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, bool) x) {
   [for (var (a, b) = x; b; a--) x];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1345,18 +1454,32 @@ ForElement
         rightParenthesis: )
         matchedValueType: (int, bool)
       equals: =
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: x
         element: <testLibrary>::@function::f::@formalParameter::x
         staticType: (int, bool)
       patternTypeSchema: (_, _)
     leftSeparator: ;
-    condition: SimpleIdentifier
+    condition2: SimpleIdentifier
       token: b
       element: b@40
       staticType: bool
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixDecrement
+        target: UnqualifiedNameAssignmentTarget
+          name: a
+          read: VariableReadResolution
+            element: a@37
+            type: int
+          write: VariableWriteResolution
+            element: a@37
+            acceptedType: int
+        operator: --
+        element: dart:core::@class::num::@method::-
+        operatorResultType: int
+        staticType: int
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: a
@@ -1370,7 +1493,7 @@ ForElement
         element: dart:core::@class::num::@method::-
         staticType: int
   rightParenthesis: )
-  body: SimpleIdentifier
+  body2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: (int, bool)
@@ -1378,13 +1501,13 @@ ForElement
   }
 
   test_scope_patternVariables() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, bool) x) {
   [for (var (a, b) = x; b; a--) 0];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1414,18 +1537,32 @@ ForElement
         rightParenthesis: )
         matchedValueType: (int, bool)
       equals: =
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: x
         element: <testLibrary>::@function::f::@formalParameter::x
         staticType: (int, bool)
       patternTypeSchema: (_, _)
     leftSeparator: ;
-    condition: SimpleIdentifier
+    condition2: SimpleIdentifier
       token: b
       element: b@40
       staticType: bool
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixDecrement
+        target: UnqualifiedNameAssignmentTarget
+          name: a
+          read: VariableReadResolution
+            element: a@37
+            type: int
+          write: VariableWriteResolution
+            element: a@37
+            acceptedType: int
+        operator: --
+        element: dart:core::@class::num::@method::-
+        operatorResultType: int
+        staticType: int
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: a
@@ -1439,20 +1576,20 @@ ForElement
         element: dart:core::@class::num::@method::-
         staticType: int
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_scope_patternVariables_shadows_outer_in_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, bool) a) {
   [for (var (a, b) = a; b; a--) 0];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1482,18 +1619,32 @@ ForElement
         rightParenthesis: )
         matchedValueType: InvalidType
       equals: =
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@37
         staticType: InvalidType
       patternTypeSchema: (_, _)
     leftSeparator: ;
-    condition: SimpleIdentifier
+    condition2: SimpleIdentifier
       token: b
       element: b@40
       staticType: InvalidType
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixDecrement
+        target: UnqualifiedNameAssignmentTarget
+          name: a
+          read: VariableReadResolution
+            element: a@37
+            type: InvalidType
+          write: VariableWriteResolution
+            element: a@37
+            acceptedType: InvalidType
+        operator: --
+        element: <null>
+        operatorResultType: dynamic
+        staticType: InvalidType
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: a
@@ -1507,20 +1658,20 @@ ForElement
         element: <null>
         staticType: InvalidType
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_scope_variables_uses_outer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, bool) a) {
   [for (var (a2, b) = a; b; a2--) 0];
 }
 ''');
 
-    var node = findNode.singleForElement;
+    var node = result.findNode.singleForElement;
     assertResolvedNodeText(node, r'''
 ForElement
   forKeyword: for
@@ -1550,18 +1701,32 @@ ForElement
         rightParenthesis: )
         matchedValueType: (int, bool)
       equals: =
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: <testLibrary>::@function::f::@formalParameter::a
         staticType: (int, bool)
       patternTypeSchema: (_, _)
     leftSeparator: ;
-    condition: SimpleIdentifier
+    condition2: SimpleIdentifier
       token: b
       element: b@41
       staticType: bool
     rightSeparator: ;
-    updaters
+    updaters2
+      PostfixDecrement
+        target: UnqualifiedNameAssignmentTarget
+          name: a2
+          read: VariableReadResolution
+            element: a2@37
+            type: int
+          write: VariableWriteResolution
+            element: a2@37
+            acceptedType: int
+        operator: --
+        element: dart:core::@class::num::@method::-
+        operatorResultType: int
+        staticType: int
+    updaters(v1)
       PostfixExpression
         operand: SimpleIdentifier
           token: a2
@@ -1575,7 +1740,7 @@ ForElement
         element: dart:core::@class::num::@method::-
         staticType: int
   rightParenthesis: )
-  body: IntegerLiteral
+  body2: IntegerLiteral
     literal: 0
     staticType: int
 ''');

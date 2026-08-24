@@ -16,65 +16,8 @@ main() {
 
 @reflectiveTest
 class ImportPrefixResolutionTest extends PubPackageResolutionTest {
-  test_asExpression_expressionStatement() async {
-    await resolveTestCodeWithDiagnostics(r'''
-import 'dart:async' as p;
-
-main() {
-  p; // use
-//^
-// [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
-}
-''');
-
-    var node = findNode.simple('p; // use');
-    assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: p
-  element: <testLibraryFragment>::@prefix::p
-  staticType: InvalidType
-''');
-  }
-
-  test_asExpression_forIn_iterable() async {
-    await resolveTestCodeWithDiagnostics(r'''
-import 'dart:async' as p;
-
-main() {
-  for (var x in p) {}
-//         ^
-// [diag.unusedLocalVariable] The value of the local variable 'x' isn't used.
-//              ^
-// [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
-}
-''');
-
-    var node = findNode.singleForStatement;
-    assertResolvedNodeText(node, r'''
-ForStatement
-  forKeyword: for
-  leftParenthesis: (
-  forLoopParts: ForEachPartsWithDeclaration
-    loopVariable: DeclaredIdentifier
-      keyword: var
-      name: x
-      declaredFragment: isPublic x@47
-        element: hasImplicitType isPublic
-          type: InvalidType
-    inKeyword: in
-    iterable: SimpleIdentifier
-      token: p
-      element: <testLibraryFragment>::@prefix::p
-      staticType: InvalidType
-  rightParenthesis: )
-  body: Block
-    leftBracket: {
-    rightBracket: }
-''');
-  }
-
-  test_asExpression_instanceCreation_argument() async {
-    await resolveTestCodeWithDiagnostics(r'''
+  test_asExpression_constructorInvocation_argument() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:async' as p;
 
 class C<T> {
@@ -90,16 +33,38 @@ main() {
 }
 ''');
 
-    var node = findNode.singleInstanceCreationExpression;
+    var node = result.findNode.singleConstructorInvocation;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: new
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: C
+      element: <testLibrary>::@class::C
+      type: C<dynamic>
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::C::@constructor::new
+      substitution: {T: dynamic}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      SimpleIdentifier
+        token: p
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::C::@constructor::new::@formalParameter::a
+          substitution: {T: dynamic}
+        element: <testLibraryFragment>::@prefix::p
+        staticType: InvalidType
+    rightParenthesis: )
+  staticType: C<dynamic>
+V1: InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType
       name: C
       element: <testLibrary>::@class::C
       type: C<dynamic>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::C::@constructor::new
       substitution: {T: dynamic}
   argumentList: ArgumentList
@@ -107,7 +72,7 @@ InstanceCreationExpression
     arguments
       SimpleIdentifier
         token: p
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::C::@constructor::new::@formalParameter::a
           substitution: {T: dynamic}
         element: <testLibraryFragment>::@prefix::p
@@ -117,8 +82,65 @@ InstanceCreationExpression
 ''');
   }
 
+  test_asExpression_expressionStatement() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+import 'dart:async' as p;
+
+main() {
+  p; // use
+//^
+// [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
+}
+''');
+
+    var node = result.findNode.simple('p; // use');
+    assertResolvedNodeText(node, r'''
+SimpleIdentifier
+  token: p
+  element: <testLibraryFragment>::@prefix::p
+  staticType: InvalidType
+''');
+  }
+
+  test_asExpression_forIn_iterable() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+import 'dart:async' as p;
+
+main() {
+  for (var x in p) {}
+//         ^
+// [diag.unusedLocalVariable] The value of the local variable 'x' isn't used.
+//              ^
+// [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
+}
+''');
+
+    var node = result.findNode.singleForStatement;
+    assertResolvedNodeText(node, r'''
+ForStatement
+  forKeyword: for
+  leftParenthesis: (
+  forLoopParts: ForEachPartsWithDeclaration
+    loopVariable: DeclaredIdentifier
+      keyword: var
+      name: x
+      declaredFragment: isPublic x@47
+        element: hasImplicitType isPublic
+          type: InvalidType
+    inKeyword: in
+    iterable2: SimpleIdentifier
+      token: p
+      element: <testLibraryFragment>::@prefix::p
+      staticType: InvalidType
+  rightParenthesis: )
+  body: Block
+    leftBracket: {
+    rightBracket: }
+''');
+  }
+
   test_asPrefix_methodInvocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'dart:math' as p;
 
 main() {
@@ -126,12 +148,37 @@ main() {
 }
 ''');
 
-    var node = findNode.simple('p.max');
+    var node = result.findNode.simple('p.max');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: p
   element: <testLibraryFragment>::@prefix::p
   staticType: null
+''');
+  }
+
+  test_declaration() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// ignore: unused_import
+import 'dart:async' as p;
+''');
+
+    var node = result.findNode.singleImportDirective;
+    assertResolvedNodeText(node, r'''
+ImportDirective
+  importKeyword: import
+  uri: SimpleStringLiteral
+    literal: 'dart:async'
+  asKeyword: as
+  prefixName: p
+  semicolon: ;
+  prefix: SimpleIdentifier
+    token: p
+    element: <testLibraryFragment>::@prefix::p
+    staticType: null
+  libraryImport: LibraryImport
+    uri: DirectiveUriWithLibrary
+      uri: dart:async
 ''');
   }
 
@@ -166,7 +213,7 @@ f() {
 ''');
   }
 
-  test_wildcardResolution_preWildcards() async {
+  test_wildcardResolution_beforeWildcardVariables() async {
     newFile('$testPackageLibPath/a.dart', r'''
 extension ExtendedString on String {
   bool get stringExt => true;
@@ -181,9 +228,8 @@ extension ExtendedString on String {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: wildcard-variables
 
 import 'a.dart' as _;
 import 'b.dart' as _;
@@ -196,7 +242,7 @@ f() {
 ''');
 
     // `_` is bound so `a` resolves to the int declared in `a.dart`.
-    var node = findNode.simple('a;');
+    var node = result.findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a

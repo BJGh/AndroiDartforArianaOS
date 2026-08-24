@@ -107,7 +107,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/exception/exception.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/instrumentation/instrumentation.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options.dart';
+import 'package:analyzer/src/analysis_options/analysis_options.dart';
 import 'package:analyzer/src/dart/analysis/status.dart' as analysis;
 import 'package:analyzer/src/generated/sdk.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
@@ -123,16 +123,17 @@ import 'package:meta/meta.dart';
 import 'package:telemetry/crash_reporting.dart';
 import 'package:watcher/watcher.dart';
 
-/// A function that can be executed to create a handler for a request.
-typedef HandlerGenerator =
-    LegacyHandler Function(
-      LegacyAnalysisServer,
-      Request,
-      CancellationToken,
-      OperationPerformanceImpl,
-    );
+typedef AnalysisOptionsBuilderUpdater = void Function(
+  AnalysisOptionsBuilder analysisOptionsBuilder,
+);
 
-typedef OptionUpdater = void Function(AnalysisOptionsImpl options);
+/// A function that can be executed to create a handler for a request.
+typedef HandlerGenerator = LegacyHandler Function(
+  LegacyAnalysisServer,
+  Request,
+  CancellationToken,
+  OperationPerformanceImpl,
+);
 
 /// Various IDE options.
 class AnalysisServerOptions {
@@ -382,7 +383,7 @@ class LegacyAnalysisServer extends AnalysisServer {
 
   /// Initialize a newly created server to receive requests from and send
   /// responses to the given [channel].
-  LegacyAnalysisServer(
+  new(
     this.channel,
     ResourceProvider baseResourceProvider,
     AnalysisServerOptions options,
@@ -420,6 +421,7 @@ class LegacyAnalysisServer extends AnalysisServer {
          NotificationManager(channel, baseResourceProvider.pathContext),
          usePlugins: options.usePlugins,
        ) {
+    notificationManager.analysisServer = this;
     var contextManagerCallbacks = ServerContextManagerCallbacks(
       this,
       resourceProvider,
@@ -481,15 +483,13 @@ class LegacyAnalysisServer extends AnalysisServer {
   set clientCapabilities(ServerSetClientCapabilitiesParams capabilities) {
     _clientCapabilities = capabilities;
 
-    // TODO(dantup): If we can confirm that IntelliJ did not ship code that
-    //  sets supportsUris=true, then we may be able to entirely remove the
-    //  uriConverter and all the calls through it.
     if (capabilities.supportsUris ?? false) {
       // URI support implies LSP, as that's the only way to access (and get
       // change notifications for) custom-scheme files.
       uriConverter = ClientUriConverter.withVirtualFileSupport(
         resourceProvider.pathContext,
       );
+      // supportsUris implies LSP-over-Legacy support.
       initializeLspOverLegacy();
     } else {
       uriConverter = ClientUriConverter.noop(resourceProvider.pathContext);
@@ -497,6 +497,8 @@ class LegacyAnalysisServer extends AnalysisServer {
 
     if (capabilities.lspCapabilities
         case Map<Object?, Object?> lspCapabilities) {
+      initializeLspOverLegacy();
+
       // First validate the capabilities so we can get a better message if it's
       // invalid.
       var reporter = lsp.LspJsonReporter();
@@ -516,6 +518,10 @@ class LegacyAnalysisServer extends AnalysisServer {
   @override
   lsp.LspClientCapabilities get editorClientCapabilities =>
       _editorClientCapabilities;
+
+  @override
+  NotificationManager get notificationManager =>
+      super.notificationManager as NotificationManager;
 
   /// The [Future] that completes when analysis is complete.
   ///
@@ -552,9 +558,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     return (Uri uri) async {
       var requestId = '${nextServerRequestId++}';
       await sendRequest(
-        ServerOpenUrlRequestParams(
-          '$uri',
-        ).toRequest(requestId, clientUriConverter: uriConverter),
+        ServerOpenUrlRequestParams('$uri')
+            .toRequest(requestId, clientUriConverter: uriConverter),
       );
     };
   }
@@ -726,6 +731,9 @@ class LegacyAnalysisServer extends AnalysisServer {
   /// This only applies to LSP over the legacy protocol and not DTD, since we
   /// do not want a DTD-LSP client to trigger LSP notifications going to the
   /// legacy protocol client, only the legacy protocol client should do that.
+  ///
+  /// For convenience, this method can be called multiple times from different
+  /// code paths.
   void initializeLspOverLegacy() {
     sendLspNotifications = true;
   }
@@ -743,9 +751,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
 
     channel.sendNotification(
-      LspNotificationParams(
-        notification,
-      ).toNotification(clientUriConverter: uriConverter),
+      LspNotificationParams(notification)
+          .toNotification(clientUriConverter: uriConverter),
     );
   }
 
@@ -1103,28 +1110,31 @@ class LegacyAnalysisServer extends AnalysisServer {
     });
   }
 
-  /// Use the given updaters to update the values of the options in every
-  /// existing analysis context.
-  void updateOptions(List<OptionUpdater> optionUpdaters) {
+  /// Use the given updaters to configure the analysis options builders for
+  /// existing analysis contexts.
+  void updateOptions(List<AnalysisOptionsBuilderUpdater> builderUpdaters) {
     // TODO(scheglov): implement for the new analysis driver
     //    //
     //    // Update existing contexts.
     //    //
     //    for (AnalysisContext context in analysisContexts) {
-    //      AnalysisOptionsImpl options =
-    //          new AnalysisOptionsImpl.from(context.analysisOptions);
-    //      optionUpdaters.forEach((OptionUpdater optionUpdater) {
-    //        optionUpdater(options);
+    //      var builder = AnalysisOptionsBuilder.from(context.analysisOptions);
+    //      builderUpdaters.forEach((
+    //        AnalysisOptionsBuilderUpdater builderUpdater,
+    //      ) {
+    //        builderUpdater(builder);
     //      });
-    //      context.analysisOptions = options;
+    //      context.analysisOptions = builder.build();
     //      // `TODO`(brianwilkerson) As far as I can tell, this doesn't cause analysis
     //      // to be scheduled for this context.
     //    }
     //    //
     //    // Update the defaults used to create new contexts.
     //    //
-    //    optionUpdaters.forEach((OptionUpdater optionUpdater) {
-    //      optionUpdater(defaultContextOptions);
+    //    builderUpdaters.forEach((
+    //      AnalysisOptionsBuilderUpdater builderUpdater,
+    //    ) {
+    //      builderUpdater(defaultContextOptions);
     //    });
   }
 
@@ -1177,9 +1187,8 @@ class LegacyAnalysisServer extends AnalysisServer {
     }
     var analysis = AnalysisStatus(isAnalyzing);
     channel.sendNotification(
-      ServerStatusParams(
-        analysis: analysis,
-      ).toNotification(clientUriConverter: uriConverter),
+      ServerStatusParams(analysis: analysis)
+          .toNotification(clientUriConverter: uriConverter),
     );
   }
 
@@ -1228,7 +1237,7 @@ class ServerContextManagerCallbacks
   @override
   final LegacyAnalysisServer analysisServer;
 
-  ServerContextManagerCallbacks(this.analysisServer, super.resourceProvider);
+  new(this.analysisServer, super.resourceProvider);
 
   AbstractNotificationManager get _notificationManager =>
       analysisServer.notificationManager;
@@ -1401,7 +1410,7 @@ class ServerException {
   final StackTrace stackTrace;
   final bool fatal;
 
-  ServerException(this.message, this.exception, this.stackTrace, this.fatal);
+  new(this.message, this.exception, this.stackTrace, this.fatal);
 
   @override
   String toString() => message;

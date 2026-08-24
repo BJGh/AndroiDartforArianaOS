@@ -81,14 +81,14 @@ f(Object o) {
   }
 
   test_metadata() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 const int ann = 1;
 class C {}
 @ann
 extension E on C {}
 ''');
-    var annotation = findNode.annotation('@ann');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@ann');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -108,14 +108,14 @@ extension E2 on C {}
   }
 
   test_this_type_interface() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   void foo() {
     this;
   }
 }
 ''');
-    var node = findNode.this_('this;');
+    var node = result.findNode.this_('this;');
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
@@ -124,14 +124,14 @@ ThisExpression
   }
 
   test_this_type_typeParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on T {
   void foo() {
     this;
   }
 }
 ''');
-    var node = findNode.this_('this;');
+    var node = result.findNode.this_('this;');
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
@@ -140,14 +140,14 @@ ThisExpression
   }
 
   test_this_type_typeParameter_withBound() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T extends Object> on T {
   void foo() {
     this;
   }
 }
 ''');
-    var node = findNode.this_('this;');
+    var node = result.findNode.this_('this;');
     assertResolvedNodeText(node, r'''
 ThisExpression
   thisKeyword: this
@@ -216,7 +216,7 @@ extension E on C {
   int get a => 1;
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart';
 
 class E {}
@@ -224,8 +224,8 @@ f(C c) {
   c.a;
 }
 ''');
-    var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('c.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
@@ -251,7 +251,7 @@ extension E on Object {
 class E {}
 class A {}
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib1.dart';
 import 'lib2.dart';
 
@@ -259,8 +259,8 @@ f(Object o, A a) {
   o.a;
 }
 ''');
-    var access = findNode.prefixed('o.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('o.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: o
@@ -283,7 +283,7 @@ extension E on C {
   int get a => 1;
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart';
 
 f(C c) {
@@ -293,8 +293,8 @@ f(C c) {
   c.a;
 }
 ''');
-    var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('c.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
@@ -311,7 +311,7 @@ PrefixedIdentifier
   }
 
   test_visibility_shadowed_byLocal_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   int get a => 1;
@@ -323,8 +323,8 @@ f(C c) {
   c.a;
 }
 ''');
-    var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('c.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
@@ -347,7 +347,7 @@ extension E on C {
   int get a => 1;
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart';
 
 double E = 2.71;
@@ -355,8 +355,8 @@ f(C c) {
   c.a;
 }
 ''');
-    var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('c.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
@@ -409,12 +409,12 @@ f(p.C c) {
 @reflectiveTest
 class ExtensionMethodsExtendedTypeTest extends PubPackageResolutionTest {
   test_named_generic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C<T> {}
 extension E<S> on C<S> {}
 ''');
-    var extendedType = findNode.typeAnnotation('C<S>');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('C<S>');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: C
   typeArguments: TypeArgumentList
@@ -431,11 +431,11 @@ NamedType
   }
 
   test_named_onDynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on dynamic {}
 ''');
-    var extendedType = findNode.typeAnnotation('dynamic');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('dynamic');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: dynamic
   element: dynamic
@@ -444,12 +444,12 @@ NamedType
   }
 
   test_named_onEnum() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A {a, b, c}
 extension E on A {}
 ''');
-    var extendedType = findNode.typeAnnotation('A {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('A {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: A
   element: <testLibrary>::@enum::A
@@ -458,11 +458,11 @@ NamedType
   }
 
   test_named_onFunctionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {}
 ''');
-    var extendedType = findNode.typeAnnotation('Function');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('Function');
+    assertResolvedNodeText(node, r'''
 GenericFunctionType
   returnType: NamedType
     name: int
@@ -470,6 +470,18 @@ GenericFunctionType
     type: int
   functionKeyword: Function
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        declaredFragment: <testLibraryFragment> null@null
+          element: isPrivate
+            type: int
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -498,10 +510,10 @@ class C { }
 extension E on C {}
 ''';
 
-    await resolveTestCodeWithDiagnostics(code);
+    var result = await resolveTestCodeWithDiagnostics(code);
 
-    var extendedType = findNode.typeAnnotation('C {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('C {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: C
   element: <testLibrary>::@class::C
@@ -510,13 +522,13 @@ NamedType
   }
 
   test_named_onMixin() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin M {
 }
 extension E on M {}
 ''');
-    var extendedType = findNode.typeAnnotation('M {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('M {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: M
   element: <testLibrary>::@mixin::M
@@ -525,12 +537,12 @@ NamedType
   }
 
   test_unnamed_generic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C<T> {}
 extension<S> on C<S> {}
 ''');
-    var extendedType = findNode.typeAnnotation('C<S>');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('C<S>');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: C
   typeArguments: TypeArgumentList
@@ -547,11 +559,11 @@ NamedType
   }
 
   test_unnamed_onDynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on dynamic {}
 ''');
-    var extendedType = findNode.typeAnnotation('dynamic');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('dynamic');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: dynamic
   element: dynamic
@@ -560,12 +572,12 @@ NamedType
   }
 
   test_unnamed_onEnum() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A {a, b, c}
 extension on A {}
 ''');
-    var extendedType = findNode.typeAnnotation('A {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('A {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: A
   element: <testLibrary>::@enum::A
@@ -574,11 +586,11 @@ NamedType
   }
 
   test_unnamed_onFunctionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on int Function(String) {}
 ''');
-    var extendedType = findNode.typeAnnotation('Function');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('Function');
+    assertResolvedNodeText(node, r'''
 GenericFunctionType
   returnType: NamedType
     name: int
@@ -586,6 +598,18 @@ GenericFunctionType
     type: int
   functionKeyword: Function
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: String
+          element: dart:core::@class::String
+          type: String
+        declaredFragment: <testLibraryFragment> null@null
+          element: isPrivate
+            type: String
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -609,12 +633,12 @@ GenericFunctionType
   }
 
   test_unnamed_onInterface() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C { }
 extension on C {}
 ''');
-    var extendedType = findNode.typeAnnotation('C {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('C {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: C
   element: <testLibrary>::@class::C
@@ -623,13 +647,13 @@ NamedType
   }
 
   test_unnamed_onMixin() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin M {
 }
 extension on M {}
 ''');
-    var extendedType = findNode.typeAnnotation('M {}');
-    assertResolvedNodeText(extendedType, r'''
+    var node = result.findNode.typeAnnotation('M {}');
+    assertResolvedNodeText(node, r'''
 NamedType
   name: M
   element: <testLibrary>::@mixin::M
@@ -661,7 +685,7 @@ main() {
   }
 
   test_instance_call_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int call(int x) => 0;
 }
@@ -674,16 +698,16 @@ f(C c) {
   c(2);
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('c(2)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('c(2)');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 2
         correspondingParameter: <testLibrary>::@class::C::@method::call::@formalParameter::x
@@ -696,7 +720,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_call_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -707,16 +731,16 @@ f(C c) {
   c(2);
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('c(2)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('c(2)');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 2
         correspondingParameter: <testLibrary>::@extension::E::@method::call::@formalParameter::x
@@ -729,7 +753,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_call_fromExtension_int() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   int call(int x) => 0;
 }
@@ -738,15 +762,15 @@ f() {
   1(2);
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('1(2)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('1(2)');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: IntegerLiteral
+  function2: IntegerLiteral
     literal: 1
     staticType: int
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 2
         correspondingParameter: <testLibrary>::@extension::E::@method::call::@formalParameter::x
@@ -759,7 +783,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_compoundAssignment_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   C operator +(int i) => this;
 }
@@ -770,9 +794,27 @@ f(C c) {
   c += 2;
 }
 ''');
-    var assignment = findNode.assignment('+=');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.compoundAssignment('c += 2');
+    assertResolvedNodeText(node, r'''
+CompoundAssignment
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  operator: +=
+  value: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@class::C::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@class::C::@method::+
+  operatorResultType: C
+  staticType: C
+V1: AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -792,7 +834,7 @@ AssignmentExpression
   }
 
   test_instance_compoundAssignment_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   C operator +(int i) => this;
@@ -801,9 +843,27 @@ f(C c) {
   c += 2;
 }
 ''');
-    var assignment = findNode.assignment('+=');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.compoundAssignment('c += 2');
+    assertResolvedNodeText(node, r'''
+CompoundAssignment
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  operator: +=
+  value: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: C
+  staticType: C
+V1: AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -823,7 +883,7 @@ AssignmentExpression
   }
 
   test_instance_getter_fromDifferentExtension_usingBounds() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {}
 extension E1 on B {
   int get g => 0;
@@ -834,8 +894,8 @@ extension E2<T extends B> on T {
   }
 }
 ''');
-    var identifier = findNode.simple('g;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('g;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: g
   element: <testLibrary>::@extension::E1::@getter::g
@@ -844,7 +904,7 @@ SimpleIdentifier
   }
 
   test_instance_getter_fromDifferentExtension_withoutTarget() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E1 on C {
   int get a => 1;
@@ -855,8 +915,8 @@ extension E2 on C {
   }
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E1::@getter::a
@@ -865,7 +925,7 @@ SimpleIdentifier
   }
 
   test_instance_getter_fromExtendedType_usingBounds() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {
   int get g => 0;
 }
@@ -875,8 +935,8 @@ extension E<T extends B> on T {
   }
 }
 ''');
-    var identifier = findNode.simple('g;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('g;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: g
   element: <testLibrary>::@class::B::@getter::g
@@ -885,7 +945,7 @@ SimpleIdentifier
   }
 
   test_instance_getter_fromExtendedType_withoutTarget() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void m() {
     a;
@@ -895,8 +955,8 @@ extension E on C {
   int get a => 1;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -905,7 +965,7 @@ SimpleIdentifier
   }
 
   test_instance_getter_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   int get a => 1;
 }
@@ -913,8 +973,8 @@ g(int Function(int) f) {
   f.a;
 }
 ''');
-    var access = findNode.prefixed('f.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('f.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: f
@@ -931,7 +991,7 @@ PrefixedIdentifier
   }
 
   test_instance_getter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -942,8 +1002,8 @@ f(C c) {
   c.a;
 }
 ''');
-    var access = findNode.prefixed('c.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('c.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: c
@@ -960,7 +1020,7 @@ PrefixedIdentifier
   }
 
   test_instance_getter_fromInstance_extensionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(int it) {}
 
 extension E on A {
@@ -972,7 +1032,7 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singlePrefixedIdentifier;
+    var node = result.findNode.singlePrefixedIdentifier;
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -990,7 +1050,7 @@ PrefixedIdentifier
   }
 
   test_instance_getter_fromInstance_Never() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on Never {
   int get foo => 0;
 }
@@ -1001,8 +1061,8 @@ f(Never a) {
 // [diag.deadCode] Dead code.
 }
 ''');
-    var access = findNode.prefixed('a.foo');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('a.foo');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: a
@@ -1019,7 +1079,7 @@ PrefixedIdentifier
   }
 
   test_instance_getter_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int? {
   int get foo => 0;
 }
@@ -1028,8 +1088,8 @@ f(int? a) {
   a.foo;
 }
 ''');
-    var access = findNode.prefixed('a.foo');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('a.foo');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: a
@@ -1046,7 +1106,7 @@ PrefixedIdentifier
   }
 
   test_instance_getter_fromInstance_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   int get foo => 0;
 }
@@ -1055,10 +1115,10 @@ f(int? a) {
   a?.foo;
 }
 ''');
-    var access = findNode.propertyAccess('foo;');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.propertyAccess('foo;');
+    assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int?
@@ -1072,7 +1132,7 @@ PropertyAccess
   }
 
   test_instance_getter_methodInvocation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -1083,11 +1143,11 @@ f(C c) {
   c.a(0);
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('c.a(0)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('c.a(0)');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -1099,7 +1159,7 @@ FunctionExpressionInvocation
     staticType: double Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -1112,7 +1172,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_getter_specificSubtypeMatchLocal() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 class B extends A {}
 
@@ -1127,8 +1187,8 @@ f(B b) {
   b.a;
 }
 ''');
-    var access = findNode.prefixed('b.a');
-    assertResolvedNodeText(access, r'''
+    var node = result.findNode.prefixed('b.a');
+    assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
     token: b
@@ -1145,7 +1205,7 @@ PrefixedIdentifier
   }
 
   test_instance_getterInvoked_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   String Function() get a => () => 'a';
 }
@@ -1153,11 +1213,11 @@ g(int Function(int) f) {
   f.a();
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('f.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('f.a()');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::g::@formalParameter::f
       staticType: int Function(int)
@@ -1177,7 +1237,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_method_fromDifferentExtension_usingBounds() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {}
 extension E1 on B {
   void m() {}
@@ -1188,8 +1248,8 @@ extension E2<T extends B> on T {
   }
 }
 ''');
-    var invocation = findNode.methodInvocation('m();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('m();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
@@ -1204,7 +1264,7 @@ MethodInvocation
   }
 
   test_instance_method_fromDifferentExtension_withoutTarget() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {}
 extension E1 on B {
   void a() {}
@@ -1215,8 +1275,8 @@ extension E2 on B {
   }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -1231,7 +1291,7 @@ MethodInvocation
   }
 
   test_instance_method_fromExtendedType_usingBounds() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {
   void m() {}
 }
@@ -1241,8 +1301,8 @@ extension E<T extends B> on T {
   }
 }
 ''');
-    var invocation = findNode.methodInvocation('m();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('m();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: m
@@ -1257,7 +1317,7 @@ MethodInvocation
   }
 
   test_instance_method_fromExtendedType_withoutTarget() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {
   void m() {
     a();
@@ -1267,8 +1327,8 @@ extension E on B {
   void a() {}
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -1283,7 +1343,7 @@ MethodInvocation
   }
 
   test_instance_method_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void a() {}
 }
@@ -1291,10 +1351,10 @@ g(int Function(int) f) {
   f.a();
 }
 ''');
-    var invocation = findNode.methodInvocation('f.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('f.a()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::g::@formalParameter::f
     staticType: int Function(int)
@@ -1312,7 +1372,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {}
 
 extension A on B {
@@ -1323,10 +1383,10 @@ f(B b) {
   b.a();
 }
 ''');
-    var invocation = findNode.methodInvocation('b.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('b.a()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: B
@@ -1344,7 +1404,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_extensionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(int it) {}
 
 extension E on A {
@@ -1356,10 +1416,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -1383,25 +1443,26 @@ extension E on int {
 }
 ''');
 
-    newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var results = await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 import 'x.dart';
 void f() {
   0.foo();
 }
-''');
+''',
+    });
+    var result = results[b]!;
 
-    await resolveFile2(b);
-    assertErrorsInResult([]);
-
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 0
     staticType: int
   operator: .
@@ -1418,7 +1479,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_Never() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on Never {
   void foo() {}
 }
@@ -1432,10 +1493,10 @@ f(Never a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a.foo()');
+    var node = result.findNode.methodInvocation('a.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: Never
@@ -1453,7 +1514,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int? {
   void foo() {}
 }
@@ -1462,10 +1523,10 @@ f(int? a) {
   a.foo();
 }
 ''');
-    var invocation = findNode.methodInvocation('a.foo()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a.foo()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int?
@@ -1483,7 +1544,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_nullable_nullLiteral() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int? {
   void foo() {}
 }
@@ -1492,10 +1553,10 @@ f(int? a) {
   null.foo();
 }
 ''');
-    var invocation = findNode.methodInvocation('null.foo()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('null.foo()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: NullLiteral
+  target2: NullLiteral
     literal: null
     staticType: Null
   operator: .
@@ -1512,7 +1573,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   void foo() {}
 }
@@ -1521,10 +1582,10 @@ f(int? a) {
   a?.foo();
 }
 ''');
-    var invocation = findNode.methodInvocation('a?.foo()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a?.foo()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int?
@@ -1542,7 +1603,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_nullLiteral() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on T {
   void foo() {}
 }
@@ -1551,10 +1612,10 @@ f() {
   null.foo();
 }
 ''');
-    var invocation = findNode.methodInvocation('null.foo()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('null.foo()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: NullLiteral
+  target2: NullLiteral
     literal: null
     staticType: Null
   operator: .
@@ -1571,7 +1632,7 @@ MethodInvocation
   }
 
   test_instance_method_fromInstance_privateName() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   void _foo() {}
 }
@@ -1580,10 +1641,10 @@ void f() {
   0._foo();
 }
 ''');
-    var invocation = findNode.methodInvocation('_foo();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('_foo();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 0
     staticType: int
   operator: .
@@ -1608,7 +1669,7 @@ extension E on int {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 part 'a.dart';
 
 void f() {
@@ -1616,10 +1677,10 @@ void f() {
 }
 ''');
 
-    var invocation = findNode.methodInvocation('_foo();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('_foo();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 0
     staticType: int
   operator: .
@@ -1636,7 +1697,7 @@ MethodInvocation
   }
 
   test_instance_method_specificSubtypeMatchLocal() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 class B extends A {}
 
@@ -1652,10 +1713,10 @@ f(B b) {
 }
 ''');
 
-    var invocation = findNode.methodInvocation('b.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('b.a()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: B
@@ -1673,7 +1734,7 @@ MethodInvocation
   }
 
   test_instance_method_specificSubtypeMatchLocalGenerics() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 class B<T> extends A<T> {}
@@ -1692,23 +1753,23 @@ f(B<C> x, C o) {
   x.f(o);
 }
 ''');
-    var invocation = findNode.methodInvocation('x.f(o)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('x.f(o)');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: B<C>
   operator: .
   methodName: SimpleIdentifier
     token: f
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::B_Ext::@method::f
       substitution: {T: C}
     staticType: void Function(C)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: o
         correspondingParameter: x@null
@@ -1721,7 +1782,7 @@ MethodInvocation
   }
 
   test_instance_operator_binary_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator +(int i) {}
 }
@@ -1732,9 +1793,22 @@ f(C c) {
   c + 2;
 }
 ''');
-    var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ ');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@class::C::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@class::C::@method::+
+  staticType: void
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -1751,7 +1825,7 @@ BinaryExpression
   }
 
   test_instance_operator_binary_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void operator +(int i) {}
 }
@@ -1759,9 +1833,22 @@ g(int Function(int) f) {
   f + 2;
 }
 ''');
-    var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ ');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: f
+    element: <testLibrary>::@function::g::@formalParameter::f
+    staticType: int Function(int)
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@extension::E::@method::+
+  staticType: void
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::g::@formalParameter::f
@@ -1778,7 +1865,7 @@ BinaryExpression
   }
 
   test_instance_operator_binary_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator +(int i) {}
@@ -1787,9 +1874,22 @@ f(C c) {
   c + 2;
 }
 ''');
-    var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ ');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@extension::E::@method::+
+  staticType: void
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -1806,7 +1906,7 @@ BinaryExpression
   }
 
   test_instance_operator_binary_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A? {
@@ -1817,9 +1917,22 @@ f(A? a) {
   a + 1;
 }
 ''');
-    var binary = findNode.binary('a + 1');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('a + 1');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: A?
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    correspondingParameter: <testLibrary>::@extension::E::@method::+::@formalParameter::_
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@extension::E::@method::+
+  staticType: int
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
@@ -1848,7 +1961,7 @@ var a = b + c;
   }
 
   test_instance_operator_index_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator [](int index) {}
 }
@@ -1859,9 +1972,25 @@ f(C c) {
   c[2];
 }
 ''');
-    var index = findNode.index('c[2]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('c[2]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@class::C::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@class::C::@method::[]
+    invokeType: void Function(int)
+    type: void
+  staticType: void
+V1: IndexExpression
   target: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -1878,7 +2007,7 @@ IndexExpression
   }
 
   test_instance_operator_index_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void operator [](int index) {}
 }
@@ -1886,9 +2015,25 @@ g(int Function(int) f) {
   f[2];
 }
 ''');
-    var index = findNode.index('f[2]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('f[2]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: f
+    element: <testLibrary>::@function::g::@formalParameter::f
+    staticType: int Function(int)
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@extension::E::@method::[]
+    invokeType: void Function(int)
+    type: void
+  staticType: void
+V1: IndexExpression
   target: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::g::@formalParameter::f
@@ -1905,7 +2050,7 @@ IndexExpression
   }
 
   test_instance_operator_index_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator [](int index) {}
@@ -1914,9 +2059,25 @@ f(C c) {
   c[2];
 }
 ''');
-    var index = findNode.index('c[2]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('c[2]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@extension::E::@method::[]
+    invokeType: void Function(int)
+    type: void
+  staticType: void
+V1: IndexExpression
   target: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -1933,7 +2094,7 @@ IndexExpression
   }
 
   test_instance_operator_index_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int? {
   int operator [](int index) => 0;
 }
@@ -1942,9 +2103,25 @@ f(int? a) {
   a[0];
 }
 ''');
-    var index = findNode.index('a[0]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('a[0]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: int?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@extension::E::@method::[]
+    invokeType: int Function(int)
+    type: int
+  staticType: int
+V1: IndexExpression
   target: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
@@ -1961,7 +2138,7 @@ IndexExpression
   }
 
   test_instance_operator_index_fromInstance_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   int operator [](int index) => 0;
 }
@@ -1970,9 +2147,26 @@ f(int? a) {
   a?[0];
 }
 ''');
-    var index = findNode.index('a?[0]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('a?[0]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: int?
+  question: ?
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 0
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@extension::E::@method::[]
+    invokeType: int Function(int)
+    type: int?
+  staticType: int?
+V1: IndexExpression
   target: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
@@ -1990,7 +2184,7 @@ IndexExpression
   }
 
   test_instance_operator_indexEquals_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator []=(int index, int value) {}
 }
@@ -2001,9 +2195,32 @@ f(C c) {
   c[2] = 1;
 }
 ''');
-    var assignment = findNode.assignment('[2] =');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('[2] =');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::f::@formalParameter::c
+      staticType: C
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      correspondingParameter: <testLibrary>::@class::C::@method::[]=::@formalParameter::index
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: MethodIndexWriteResolution
+      element: <testLibrary>::@class::C::@method::[]=
+      invokeType: void Function(int, int)
+      acceptedType: int
+  operator: =
+  value: IntegerLiteral
+    literal: 1
+    correspondingParameter: <testLibrary>::@class::C::@method::[]=::@formalParameter::value
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: c
@@ -2032,7 +2249,7 @@ AssignmentExpression
   }
 
   test_instance_operator_indexEquals_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void operator []=(int index, int value) {}
 }
@@ -2040,9 +2257,32 @@ g(int Function(int) f) {
   f[2] = 3;
 }
 ''');
-    var assignment = findNode.assignment('f[2]');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('f[2]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: f
+      element: <testLibrary>::@function::g::@formalParameter::f
+      staticType: int Function(int)
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::index
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: MethodIndexWriteResolution
+      element: <testLibrary>::@extension::E::@method::[]=
+      invokeType: void Function(int, int)
+      acceptedType: int
+  operator: =
+  value: IntegerLiteral
+    literal: 3
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::value
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: f
@@ -2071,7 +2311,7 @@ AssignmentExpression
   }
 
   test_instance_operator_indexEquals_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator []=(int index, int value) {}
@@ -2080,9 +2320,32 @@ f(C c) {
   c[2] = 3;
 }
 ''');
-    var assignment = findNode.assignment('c[2]');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('c[2]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::f::@formalParameter::c
+      staticType: C
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::index
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: MethodIndexWriteResolution
+      element: <testLibrary>::@extension::E::@method::[]=
+      invokeType: void Function(int, int)
+      acceptedType: int
+  operator: =
+  value: IntegerLiteral
+    literal: 3
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::value
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: SimpleIdentifier
       token: c
@@ -2111,7 +2374,7 @@ AssignmentExpression
   }
 
   test_instance_operator_postfix_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   C operator +(int i) => this;
 }
@@ -2122,9 +2385,22 @@ f(C c) {
   c++;
 }
 ''');
-    var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  operator: ++
+  element: <testLibrary>::@class::C::@method::+
+  operatorResultType: C
+  staticType: C
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -2140,7 +2416,7 @@ PostfixExpression
   }
 
   test_instance_operator_postfix_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   int Function(int) operator +(int i) => this;
 }
@@ -2148,9 +2424,22 @@ g(int Function(int) f) {
   f++;
 }
 ''');
-    var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: f
+    read: VariableReadResolution
+      element: <testLibrary>::@function::g::@formalParameter::f
+      type: int Function(int)
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::g::@formalParameter::f
+      acceptedType: int Function(int)
+  operator: ++
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: int Function(int)
+  staticType: int Function(int)
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::g::@formalParameter::f
@@ -2166,7 +2455,7 @@ PostfixExpression
   }
 
   test_instance_operator_postfix_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   C operator +(int i) => this;
@@ -2175,9 +2464,22 @@ f(C c) {
   c++;
 }
 ''');
-    var postfix = findNode.postfix('++');
-    assertResolvedNodeText(postfix, r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  operator: ++
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: C
+  staticType: C
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -2193,7 +2495,7 @@ PostfixExpression
   }
 
   test_instance_operator_postfixInc_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A? {
@@ -2204,9 +2506,22 @@ f(A? a) {
   a++;
 }
 ''');
-    var expression = findNode.postfix('a++');
-    assertResolvedNodeText(expression, r'''
-PostfixExpression
+    var node = result.findNode.postfixIncrement('a++');
+    assertResolvedNodeText(node, r'''
+PostfixIncrement
+  target: UnqualifiedNameAssignmentTarget
+    name: a
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::a
+      type: A?
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::a
+      acceptedType: A?
+  operator: ++
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: A?
+  staticType: A?
+V1: PostfixExpression
   operand: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
@@ -2222,7 +2537,7 @@ PostfixExpression
   }
 
   test_instance_operator_prefix_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   C operator +(int i) => this;
 }
@@ -2233,9 +2548,22 @@ f(C c) {
   ++c;
 }
 ''');
-    var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  element: <testLibrary>::@class::C::@method::+
+  operatorResultType: C
+  staticType: C
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: c
@@ -2251,7 +2579,7 @@ PrefixExpression
   }
 
   test_instance_operator_prefix_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   int Function(int) operator +(int i) => this;
 }
@@ -2259,9 +2587,22 @@ g(int Function(int) f) {
   ++f;
 }
 ''');
-    var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: f
+    read: VariableReadResolution
+      element: <testLibrary>::@function::g::@formalParameter::f
+      type: int Function(int)
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::g::@formalParameter::f
+      acceptedType: int Function(int)
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: int Function(int)
+  staticType: int Function(int)
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: f
@@ -2277,7 +2618,7 @@ PrefixExpression
   }
 
   test_instance_operator_prefix_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   C operator +(int i) => this;
@@ -2286,9 +2627,22 @@ f(C c) {
   ++c;
 }
 ''');
-    var prefix = findNode.prefix('++');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: c
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      type: C
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::c
+      acceptedType: C
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: C
+  staticType: C
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: c
@@ -2304,7 +2658,7 @@ PrefixExpression
   }
 
   test_instance_operator_prefixInc_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A? {
@@ -2315,9 +2669,22 @@ f(A? a) {
   ++a;
 }
 ''');
-    var expression = findNode.prefix('++a');
-    assertResolvedNodeText(expression, r'''
-PrefixExpression
+    var node = result.findNode.prefixIncrement('++a');
+    assertResolvedNodeText(node, r'''
+PrefixIncrement
+  operator: ++
+  target: UnqualifiedNameAssignmentTarget
+    name: a
+    read: VariableReadResolution
+      element: <testLibrary>::@function::f::@formalParameter::a
+      type: A?
+    write: VariableWriteResolution
+      element: <testLibrary>::@function::f::@formalParameter::a
+      acceptedType: A?
+  element: <testLibrary>::@extension::E::@method::+
+  operatorResultType: A?
+  staticType: A?
+V1: PrefixExpression
   operator: ++
   operand: SimpleIdentifier
     token: a
@@ -2333,7 +2700,7 @@ PrefixExpression
   }
 
   test_instance_operator_unary_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   C operator -() => this;
 }
@@ -2344,9 +2711,18 @@ f(C c) {
   -c;
 }
 ''');
-    var prefix = findNode.prefix('-c');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  unaryOperator: negate
+  element: <testLibrary>::@class::C::@method::unary-
+  staticType: C
+V1: PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: c
@@ -2358,7 +2734,7 @@ PrefixExpression
   }
 
   test_instance_operator_unary_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void operator -() {}
 }
@@ -2366,9 +2742,18 @@ g(int Function(int) f) {
   -f;
 }
 ''');
-    var prefix = findNode.prefix('-f');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: SimpleIdentifier
+    token: f
+    element: <testLibrary>::@function::g::@formalParameter::f
+    staticType: int Function(int)
+  unaryOperator: negate
+  element: <testLibrary>::@extension::E::@method::unary-
+  staticType: void
+V1: PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: f
@@ -2380,7 +2765,7 @@ PrefixExpression
   }
 
   test_instance_operator_unary_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   C operator -() => this;
@@ -2389,9 +2774,18 @@ f(C c) {
   -c;
 }
 ''');
-    var prefix = findNode.prefix('-c');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  unaryOperator: negate
+  element: <testLibrary>::@extension::E::@method::unary-
+  staticType: C
+V1: PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: c
@@ -2403,7 +2797,7 @@ PrefixExpression
   }
 
   test_instance_operator_unaryMinus_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A? {
@@ -2414,9 +2808,18 @@ f(A? a) {
   -a;
 }
 ''');
-    var expression = findNode.prefix('-a');
-    assertResolvedNodeText(expression, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: A?
+  unaryOperator: negate
+  element: <testLibrary>::@extension::E::@method::unary-
+  staticType: A?
+V1: PrefixExpression
   operator: -
   operand: SimpleIdentifier
     token: a
@@ -2428,7 +2831,7 @@ PrefixExpression
   }
 
   test_instance_setter_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   set a(int x) {}
 }
@@ -2436,10 +2839,10 @@ g(int Function(int) f) {
   f.a = 1;
 }
 ''');
-    var assignment = findNode.assignment('a = 1');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::g::@formalParameter::f
@@ -2452,7 +2855,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@extension::E::@setter::a::@formalParameter::x
     staticType: int
@@ -2466,7 +2869,7 @@ AssignmentExpression
   }
 
   test_instance_setter_fromInstance_extensionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(int it) {}
 
 extension E on A {
@@ -2478,10 +2881,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.singleAssignmentExpression;
+    var node = result.findNode.singleAssignmentExpression;
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -2494,7 +2897,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::_
     staticType: int
@@ -2508,7 +2911,7 @@ AssignmentExpression
   }
 
   test_instance_setter_fromInstance_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int? {
   set foo(int _) {}
 }
@@ -2517,9 +2920,10 @@ f(int? a) {
   a.foo = 1;
 }
 ''');
-    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
+    var node = result.findNode.assignment('foo = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -2532,7 +2936,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::_
     staticType: int
@@ -2546,7 +2950,7 @@ AssignmentExpression
   }
 
   test_instance_setter_fromInstance_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int {
   set foo(int _) {}
 }
@@ -2555,10 +2959,11 @@ f(int? a) {
   a?.foo = 1;
 }
 ''');
-    assertResolvedNodeText(findNode.assignment('foo = 1'), r'''
+    var node = result.findNode.assignment('foo = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: SimpleIdentifier
+  leftHandSide2: PropertyAccess
+    target2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int?
@@ -2569,7 +2974,7 @@ AssignmentExpression
       staticType: null
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::_
     staticType: int
@@ -2583,7 +2988,7 @@ AssignmentExpression
   }
 
   test_instance_setter_oneMatch() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -2594,10 +2999,10 @@ f(C c) {
   c.a = 1;
 }
 ''');
-    var assignment = findNode.assignment('a = 1');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 1');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
@@ -2610,7 +3015,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 1
     correspondingParameter: <testLibrary>::@extension::E::@setter::a::@formalParameter::x
     staticType: int
@@ -2624,13 +3029,13 @@ AssignmentExpression
   }
 
   test_instance_tearoff_fromExtension_functionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on int Function(int) {
   void a(int x) {}
 }
 g(int Function(int) f) => f.a;
 ''');
-    var node = findNode.prefixed('a;');
+    var node = result.findNode.prefixed('a;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2648,7 +3053,7 @@ PrefixedIdentifier
   }
 
   test_instance_tearoff_fromExtension_interfaceType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -2657,7 +3062,7 @@ extension E on C {
 
 f(C c) => c.a;
 ''');
-    var node = findNode.prefixed('a;');
+    var node = result.findNode.prefixed('a;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2682,17 +3087,17 @@ extension E on C {
   static int a = 1;
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart' as p;
 
 f() {
   p.E.a;
 }
 ''');
-    var node = findNode.propertyAccess('p.E.a;');
+    var node = result.findNode.propertyAccess('p.E.a;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
       element: <testLibraryFragment>::@prefix::p
@@ -2714,7 +3119,7 @@ PropertyAccess
   }
 
   test_static_field_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -2725,7 +3130,7 @@ f() {
   E.a;
 }
 ''');
-    var node = findNode.prefixed('E.a;');
+    var node = result.findNode.prefixed('E.a;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2808,17 +3213,17 @@ extension E on C {
   static int get a => 1;
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart' as p;
 
 f() {
   p.E.a;
 }
 ''');
-    var node = findNode.propertyAccess('p.E.a;');
+    var node = result.findNode.propertyAccess('p.E.a;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
       element: <testLibraryFragment>::@prefix::p
@@ -2840,7 +3245,7 @@ PropertyAccess
   }
 
   test_static_getter_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -2851,7 +3256,7 @@ f() {
   E.a;
 }
 ''');
-    var node = findNode.prefixed('E.a;');
+    var node = result.findNode.prefixed('E.a;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2869,7 +3274,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onClass_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -2881,7 +3286,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2899,7 +3304,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onClass_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 extension E on A<String> {
@@ -2910,7 +3315,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2928,7 +3333,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onClass_viaTypedef_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 typedef T = A;
@@ -2942,7 +3347,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2960,7 +3365,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onClass_viaTypedef_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 typedef T<Y> = A<Y>;
@@ -2974,7 +3379,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -2992,7 +3397,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onEnum_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A { element; }
 
 extension E on A {
@@ -3003,7 +3408,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3021,7 +3426,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onEnum_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A<X> { element; }
 
 extension E on A<String> {
@@ -3032,7 +3437,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3050,7 +3455,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onExtensionType_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(Object? it) {}
 
 extension E on A {
@@ -3061,7 +3466,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3079,7 +3484,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onExtensionType_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A<X>(Object? it) {}
 
 extension E on A<String> {
@@ -3090,7 +3495,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3108,7 +3513,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onMixin_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin A {}
 
 extension E on A {
@@ -3119,7 +3524,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3137,7 +3542,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onMixin_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin A<X> {}
 
 extension E on A<String> {
@@ -3148,7 +3553,7 @@ void f() {
   A.foo;
 }
 ''');
-    var node = findNode.prefixed('A.foo');
+    var node = result.findNode.prefixed('A.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3166,7 +3571,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onTypedef_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 typedef T = A;
@@ -3180,7 +3585,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('T.foo');
+    var node = result.findNode.prefixed('T.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3198,7 +3603,7 @@ PrefixedIdentifier
   }
 
   test_static_getter_success_onTypedef_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 typedef T<Y> = A<Y>;
@@ -3212,7 +3617,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.prefixed('T.foo');
+    var node = result.findNode.prefixed('T.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -3237,17 +3642,17 @@ extension E on C {
   static void a() {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart' as p;
 
 f() {
   p.E.a();
 }
 ''');
-    var invocation = findNode.methodInvocation('E.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('E.a()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: p
       element: <testLibraryFragment>::@prefix::p
@@ -3273,7 +3678,7 @@ MethodInvocation
   }
 
   test_static_method_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -3284,10 +3689,10 @@ f() {
   E.a();
 }
 ''');
-    var invocation = findNode.methodInvocation('E.a()');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('E.a()');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: E
     element: <testLibrary>::@extension::E
     staticType: null
@@ -3370,18 +3775,18 @@ extension E on C {
   static set a(int x) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'lib.dart' as p;
 
 f() {
   p.E.a = 3;
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: PrefixedIdentifier
+  leftHandSide2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: p
         element: <testLibraryFragment>::@prefix::p
@@ -3400,7 +3805,7 @@ AssignmentExpression
       staticType: null
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 3
     correspondingParameter: package:test/lib.dart::@extension::E::@setter::a::@formalParameter::x
     staticType: int
@@ -3414,7 +3819,7 @@ AssignmentExpression
   }
 
   test_static_setter_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -3425,10 +3830,10 @@ f() {
   E.a = 3;
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@extension::E
@@ -3441,7 +3846,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 3
     correspondingParameter: <testLibrary>::@extension::E::@setter::a::@formalParameter::x
     staticType: int
@@ -3455,7 +3860,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onClass_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -3466,10 +3871,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -3482,7 +3887,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3496,7 +3901,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onClass_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 extension E on A<String> {
@@ -3507,10 +3912,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -3523,7 +3928,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3537,7 +3942,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onClass_viaTypedef_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 typedef T = A;
@@ -3551,10 +3956,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -3567,7 +3972,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3581,7 +3986,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onClass_viaTypedef_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 typedef T<Y> = A<Y>;
@@ -3595,10 +4000,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -3611,7 +4016,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3625,7 +4030,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onEnum_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A { element; }
 
 extension E on A {
@@ -3636,10 +4041,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@enum::A
@@ -3652,7 +4057,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3666,7 +4071,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onEnum_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum A<X> { element; }
 
 extension E on A<String> {
@@ -3677,10 +4082,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@enum::A
@@ -3693,7 +4098,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3707,7 +4112,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onExtensionType_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(Object? it) {}
 
 extension E on A {
@@ -3718,10 +4123,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@extensionType::A
@@ -3734,7 +4139,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3748,7 +4153,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onExtensionType_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A<X>(Object? it) {}
 
 extension E on A<String> {
@@ -3759,10 +4164,10 @@ void f() {
   A.foo = 0;
 }
 ''');
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@extensionType::A
@@ -3775,7 +4180,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3789,7 +4194,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onMixin_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin A {}
 
 extension E on A {
@@ -3801,10 +4206,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@mixin::A
@@ -3817,7 +4222,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3831,7 +4236,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onMixin_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin A<X> {}
 
 extension E on A<String> {
@@ -3843,10 +4248,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('A.foo = 0');
+    var node = result.findNode.assignment('A.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@mixin::A
@@ -3859,7 +4264,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3873,7 +4278,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onTypedef_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 typedef T = A;
@@ -3887,10 +4292,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('T.foo = 0');
+    var node = result.findNode.assignment('T.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: T
       element: <testLibrary>::@typeAlias::T
@@ -3903,7 +4308,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3917,7 +4322,7 @@ AssignmentExpression
   }
 
   test_static_setter_success_onTypedef_typeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<X> {}
 
 typedef T<Y> = A<Y>;
@@ -3931,10 +4336,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.assignment('T.foo = 0');
+    var node = result.findNode.assignment('T.foo = 0');
     assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: T
       element: <testLibrary>::@typeAlias::T
@@ -3947,7 +4352,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
     staticType: int
@@ -3961,7 +4366,7 @@ AssignmentExpression
   }
 
   test_static_tearoff() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -3970,7 +4375,7 @@ extension E on C {
 
 f() => E.a;
 ''');
-    var node = findNode.prefixed('E.a;');
+    var node = result.findNode.prefixed('E.a;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -4020,7 +4425,7 @@ extension E on Function {
 @reflectiveTest
 class ExtensionMethodsInternalReferenceTest extends PubPackageResolutionTest {
   test_instance_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4028,15 +4433,15 @@ extension E on C {
   int m() => this(2);
 }
 ''');
-    var invocation = findNode.functionExpressionInvocation('this(2)');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.functionExpressionInvocation('this(2)');
+    assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: ThisExpression
+  function2: ThisExpression
     thisKeyword: this
     staticType: C
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 2
         correspondingParameter: <testLibrary>::@extension::E::@method::call::@formalParameter::x
@@ -4049,7 +4454,7 @@ FunctionExpressionInvocation
   }
 
   test_instance_getter_asSetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E1 on int {
   int get foo => 0;
 }
@@ -4063,8 +4468,8 @@ extension E2 on int {
   }
 }
 ''');
-    var assignment = findNode.assignment('foo = 0');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo = 0');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: foo
@@ -4085,7 +4490,7 @@ AssignmentExpression
   }
 
   test_instance_getter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int get a => 1;
 }
@@ -4095,8 +4500,8 @@ extension E on C {
   int m() => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -4105,7 +4510,7 @@ SimpleIdentifier
   }
 
   test_instance_getter_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int get a => 1;
 }
@@ -4115,9 +4520,20 @@ extension E on C {
   int m() => this.a;
 }
 ''');
-    var access = findNode.propertyAccess('this.a');
-    assertResolvedNodeText(access, r'''
-PropertyAccess
+    var node = result.findNode.receiverPropertyExtraction('this.a');
+    assertResolvedNodeText(node, r'''
+ReceiverPropertyExtraction
+  receiver: ThisExpression
+    thisKeyword: this
+    staticType: C
+  operator: .
+  propertyName: a
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::a
+    invokeType: int Function()
+    type: int
+  staticType: int
+V1: PropertyAccess
   target: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4131,7 +4547,7 @@ PropertyAccess
   }
 
   test_instance_getter_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4140,9 +4556,20 @@ extension E on C {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singleReceiverPropertyExtraction;
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ThisExpression
+    thisKeyword: this
+    staticType: C
+  operator: .
+  propertyName: a
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@extension::E::@getter::a
+    invokeType: int Function()
+    type: int
+  staticType: int
+V1: PropertyAccess
   target: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4156,7 +4583,7 @@ PropertyAccess
   }
 
   test_instance_method_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void a() {}
 }
@@ -4165,8 +4592,8 @@ extension E on C {
   void b() { a(); }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -4181,7 +4608,7 @@ MethodInvocation
   }
 
   test_instance_method_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void a() {}
 }
@@ -4190,10 +4617,10 @@ extension E on C {
   void b() { this.a(); }
 }
 ''');
-    var invocation = findNode.methodInvocation('this.a');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('this.a');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ThisExpression
+  target2: ThisExpression
     thisKeyword: this
     staticType: C
   operator: .
@@ -4210,17 +4637,17 @@ MethodInvocation
   }
 
   test_instance_method_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void a() {}
   void b() { this.a(); }
 }
 ''');
-    var invocation = findNode.methodInvocation('this.a');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('this.a');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ThisExpression
+  target2: ThisExpression
     thisKeyword: this
     staticType: C
   operator: .
@@ -4237,7 +4664,7 @@ MethodInvocation
   }
 
   test_instance_operator_binary_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator +(int i) {}
 }
@@ -4246,9 +4673,21 @@ extension E on C {
   void b() { this + 2; }
 }
 ''');
-    var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ ');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: ThisExpression
+    thisKeyword: this
+    staticType: C
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@class::C::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@class::C::@method::+
+  staticType: void
+V1: BinaryExpression
   leftOperand: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4264,16 +4703,28 @@ BinaryExpression
   }
 
   test_instance_operator_binary_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator +(int i) {}
   void b() { this + 2; }
 }
 ''');
-    var binary = findNode.binary('+ ');
-    assertResolvedNodeText(binary, r'''
-BinaryExpression
+    var node = result.findNode.binaryOperatorInvocation('+ ');
+    assertResolvedNodeText(node, r'''
+BinaryOperatorInvocation
+  leftOperand: ThisExpression
+    thisKeyword: this
+    staticType: C
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::+::@formalParameter::i
+    staticType: int
+  binaryOperator: add
+  element: <testLibrary>::@extension::E::@method::+
+  staticType: void
+V1: BinaryExpression
   leftOperand: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4289,7 +4740,7 @@ BinaryExpression
   }
 
   test_instance_operator_index_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator [](int index) {}
 }
@@ -4298,9 +4749,24 @@ extension E on C {
   void b() { this[2]; }
 }
 ''');
-    var index = findNode.index('this[2]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('this[2]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: ThisExpression
+    thisKeyword: this
+    staticType: C
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@class::C::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@class::C::@method::[]
+    invokeType: void Function(int)
+    type: void
+  staticType: void
+V1: IndexExpression
   target: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4316,16 +4782,31 @@ IndexExpression
   }
 
   test_instance_operator_index_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator [](int index) {}
   void b() { this[2]; }
 }
 ''');
-    var index = findNode.index('this[2]');
-    assertResolvedNodeText(index, r'''
-IndexExpression
+    var node = result.findNode.indexExpression2('this[2]');
+    assertResolvedNodeText(node, r'''
+IndexExpression2
+  receiver: ThisExpression
+    thisKeyword: this
+    staticType: C
+  leftBracket: [
+  index: IntegerLiteral
+    literal: 2
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]::@formalParameter::index
+    staticType: int
+  rightBracket: ]
+  resolution: MethodIndexReadResolution
+    element: <testLibrary>::@extension::E::@method::[]
+    invokeType: void Function(int)
+    type: void
+  staticType: void
+V1: IndexExpression
   target: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4341,7 +4822,7 @@ IndexExpression
   }
 
   test_instance_operator_indexEquals_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator []=(int index, int value) {}
 }
@@ -4350,9 +4831,31 @@ extension E on C {
   void b() { this[2] = 1; }
 }
 ''');
-    var assignment = findNode.assignment('this[2]');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('this[2]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: ThisExpression
+      thisKeyword: this
+      staticType: C
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      correspondingParameter: <testLibrary>::@class::C::@method::[]=::@formalParameter::index
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: MethodIndexWriteResolution
+      element: <testLibrary>::@class::C::@method::[]=
+      invokeType: void Function(int, int)
+      acceptedType: int
+  operator: =
+  value: IntegerLiteral
+    literal: 1
+    correspondingParameter: <testLibrary>::@class::C::@method::[]=::@formalParameter::value
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: ThisExpression
       thisKeyword: this
@@ -4380,16 +4883,38 @@ AssignmentExpression
   }
 
   test_instance_operator_indexEquals_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator []=(int index, int value) {}
   void b() { this[2] = 3; }
 }
 ''');
-    var assignment = findNode.assignment('this[2]');
-    assertResolvedNodeText(assignment, r'''
-AssignmentExpression
+    var node = result.findNode.directAssignment('this[2]');
+    assertResolvedNodeText(node, r'''
+DirectAssignment
+  target: IndexAssignmentTarget
+    receiver: ThisExpression
+      thisKeyword: this
+      staticType: C
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 2
+      correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::index
+      staticType: int
+    rightBracket: ]
+    read: <null>
+    write: MethodIndexWriteResolution
+      element: <testLibrary>::@extension::E::@method::[]=
+      invokeType: void Function(int, int)
+      acceptedType: int
+  operator: =
+  value: IntegerLiteral
+    literal: 3
+    correspondingParameter: <testLibrary>::@extension::E::@method::[]=::@formalParameter::value
+    staticType: int
+  staticType: int
+V1: AssignmentExpression
   leftHandSide: IndexExpression
     target: ThisExpression
       thisKeyword: this
@@ -4417,7 +4942,7 @@ AssignmentExpression
   }
 
   test_instance_operator_unary_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void operator -() {}
 }
@@ -4426,9 +4951,17 @@ extension E on C {
   void b() { -this; }
 }
 ''');
-    var prefix = findNode.prefix('-this');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: ThisExpression
+    thisKeyword: this
+    staticType: C
+  unaryOperator: negate
+  element: <testLibrary>::@class::C::@method::unary-
+  staticType: void
+V1: PrefixExpression
   operator: -
   operand: ThisExpression
     thisKeyword: this
@@ -4439,16 +4972,24 @@ PrefixExpression
   }
 
   test_instance_operator_unary_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   void operator -() {}
   void b() { -this; }
 }
 ''');
-    var prefix = findNode.prefix('-this');
-    assertResolvedNodeText(prefix, r'''
-PrefixExpression
+    var node = result.findNode.singleUnaryOperatorInvocation;
+    assertResolvedNodeText(node, r'''
+UnaryOperatorInvocation
+  operator: -
+  operand: ThisExpression
+    thisKeyword: this
+    staticType: C
+  unaryOperator: negate
+  element: <testLibrary>::@extension::E::@method::unary-
+  staticType: void
+V1: PrefixExpression
   operator: -
   operand: ThisExpression
     thisKeyword: this
@@ -4459,7 +5000,7 @@ PrefixExpression
   }
 
   test_instance_setter_asGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E1 on int {
   set foo(int _) {}
 }
@@ -4473,7 +5014,7 @@ extension E2 on int {
   }
 }
 ''');
-    var node = findNode.simple('foo;');
+    var node = result.findNode.simple('foo;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -4483,7 +5024,7 @@ SimpleIdentifier
   }
 
   test_instance_setter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   set a(int _) {}
 }
@@ -4495,8 +5036,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -4517,7 +5058,7 @@ AssignmentExpression
   }
 
   test_instance_setter_fromThis_fromExtendedType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   set a(int _) {}
 }
@@ -4529,8 +5070,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: ThisExpression
@@ -4557,7 +5098,7 @@ AssignmentExpression
   }
 
   test_instance_setter_fromThis_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4567,8 +5108,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: ThisExpression
@@ -4595,7 +5136,7 @@ AssignmentExpression
   }
 
   test_instance_tearoff_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4603,8 +5144,8 @@ extension E on C {
   get b => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@method::a
@@ -4613,7 +5154,7 @@ SimpleIdentifier
   }
 
   test_instance_tearoff_fromThis() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4621,9 +5162,19 @@ extension E on C {
   get c => this.a;
 }
 ''');
-    var identifier = findNode.propertyAccess('this.a;');
-    assertResolvedNodeText(identifier, r'''
-PropertyAccess
+    var node = result.findNode.receiverPropertyExtraction('this.a;');
+    assertResolvedNodeText(node, r'''
+ReceiverPropertyExtraction
+  receiver: ThisExpression
+    thisKeyword: this
+    staticType: C
+  operator: .
+  propertyName: a
+  resolution: ExecutableTearOffResolution
+    element: <testLibrary>::@extension::E::@method::a
+    type: void Function(int)
+  staticType: void Function(int)
+V1: PropertyAccess
   target: ThisExpression
     thisKeyword: this
     staticType: C
@@ -4637,7 +5188,7 @@ PropertyAccess
   }
 
   test_static_field_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4645,8 +5196,8 @@ extension E on C {
   int m() => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -4655,7 +5206,7 @@ SimpleIdentifier
   }
 
   test_static_field_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4663,8 +5214,8 @@ extension E on C {
   static int m() => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -4673,7 +5224,7 @@ SimpleIdentifier
   }
 
   test_static_getter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4681,8 +5232,8 @@ extension E on C {
   int m() => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -4691,7 +5242,7 @@ SimpleIdentifier
   }
 
   test_static_getter_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4699,8 +5250,8 @@ extension E on C {
   static int m() => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@getter::a
@@ -4709,15 +5260,15 @@ SimpleIdentifier
   }
 
   test_static_method_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   static void a() {}
   void b() { a(); }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -4732,15 +5283,15 @@ MethodInvocation
   }
 
   test_static_method_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 extension E on C {
   static void a() {}
   static void b() { a(); }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -4755,7 +5306,7 @@ MethodInvocation
   }
 
   test_static_setter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4765,8 +5316,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -4787,7 +5338,7 @@ AssignmentExpression
   }
 
   test_static_setter_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4797,8 +5348,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 3');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -4819,7 +5370,7 @@ AssignmentExpression
   }
 
   test_static_tearoff_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4827,8 +5378,8 @@ extension E on C {
   get b => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@method::a
@@ -4837,7 +5388,7 @@ SimpleIdentifier
   }
 
   test_static_tearoff_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -4845,8 +5396,8 @@ extension E on C {
   static get c => a;
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@extension::E::@method::a
@@ -4855,7 +5406,7 @@ SimpleIdentifier
   }
 
   test_topLevel_function_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void a() {}
 }
@@ -4868,8 +5419,8 @@ extension E on C {
   }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -4884,7 +5435,7 @@ MethodInvocation
   }
 
   test_topLevel_function_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void a() {}
 }
@@ -4897,8 +5448,8 @@ extension E on C {
   }
 }
 ''');
-    var invocation = findNode.methodInvocation('a();');
-    assertResolvedNodeText(invocation, r'''
+    var node = result.findNode.methodInvocation('a();');
+    assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
     token: a
@@ -4913,7 +5464,7 @@ MethodInvocation
   }
 
   test_topLevel_getter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int get a => 0;
 }
@@ -4926,8 +5477,8 @@ extension E on C {
   }
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@getter::a
@@ -4936,7 +5487,7 @@ SimpleIdentifier
   }
 
   test_topLevel_getter_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int get a => 0;
 }
@@ -4949,8 +5500,8 @@ extension E on C {
   }
 }
 ''');
-    var identifier = findNode.simple('a;');
-    assertResolvedNodeText(identifier, r'''
+    var node = result.findNode.simple('a;');
+    assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@getter::a
@@ -4959,7 +5510,7 @@ SimpleIdentifier
   }
 
   test_topLevel_setter_fromInstance() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   set a(int _) {}
 }
@@ -4972,8 +5523,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 0');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 0');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a
@@ -4994,7 +5545,7 @@ AssignmentExpression
   }
 
   test_topLevel_setter_fromStatic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   set a(int _) {}
 }
@@ -5007,8 +5558,8 @@ extension E on C {
   }
 }
 ''');
-    var assignment = findNode.assignment('a = 0');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('a = 0');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: SimpleIdentifier
     token: a

@@ -2,10 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import '../../generated/test_support.dart';
 import '../dart/resolution/context_collection_resolution.dart';
 import '../dart/resolution/node_text_expectations.dart';
 
@@ -44,7 +42,7 @@ class A {
 }
 
 augment class A {
-  augment int foo = 42;
+  augment abstract int foo;
 }
 ''');
   }
@@ -154,12 +152,16 @@ class C {
 
   test_instance_getter_field_augment() async {
     await resolveTestCodeWithDiagnostics(r'''
-abstract class C {
+class C {
   int get foo;
+//        ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
-augment abstract class C {
+augment class C {
   augment int foo = 0;
+//            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -455,12 +457,16 @@ class A(var int _, var int _);
 
   test_instance_setter_field_augment() async {
     await resolveTestCodeWithDiagnostics(r'''
-abstract class C {
+class C {
   void set foo(int _);
+//         ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
-augment abstract class C {
+augment class C {
   augment int foo = 0;
+//            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -673,10 +679,14 @@ class C {
     await resolveTestCodeWithDiagnostics(r'''
 class A {
   static int get foo => 0;
+//               ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment class A {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -815,10 +825,14 @@ class C {
     await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void set foo(_) {}
+//                ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment class A {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -975,7 +989,7 @@ enum E {
 }
 
 augment enum E {;
-  augment final int foo = 0;
+  augment abstract final int foo;
 }
 ''');
   }
@@ -1208,10 +1222,14 @@ enum E(final int _, final int _) {
 enum E {
   v;
   void set foo(int _) {}
+//         ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment enum E {;
   augment final int foo = 0;
+//                  ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -1403,10 +1421,14 @@ enum E {
 enum E {
   v;
   static int get foo => 0;
+//               ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment enum E {;
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -1556,10 +1578,14 @@ enum E {
 enum E {
   v;
   static void set foo(_) {}
+//                ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment enum E {;
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -1671,12 +1697,14 @@ extension E on A {
     await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   int get foo => 0;
+//        ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment extension E {
-  augment int foo = 0;
-//            ^^^
-// [diag.extensionDeclaresInstanceField] Extensions can't declare instance fields.
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -1821,12 +1849,14 @@ extension E on A {
     await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   void set foo(int _) {}
+//         ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment extension E {
-  augment int foo = 0;
-//            ^^^
-// [diag.extensionDeclaresInstanceField] Extensions can't declare instance fields.
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -1967,10 +1997,14 @@ extension E on A {
     await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   static int get foo => 0;
+//               ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment extension E {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2115,10 +2149,14 @@ extension E on A {
     await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   static void set foo(_) {}
+//                ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment extension E {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2207,12 +2245,14 @@ class DuplicateDefinitionExtensionTypeTest extends PubPackageResolutionTest {
     await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   int get foo => 0;
+//        ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
-augment extension type E(int it) {
-  augment int foo = 0;
-//            ^^^
-// [diag.extensionTypeDeclaresInstanceField] Extension types can't declare instance fields.
+augment extension type E {
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2327,12 +2367,14 @@ extension type E(int it) {
     await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   void set foo(int _) {}
+//         ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
-augment extension type E(int it) {
-  augment int foo = 0;
-//            ^^^
-// [diag.extensionTypeDeclaresInstanceField] Extension types can't declare instance fields.
+augment extension type E {
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2437,10 +2479,14 @@ extension type E(int it) {
     await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   static int get foo => 0;
+//               ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
-augment extension type E(int it) {
-  augment static int foo = 0;
+augment extension type E {
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2523,10 +2569,14 @@ extension type E(int it) {
     await resolveTestCodeWithDiagnostics(r'''
 extension type E(int it) {
   static void set foo(_) {}
+//                ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
-augment extension type E(int it) {
-  augment static int foo = 0;
+augment extension type E {
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2645,10 +2695,14 @@ mixin M {
     await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   int get foo => 0;
+//        ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment mixin M {
-  augment int foo = 0;
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2759,10 +2813,14 @@ mixin M {
     await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   void set foo(int _) {}
+//         ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment mixin M {
-  augment int foo = 0;
+  augment abstract int foo;
+//                     ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2867,10 +2925,14 @@ mixin M {
     await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   static int get foo => 0;
+//               ^^^
+// [context 1] The corresponding getter is declared here.
 }
 
 augment mixin M {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutSetterDeclaration][context 1] This augmentation induces a setter, but no setter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -2953,10 +3015,14 @@ mixin M {
     await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   static void set foo(_) {}
+//                ^^^
+// [context 1] The corresponding setter is declared here.
 }
 
 augment mixin M {
-  augment static int foo = 0;
+  augment static abstract int foo;
+//                            ^^^
+// [diag.augmentationWithoutGetterDeclaration][context 1] This augmentation induces a getter, but no getter declaration named 'foo' exists to augment.
 }
 ''');
   }
@@ -3015,10 +3081,9 @@ void f() {
 ''');
   }
 
-  test_block_localFunction_wildcard_preWildcards() async {
+  test_block_localFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   void _() {}
@@ -3062,10 +3127,9 @@ void f() {
 ''');
   }
 
-  test_block_localVariable_localVariable_wildcard_preWildcards() async {
+  test_block_localVariable_localVariable_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   var _ = 0;
@@ -3102,10 +3166,9 @@ void f() {
 ''');
   }
 
-  test_block_localVariable_patternVariable_wildcard_preWildcards() async {
+  test_block_localVariable_patternVariable_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   var _ = 0;
@@ -3160,13 +3223,14 @@ main() {
     await resolveTestCodeWithDiagnostics(r'''
 f() {
   try {} catch (_, _) {}
+//                 ^
+// [diag.unusedCatchStack] The stack trace variable '_' isn't used and can be removed.
 }''');
   }
 
-  test_catch_wildcard_preWildCards() async {
+  test_catch_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 f() {
   try {} catch (_, _) {}
@@ -3174,6 +3238,7 @@ f() {
 // [context 1] The first definition of this name.
 //                 ^
 // [diag.duplicateDefinition][context 1] The name '_' is already defined.
+// [diag.unusedCatchStack] The stack trace variable '_' isn't used and can be removed.
 }''');
   }
 
@@ -3211,10 +3276,9 @@ f() {
 ''');
   }
 
-  test_for_initializers_wildcard_preWildcards() async {
+  test_for_initializers_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 f() {
   for (int _ = 0, _ = 0; ;) {}
@@ -3256,10 +3320,9 @@ class A {
 ''');
   }
 
-  test_parameters_constructor_field_first_wildcard_preWildcards() async {
+  test_parameters_constructor_field_first_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A {
   int? _;
@@ -3298,10 +3361,9 @@ class A {
 ''');
   }
 
-  test_parameters_constructor_field_second_wildcard_preWildcards() async {
+  test_parameters_constructor_field_second_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A {
   int? _;
@@ -3332,10 +3394,9 @@ class B extends A {
 ''');
   }
 
-  test_parameters_constructor_super_first_wildcard_preWildcards() async {
+  test_parameters_constructor_super_first_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A {
   int? _;
@@ -3387,10 +3448,9 @@ typedef void F(int _, double _);
 ''');
   }
 
-  test_parameters_functionTypeAlias_wildcard_preWildcards() async {
+  test_parameters_functionTypeAlias_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef void F(int _, double _);
 //                 ^
@@ -3416,10 +3476,9 @@ typedef F = void Function(int _, double _);
 ''');
   }
 
-  test_parameters_genericFunction_wildcard_preWildcards() async {
+  test_parameters_genericFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef F = void Function(int _, double _);
 //                            ^
@@ -3454,10 +3513,9 @@ f() {
 ''');
   }
 
-  test_parameters_localFunction_wildcard_preWildcards() async {
+  test_parameters_localFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 f() {
   g(int _, double _) {};
@@ -3493,10 +3551,9 @@ class A {
 ''');
   }
 
-  test_parameters_method_wildcard_preWildcards() async {
+  test_parameters_method_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A {
   m(int _, double _) {
@@ -3621,10 +3678,9 @@ f(int _, double _) {}
 ''');
   }
 
-  test_parameters_topLevelFunction_wildcard_preWildcards() async {
+  test_parameters_topLevelFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 f(int _, double _) {}
 //    ^
@@ -3636,7 +3692,7 @@ f(int _, double _) {}
 
   test_switchCase_localVariable_localVariable() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+// %before-language-feature: patterns
 void f() {
   switch (0) {
     case 0:
@@ -3671,10 +3727,9 @@ void f() {
 ''');
   }
 
-  test_switchDefault_localVariable_localVariable_preWildcards() async {
+  test_switchDefault_localVariable_localVariable_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   switch (0) {
@@ -3732,10 +3787,9 @@ void f() {
 ''');
   }
 
-  test_switchPatternCase_localVariable_localVariable_wildcard_preWildCards() async {
+  test_switchPatternCase_localVariable_localVariable_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   switch (0) {
@@ -3828,24 +3882,22 @@ set f(int value) {}
   }
 
   test_topLevel_setter_setter_inPart() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
-set f(int value) {}
-''');
+    var a = getFile('$testPackageLibPath/a.dart');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    await resolveFilesWithDiagnostics({
+      testFile: r'''
 part 'a.dart';
 set f(int value) {}
-''');
-
-    await assertErrorsInFile2(a, [
-      error(
-        diag.duplicateDefinition,
-        25,
-        1,
-        contextMessages: [message(testFile, 19, 1)],
-      ),
-    ]);
+//  ^
+// [context 1] The first definition of this name.
+''',
+      a: r'''
+part of 'test.dart';
+set f(int value) {}
+//  ^
+// [diag.duplicateDefinition][context 1] The name 'f=' is already defined.
+''',
+    });
   }
 
   test_typeParameters_class() async {
@@ -3864,10 +3916,9 @@ class A<_, _> {}
 ''');
   }
 
-  test_typeParameters_class_wildcard_preWildcards() async {
+  test_typeParameters_class_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A<_, _> {}
 //      ^
@@ -3893,10 +3944,9 @@ typedef void F<_, _>();
 ''');
   }
 
-  test_typeParameters_functionTypeAlias_wildcard_preWildcards() async {
+  test_typeParameters_functionTypeAlias_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef void F<_, _>();
 //             ^
@@ -3922,10 +3972,9 @@ typedef F = void Function<_, _>();
 ''');
   }
 
-  test_typeParameters_genericFunction_wildcard_preWildcards() async {
+  test_typeParameters_genericFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef F = void Function<_, _>();
 //                        ^
@@ -3951,10 +4000,9 @@ typedef F<_, _> = void Function();
 ''');
   }
 
-  test_typeParameters_genericTypedef_functionType_wildcard_preWildcards() async {
+  test_typeParameters_genericTypedef_functionType_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef F<_, _> = void Function();
 //        ^
@@ -3980,10 +4028,9 @@ typedef F<_, _> = Map;
 ''');
   }
 
-  test_typeParameters_genericTypedef_interfaceType_wildcard_preWildcards() async {
+  test_typeParameters_genericTypedef_interfaceType_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 typedef F<_, _> = Map;
 //        ^
@@ -4013,10 +4060,9 @@ class A {
 ''');
   }
 
-  test_typeParameters_method_wildcard_preWildcards() async {
+  test_typeParameters_method_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 class A {
   void m<_, _>() {}
@@ -4044,10 +4090,9 @@ void f<_, _>() {}
 ''');
   }
 
-  test_typeParameters_topLevelFunction_wildcard_preWildcards() async {
+  test_typeParameters_topLevelFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f<_, _>() {}
 //     ^
@@ -4080,69 +4125,52 @@ augment class A {}
   }
 
   test_class_library_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var lib = getFile('$testPackageLibPath/lib.dart');
+    var a = getFile('$testPackageLibPath/a.dart');
+
+    await resolveFilesWithDiagnostics({
+      lib: r'''
 part 'a.dart';
 
 class A {}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+//    ^
+// [context 1] The first definition of this name.
+''',
+      a: r'''
 part of 'lib.dart';
 
 class A {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
-    GatheringDiagnosticListener()
-      ..addAll(aResult.diagnostics)
-      ..assertErrors([
-        error(
-          diag.duplicateDefinition,
-          27,
-          1,
-          contextMessages: [message(lib, 22, 1)],
-        ),
-      ]);
+//    ^
+// [diag.duplicateDefinition][context 1] The name 'A' is already defined.
+''',
+    });
   }
 
   test_class_part_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var lib = getFile('$testPackageLibPath/lib.dart');
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      lib: r'''
 part 'a.dart';
 part 'b.dart';
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+''',
+      a: r'''
 part of 'lib.dart';
 
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', '''
+//    ^
+// [context 1] The first definition of this name.
+''',
+      b: r'''
 part of 'lib.dart';
 
 class A {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
-    GatheringDiagnosticListener()
-      ..addAll(aResult.diagnostics)
-      ..assertNoErrors();
-
-    var bResult = await resolveFile(b);
-    GatheringDiagnosticListener()
-      ..addAll(bResult.diagnostics)
-      ..assertErrors([
-        error(
-          diag.duplicateDefinition,
-          27,
-          1,
-          contextMessages: [message(a, 27, 1)],
-        ),
-      ]);
+//    ^
+// [diag.duplicateDefinition][context 1] The name 'A' is already defined.
+''',
+    });
   }
 
   test_extension() async {
@@ -4158,31 +4186,25 @@ extension A on int {}
   }
 
   test_extension_library_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var lib = getFile('$testPackageLibPath/lib.dart');
+    var a = getFile('$testPackageLibPath/a.dart');
+
+    await resolveFilesWithDiagnostics({
+      lib: r'''
 part 'a.dart';
 
 extension A on int {}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+//        ^
+// [context 1] The first definition of this name.
+''',
+      a: r'''
 part of 'lib.dart';
 
 extension A on int {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
-    GatheringDiagnosticListener()
-      ..addAll(aResult.diagnostics)
-      ..assertErrors([
-        error(
-          diag.duplicateDefinition,
-          31,
-          1,
-          contextMessages: [message(lib, 26, 1)],
-        ),
-      ]);
+//        ^
+// [diag.duplicateDefinition][context 1] The name 'A' is already defined.
+''',
+    });
   }
 
   test_extensionType() async {
@@ -4198,31 +4220,25 @@ extension type A(int it) {}
   }
 
   test_extensionType_library_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var lib = getFile('$testPackageLibPath/lib.dart');
+    var a = getFile('$testPackageLibPath/a.dart');
+
+    await resolveFilesWithDiagnostics({
+      lib: r'''
 part 'a.dart';
 
 extension type A(int it) {}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+//             ^
+// [context 1] The first definition of this name.
+''',
+      a: r'''
 part of 'lib.dart';
 
 extension type A(int it) {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
-    GatheringDiagnosticListener()
-      ..addAll(aResult.diagnostics)
-      ..assertErrors([
-        error(
-          diag.duplicateDefinition,
-          36,
-          1,
-          contextMessages: [message(lib, 31, 1)],
-        ),
-      ]);
+//             ^
+// [diag.duplicateDefinition][context 1] The name 'A' is already defined.
+''',
+    });
   }
 
   test_mixin() async {
@@ -4245,31 +4261,25 @@ augment mixin A {}
   }
 
   test_mixin_library_part() async {
-    var lib = newFile('$testPackageLibPath/lib.dart', '''
+    var lib = getFile('$testPackageLibPath/lib.dart');
+    var a = getFile('$testPackageLibPath/a.dart');
+
+    await resolveFilesWithDiagnostics({
+      lib: r'''
 part 'a.dart';
 
 mixin A {}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', '''
+//    ^
+// [context 1] The first definition of this name.
+''',
+      a: r'''
 part of 'lib.dart';
 
 mixin A {}
-''');
-
-    await resolveFile(lib);
-
-    var aResult = await resolveFile(a);
-    GatheringDiagnosticListener()
-      ..addAll(aResult.diagnostics)
-      ..assertErrors([
-        error(
-          diag.duplicateDefinition,
-          27,
-          1,
-          contextMessages: [message(lib, 22, 1)],
-        ),
-      ]);
+//    ^
+// [diag.duplicateDefinition][context 1] The name 'A' is already defined.
+''',
+    });
   }
 
   test_topLevelVariable() async {
@@ -4286,7 +4296,7 @@ int foo = 42;
   test_topLevelVariable_topLevelVariable_augment() async {
     await resolveTestCodeWithDiagnostics(r'''
 int foo = 0;
-augment int foo = 42;
+augment abstract int foo;
 ''');
   }
 

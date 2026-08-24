@@ -10,14 +10,19 @@ import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
 import 'package:kernel/core_types.dart' show CoreTypes;
 import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
+
 import '../test_helpers.dart';
 
 void main() {
   final component = readVmPlatformKernelFile();
   final coreTypes = CoreTypes(component);
+  final coreLibraries = coreTypes.index;
   final classHierarchy = ClassHierarchy(component, coreTypes);
   final typeEnvironment = TypeEnvironment(coreTypes, classHierarchy);
-  final globalContext = GlobalContext(typeEnvironment: typeEnvironment);
+  final globalContext = GlobalContext(
+    typeEnvironment: typeEnvironment,
+    coreLibraries: coreLibraries,
+  );
   late FunctionRegistry functionRegistry;
 
   setUp(() {
@@ -38,6 +43,9 @@ void main() {
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isTrue);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is StaticType, isTrue);
     expect(returnType.dartType, equals(member.getterType));
@@ -53,6 +61,9 @@ void main() {
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isTrue);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is TopType, isTrue);
     expect(returnType.dartType, equals(ast.VoidType()));
@@ -62,14 +73,18 @@ void main() {
 
   test('field getter', () {
     final member = coreTypes.pragmaName;
-    final func =
-        functionRegistry.getFunction(member, isGetter: true)
-            as ImplicitFieldGetter;
+    final func = functionRegistry.getFunction(
+      member,
+      isGetter: true,
+    ) as ImplicitFieldGetter;
     expect(func.member, same(member));
     expect(func.hasReceiverParameter, isTrue);
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     expect(func.returnType, equals(StringType()));
     expect(functionRegistry.getFunction(member, isGetter: true), same(func));
   });
@@ -80,14 +95,18 @@ void main() {
       'Error',
       '_stackTrace',
     );
-    final func =
-        functionRegistry.getFunction(member, isSetter: true)
-            as ImplicitFieldSetter;
+    final func = functionRegistry.getFunction(
+      member,
+      isSetter: true,
+    ) as ImplicitFieldSetter;
     expect(func.member, same(member));
     expect(func.hasReceiverParameter, isTrue);
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     expect(func.returnType, equals(TopType(const ast.VoidType())));
     expect(functionRegistry.getFunction(member, isSetter: true), same(func));
     expect(
@@ -98,14 +117,18 @@ void main() {
 
   test('field initializer', () {
     final member = coreTypes.index.getField('dart:core', 'double', 'nan');
-    final func =
-        functionRegistry.getFunction(member, isInitializer: true)
-            as FieldInitializerFunction;
+    final func = functionRegistry.getFunction(
+      member,
+      isInitializer: true,
+    ) as FieldInitializerFunction;
     expect(func.member, same(member));
     expect(func.hasReceiverParameter, isFalse);
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     expect(func.returnType, equals(DoubleType()));
     expect(
       functionRegistry.getFunction(member, isInitializer: true),
@@ -125,6 +148,9 @@ void main() {
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isTrue);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(1));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is StaticType, isTrue);
     expect(returnType.dartType, equals(member.function.returnType));
@@ -139,6 +165,9 @@ void main() {
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is TopType, isTrue);
     expect(returnType.dartType, equals(ast.VoidType()));
@@ -147,14 +176,18 @@ void main() {
 
   test('tear-off', () {
     final member = coreTypes.index.getProcedure('dart:core', 'List', 'empty');
-    final func =
-        functionRegistry.getFunction(member, isTearOff: true)
-            as TearOffFunction;
+    final func = functionRegistry.getFunction(
+      member,
+      isTearOff: true,
+    ) as TearOffFunction;
     expect(func.member, same(member));
     expect(func.hasReceiverParameter, isFalse);
     expect(func.hasClosureParameter, isTrue);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isTrue);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(1));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is StaticType, isTrue);
     expect(returnType.dartType, equals(member.function.returnType));
@@ -164,22 +197,28 @@ void main() {
 
   test('local function', () {
     final member = coreTypes.futureValueFactory;
+    final enclosingFunction = functionRegistry.getFunction(member);
     final localFunction = ast.FunctionDeclaration(
-      ast.VariableDeclaration('foo'),
+      ast.LocalFunctionVariable(name: 'foo', type: const ast.DynamicType()),
       ast.FunctionNode(
         ast.Block([]),
         returnType: coreTypes.boolNonNullableRawType,
       ),
     );
-    final func =
-        functionRegistry.getFunction(member, localFunction: localFunction)
-            as LocalFunction;
+    final func = functionRegistry.getFunction(
+      member,
+      enclosingFunction: enclosingFunction,
+      localFunction: localFunction,
+    ) as LocalFunction;
     expect(func.member, same(member));
     expect(func.localFunction, same(localFunction));
     expect(func.hasReceiverParameter, isFalse);
     expect(func.hasClosureParameter, isTrue);
     expect(func.hasClassTypeParameters, isFalse);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isTrue);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(1));
     expect(func.returnType, equals(BoolType()));
     expect(
       functionRegistry.getFunction(member, localFunction: localFunction),
@@ -189,14 +228,18 @@ void main() {
 
   test('method-extractor', () {
     final member = coreTypes.index.getProcedure('dart:core', 'List', 'add');
-    final func =
-        functionRegistry.getFunction(member, isMethodExtractor: true)
-            as MethodExtractor;
+    final func = functionRegistry.getFunction(
+      member,
+      isMethodExtractor: true,
+    ) as MethodExtractor;
     expect(func.member, same(member));
     expect(func.hasReceiverParameter, isTrue);
     expect(func.hasClosureParameter, isFalse);
     expect(func.hasClassTypeParameters, isTrue);
     expect(func.hasFunctionTypeParameters, isFalse);
+    expect(func.hasEnclosingFunctionTypeParameters, isFalse);
+    expect(func.numberOfFunctionTypeParameters, equals(0));
+    expect(func.numberOfEnclosingFunctionTypeParameters, equals(0));
     final returnType = func.returnType;
     expect(returnType is StaticType, isTrue);
     expect(

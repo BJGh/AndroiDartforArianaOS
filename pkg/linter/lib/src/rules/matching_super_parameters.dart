@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use matching super parameter names.';
 
 class MatchingSuperParameters extends AnalysisRule {
-  MatchingSuperParameters()
-    : super(name: LintNames.matching_super_parameters, description: _desc);
+  new() : super(name: LintNames.matching_super_parameters, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.matchingSuperParameters;
@@ -33,11 +32,7 @@ class MatchingSuperParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  const _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     _visitConstructor(node.parameters, node.initializers, node.parent?.parent);

@@ -16,27 +16,27 @@ class ConstructorInfo {
 
   /// All parameters of the constructor in canonical order (positional first,
   /// then named sorted by name).
-  final List<VariableDeclaration> allParameters;
+  final List<FunctionParameter> allParameters;
 
   /// Parameters that must be passed to the initializer function.
   late final List<TypeParameter> initializerTypeParameters;
-  late final List<VariableDeclaration> initializerParameters;
+  late final List<FunctionParameter> initializerParameters;
 
   /// Parameters that must be passed to the body function from the allocator.
   ///
   /// NOTE: Type parameters of a constructor always end up in fields and can be
   /// loaded from there. The constructor body therefore never needs to get them
   /// passed explicitly.
-  late final List<VariableDeclaration> bodyParameters;
+  late final List<FunctionParameter> bodyParameters;
 
   /// Parameters that constructor bodies can load via `this`.
-  final Map<VariableDeclaration, Field> parameterToField = {};
+  final Map<Variable, Field> parameterToField = {};
 
   ConstructorInfo(this.constructor, this.translator)
     : allParameters = [
         ...constructor.function.positionalParameters,
         ...(constructor.function.namedParameters.toList()
-          ..sort((a, b) => a.name!.compareTo(b.name!))),
+          ..sort((a, b) => a.parameterName.compareTo(b.parameterName))),
       ] {
     // The initializer gets all arguments and produces
     //   - arguments to be passed to the body function
@@ -108,11 +108,11 @@ class _UsageCollector extends RecursiveVisitor {
   final Translator translator;
   final Closures closures;
 
-  final variablesRead = <VariableDeclaration>{};
-  final variablesWritten = <VariableDeclaration>{};
-  final variablesCaptured = <VariableDeclaration>{};
+  final variablesRead = <Variable>{};
+  final variablesWritten = <Variable>{};
+  final variablesCaptured = <Variable>{};
   final usedTypeParameters = <TypeParameter>{};
-  final variablesStoredInFields = <VariableDeclaration, Field>{};
+  final variablesStoredInFields = <Variable, Field>{};
 
   _UsageCollector(this.translator, this.closures);
 
@@ -171,7 +171,7 @@ class _UsageCollector extends RecursiveVisitor {
       final arg = namedArg.value;
       if (arg is VariableGet) {
         for (final targetNamedParameter in target.function.namedParameters) {
-          if (targetNamedParameter.name == namedArg.name) {
+          if (targetNamedParameter.parameterName == namedArg.name) {
             final field = targetInfo.parameterToField[targetNamedParameter];
             if (field != null) {
               variablesStoredInFields[arg.variable] = field;

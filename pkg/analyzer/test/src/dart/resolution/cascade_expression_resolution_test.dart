@@ -16,8 +16,244 @@ main() {
 
 @reflectiveTest
 class CascadeExpressionResolutionTest extends PubPackageResolutionTest {
+  test_functionInterface_call_read() async {
+    var result = await resolveTestCode(r'''
+Function f(Function a) {
+  return a..call;
+}
+''');
+
+    var node = result.findNode.cascadePropertyExtraction('call;');
+    assertResolvedNodeText(node, r'''
+CascadePropertyExtraction
+  propertyName: call
+  resolution: FunctionInterfaceCallTearOffResolution
+    type: Function
+  staticType: Function
+V1: PropertyAccess
+  operator: ..
+  propertyName: SimpleIdentifier
+    token: call
+    element: <null>
+    staticType: Function
+  staticType: Function
+''');
+  }
+
+  test_functionType_call_read_typeParameterBound() async {
+    var result = await resolveTestCode(r'''
+T f<T extends int Function(String)>(T a) {
+  return a..call;
+}
+''');
+
+    var node = result.findNode.cascadePropertyExtraction('call;');
+    assertResolvedNodeText(node, r'''
+CascadePropertyExtraction
+  propertyName: call
+  resolution: FunctionCallTearOffResolution
+    type: T
+    associatedFunctionType: int Function(String)
+  staticType: T
+V1: PropertyAccess
+  operator: ..
+  propertyName: SimpleIdentifier
+    token: call
+    element: <null>
+    staticType: T
+  staticType: T
+''');
+  }
+
+  test_indexSections_ast() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+class A {
+  dynamic operator[](int index) => 0;
+  operator[]=(int index, dynamic value) {}
+}
+
+void f(A a) {
+  a..[0]..[1] = 1..[2] += 1..[3] ??= 1;
+}
+''');
+
+    var node = result.findNode.singleCascadeExpression;
+    assertResolvedNodeText(node, r'''
+CascadeExpression
+  target2: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: A
+  sections
+    CascadeSection
+      operator: ..
+      body: CascadeIndexExpression
+        leftBracket: [
+        index: IntegerLiteral
+          literal: 0
+          correspondingParameter: <testLibrary>::@class::A::@method::[]::@formalParameter::index
+          staticType: int
+        rightBracket: ]
+        resolution: MethodIndexReadResolution
+          element: <testLibrary>::@class::A::@method::[]
+          invokeType: dynamic Function(int)
+          type: dynamic
+        staticType: dynamic
+    CascadeSection
+      operator: ..
+      body: DirectAssignment
+        target: CascadeIndexAssignmentTarget
+          leftBracket: [
+          index: IntegerLiteral
+            literal: 1
+            correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+            staticType: int
+          rightBracket: ]
+          read: <null>
+          write: MethodIndexWriteResolution
+            element: <testLibrary>::@class::A::@method::[]=
+            invokeType: void Function(int, dynamic)
+            acceptedType: dynamic
+        operator: =
+        value: IntegerLiteral
+          literal: 1
+          correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::value
+          staticType: int
+        staticType: int
+    CascadeSection
+      operator: ..
+      body: CompoundAssignment
+        target: CascadeIndexAssignmentTarget
+          leftBracket: [
+          index: IntegerLiteral
+            literal: 2
+            correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+            staticType: int
+          rightBracket: ]
+          read: MethodIndexReadResolution
+            element: <testLibrary>::@class::A::@method::[]
+            invokeType: dynamic Function(int)
+            type: dynamic
+          write: MethodIndexWriteResolution
+            element: <testLibrary>::@class::A::@method::[]=
+            invokeType: void Function(int, dynamic)
+            acceptedType: dynamic
+        operator: +=
+        value: IntegerLiteral
+          literal: 1
+          correspondingParameter: <null>
+          staticType: int
+        binaryOperator: add
+        element: <null>
+        operatorResultType: dynamic
+        staticType: dynamic
+    CascadeSection
+      operator: ..
+      body: IfNullAssignment
+        target: CascadeIndexAssignmentTarget
+          leftBracket: [
+          index: IntegerLiteral
+            literal: 3
+            correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+            staticType: int
+          rightBracket: ]
+          read: MethodIndexReadResolution
+            element: <testLibrary>::@class::A::@method::[]
+            invokeType: dynamic Function(int)
+            type: dynamic
+          write: MethodIndexWriteResolution
+            element: <testLibrary>::@class::A::@method::[]=
+            invokeType: void Function(int, dynamic)
+            acceptedType: dynamic
+        operator: ??=
+        value: IntegerLiteral
+          literal: 1
+          correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::value
+          staticType: int
+        staticType: dynamic
+  cascadeSections
+    IndexExpression
+      period: ..
+      leftBracket: [
+      index: IntegerLiteral
+        literal: 0
+        correspondingParameter: <testLibrary>::@class::A::@method::[]::@formalParameter::index
+        staticType: int
+      rightBracket: ]
+      element: <testLibrary>::@class::A::@method::[]
+      staticType: dynamic
+    AssignmentExpression
+      leftHandSide: IndexExpression
+        period: ..
+        leftBracket: [
+        index: IntegerLiteral
+          literal: 1
+          correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+          staticType: int
+        rightBracket: ]
+        element: <null>
+        staticType: null
+      operator: =
+      rightHandSide: IntegerLiteral
+        literal: 1
+        correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::value
+        staticType: int
+      readElement: <null>
+      readType: null
+      writeElement: <testLibrary>::@class::A::@method::[]=
+      writeType: dynamic
+      element: <null>
+      staticType: int
+    AssignmentExpression
+      leftHandSide: IndexExpression
+        period: ..
+        leftBracket: [
+        index: IntegerLiteral
+          literal: 2
+          correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+          staticType: int
+        rightBracket: ]
+        element: <null>
+        staticType: null
+      operator: +=
+      rightHandSide: IntegerLiteral
+        literal: 1
+        correspondingParameter: <null>
+        staticType: int
+      readElement: <testLibrary>::@class::A::@method::[]
+      readType: dynamic
+      writeElement: <testLibrary>::@class::A::@method::[]=
+      writeType: dynamic
+      element: <null>
+      staticType: dynamic
+    AssignmentExpression
+      leftHandSide: IndexExpression
+        period: ..
+        leftBracket: [
+        index: IntegerLiteral
+          literal: 3
+          correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::index
+          staticType: int
+        rightBracket: ]
+        element: <null>
+        staticType: null
+      operator: ??=
+      rightHandSide: IntegerLiteral
+        literal: 1
+        correspondingParameter: <testLibrary>::@class::A::@method::[]=::@formalParameter::value
+        staticType: int
+      readElement: <testLibrary>::@class::A::@method::[]
+      readType: dynamic
+      writeElement: <testLibrary>::@class::A::@method::[]=
+      writeType: dynamic
+      element: <null>
+      staticType: dynamic
+  staticType: A
+''');
+  }
+
   test_nullAware_indexGet_promotableField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   final D? _d;
   C(this._d);
@@ -36,17 +272,27 @@ test(C c) {
     // The null shorting for the index get `.._d?[0]` ends at the end of the
     // cascade section, therefore in the cascade section that follows, `..d_`
     // has static type `D?`.
-    var node = findNode.simple('_d?.g()');
+    var node = result.findNode.cascadePropertyExtraction('_d?.g()');
     assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _d
-  element: <testLibrary>::@class::C::@getter::_d
+CascadePropertyExtraction
+  propertyName: _d
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_d
+    invokeType: D? Function()
+    type: D?
+  staticType: D?
+V1: PropertyAccess
+  operator: ..
+  propertyName: SimpleIdentifier
+    token: _d
+    element: <testLibrary>::@class::C::@getter::_d
+    staticType: D?
   staticType: D?
 ''');
   }
 
   test_nullAware_indexGet_promotableLocal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   D? get d;
 }
@@ -65,7 +311,7 @@ test(C c, int? i) {
     // The null shorting for the index get `..d?[0]` ends at the end of the
     // cascade section, therefore in the cascade section that follows, `i` has
     // static type `int?`.
-    var node = findNode.simple('i!);');
+    var node = result.findNode.simple('i!);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: i
@@ -75,7 +321,7 @@ SimpleIdentifier
   }
 
   test_nullAware_indexSet_promotableLocal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   D get d;
   void f(int i);
@@ -93,7 +339,7 @@ test(C c, int? i) {
     // The null shorting for the index set `..d[0] ??= i!` ends at the end of
     // the cascade section, therefore in the cascade section that follows, `i`
     // has static type `int?`.
-    var node = findNode.simple('i!);');
+    var node = result.findNode.simple('i!);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: i
@@ -103,7 +349,7 @@ SimpleIdentifier
   }
 
   test_nullAware_methodInvocation_promotableField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   final D? _d;
   C(this._d);
@@ -121,17 +367,27 @@ test(C c) {
     // The null shorting for the method invocation `.._d?.f()` ends at the end
     // of the cascade section, therefore in the cascade section that follows,
     // `.._d` has static type `D?`.
-    var node = findNode.simple('_d?.g()');
+    var node = result.findNode.cascadePropertyExtraction('_d?.g()');
     assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _d
-  element: <testLibrary>::@class::C::@getter::_d
+CascadePropertyExtraction
+  propertyName: _d
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_d
+    invokeType: D? Function()
+    type: D?
+  staticType: D?
+V1: PropertyAccess
+  operator: ..
+  propertyName: SimpleIdentifier
+    token: _d
+    element: <testLibrary>::@class::C::@getter::_d
+    staticType: D?
   staticType: D?
 ''');
   }
 
   test_nullAware_methodInvocation_promotableLocal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   D? get d;
 }
@@ -148,7 +404,7 @@ test(C c, int? i) {
     // The null shorting for the method invocation `..d?.f(i!)` ends at the end
     // of the cascade section, therefore in the cascade section that follows,
     // `i` has static type `int?`.
-    var node = findNode.simple('i!);');
+    var node = result.findNode.simple('i!);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: i
@@ -158,7 +414,7 @@ SimpleIdentifier
   }
 
   test_nullAware_propertyGet_promotableField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   final D? _d;
   C(this._d);
@@ -177,17 +433,27 @@ test(C c) {
     // The null shorting for the property get `.._d?.d` ends at the end of the
     // cascade section, therefore in the cascade section that follows, `..d_`
     // has static type `D?`.
-    var node = findNode.simple('_d?.g()');
+    var node = result.findNode.cascadePropertyExtraction('_d?.g()');
     assertResolvedNodeText(node, r'''
-SimpleIdentifier
-  token: _d
-  element: <testLibrary>::@class::C::@getter::_d
+CascadePropertyExtraction
+  propertyName: _d
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_d
+    invokeType: D? Function()
+    type: D?
+  staticType: D?
+V1: PropertyAccess
+  operator: ..
+  propertyName: SimpleIdentifier
+    token: _d
+    element: <testLibrary>::@class::C::@getter::_d
+    staticType: D?
   staticType: D?
 ''');
   }
 
   test_nullAware_propertyGet_promotableLocal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   D? get d;
 }
@@ -206,7 +472,7 @@ test(C c, int? i) {
     // The null shorting for the property get `..d?.d` ends at the end of the
     // cascade section, therefore in the cascade section that follows, `i` has
     // static type `int?`.
-    var node = findNode.simple('i!);');
+    var node = result.findNode.simple('i!);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: i
@@ -216,7 +482,7 @@ SimpleIdentifier
   }
 
   test_nullAware_propertySet_promotableLocal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class C {
   int? x;
   void f(int i);
@@ -229,7 +495,7 @@ test(C c, int? i) {
     // The null shorting for the property set `..x ??= i!` ends at the end of
     // the cascade section, therefore in the cascade section that follows, `i`
     // has static type `int?`.
-    var node = findNode.simple('i!);');
+    var node = result.findNode.simple('i!);');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: i

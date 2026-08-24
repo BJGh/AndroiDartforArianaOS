@@ -23,7 +23,7 @@ import 'package:collection/collection.dart';
 class CreateExtensionGetter extends _CreateExtensionMember {
   String _getterName = '';
 
-  CreateExtensionGetter({required super.context});
+  new({required super.context});
 
   @override
   List<String> get fixArguments => [_getterName];
@@ -76,12 +76,17 @@ class CreateExtensionGetter extends _CreateExtensionMember {
       addStaticKeyword = true;
     }
 
-    // TODO(FMorschel): We should take into account if the target type contains
-    // a setter for the same name and stop the fix from being applied.
     // We need the type for the extension.
     if (targetType == null ||
         targetType is DynamicType ||
         targetType is InvalidType) {
+      return;
+    }
+
+    // Extensions aren't considered when the interface already defines a
+    // member with the same basename.
+    if (targetType is InterfaceType &&
+        targetType.lookUpSetter(_getterName, libraryElement2) != null) {
       return;
     }
 
@@ -151,7 +156,7 @@ class CreateExtensionGetter extends _CreateExtensionMember {
 class CreateExtensionMethod extends _CreateExtensionMember {
   String _methodName = '';
 
-  CreateExtensionMethod({required super.context});
+  new({required super.context});
 
   @override
   List<String> get fixArguments => [_methodName];
@@ -336,7 +341,7 @@ class CreateExtensionMethod extends _CreateExtensionMember {
 class CreateExtensionOperator extends _CreateExtensionMember {
   String _operator = '';
 
-  CreateExtensionOperator({required super.context});
+  new({required super.context});
 
   @override
   List<String>? get fixArguments => [_operator];
@@ -368,10 +373,9 @@ class CreateExtensionOperator extends _CreateExtensionMember {
         if (parameterType == null) {
           return;
         }
-        if (parent case AssignmentExpression(
-          :var leftHandSide,
-          :var rightHandSide,
-        ) when leftHandSide == node) {
+        if (parent
+            case AssignmentExpression(:var leftHandSide, :var rightHandSide)
+            when leftHandSide == node) {
           assigningType = rightHandSide.staticType;
           indexSetter = true;
           _operator = TokenType.INDEX_EQ.lexeme;
@@ -496,7 +500,7 @@ class CreateExtensionOperator extends _CreateExtensionMember {
 class CreateExtensionSetter extends _CreateExtensionMember {
   String _setterName = '';
 
-  CreateExtensionSetter({required super.context});
+  new({required super.context});
 
   @override
   List<String> get fixArguments => [_setterName];
@@ -549,12 +553,17 @@ class CreateExtensionSetter extends _CreateExtensionMember {
       addStaticKeyword = true;
     }
 
-    // TODO(FMorschel): We should take into account if the target type contains
-    // a setter for the same name and stop the fix from being applied.
     // We need the type for the extension.
     if (targetType == null ||
         targetType is DynamicType ||
         targetType is InvalidType) {
+      return;
+    }
+
+    // Extensions aren't considered when the interface already defines a
+    // member with the same basename.
+    if (targetType is InterfaceType &&
+        targetType.lookUpGetter(_setterName, libraryElement2) != null) {
       return;
     }
 
@@ -615,7 +624,7 @@ class CreateExtensionSetter extends _CreateExtensionMember {
 }
 
 abstract class _CreateExtensionMember extends ResolvedCorrectionProducer {
-  _CreateExtensionMember({required super.context});
+  new({required super.context});
 
   @override
   CorrectionApplicability get applicability {

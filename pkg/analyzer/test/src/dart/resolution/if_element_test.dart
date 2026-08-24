@@ -17,18 +17,18 @@ main() {
 @reflectiveTest
 class IfElementResolutionTest extends PubPackageResolutionTest {
   test_caseClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) {
   [if (x case 0) 1 else 2];
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -36,33 +36,33 @@ IfElement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: Object
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 1
     staticType: int
   elseKeyword: else
-  elseElement: IntegerLiteral
+  elseElement2: IntegerLiteral
     literal: 2
     staticType: int
 ''');
   }
 
   test_caseClause_topLevelVariableInitializer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = 0;
 final y = [ if (x case var a) a ];
 ''');
 
-    var node = findNode.singleIfElement;
+    var node = result.findNode.singleIfElement;
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@getter::x
     staticType: int
@@ -77,7 +77,7 @@ IfElement
             type: int
         matchedValueType: int
   rightParenthesis: )
-  thenElement: SimpleIdentifier
+  thenElement2: SimpleIdentifier
     token: a
     element: a@40
     staticType: int
@@ -91,7 +91,7 @@ IfElement
     // but they are considered initialized after the entire case pattern,
     // before the guard expression if there is one. However, all pattern
     // variables are in scope in the entire pattern.
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 void f(Object x) {
   [
@@ -108,12 +108,12 @@ void f(Object x) {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -135,7 +135,7 @@ IfElement
             matchedValueType: Object?
           RelationalPattern
             operator: ==
-            operand: SimpleIdentifier
+            operand2: SimpleIdentifier
               token: a
               element: a@56
               staticType: int
@@ -146,7 +146,20 @@ IfElement
         requiredType: List<Object?>
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@56
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@56
@@ -160,12 +173,12 @@ IfElement
           staticInvokeType: bool Function(num)
           staticType: bool
   rightParenthesis: )
-  thenElement: SimpleIdentifier
+  thenElement2: SimpleIdentifier
     token: a
     element: a@56
     staticType: int
   elseKeyword: else
-  elseElement: SimpleIdentifier
+  elseElement2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
@@ -173,7 +186,7 @@ IfElement
   }
 
   test_caseClause_variables_single() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) {
   [
     if (x case int a when a > 0)
@@ -186,12 +199,12 @@ void f(Object x) {
 }
 ''');
 
-    var node = findNode.ifElement('if (x');
+    var node = result.findNode.ifElement('if (x');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -210,7 +223,20 @@ IfElement
         matchedValueType: Object
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@42
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@42
@@ -224,12 +250,12 @@ IfElement
           staticInvokeType: bool Function(num)
           staticType: bool
   rightParenthesis: )
-  thenElement: SimpleIdentifier
+  thenElement2: SimpleIdentifier
     token: a
     element: a@42
     staticType: int
   elseKeyword: else
-  elseElement: SimpleIdentifier
+  elseElement2: SimpleIdentifier
     token: a
     element: <null>
     staticType: InvalidType
@@ -237,7 +263,7 @@ IfElement
   }
 
   test_expression_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     [if (super) 0 else 1];
@@ -248,27 +274,27 @@ class A {
 }
 ''');
 
-    var node = findNode.singleIfElement;
+    var node = result.findNode.singleIfElement;
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: A
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 0
     staticType: int
   elseKeyword: else
-  elseElement: IntegerLiteral
+  elseElement2: IntegerLiteral
     literal: 1
     staticType: int
 ''');
   }
 
   test_rewrite_caseClause_pattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) {
   [if (x case const A()) 0];
 }
@@ -278,12 +304,12 @@ class A {
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -292,7 +318,18 @@ IfElement
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
         constKeyword: const
-        expression: InstanceCreationExpression
+        expression2: ConstructorInvocation
+          constructorReference: ConstructorReference2
+            typeReference: ConstructorTypeReference
+              name: A
+              element: <testLibrary>::@class::A
+              type: A
+            element: <testLibrary>::@class::A::@constructor::new
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+          staticType: A
+        expression(v1): InstanceCreationExpression
           constructorName: ConstructorName
             type: NamedType
               name: A
@@ -305,26 +342,26 @@ IfElement
           staticType: A
         matchedValueType: Object
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_rewrite_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(bool Function() a) {
   [if (a()) 0];
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: bool Function()
@@ -335,26 +372,26 @@ IfElement
     staticInvokeType: bool Function()
     staticType: bool
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_rewrite_expression_caseClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int Function() a) {
   [if (a() case 0) 1];
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -368,30 +405,30 @@ IfElement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: int
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 1
     staticType: int
 ''');
   }
 
   test_rewrite_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x, bool Function() a) {
   [if (x case 0 when a()) 1];
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -399,14 +436,14 @@ IfElement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: Object
       whenClause: WhenClause
         whenKeyword: when
-        expression: FunctionExpressionInvocation
-          function: SimpleIdentifier
+        expression2: FunctionExpressionInvocation
+          function2: SimpleIdentifier
             token: a
             element: <testLibrary>::@function::f::@formalParameter::a
             staticType: bool Function()
@@ -417,25 +454,25 @@ IfElement
           staticInvokeType: bool Function()
           staticType: bool
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 1
     staticType: int
 ''');
   }
 
   test_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object x) {
   [if (x case 0 when true) 1 else 2];
 }
 ''');
 
-    var node = findNode.ifElement('if');
+    var node = result.findNode.ifElement('if');
     assertResolvedNodeText(node, r'''
 IfElement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object
@@ -443,21 +480,21 @@ IfElement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: Object
       whenClause: WhenClause
         whenKeyword: when
-        expression: BooleanLiteral
+        expression2: BooleanLiteral
           literal: true
           staticType: bool
   rightParenthesis: )
-  thenElement: IntegerLiteral
+  thenElement2: IntegerLiteral
     literal: 1
     staticType: int
   elseKeyword: else
-  elseElement: IntegerLiteral
+  elseElement2: IntegerLiteral
     literal: 2
     staticType: int
 ''');

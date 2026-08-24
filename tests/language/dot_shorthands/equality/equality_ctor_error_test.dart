@@ -55,166 +55,182 @@ void notSymmetrical(ConstructorClass ctor, ConstructorExt ctorExt) {
   const bool symEqRegular = .constRegular(1) == constCtor;
   //                        ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                         ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                         ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   const bool symEqNamed = .constNamed(x: 1) == constCtor;
   //                      ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                       ^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                       ^
   // [cfe] No type was provided to find the dot shorthand 'constNamed'.
 
   const bool symEqOptional = .constOptional(1) == constCtor;
   //                         ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                          ^^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                          ^
   // [cfe] No type was provided to find the dot shorthand 'constOptional'.
 
   const bool symNeqRegular = .constRegular(1) != constCtor;
   //                         ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                          ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                          ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   const bool symNeqNamed = .constNamed(x: 1) != constCtor;
   //                       ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                        ^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                        ^
   // [cfe] No type was provided to find the dot shorthand 'constNamed'.
 
   const bool symNeqOptional = .constOptional(1) != constCtor;
   //                          ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                           ^^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                           ^
   // [cfe] No type was provided to find the dot shorthand 'constOptional'.
 
   const ConstructorExt constCtorExt = .constRegular(1);
   const bool symExtEqRegular = .constRegular(1) == constCtorExt;
   //                           ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                            ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                            ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   const bool symExtEqNamed = .constNamed(x: 1) == constCtorExt;
   //                         ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                          ^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                          ^
   // [cfe] No type was provided to find the dot shorthand 'constNamed'.
 
   const bool symExtEqOptional = .constOptional(1) == constCtorExt;
   //                            ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                             ^^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                             ^
   // [cfe] No type was provided to find the dot shorthand 'constOptional'.
 
   const bool symExtNeqRegular = .constRegular(1) != constCtorExt;
   //                            ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                             ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                             ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   const bool symExtNeqNamed = .constNamed(x: 1) != constCtorExt;
   //                          ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                           ^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                           ^
   // [cfe] No type was provided to find the dot shorthand 'constNamed'.
 
   const bool symExtNeqOptional = .constOptional(1) != constCtorExt;
   //                             ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                              ^^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                              ^
   // [cfe] No type was provided to find the dot shorthand 'constOptional'.
 
   if (.new(1) == ctor) print('not ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.regular(1) == ctor) print('not ok');
-  //   ^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'regular'.
 
   if (.named(x: 1) == ctor) print('not ok');
-  //   ^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'named'.
 
   if (.optional(1) == ctor) print('not ok');
-  //   ^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'optional'.
 
   if (.new(1) != ctor) print('not ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.regular(1) != ctor) print('not ok');
-  //   ^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'regular'.
 
   if (.named(x: 1) != ctor) print('not ok');
-  //   ^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'named'.
 
   if (.optional(1) != ctor) print('not ok');
-  //   ^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'optional'.
 
   if (.new(1) == ctorExt) print('not ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.regular(1) == ctorExt) print('not ok');
-  //   ^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'regular'.
 
   if (.named(x: 1) == ctorExt) print('not ok');
-  //   ^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'named'.
 
   if (.optional(1) == ctorExt) print('not ok');
-  //   ^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'optional'.
 
   if (.new(1) != ctorExt) print('not ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.regular(1) != ctorExt) print('not ok');
-  //   ^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'regular'.
 
   if (.named(x: 1) != ctorExt) print('not ok');
-  //   ^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'named'.
 
   if (.optional(1) != ctorExt) print('not ok');
-  //   ^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'optional'.
 }
 
@@ -227,132 +243,162 @@ void rhsNeedsToBeShorthand(
   const bool constCondition = obj as bool;
 
   const ConstructorClass constCtor = .constRegular(1);
-  const bool rhsCtorEq = constCtor == (constCondition ? .constRegular(1) : ConstructorClass.constNamed(x: 1));
-  //                                                    ^^^^^^^^^^^^^^^^
+  const bool rhsCtorEq =
+      constCtor ==
+      (constCondition ? .constRegular(1) : ConstructorClass.constNamed(x: 1));
+  //                    ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                     ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                     ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
-  const bool rhsCtorNeq = constCtor != (constCondition ? ConstructorClass.constOptional(1) : .constRegular(1));
-  //                                                                                         ^^^^^^^^^^^^^^^^
+  const bool rhsCtorNeq =
+      constCtor !=
+      (constCondition ? ConstructorClass.constOptional(1) : .constRegular(1));
+  //                                                        ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                                          ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                                                         ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   if (ctor == (.new(1))) {
-    //          ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //         ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //          ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor != (.new(1))) {
-    //          ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //         ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //          ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor == (condition ? .new(1) : .regular(1))) {
-    //                      ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                     ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                      ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
-    //                                ^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                               ^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                ^
     // [cfe] No type was provided to find the dot shorthand 'regular'.
     print('not ok');
   }
 
   if (ctor != (condition ? .optional(1) : .named(x: 1))) {
-    //                      ^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                     ^^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                      ^
     // [cfe] No type was provided to find the dot shorthand 'optional'.
-    //                                     ^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                    ^^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                     ^
     // [cfe] No type was provided to find the dot shorthand 'named'.
     print('not ok');
   }
 
-  if (ctor case == (constCondition ? const .constRegular(1) : const .constNamed(x: 1))) {
-    //                               ^^^^^^^^^^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
-    //                                      ^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
-    // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
-    //                                                               ^^^^^^^^^^
+  if (ctor
+      case == (constCondition
+          ? const .constRegular(1)
+          //^^^^^^^^^^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
+          //       ^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
+          // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
+          : const .constNamed(x: 1))) {
+    //             ^^^^^^^^^^
     // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
     // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object?'.
     print('not ok');
   }
 
-  if (ctor case != (constCondition ? const .constOptional(1) : const .constRegular(1))) {
-    //                               ^^^^^^^^^^^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
-    //                                      ^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
-    // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object?'.
-    //                                                                ^^^^^^^^^^^^
+  if (ctor
+      case != (constCondition
+          ? const .constOptional(1)
+          //^^^^^^^^^^^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
+          //       ^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
+          // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object?'.
+          : const .constRegular(1))) {
+    //             ^^^^^^^^^^^^
     // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
     // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
     print('not ok');
   }
 
   const ConstructorExt constCtorExt = .constRegular(1);
-  const bool rhsCtorExtEq = constCtorExt == (constCondition ? .constRegular(1) : ConstructorExt.constNamed(x: 1));
-  //                                                          ^^^^^^^^^^^^^^^^
+  const bool rhsCtorExtEq =
+      constCtorExt ==
+      (constCondition ? .constRegular(1) : ConstructorExt.constNamed(x: 1));
+  //                    ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                           ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                     ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
-  const bool rhsCtorExtNeq = constCtorExt != (constCondition ? ConstructorExt.constOptional(1) : .constRegular(1));
-  //                                                                                             ^^^^^^^^^^^^^^^^
+  const bool rhsCtorExtNeq =
+      constCtorExt !=
+      (constCondition ? ConstructorExt.constOptional(1) : .constRegular(1));
+  //                                                      ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                                              ^^^^^^^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                                                       ^
   // [cfe] No type was provided to find the dot shorthand 'constRegular'.
 
   if (ctorExt == (condition ? .new(1) : .regular(1))) {
-    //                         ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                        ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                         ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
-    //                                   ^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                  ^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                   ^
     // [cfe] No type was provided to find the dot shorthand 'regular'.
     print('not ok');
   }
 
   if (ctorExt != (condition ? .named(x: 1) : .optional(1))) {
-    //                         ^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                        ^^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                         ^
     // [cfe] No type was provided to find the dot shorthand 'named'.
-    //                                        ^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                       ^^^^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                        ^
     // [cfe] No type was provided to find the dot shorthand 'optional'.
     print('not ok');
   }
 
-  if (ctorExt case == (constCondition ? const .constRegular(1) : const .constNamed(x: 1))) {
-    //                                  ^^^^^^^^^^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
-    //                                         ^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
-    // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
-    //                                                                  ^^^^^^^^^^
+  if (ctorExt
+      case == (constCondition
+          ? const .constRegular(1)
+          //^^^^^^^^^^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
+          //       ^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
+          // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
+          : const .constNamed(x: 1))) {
+    //             ^^^^^^^^^^
     // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
     // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object?'.
     print('not ok');
   }
 
-  if (ctorExt case != (constCondition ? const .constOptional(1) : const .constRegular(1))) {
-    //                                  ^^^^^^^^^^^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
-    //                                         ^^^^^^^^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
-    // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object?'.
-    //                                                                   ^^^^^^^^^^^^
+  if (ctorExt
+      case != (constCondition
+          ? const .constOptional(1)
+          //^^^^^^^^^^^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.NON_CONSTANT_RELATIONAL_PATTERN_EXPRESSION
+          //       ^^^^^^^^^^^^^
+          // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
+          // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object?'.
+          : const .constRegular(1))) {
+    //             ^^^^^^^^^^^^
     // [analyzer] COMPILE_TIME_ERROR.CONST_WITH_UNDEFINED_CONSTRUCTOR
     // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object?'.
     print('not ok');
@@ -361,45 +407,51 @@ void rhsNeedsToBeShorthand(
 
 void objectContextType(ConstructorClass ctor, ConstructorExt ctorExt) {
   const ConstructorClass constCtor = .constRegular(1);
-  const bool contextTypeCtorEqRegular = (constCtor as Object) == .constRegular(1);
-  //                                                             ^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorEqRegular =
+      (constCtor as Object) == .constRegular(1);
+  //                           ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                              ^^^^^^^^^^^^
+  //                            ^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorEqNamed = (constCtor as Object) == .constNamed(x: 1);
-  //                                                           ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorEqNamed =
+      (constCtor as Object) == .constNamed(x: 1);
+  //                           ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                            ^^^^^^^^^^
+  //                            ^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorEqOptional = (constCtor as Object) == .constOptional(1);
-  //                                                              ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorEqOptional =
+      (constCtor as Object) == .constOptional(1);
+  //                           ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                               ^^^^^^^^^^^^^
+  //                            ^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorNeqRegular = (constCtor as Object) != .constRegular(1);
-  //                                                              ^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorNeqRegular =
+      (constCtor as Object) != .constRegular(1);
+  //                           ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                               ^^^^^^^^^^^^
+  //                            ^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorNeqNamed = (constCtor as Object) != .constNamed(x: 1);
-  //                                                            ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorNeqNamed =
+      (constCtor as Object) != .constNamed(x: 1);
+  //                           ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                             ^^^^^^^^^^
+  //                            ^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorNeqOptional = (constCtor as Object) != .constOptional(1);
-  //                                                               ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorNeqOptional =
+      (constCtor as Object) != .constOptional(1);
+  //                           ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                ^^^^^^^^^^^^^
+  //                            ^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object'.
 
@@ -488,45 +540,51 @@ void objectContextType(ConstructorClass ctor, ConstructorExt ctorExt) {
   // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object'.
 
   const ConstructorExt constCtorExt = .constRegular(1);
-  const bool contextTypeCtorExtEqRegular = (constCtorExt as Object) == .constRegular(1);
-  //                                                                   ^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtEqRegular =
+      (constCtorExt as Object) == .constRegular(1);
+  //                              ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                    ^^^^^^^^^^^^
+  //                               ^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorExtEqNamed = (constCtorExt as Object) == .constNamed(x: 1);
-  //                                                                 ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtEqNamed =
+      (constCtorExt as Object) == .constNamed(x: 1);
+  //                              ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                  ^^^^^^^^^^
+  //                               ^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorExtEqOptional = (constCtorExt as Object) == .constOptional(1);
-  //                                                                    ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtEqOptional =
+      (constCtorExt as Object) == .constOptional(1);
+  //                              ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                     ^^^^^^^^^^^^^
+  //                               ^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorExtNeqRegular = (constCtorExt as Object) != .constRegular(1);
-  //                                                                    ^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtNeqRegular =
+      (constCtorExt as Object) != .constRegular(1);
+  //                              ^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                     ^^^^^^^^^^^^
+  //                               ^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constRegular' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorExtNeqNamed = (constCtorExt as Object) != .constNamed(x: 1);
-  //                                                                  ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtNeqNamed =
+      (constCtorExt as Object) != .constNamed(x: 1);
+  //                              ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                   ^^^^^^^^^^
+  //                               ^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constNamed' isn't defined for the type 'Object'.
 
-  const bool contextTypeCtorExtNeqOptional = (constCtorExt as Object) != .constOptional(1);
-  //                                                                     ^^^^^^^^^^^^^^^^^
+  const bool contextTypeCtorExtNeqOptional =
+      (constCtorExt as Object) != .constOptional(1);
+  //                              ^^^^^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.CONST_INITIALIZED_WITH_NON_CONSTANT_VALUE
-  //                                                                      ^^^^^^^^^^^^^
+  //                               ^^^^^^^^^^^^^
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'constOptional' isn't defined for the type 'Object'.
 

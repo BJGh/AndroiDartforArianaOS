@@ -22,7 +22,7 @@ class ConstructorsOperation extends NotImportedOperation {
 
   /// Initialize a newly created operation to use the [_declarationHelper] to add
   /// the static members from a library.
-  ConstructorsOperation({required this._declarationHelper});
+  new({required this._declarationHelper});
 
   /// Compute any candidate suggestions for elements in the [library].
   void computeSuggestionsIn(LibraryElement library) {
@@ -48,12 +48,17 @@ class InstanceExtensionMembersOperation extends NotImportedOperation {
   /// Whether to include suggestions for setters.
   final bool _includeSetters;
 
-  InstanceExtensionMembersOperation({
+  /// The prefix with which members that are shadowed at the completion
+  /// location can still be suggested, or [ThisPrefix.none] if they can't be.
+  final ThisPrefix _thisPrefixAllowed;
+
+  new({
     required this._declarationHelper,
     required this._type,
     required this._excludedGetters,
     required this._includeMethods,
     required this._includeSetters,
+    this._thisPrefixAllowed = .none,
   });
 
   /// Compute any candidate suggestions for elements in the [library].
@@ -64,6 +69,7 @@ class InstanceExtensionMembersOperation extends NotImportedOperation {
       excludedGetters: _excludedGetters,
       includeMethods: _includeMethods,
       includeSetters: _includeSetters,
+      thisPrefixAllowed: _thisPrefixAllowed,
     );
   }
 }
@@ -82,7 +88,7 @@ class NotImportedCompletionPass {
   final List<NotImportedOperation> _operations;
 
   /// Initialize a newly created completion pass.
-  NotImportedCompletionPass({
+  new({
     required this._state,
     required this._collector,
     required this._operations,
@@ -186,7 +192,7 @@ class StaticMembersOperation extends NotImportedOperation {
 
   /// Initialize a newly created operation to use the [_declarationHelper] to add
   /// the static members from a library.
-  StaticMembersOperation({required this._declarationHelper});
+  new({required this._declarationHelper});
 
   /// Compute any candidate suggestions for elements in the [library].
   void computeSuggestionsIn(
@@ -208,7 +214,7 @@ class _ImportSummary {
   /// The libraries that are imported in their entirety.
   Set<LibraryElement> importedLibraries = Set<LibraryElement>.identity();
 
-  _ImportSummary(LibraryElement library) {
+  new(LibraryElement library) {
     for (var fragment in library.fragments) {
       for (var import in fragment.libraryImports) {
         var importedLibrary = import.importedLibrary;

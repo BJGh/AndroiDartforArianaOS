@@ -2,30 +2,24 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/flow_analysis/flow_analysis.dart';
 import 'package:kernel/ast.dart';
 
 import '../base/compiler_context.dart';
 import '../base/messages.dart';
-import '../kernel/external_ast_helper.dart';
-import '../kernel/internal_ast.dart';
+import '../kernel/external_ast_helper.dart' as extern;
+import '../kernel/inferred_collections.dart';
 import '../source/check_helper.dart';
+import 'element_inference.dart';
 import 'inference_visitor_base.dart';
 import 'type_schema.dart';
 
 /// The result of a statement inference.
-class StatementInferenceResult {
-  const StatementInferenceResult();
+abstract class StatementInferenceResult {
+  factory single(Statement statement) = SingleStatementInferenceResult;
 
-  factory StatementInferenceResult.single(Statement statement) =
-      SingleStatementInferenceResult;
-
-  factory StatementInferenceResult.multiple(
-    int fileOffset,
-    List<Statement> statements,
-  ) {
-    if (statements.length == 0) {
-      return const StatementInferenceResult();
-    } else if (statements.length == 1) {
+  factory multiple(int fileOffset, List<Statement> statements) {
+    if (statements.length == 1) {
       // Coverage-ignore-block(suite): Not run.
       return new SingleStatementInferenceResult(statements.single);
     } else {
@@ -33,29 +27,18 @@ class StatementInferenceResult {
     }
   }
 
-  bool get hasChanged => false;
+  Statement get statement;
 
-  // Coverage-ignore(suite): Not run.
-  Statement get statement =>
-      throw new UnsupportedError('StatementInferenceResult.statement');
+  int get statementCount;
 
-  // Coverage-ignore(suite): Not run.
-  int get statementCount =>
-      throw new UnsupportedError('StatementInferenceResult.statementCount');
-
-  // Coverage-ignore(suite): Not run.
-  List<Statement> get statements =>
-      throw new UnsupportedError('StatementInferenceResult.statements');
+  List<Statement> get statements;
 }
 
 class SingleStatementInferenceResult implements StatementInferenceResult {
   @override
   final Statement statement;
 
-  SingleStatementInferenceResult(this.statement);
-
-  @override
-  bool get hasChanged => true;
+  new(this.statement);
 
   @override
   int get statementCount => 1;
@@ -71,7 +54,7 @@ class MultipleStatementInferenceResult implements StatementInferenceResult {
   @override
   final List<Statement> statements;
 
-  MultipleStatementInferenceResult(this.fileOffset, this.statements)
+  new(this.fileOffset, this.statements)
     : assert(
         statements.isNotEmpty,
         "The multi-statement result shouldn't be empty.",
@@ -83,20 +66,87 @@ class MultipleStatementInferenceResult implements StatementInferenceResult {
       );
 
   @override
-  bool get hasChanged => true;
-
-  @override
   // Coverage-ignore(suite): Not run.
   Statement get statement {
     if (statements.length == 1) {
       return statements.single;
     } else {
-      return new Block(statements)..fileOffset = fileOffset;
+      return extern.createBlock(statements, fileOffset: fileOffset);
     }
   }
 
   @override
   int get statementCount => statements.length;
+}
+
+sealed class VariableDeclarationInferenceResult {
+  factory direct(VariableDeclaration declaration) =
+      DirectVariableDeclarationInferenceResult;
+
+  factory effect([Expression? expression]) =
+      EffectVariableDeclarationInferenceResult;
+
+  factory late(
+    List<VariableDeclaration> variableDeclarations,
+    List<FunctionDeclaration> functionDeclarations, {
+    required int fileOffset,
+  }) = LateVariableDeclarationInferenceResult;
+
+  StatementInferenceResult toStatementInferenceResult({
+    required int fileOffset,
+  });
+}
+
+class DirectVariableDeclarationInferenceResult
+    implements VariableDeclarationInferenceResult {
+  final VariableDeclaration declaration;
+
+  new(this.declaration);
+
+  @override
+  StatementInferenceResult toStatementInferenceResult({
+    required int fileOffset,
+  }) => new StatementInferenceResult.single(
+    extern.createVariableStatement(declaration, fileOffset: fileOffset),
+  );
+}
+
+class EffectVariableDeclarationInferenceResult
+    implements VariableDeclarationInferenceResult {
+  final Expression? expression;
+
+  new([this.expression]);
+
+  @override
+  StatementInferenceResult toStatementInferenceResult({
+    required int fileOffset,
+  }) => new StatementInferenceResult.single(
+    expression != null
+        ? extern.createExpressionStatement(expression!, fileOffset: fileOffset)
+        : extern.createEmptyStatement(fileOffset: fileOffset),
+  );
+}
+
+class LateVariableDeclarationInferenceResult
+    implements VariableDeclarationInferenceResult {
+  final int fileOffset;
+  final List<VariableDeclaration> variableDeclarations;
+  final List<FunctionDeclaration> functionDeclarations;
+
+  new(
+    this.variableDeclarations,
+    this.functionDeclarations, {
+    required this.fileOffset,
+  });
+
+  @override
+  StatementInferenceResult toStatementInferenceResult({
+    required int fileOffset,
+  }) => new StatementInferenceResult.multiple(fileOffset, [
+    for (VariableDeclaration variableDeclaration in variableDeclarations)
+      extern.createVariableStatement(variableDeclaration),
+    ...functionDeclarations,
+  ]);
 }
 
 /// Tells the inferred type and how the code should be transformed.
@@ -120,6 +170,9 @@ abstract class InvocationInferenceResult {
   /// The named arguments.
   List<NamedExpression> get named;
 
+  /// The flow analysis expression info for the invocation expression.
+  ExpressionInfo? get expressionInfo;
+
   /// Applies the result of the inference to the expression being inferred.
   ///
   /// A successful result leaves [expression] intact, and an error detected
@@ -139,11 +192,12 @@ abstract class InvocationInferenceResult {
 
   static Expression _insertHoistedExpressions(
     Expression expression,
-    List<VariableDeclaration> hoistedExpressions,
+    List<CachedExpression> hoistedExpressions,
   ) {
     if (hoistedExpressions.isNotEmpty) {
       for (int index = hoistedExpressions.length - 1; index >= 0; index--) {
-        expression = createLet(hoistedExpressions[index], expression);
+        CachedExpression cache = hoistedExpressions[index];
+        expression = extern.createLet(cache: cache, body: expression);
       }
     }
     return expression;
@@ -164,7 +218,7 @@ class SuccessfulInferenceResult implements InvocationInferenceResult {
   @override
   final List<DartType> typeArguments;
 
-  final List<VariableDeclaration>? hoistedArguments;
+  final List<CachedExpression>? hoistedArguments;
 
   @override
   final List<Expression> positional;
@@ -172,14 +226,18 @@ class SuccessfulInferenceResult implements InvocationInferenceResult {
   @override
   final List<NamedExpression> named;
 
+  @override
+  final ExpressionInfo? expressionInfo;
+
   final DartType? inferredReceiverType;
 
-  SuccessfulInferenceResult({
+  new({
     required this.inferredType,
     required this.functionType,
     required this.typeArguments,
     required this.positional,
     required this.named,
+    required this.expressionInfo,
     required this.hoistedArguments,
     this.inferredReceiverType,
   });
@@ -189,7 +247,7 @@ class SuccessfulInferenceResult implements InvocationInferenceResult {
     Expression expression, {
     DartType? extensionReceiverType,
   }) {
-    List<VariableDeclaration>? hoistedArguments = this.hoistedArguments;
+    List<CachedExpression>? hoistedArguments = this.hoistedArguments;
     if (hoistedArguments == null || hoistedArguments.isEmpty) {
       return expression;
     } else if (expression is RedirectingFactoryInvocation) {
@@ -220,16 +278,16 @@ class SuccessfulInferenceResult implements InvocationInferenceResult {
         // The hoisting of InstanceGetterInvocation is performed elsewhere.
         return expression;
       } else if (expression is InstanceInvocation) {
-        if (!isPureExpression(expression.receiver)) {
-          VariableDeclaration receiver = createVariable(
-            expression.receiver,
-            inferredReceiverType ?? const DynamicType(),
+        if (!extern.isPureExpression(expression.receiver)) {
+          CachedExpression receiverCache = extern.createCachedExpression(
+            expression: expression.receiver,
+            type: inferredReceiverType ?? const DynamicType(),
           );
-          expression.receiver = createVariableGet(receiver)
+          expression.receiver = extern.createVariableGet(receiverCache.variable)
             ..parent = expression;
-          return createLet(
-            receiver,
-            InvocationInferenceResult._insertHoistedExpressions(
+          return extern.createLet(
+            cache: receiverCache,
+            body: InvocationInferenceResult._insertHoistedExpressions(
               expression,
               hoistedArguments,
             ),
@@ -248,17 +306,17 @@ class SuccessfulInferenceResult implements InvocationInferenceResult {
       } else if (expression is StaticInvocation) {
         if (extensionReceiverType != null) {
           Expression receiver = expression.arguments.positional.first;
-          if (!isPureExpression(receiver)) {
-            VariableDeclaration receiverVariable = createVariable(
-              receiver,
-              extensionReceiverType,
+          if (!extern.isPureExpression(receiver)) {
+            CachedExpression receiverCache = extern.createCachedExpression(
+              expression: receiver,
+              type: extensionReceiverType,
             );
-            expression.arguments.positional.first = createVariableGet(
-              receiverVariable,
+            expression.arguments.positional.first = extern.createVariableGet(
+              receiverCache.variable,
             )..parent = expression;
-            return createLet(
-              receiverVariable,
-              InvocationInferenceResult._insertHoistedExpressions(
+            return extern.createLet(
+              cache: receiverCache,
+              body: InvocationInferenceResult._insertHoistedExpressions(
                 expression,
                 hoistedArguments,
               ),
@@ -308,7 +366,7 @@ class WrapInProblemInferenceResult implements InvocationInferenceResult {
   @override
   final bool isInapplicable;
 
-  final List<VariableDeclaration>? hoistedArguments;
+  final List<CachedExpression>? hoistedArguments;
 
   @override
   final List<Expression> positional;
@@ -316,7 +374,7 @@ class WrapInProblemInferenceResult implements InvocationInferenceResult {
   @override
   final List<NamedExpression> named;
 
-  WrapInProblemInferenceResult({
+  new({
     required this.message,
     required this.problemReporting,
     required this.compilerContext,
@@ -325,6 +383,10 @@ class WrapInProblemInferenceResult implements InvocationInferenceResult {
     required this.positional,
     required this.named,
   });
+
+  @override
+  // Coverage-ignore(suite): Not run.
+  ExpressionInfo? get expressionInfo => null;
 
   @override
   DartType get inferredType => const InvalidType();
@@ -340,12 +402,14 @@ class WrapInProblemInferenceResult implements InvocationInferenceResult {
     Expression expression, {
     DartType? extensionReceiverType,
   }) {
-    expression = problemReporting.wrapInLocatedProblem(
-      compilerContext: compilerContext,
+    expression = extern.createInvalidExpressionFromErrorText(
+      problemReporting.buildProblemFromLocatedMessage(
+        compilerContext: compilerContext,
+        message: message,
+      ),
       expression: expression,
-      message: message,
     );
-    List<VariableDeclaration>? hoistedArguments = this.hoistedArguments;
+    List<CachedExpression>? hoistedArguments = this.hoistedArguments;
     if (hoistedArguments == null || hoistedArguments.isEmpty) {
       return expression;
     } else {
@@ -374,7 +438,7 @@ abstract class InitializerInferenceResult {
   /// [LocalInitializer]s.
   void addHoistedArguments(List<Initializer> initializers);
 
-  factory InitializerInferenceResult.fromInvocationInferenceResult(
+  factory fromInvocationInferenceResult(
     Initializer initializer,
     InvocationInferenceResult invocationInferenceResult,
   ) {
@@ -387,7 +451,7 @@ class SuccessfulInitializerInferenceResult
   @override
   final Initializer initializer;
 
-  SuccessfulInitializerInferenceResult(this.initializer);
+  new(this.initializer);
 
   @override
   void addHoistedArguments(List<Initializer> initializers) {}
@@ -398,14 +462,11 @@ class SuccessfulInitializerInvocationInferenceResult
   @override
   final Initializer initializer;
 
-  final List<VariableDeclaration>? hoistedArguments;
+  final List<CachedExpression>? hoistedArguments;
 
-  SuccessfulInitializerInvocationInferenceResult({
-    required this.initializer,
-    required this.hoistedArguments,
-  });
+  new({required this.initializer, required this.hoistedArguments});
 
-  SuccessfulInitializerInvocationInferenceResult.fromSuccessfulInferenceResult(
+  new fromSuccessfulInferenceResult(
     Initializer initializer,
     SuccessfulInferenceResult successfulInferenceResult,
   ) : this(
@@ -415,13 +476,10 @@ class SuccessfulInitializerInvocationInferenceResult
 
   @override
   void addHoistedArguments(List<Initializer> initializers) {
-    List<VariableDeclaration>? hoistedArguments = this.hoistedArguments;
+    List<CachedExpression>? hoistedArguments = this.hoistedArguments;
     if (hoistedArguments != null && hoistedArguments.isNotEmpty) {
-      for (VariableDeclaration hoistedArgument in hoistedArguments) {
-        initializers.add(
-          new LocalInitializer(hoistedArgument)
-            ..fileOffset = hoistedArgument.fileOffset,
-        );
+      for (CachedExpression cache in hoistedArguments) {
+        initializers.add(extern.createLocalInitializer(cache));
       }
     }
   }
@@ -433,7 +491,7 @@ class WrapInProblemInitializerInferenceResult
   final Initializer initializer;
   final WrapInProblemInferenceResult wrapInProblemInferenceResult;
 
-  WrapInProblemInitializerInferenceResult.fromWrapInProblemInferenceResult(
+  new fromWrapInProblemInferenceResult(
     this.initializer,
     this.wrapInProblemInferenceResult,
   );
@@ -452,7 +510,7 @@ class PropertyGetInferenceResult {
   // class in favor of using [ExpressionInferenceResult]?
   final Member? member;
 
-  PropertyGetInferenceResult(this.expressionInferenceResult, this.member);
+  new(this.expressionInferenceResult, this.member);
 
   @override
   String toString() {
@@ -483,31 +541,31 @@ class ExpressionInferenceResult {
   /// type of the expression after coercion, `int` in the example above.
   final DartType? postCoercionType;
 
-  ExpressionInferenceResult(
-    this.inferredType,
-    this.expression, {
-    this.postCoercionType = null,
-  }) : assert(isKnown(inferredType), "$inferredType is not known.");
+  new(this.inferredType, this.expression, {this.postCoercionType = null})
+    : assert(isKnown(inferredType), "$inferredType is not known.");
 
   @override
   String toString() => 'ExpressionInferenceResult($inferredType,$expression)';
 }
 
+/// The result of inference of an [InternalElement].
+class ElementInferenceResult({
+  /// The inferred type of the element.
+  required final ElementType inferredType,
+
+  /// The inferred expression.
+  required final InferredElement element,
+});
+
 /// A guard used for creating null-shorting null-aware actions.
 class NullAwareGuard {
   /// The variable used to guard the null-aware action.
-  final VariableDeclaration _nullAwareVariable;
+  final CachedExpression _nullAwareCache;
 
   /// The file offset used for the null-test.
   int _nullAwareFileOffset;
 
-  final InferenceVisitorBase _inferrer;
-
-  NullAwareGuard(
-    this._nullAwareVariable,
-    this._nullAwareFileOffset,
-    this._inferrer,
-  );
+  new(this._nullAwareCache, this._nullAwareFileOffset);
 
   /// Creates the null-guarded application of [nullAwareAction] with the
   /// [inferredType].
@@ -521,9 +579,9 @@ class NullAwareGuard {
     DartType inferredType,
     Expression nullAwareAction,
   ) {
-    Expression equalsNull = _inferrer.createEqualsNull(
-      _nullAwareFileOffset,
-      createVariableGet(_nullAwareVariable),
+    Expression equalsNull = extern.createEqualsNull(
+      extern.createVariableGet(_nullAwareCache.variable),
+      fileOffset: _nullAwareFileOffset,
     );
 
     // In case null guards are applied to non-nullable receivers, we still
@@ -561,21 +619,24 @@ class NullAwareGuard {
     // for non-nullable receivers in cascades.
     Expression typeSafeIfNullBranch =
         inferredType.nullability == Nullability.nullable
-        ? new NullLiteral()
-        : createVariableGet(_nullAwareVariable);
+        ? extern.createNullLiteral(fileOffset: TreeNode.noOffset)
+        : extern.createVariableGet(_nullAwareCache.variable);
     typeSafeIfNullBranch.fileOffset = _nullAwareFileOffset;
 
-    ConditionalExpression condition = new ConditionalExpression(
+    ConditionalExpression condition = extern.createConditionalExpression(
       equalsNull,
       typeSafeIfNullBranch,
       nullAwareAction,
-      inferredType,
-    )..fileOffset = _nullAwareFileOffset;
-    return new Let(_nullAwareVariable, condition)
-      ..fileOffset = _nullAwareFileOffset;
+      staticType: inferredType,
+      fileOffset: _nullAwareFileOffset,
+    );
+    return extern.createLet(
+      cache: _nullAwareCache,
+      body: condition,
+      fileOffset: _nullAwareFileOffset,
+    );
   }
 
   @override
-  String toString() =>
-      'NullAwareGuard($_nullAwareVariable,$_nullAwareFileOffset)';
+  String toString() => 'NullAwareGuard($_nullAwareCache,$_nullAwareFileOffset)';
 }

@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't assign a variable to itself.";
 
 class NoSelfAssignments extends AnalysisRule {
-  NoSelfAssignments()
-    : super(name: LintNames.no_self_assignments, description: _desc);
+  new() : super(name: LintNames.no_self_assignments, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.noSelfAssignments;
@@ -32,11 +31,7 @@ class NoSelfAssignments extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitAssignmentExpression(AssignmentExpression node) {
     if (node.operator.type != TokenType.EQ) return;

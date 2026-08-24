@@ -95,11 +95,30 @@ LEAF_RUNTIME_ENTRY_LIST(DECLARE_LEAF_RUNTIME_ENTRY)
 #undef DECLARE_RUNTIME_ENTRY
 #undef DECLARE_LEAF_RUNTIME_ENTRY
 
+#if defined(HOST_ARCH_ARM64) &&                                                \
+    (defined(SIMULATOR_FFI) || defined(DART_DYNAMIC_MODULES))
+constexpr int kNumCallbackContextIntegerArguments = 8;
+constexpr int kNumCallbackContextDoubleArguments = 8;
+
+// Used for redirected FFI callbacks in the simulator and intepreter on ARM64.
+struct CallbackContext {
+  uword integer_arguments[kNumCallbackContextIntegerArguments];
+  uword double_arguments[kNumCallbackContextDoubleArguments];
+  uword r8;
+  uword sp;
+};
+
+extern "C" void DoRedirectedFfiCallback(CallbackContext* ctxt,
+                                        uword trampoline);
+#endif
+
 // See StubCode::GenerateFfiCallbackTrampolineStub.
 struct CallbackMetadata {
   uword entry_point;
   uword type;  // FfiCallbackMetadata::CallType
   uword epilogue;
+  uword caller_isolate;
+  uword caller_isolate_group;
 };
 extern "C" Thread* DLRT_GetFfiCallbackMetadata(uword trampoline,
                                                CallbackMetadata* out);
@@ -108,9 +127,13 @@ extern "C" void* DLRT_ExitTemporaryIsolate();
 #else
 extern "C" void* DLRT_ExitTemporaryIsolate(Thread*);
 #endif
-extern "C" void* DLRT_ExitIsolateGroupBoundIsolate(Thread*);
-extern "C" void* DLRT_ExitSyncCallbackTargetIsolate(Thread*);
-extern "C" void* DLRT_ExitSyncCallback(Thread*);
+extern "C" void* DLRT_ExitIsolateGroupBoundIsolate(Thread*,
+                                                   Isolate*,
+                                                   IsolateGroup*);
+extern "C" void* DLRT_ExitSyncCallbackTargetIsolate(Thread*,
+                                                    Isolate*,
+                                                    IsolateGroup*);
+extern "C" void* DLRT_ExitSyncCallback(Thread*, Isolate*, IsolateGroup*);
 
 const char* DeoptReasonToCString(ICData::DeoptReasonId deopt_reason);
 

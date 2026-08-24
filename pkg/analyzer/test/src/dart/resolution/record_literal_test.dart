@@ -16,23 +16,144 @@ main() {
 
 @reflectiveTest
 class RecordLiteralResolutionTest extends PubPackageResolutionTest {
+  test_beforeRecords_singleField_noComma() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+final x = (0);
+''');
+
+    var node = result.findNode.singleVariableDeclaration;
+    assertResolvedNodeText(node, r'''
+VariableDeclaration
+  name: x
+  equals: =
+  initializer2: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: IntegerLiteral
+      literal: 0
+      staticType: int
+    rightParenthesis: )
+    staticType: int
+  declaredFragment: <testLibraryFragment> x@22
+''');
+  }
+
+  test_beforeRecords_singleField_noComma_const() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+final x = const (0);
+//              ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+//                ^
+// [diag.recordLiteralOnePositionalNoTrailingComma] A record literal with exactly one positional field requires a trailing comma.
+''');
+
+    var node = result.findNode.singleVariableDeclaration;
+    assertResolvedNodeText(node, r'''
+VariableDeclaration
+  name: x
+  equals: =
+  initializer2: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: IntegerLiteral
+      literal: 0
+      staticType: int
+    rightParenthesis: )
+    staticType: int
+  declaredFragment: <testLibraryFragment> x@22
+''');
+  }
+
+  test_beforeRecords_singleField_withComma() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+final x = (0,);
+//        ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+''');
+
+    var node = result.findNode.singleVariableDeclaration;
+    assertResolvedNodeText(node, r'''
+VariableDeclaration
+  name: x
+  equals: =
+  initializer2: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: IntegerLiteral
+      literal: 0
+      staticType: int
+    rightParenthesis: )
+    staticType: int
+  declaredFragment: <testLibraryFragment> x@22
+''');
+  }
+
+  test_beforeRecords_twoFields() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+final x = (0, 1);
+//        ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+''');
+
+    var node = result.findNode.singleVariableDeclaration;
+    assertResolvedNodeText(node, r'''
+VariableDeclaration
+  name: x
+  equals: =
+  initializer2: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: IntegerLiteral
+      literal: 0
+      staticType: int
+    rightParenthesis: )
+    staticType: int
+  declaredFragment: <testLibraryFragment> x@22
+''');
+  }
+
+  test_beforeRecords_zeroFields() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: records
+final x = ();
+//        ^
+// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
+''');
+
+    var node = result.findNode.singleVariableDeclaration;
+    assertResolvedNodeText(node, r'''
+VariableDeclaration
+  name: x
+  equals: =
+  initializer2: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: SimpleIdentifier
+      token: <empty> <synthetic>
+      element: <null>
+      staticType: InvalidType
+    rightParenthesis: )
+    staticType: InvalidType
+  declaredFragment: <testLibraryFragment> x@22
+''');
+  }
+
   test_field_rewrite_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   (f1: r.$1, );
 }
 ''');
 
-    var node = findNode.recordLiteral('(f1');
+    var node = result.findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: PropertyAccess
-        target: SimpleIdentifier
+      fieldExpression2: PropertyAccess
+        target2: SimpleIdentifier
           token: r
           element: <testLibrary>::@function::f::@formalParameter::r
           staticType: (int, String)
@@ -48,19 +169,19 @@ RecordLiteral
   }
 
   test_field_rewrite_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) r) {
   (r.$1, );
 }
 ''');
 
-    var node = findNode.recordLiteral('(r');
+    var node = result.findNode.recordLiteral('(r');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     PropertyAccess
-      target: SimpleIdentifier
+      target2: SimpleIdentifier
         token: r
         element: <testLibrary>::@function::f::@formalParameter::r
         staticType: (int, String)
@@ -76,21 +197,21 @@ RecordLiteral
   }
 
   test_hasContext_functionReference_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f<T>() {}
 final ({void Function() f1}) x = (f1: f);
 ''');
 
-    var node = findNode.singleRecordLiteral;
+    var node = result.findNode.singleRecordLiteral;
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: FunctionReference
-        function: SimpleIdentifier
+      fieldExpression2: FunctionReference
+        function2: SimpleIdentifier
           token: f
           element: <testLibrary>::@function::f
           staticType: void Function<T>()
@@ -103,18 +224,18 @@ RecordLiteral
   }
 
   test_hasContext_functionReference_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f<T>() {}
 final (void Function(), ) x = (f, );
 ''');
 
-    var node = findNode.singleRecordLiteral;
+    var node = result.findNode.singleRecordLiteral;
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     FunctionReference
-      function: SimpleIdentifier
+      function2: SimpleIdentifier
         token: f
         element: <testLibrary>::@function::f
         staticType: void Function<T>()
@@ -127,17 +248,17 @@ RecordLiteral
   }
 
   test_hasContext_greatestClosure() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f<T>((List<T>, List<T>) x) {}
 
 test(dynamic d) => f((d, d));
 ''');
 
-    var node = findNode.recordLiteral('(d,');
+    var node = result.findNode.recordLiteral('(d,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     SimpleIdentifier
       token: d
       element: <testLibrary>::@function::test::@formalParameter::d
@@ -152,7 +273,7 @@ RecordLiteral
   }
 
   test_hasContext_implicitCallReference_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void call() {}
 }
@@ -161,16 +282,16 @@ final a = A();
 final ({void Function() f1}) x = (f1: a);
 ''');
 
-    var node = findNode.recordLiteral('(f1');
+    var node = result.findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: ImplicitCallReference
-        expression: SimpleIdentifier
+      fieldExpression2: ImplicitCallReference
+        expression2: SimpleIdentifier
           token: a
           element: <testLibrary>::@getter::a
           staticType: A
@@ -182,7 +303,7 @@ RecordLiteral
   }
 
   test_hasContext_implicitCallReference_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void call() {}
 }
@@ -191,13 +312,13 @@ final a = A();
 final (void Function(), ) x = (a, );
 ''');
 
-    var node = findNode.recordLiteral('(a');
+    var node = result.findNode.recordLiteral('(a');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     ImplicitCallReference
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: <testLibrary>::@getter::a
         staticType: A
@@ -209,20 +330,20 @@ RecordLiteral
   }
 
   test_hasContext_implicitCast_fromDynamic_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final dynamic a = 0;
 final ({int f1}) x = (f1: a);
 ''');
 
-    var node = findNode.recordLiteral('(f1');
+    var node = result.findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: SimpleIdentifier
+      fieldExpression2: SimpleIdentifier
         token: a
         element: <testLibrary>::@getter::a
         staticType: dynamic
@@ -232,16 +353,16 @@ RecordLiteral
   }
 
   test_hasContext_implicitCast_fromDynamic_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final dynamic a = 0;
 final (int, ) x = (a, );
 ''');
 
-    var node = findNode.recordLiteral('(a');
+    var node = result.findNode.recordLiteral('(a');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     SimpleIdentifier
       token: a
       element: <testLibrary>::@getter::a
@@ -252,7 +373,7 @@ RecordLiteral
   }
 
   test_hasContext_mismatchedTypes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(Object o) {
   if (o is (int,)) {
     o = ('',);
@@ -260,11 +381,11 @@ f(Object o) {
 }
 ''');
 
-    var node = findNode.recordLiteral("('',");
+    var node = result.findNode.recordLiteral("('',");
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     SimpleStringLiteral
       literal: ''
   rightParenthesis: )
@@ -273,7 +394,7 @@ RecordLiteral
   }
 
   test_hasContext_mixed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A1 {}
 class A2 {}
 class A3 {}
@@ -285,11 +406,11 @@ final (A1, A2, A3, {A4 f1, A5 f2}) x = (g(), f1: g(), g(), f2: g(), g());
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -305,7 +426,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -332,7 +453,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -362,7 +483,7 @@ RecordLiteral
   }
 
   test_hasContext_mixed_namedWherePositionalExpected() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(Object o) {
   if (o is (int,)) {
     o = (f1: g());
@@ -372,15 +493,15 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(f1:');
+    var node = result.findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -398,7 +519,7 @@ RecordLiteral
   }
 
   test_hasContext_mixed_nameMismatch() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(Object o) {
   if (o is (int, {String f1})) {
     o = (g(), f2: g());
@@ -408,11 +529,11 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -428,7 +549,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -446,7 +567,7 @@ RecordLiteral
   }
 
   test_hasContext_mixed_positionalWhereNamedExpected() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 f(Object o) {
   if (o is ({int f1})) {
     o = (g(),);
@@ -456,11 +577,11 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -479,21 +600,21 @@ RecordLiteral
   }
 
   test_hasContext_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final ({int f1, String f2}) x = (f1: g(), f2: g());
 
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(f1:');
+    var node = result.findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -508,7 +629,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -526,21 +647,21 @@ RecordLiteral
   }
 
   test_hasContext_named_differentOrder() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final ({int f1, String f2}) x = (f2: g(), f1: g());
 
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(f2:');
+    var node = result.findNode.recordLiteral('(f2:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -555,7 +676,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -573,7 +694,7 @@ RecordLiteral
   }
 
   test_hasContext_named_extraInContext() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(Object o) {
   if (o is ({int f1, String f2})) {
     o = (f1: g());
@@ -583,15 +704,15 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(f1:');
+    var node = result.findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -609,7 +730,7 @@ RecordLiteral
   }
 
   test_hasContext_named_extraInLiteral() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(Object o) {
   if (o is ({int f1})) {
     o = (f1: g(), f2: g());
@@ -619,15 +740,15 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(f1:');
+    var node = result.findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -642,7 +763,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: MethodInvocation
+      fieldExpression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -660,20 +781,20 @@ RecordLiteral
   }
 
   test_hasContext_noImplicitCast_fromDynamicToTop_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final dynamic a = 0;
 final ({Object? f1}) x = (f1: a);
 ''');
 
-    var node = findNode.recordLiteral('(f1');
+    var node = result.findNode.recordLiteral('(f1');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: SimpleIdentifier
+      fieldExpression2: SimpleIdentifier
         token: a
         element: <testLibrary>::@getter::a
         staticType: dynamic
@@ -683,16 +804,16 @@ RecordLiteral
   }
 
   test_hasContext_noImplicitCast_fromDynamicToTop_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final dynamic a = 0;
 final (Object?, ) x = (a, );
 ''');
 
-    var node = findNode.recordLiteral('(a');
+    var node = result.findNode.recordLiteral('(a');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     SimpleIdentifier
       token: a
       element: <testLibrary>::@getter::a
@@ -703,17 +824,17 @@ RecordLiteral
   }
 
   test_hasContext_notRecordType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final Object x = (g(), g());
 
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -744,17 +865,17 @@ RecordLiteral
   }
 
   test_hasContext_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final (int, String) x = (g(), g());
 
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -785,7 +906,7 @@ RecordLiteral
   }
 
   test_hasContext_positional_extraInContext() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(Object o) {
   if (o is (int, String)) {
     o = (g(),);
@@ -795,11 +916,11 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -818,7 +939,7 @@ RecordLiteral
   }
 
   test_hasContext_positional_extraInLiteral() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(Object o) {
   if (o is (int,)) {
     o = (g(), g());
@@ -828,11 +949,11 @@ f(Object o) {
 T g<T>() => throw 0;
 ''');
 
-    var node = findNode.recordLiteral('(g(),');
+    var node = result.findNode.recordLiteral('(g(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: g
@@ -863,17 +984,17 @@ RecordLiteral
   }
 
   test_hasContext_unknownFieldType_noDowncast() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f<T>((T, T) x) {}
 
 test(dynamic d) => f((d, d));
 ''');
 
-    var node = findNode.recordLiteral('(d,');
+    var node = result.findNode.recordLiteral('(d,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     SimpleIdentifier
       token: d
       element: <testLibrary>::@function::test::@formalParameter::d
@@ -887,133 +1008,12 @@ RecordLiteral
 ''');
   }
 
-  test_language219_singleField_noComma() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-final x = (0);
-''');
-
-    var node = findNode.singleVariableDeclaration;
-    assertResolvedNodeText(node, r'''
-VariableDeclaration
-  name: x
-  equals: =
-  initializer: ParenthesizedExpression
-    leftParenthesis: (
-    expression: IntegerLiteral
-      literal: 0
-      staticType: int
-    rightParenthesis: )
-    staticType: int
-  declaredFragment: <testLibraryFragment> x@22
-''');
-  }
-
-  test_language219_singleField_noComma_const() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-final x = const (0);
-//              ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-//                ^
-// [diag.recordLiteralOnePositionalNoTrailingComma] A record literal with exactly one positional field requires a trailing comma.
-''');
-
-    var node = findNode.singleVariableDeclaration;
-    assertResolvedNodeText(node, r'''
-VariableDeclaration
-  name: x
-  equals: =
-  initializer: ParenthesizedExpression
-    leftParenthesis: (
-    expression: IntegerLiteral
-      literal: 0
-      staticType: int
-    rightParenthesis: )
-    staticType: int
-  declaredFragment: <testLibraryFragment> x@22
-''');
-  }
-
-  test_language219_singleField_withComma() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-final x = (0,);
-//        ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-''');
-
-    var node = findNode.singleVariableDeclaration;
-    assertResolvedNodeText(node, r'''
-VariableDeclaration
-  name: x
-  equals: =
-  initializer: ParenthesizedExpression
-    leftParenthesis: (
-    expression: IntegerLiteral
-      literal: 0
-      staticType: int
-    rightParenthesis: )
-    staticType: int
-  declaredFragment: <testLibraryFragment> x@22
-''');
-  }
-
-  test_language219_twoFields() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-final x = (0, 1);
-//        ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-''');
-
-    var node = findNode.singleVariableDeclaration;
-    assertResolvedNodeText(node, r'''
-VariableDeclaration
-  name: x
-  equals: =
-  initializer: ParenthesizedExpression
-    leftParenthesis: (
-    expression: IntegerLiteral
-      literal: 0
-      staticType: int
-    rightParenthesis: )
-    staticType: int
-  declaredFragment: <testLibraryFragment> x@22
-''');
-  }
-
-  test_language219_zeroFields() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
-final x = ();
-//        ^
-// [diag.experimentNotEnabled] This requires the 'records' language feature to be enabled.
-''');
-
-    var node = findNode.singleVariableDeclaration;
-    assertResolvedNodeText(node, r'''
-VariableDeclaration
-  name: x
-  equals: =
-  initializer: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: <empty> <synthetic>
-      element: <null>
-      staticType: InvalidType
-    rightParenthesis: )
-    staticType: InvalidType
-  declaredFragment: <testLibraryFragment> x@22
-''');
-  }
-
   test_noContext_empty() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = ();
 ''');
 
-    var node = findNode.recordLiteral('()');
+    var node = result.findNode.recordLiteral('()');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
@@ -1023,22 +1023,22 @@ RecordLiteral
   }
 
   test_noContext_mixed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = (0, f1: 1, 2, f2: 3, 4);
 ''');
 
-    var node = findNode.recordLiteral('(0,');
+    var node = result.findNode.recordLiteral('(0,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     IntegerLiteral
       literal: 0
       staticType: int
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: IntegerLiteral
+      fieldExpression2: IntegerLiteral
         literal: 1
         staticType: int
     IntegerLiteral
@@ -1047,7 +1047,7 @@ RecordLiteral
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: IntegerLiteral
+      fieldExpression2: IntegerLiteral
         literal: 3
         staticType: int
     IntegerLiteral
@@ -1059,25 +1059,25 @@ RecordLiteral
   }
 
   test_noContext_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = (f1: 0, f2: true);
 ''');
 
-    var node = findNode.recordLiteral('(f1:');
+    var node = result.findNode.recordLiteral('(f1:');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     RecordLiteralNamedField
       name: f1
       colon: :
-      fieldExpression: IntegerLiteral
+      fieldExpression2: IntegerLiteral
         literal: 0
         staticType: int
     RecordLiteralNamedField
       name: f2
       colon: :
-      fieldExpression: BooleanLiteral
+      fieldExpression2: BooleanLiteral
         literal: true
         staticType: bool
   rightParenthesis: )
@@ -1086,15 +1086,15 @@ RecordLiteral
   }
 
   test_noContext_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final x = (0, true);
 ''');
 
-    var node = findNode.recordLiteral('(0,');
+    var node = result.findNode.recordLiteral('(0,');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     IntegerLiteral
       literal: 0
       staticType: int
@@ -1107,7 +1107,7 @@ RecordLiteral
   }
 
   test_void_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {}
 
 g() => (f(),);
@@ -1115,11 +1115,11 @@ g() => (f(),);
 // [diag.useOfVoidResult] This expression has a type of 'void' so its value can't be used.
 ''');
 
-    var node = findNode.recordLiteral('(f(),');
+    var node = result.findNode.recordLiteral('(f(),');
     assertResolvedNodeText(node, r'''
 RecordLiteral
   leftParenthesis: (
-  fields
+  fields2
     MethodInvocation
       methodName: SimpleIdentifier
         token: f

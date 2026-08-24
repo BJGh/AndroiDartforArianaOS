@@ -38,6 +38,7 @@ import 'server_abstract.dart';
 
 void main() {
   defineReflectiveSuite(() {
+    defineReflectiveTests(CompletionDataMergeTest);
     defineReflectiveTests(CompletionDocumentationResolutionTest);
     defineReflectiveTests(CompletionLabelDetailsTest);
     defineReflectiveTests(CompletionTest);
@@ -66,7 +67,7 @@ abstract class AbstractCompletionTest extends AbstractLspAnalysisServerTest
   late String content;
   late final TestCode code = TestCode.parseNormalized(content);
 
-  AbstractCompletionTest() {
+  new() {
     defaultInitializationOptions = {
       // Default to a high budget for tests because everything is cold and
       // may take longer to return.
@@ -104,6 +105,70 @@ $lintsYaml
 }
 
 @reflectiveTest
+class CompletionDataMergeTest extends AbstractCompletionTest {
+  Future<void> initializeServer() async {
+    await initialize();
+    await openFile(mainFileUri, code.code);
+    await workspaceAnalysisComplete();
+  }
+
+  Future<void> test_supported() async {
+    setCompletionListApplyKindSupport();
+
+    content = '^';
+    await initializeServer();
+
+    var completionList = await getCompletionList(
+      mainFileUri,
+      code.position.position,
+    );
+
+    // File should be populated at the list level (itemDefaults.data).
+    var listResolutionInfo = CompletionResolutionInfo.fromJson(
+      completionList.itemDefaults?.data as Map<String, Object?>,
+    ) as DartCompletionRequestResolutionInfo;
+    expect(listResolutionInfo.file, mainFilePath);
+
+    // every item should have a null file (or no data at all).
+    for (var item in completionList.items) {
+      var data = item.data as DartCompletionItemResolutionInfo?;
+      expect(data?.file, isNull);
+    }
+  }
+
+  Future<void> test_unsupported() async {
+    setCompletionListApplyKindSupport(false);
+
+    content = '^';
+    await initializeServer();
+
+    var completionList = await getCompletionList(
+      mainFileUri,
+      code.position.position,
+    );
+
+    // We should have no list-level data.
+    expect(completionList.itemDefaults?.data, isNull);
+
+    // every item should have either no data (because it doesn't need
+    // resolving), or the file.
+    for (var item in completionList.items) {
+      var data = item.data as DartCompletionItemResolutionInfo?;
+      expect(data?.file, anyOf(isNull, mainFilePath));
+    }
+
+    // Ensure at least some items actually had data, so the check above was
+    // valid (since it would pass if we lost all data from all items).
+    expect(
+      completionList.items,
+      anyElement(
+        isA<CompletionItem>().having((item) => item.data, 'data', isNotNull),
+      ),
+    );
+  }
+}
+
+@reflectiveTest
 class CompletionDocumentationResolutionTest extends AbstractCompletionTest {
   Future<void> assertNoCompletionItem(String label) async {
     var completions = await getCompletion(mainFileUri, code.position.position);
@@ -118,13 +183,14 @@ class CompletionDocumentationResolutionTest extends AbstractCompletionTest {
   Future<void> initializeServer() async {
     await initialize();
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
   }
 
   Future<void> test_abstract_class() async {
     newFile(join(projectFolderPath, 'my_class.dart'), '''
 typedef MyClass2 = MyClass;
 
+/// Class.
 abstract class MyClass {}
 ''');
 
@@ -138,6 +204,36 @@ void f() {
 
     var completion = await getCompletionItem('MyClass');
     expectDocumentation(completion, isNull);
+
+    var resolved = await resolveCompletion(completion);
+    expectDocumentation(resolved, contains('Class.'));
+  }
+
+  /// Test dartdocs for elements that are already imported file because in the
+  /// past we would only delay docs from not-imported items until resolve
+  /// (because it was only those who got resolution data).
+  Future<void> test_alreadyImported() async {
+    newFile(join(projectFolderPath, 'lib', 'my_class.dart'), '''
+/// This is MyClass with a long dartdoc that should be delayed until resolve
+/// despite being already-imported!
+class MyClass {}
+''');
+    content = '''
+import 'my_class.dart';
+
+void f() {
+  MyClas^
+}
+''';
+
+    await initializeServer();
+
+    var completion = await getCompletionItem('MyClass');
+    expectDocumentation(completion, isNull);
+
+    var resolved = await resolveCompletion(completion);
+    expectDocumentation(resolved, contains('with a long dartdoc'));
+    expectDocumentation(resolved, hasLength(greaterThan(100)));
   }
 
   Future<void> test_class() async {
@@ -200,8 +296,9 @@ void f() {
 ''';
     await initializeServer();
 
-    var completion = await getCompletionItem('c1()');
-    expectDocumentation(completion, equals('This is a constructor.'));
+    var completion = await getCompletionItem('c1()'); // Expect 1 item
+    var resolved = await resolveCompletion(completion); // Resolve for docs
+    expectDocumentation(resolved, equals('This is a constructor.'));
   }
 
   Future<void> test_class_constructorNamed() async {
@@ -510,9 +607,9 @@ void f(Other r) {
     var resolved = await resolveCompletion(completion);
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
     expect(
       newContent,
@@ -595,6 +692,59 @@ void f(t.Other r) {
     );
   }
 
+  /// Test dartdocs for elements in the same file because in the
+  /// past we would only delay docs from not-imported items until resolve
+  /// (because it was only those who got resolution data).
+  Future<void> test_sameFile() async {
+    content = '''
+/// This is MyClass with a long dartdoc that should be delayed until resolve
+/// despite being in the same file.
+class MyClass {}
+
+void f() {
+  MyClas^
+}
+''';
+
+    await initializeServer();
+
+    var completion = await getCompletionItem('MyClass');
+    expectDocumentation(completion, isNull);
+
+    var resolved = await resolveCompletion(completion);
+    expectDocumentation(resolved, contains('with a long dartdoc'));
+    expectDocumentation(resolved, hasLength(greaterThan(100)));
+  }
+
+  /// Ensure we consider the length of copied docs when deciding to attach
+  /// resolution info, so copied docs can also be delayed until `/resolve`.
+  Future<void> test_sameFile_copiedDoc() async {
+    content = '''
+class A {
+  /// This is a long doc comment that should be delayed until /resolve and not
+  /// included inline in the initial completion items.
+  int get foo => 42;
+}
+class B extends A {
+  @override
+  int get foo => 42;
+}
+void f(B b) {
+  b.foo^
+}
+''';
+
+    await initializeServer();
+
+    var completion = await getCompletionItem('foo');
+    expectDocumentation(completion, isNull);
+
+    var resolved = await resolveCompletion(completion);
+    expectDocumentation(resolved, contains('This is a long doc comment'));
+    expectDocumentation(resolved, contains('Copied from `A`'));
+    expectDocumentation(resolved, hasLength(greaterThan(100)));
+  }
+
   Future<void> test_typeAlias_constructors() async {
     newFile(join(projectFolderPath, 'lib', 'alias1.dart'), '''
 import 'main.dart';
@@ -624,8 +774,8 @@ var id = myConstru^
       var completion = completions.singleWhere(
         (completion) => completion.label == label,
       );
-      var info = completion.data as DartCompletionResolutionInfo?;
-      var importUri = info?.importUris.singleOrNull;
+      var info = completion.data as DartCompletionMergedResolutionInfo?;
+      var importUri = info?.importUris?.singleOrNull;
 
       expect(importUri, autoImport ?? isNull);
     }
@@ -1390,6 +1540,9 @@ void f(int variable) {
 
 @reflectiveTest
 class CompletionTest extends AbstractCompletionTest {
+  @override
+  bool get addFlutterPackageDep => true;
+
   /// Checks whether the correct types of documentation are returned for
   /// completions based on [preference].
   Future<void> assertDocumentation(
@@ -1409,20 +1562,21 @@ A^
     await provideConfig(initialize, {'documentation': ?preference});
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
     var completion = res.singleWhere((c) => c.label == 'A');
+    var resolved = await resolveCompletion(completion); // Resolve for docs
 
     if (includesSummary) {
-      expectDocumentation(completion, contains('Summary.'));
+      expectDocumentation(resolved, contains('Summary.'));
     } else {
-      expectDocumentation(completion, isNot(contains('Summary.')));
+      expectDocumentation(resolved, isNot(contains('Summary.')));
     }
 
     if (includesFull) {
-      expectDocumentation(completion, contains('Full.'));
+      expectDocumentation(resolved, contains('Full.'));
     } else {
-      expectDocumentation(completion, isNot(contains('Full.')));
+      expectDocumentation(resolved, isNot(contains('Full.')));
     }
   }
 
@@ -1449,7 +1603,7 @@ void f() {
     await provideConfig(initialize, {'documentation': ?preference});
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
     var completion = res.singleWhere((c) => c.label == 'InOtherFile');
 
@@ -1543,10 +1697,39 @@ void f() {
     expect(item.textEdit, isNull);
   }
 
-  @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfig(flutter: true);
+  Future<void> test_alreadyImported_noImportUris() async {
+    newFile(join(projectFolderPath, 'lib', 'my_class.dart'), '''
+class MyClass {}
+''');
+
+    content = '''
+import 'my_class.dart';
+
+void f() {
+  MyClass^
+}
+''';
+
+    await initialize();
+
+    await openFile(mainFileUri, code.code);
+    await workspaceAnalysisComplete();
+    var res = await getCompletion(mainFileUri, code.position.position);
+
+    var completion = res.where((c) => c.label == 'MyClass').single;
+    // Either we should have no data, or the data should have no importUris
+    // because there's nothing to import.
+    expect(
+      completion.data,
+      anyOf(
+        isNull,
+        isA<DartCompletionItemResolutionInfo>().having(
+          (item) => item.importUris,
+          'importUris',
+          isEmpty,
+        ),
+      ),
+    );
   }
 
   Future<void> test_annotation_beforeMember() async {
@@ -2040,7 +2223,7 @@ void f() {
     await provideConfig(initialize, {'completeFunctionCalls': true});
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
     var item = res.singleWhere((c) => c.label == 'myFunction(…)');
     // Ensure the snippet comes through in the expected format with the expected
@@ -2089,7 +2272,7 @@ final a = Stri^
     await provideConfig(initialize, {'completeFunctionCalls': true});
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completion = res.singleWhere(
@@ -2399,7 +2582,7 @@ var a = 1 /^
       // after the expectations are set up above, because otherwise if the
       // exceptions occur too quickly, they will be unhandled (whereas the
       // expectations attach error handlers to them).
-      await pumpEventQueue(times: 50000);
+      await pumpEventQueue(times: 5000);
       completer.complete();
       await Future.wait(expectationFutures);
     } finally {
@@ -2964,7 +3147,7 @@ void f() {
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     // Expect everything (hashCode etc. will take it over 500).
@@ -2994,7 +3177,7 @@ void f() {
 
     await provideConfig(initialize, {'maxCompletionItems': 200});
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     // Should be capped at 200 and marked as incomplete.
@@ -3132,7 +3315,7 @@ void f() {
 
     await provideConfig(initialize, {'maxCompletionItems': 10});
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     expect(res.items, hasLength(10));
@@ -3166,7 +3349,7 @@ void f() {
     setCompletionItemSnippetSupport();
     await provideConfig(initialize, {'maxCompletionItems': 10});
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     // Should be capped at 10 and marked as incomplete.
@@ -3521,7 +3704,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completion = res.singleWhere((c) => c.label.startsWith('foo'));
@@ -3577,6 +3760,56 @@ class Derived extends Base {
     var completionLabel = 'override name => …';
 
     await _checkCompletionEdits(mainFileUri, completionLabel, expectedContent);
+  }
+
+  /// The suggestion label, kind, and textEdit for a `this.`-prefixed instance
+  /// member all go through LSP-specific conversion, unlike the raw
+  /// suggestions checked in `CompletionScopeTest`.
+  Future<void> test_parameter_instanceMethod() async {
+    content = '''
+class C {
+  void foo() {}
+  void bar(int foo) {
+    ^
+  }
+}
+''';
+    await initialize();
+    await openFile(mainFileUri, code.code);
+    var res = await getCompletion(mainFileUri, code.position.position);
+
+    var fooParameter = res.singleWhere((c) => c.label == 'foo');
+    var thisMethodFoo = res.singleWhere((c) => c.label.startsWith('this.foo'));
+
+    expect(fooParameter.kind, equals(CompletionItemKind.Variable));
+    expect(thisMethodFoo.kind, equals(CompletionItemKind.Method));
+    var newText = toTextEdit(thisMethodFoo.textEdit!).newText;
+    expect(newText, equals('this.foo'));
+  }
+
+  /// The suggestion label, kind, and textEdit for a `this.`-prefixed instance
+  /// member all go through LSP-specific conversion, unlike the raw
+  /// suggestions checked in `CompletionScopeTest`.
+  Future<void> test_parameter_staticField() async {
+    content = '''
+class C {
+  static int foo = 0;
+  void bar(int foo) {
+    ^
+  }
+}
+''';
+    await initialize();
+    await openFile(mainFileUri, code.code);
+    var res = await getCompletion(mainFileUri, code.position.position);
+
+    var fooParameter = res.singleWhere((c) => c.label == 'foo');
+    var staticFooField = res.singleWhere((c) => c.label.startsWith('C.foo'));
+
+    expect(fooParameter.kind, equals(CompletionItemKind.Variable));
+    expect(staticFooField.kind, equals(CompletionItemKind.Field));
+    var newText = toTextEdit(staticFooField.textEdit!).newText;
+    expect(newText, equals('C.foo'));
   }
 
   Future<void> test_plainText() async {
@@ -3785,7 +4018,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
@@ -3823,9 +4056,9 @@ void f() {
     // Apply both the main completion edit and the additionalTextEdits atomically.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
 
     // Ensure both edits were made - the completion, and the inserted import.
@@ -3900,7 +4133,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
     var completions = res.where((c) => c.label == 'MyExportedClass').toList();
     expect(completions, hasLength(1));
@@ -3931,7 +4164,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completions = res.where((c) => c.label == 'MyExportedClass').toList();
@@ -3962,7 +4195,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completions = res.where((c) => c.label == 'MyDuplicatedClass').toList();
@@ -4001,7 +4234,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var enumCompletions = res
@@ -4039,9 +4272,9 @@ void f() {
     // Apply both the main completion edit and the additionalTextEdits atomically.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
 
     // Ensure both edits were made - the completion, and the inserted import.
@@ -4082,7 +4315,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completions = res
@@ -4119,7 +4352,7 @@ void f(String a) {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Expect only a single entry for the 'empty' extension member.
@@ -4136,9 +4369,9 @@ void f(String a) {
     // Verify the edits.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
     expect(
       newContent,
@@ -4174,7 +4407,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completions = res.where((c) => c.label == 'MyExportedClass').toList();
@@ -4256,7 +4489,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completions = res.where((c) => c.label == 'MyExportedClass').toList();
@@ -4289,7 +4522,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
@@ -4329,15 +4562,15 @@ void f() {
 
     var newContentReplaceMode = applyTextEdits(
       code.code,
-      [
-        textEditForReplace(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [textEditForReplace(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
     var newContentInsertMode = applyTextEdits(
       code.code,
-      [
-        textEditForInsert(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [textEditForInsert(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
 
     // Ensure both edits were made - the completion, and the inserted import.
@@ -4387,7 +4620,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completion = res.singleWhere((c) => c.label == 'InOtherFile');
@@ -4405,9 +4638,9 @@ void f() {
     // Apply all current-document edits.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
     expect(
       newContent,
@@ -4443,7 +4676,7 @@ void f() {
       },
     );
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     // Ensure we flagged that we returned everything.
@@ -4470,7 +4703,7 @@ void f() {
       },
     );
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletionList(mainFileUri, code.position.position);
 
     // Ensure we flagged that we did not return everything.
@@ -4595,7 +4828,7 @@ void f() {
     content = 'MyOtherClass^';
     await initialize();
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
 
     // Start with a blank file.
     newFile(otherFilePath, '');
@@ -4630,7 +4863,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Find the completion for the class in the other file.
@@ -4653,9 +4886,9 @@ void f() {
     // Apply both the main completion edit and the additionalTextEdits atomically.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
 
     // Ensure both edits were made - the completion, and the inserted import.
@@ -4704,7 +4937,7 @@ class BaseImpl extends Base {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     var completion = res.singleWhere(
@@ -4714,9 +4947,9 @@ class BaseImpl extends Base {
 
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolved.textEdit!),
-      ].followedBy(resolved.additionalTextEdits!).toList(),
+      [toTextEdit(resolved.textEdit!)]
+          .followedBy(resolved.additionalTextEdits!)
+          .toList(),
     );
 
     expect(
@@ -4845,7 +5078,7 @@ void f() {
     );
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Ensure the item doesn't appear in the results (because we might not
@@ -4870,7 +5103,7 @@ void f() {
     await initialize();
 
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(mainFileUri, code.position.position);
 
     // Ensure the item doesn't appear in the results (because we might not
@@ -4920,7 +5153,7 @@ void f() {
   ) async {
     await initialize();
     await openFile(fileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     var res = await getCompletion(fileUri, code.position.position);
 
     var completion = res.singleWhere((c) => c.label == completionLabel);
@@ -4929,9 +5162,9 @@ void f() {
     // Apply both the main completion edit and the additionalTextEdits atomically.
     var newContent = applyTextEdits(
       code.code,
-      [
-        toTextEdit(resolvedCompletion.textEdit!),
-      ].followedBy(resolvedCompletion.additionalTextEdits ?? []).toList(),
+      [toTextEdit(resolvedCompletion.textEdit!)]
+          .followedBy(resolvedCompletion.additionalTextEdits ?? [])
+          .toList(),
     );
 
     expect(newContent, equalsNormalized(expectedContent));
@@ -5036,7 +5269,7 @@ void f() {
 
     await initialize();
     await openFile(mainFileUri, code.code);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
 
     // Use a Completer to control when the completion handler starts computing.
     var completer = Completer<void>();
@@ -5459,18 +5692,15 @@ void f() {
 
 @reflectiveTest
 class FlutterSnippetCompletionTest extends SnippetCompletionTest {
+  @override
+  bool get addFlutterPackageDep => true;
+
   /// Standard import statements expected for basic Widgets.
   String get expectedImports => '''
 import 'package:flutter/widgets.dart';''';
 
   /// Constructor params expected on Widget classes.
   String get expectedWidgetConstructorParams => '({super.key})';
-
-  @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfig(flutter: true);
-  }
 
   Future<void> test_snippets_flutterStateful() async {
     content = '''
@@ -5497,7 +5727,7 @@ import 'package:flutter/widgets.dart';
 class A {}
 
 class \${1:MyWidget} extends StatefulWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   State<\${1:MyWidget}> createState() => _\${1:MyWidget}State();
@@ -5540,7 +5770,7 @@ import 'package:flutter/widgets.dart';
 class A {}
 
 class \${1:MyWidget} extends StatefulWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   State<\${1:MyWidget}> createState() => _\${1:MyWidget}State();
@@ -5598,7 +5828,7 @@ import 'package:flutter/widgets.dart';
 class A {}
 
 class \${1:MyWidget} extends StatelessWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   Widget build(BuildContext context) {
@@ -5634,7 +5864,7 @@ $expectedImports
 class A {}
 
 class \${1:MyWidget} extends StatelessWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   Widget build(BuildContext context) {
@@ -5664,7 +5894,7 @@ stless^
 $expectedImports
 
 class \${1:MyWidget} extends StatelessWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   Widget build(BuildContext context) {
@@ -5692,7 +5922,7 @@ class \${1:MyWidget} extends StatelessWidget {
 $expectedImports
 
 class \${1:MyWidget} extends StatelessWidget {
-  const \${1:MyWidget}$expectedWidgetConstructorParams;
+  const new$expectedWidgetConstructorParams;
 
   @override
   Widget build(BuildContext context) {

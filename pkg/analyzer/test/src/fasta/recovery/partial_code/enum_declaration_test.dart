@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,18 +17,19 @@ main() {
 @reflectiveTest
 class EnumDeclarationTest extends ParserDiagnosticsTest {
   void test_enum_declaration_comma_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, class A {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 5),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -53,18 +53,19 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, const a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 5),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -84,25 +85,26 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_comma_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, enum E { v }
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 4),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -129,17 +131,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken][column 10][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 10, 1),
-      error(diag.missingIdentifier, 8, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -154,18 +155,19 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, final a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 5),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -185,24 +187,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_comma_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, int f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -229,18 +231,19 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, void f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 4),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -269,17 +272,38 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, int get a => 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: <empty> <synthetic>
+          EnumConstantDeclaration
+            name: int
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -305,18 +329,18 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, mixin M {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//              ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingFunctionParameters, 16, 1),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -343,17 +367,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, set a(b) {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -371,6 +395,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -382,19 +412,20 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, typedef A = B Function(C, D);
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//                ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken] Expected to find '}'.
+//                    ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingConstFinalVarOrType, 18, 1),
-      error(diag.expectedToken, 18, 1),
-      error(diag.expectedToken, 22, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -413,13 +444,21 @@ CompilationUnit
           VariableDeclaration
             name: A
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: B
       semicolon: ; <synthetic>
     FunctionDeclaration
       name: Function
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: C
+            RegularFormalParameter
+              name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: C
@@ -432,18 +471,19 @@ CompilationUnit
   }
 
   void test_enum_declaration_comma_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, var a;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.missingIdentifier, 10, 3),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -467,14 +507,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} class A {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -496,14 +537,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} const a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -521,21 +563,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaRightBrace_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} enum E { v }
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -560,14 +603,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -582,14 +626,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} final a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -607,21 +652,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaRightBrace_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} int f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -648,14 +694,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} void f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -682,14 +729,36 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} int get a => 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: <empty> <synthetic>
+        rightBracket: }
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -715,14 +784,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} mixin M {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -743,14 +813,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} set a(b) {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -767,6 +838,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -778,14 +855,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} typedef A = B Function(C, D);
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -806,6 +884,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -818,14 +906,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaRightBrace_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,} var a;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -847,17 +936,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a class A {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -881,17 +970,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a const a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -911,24 +1000,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaValue_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a enum E { v }
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -955,17 +1044,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken][column 11][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 11, 1),
-      error(diag.missingIdentifier, 8, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -982,17 +1070,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a final a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1012,24 +1100,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaValue_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a int f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1058,17 +1146,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a void f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1097,17 +1185,40 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a int get a => 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: <empty> <synthetic>
+          EnumConstantDeclaration
+            name: a
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1135,17 +1246,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a mixin M {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1168,17 +1279,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a set a(b) {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1197,6 +1308,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1208,17 +1325,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a typedef A = B Function(C, D);
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1241,6 +1358,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -1253,17 +1380,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValue_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,a var a;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1287,14 +1414,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} class A {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1318,14 +1446,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} const a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1345,21 +1474,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaValueRightBrace_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} enum E { v }
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1386,14 +1516,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1410,14 +1541,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} final a = 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1437,21 +1569,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_commaValueRightBrace_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} int f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1480,14 +1613,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} void f() {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1516,14 +1650,38 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} int get a => 0;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: <empty> <synthetic>
+          EnumConstantDeclaration
+            name: a
+        rightBracket: }
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1551,14 +1709,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} mixin M {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1581,14 +1740,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} set a(b) {}
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1607,6 +1767,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1618,14 +1784,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} typedef A = B Function(C, D);
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1648,6 +1815,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -1660,14 +1837,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_commaValueRightBrace_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {, a} var a;
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1691,17 +1869,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum class A {}
+//   ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 5),
-      error(diag.missingEnumBody, 5, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1720,20 +1897,22 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum const a = 0;
+//   ^^^^^
+// [diag.constWithoutPrimaryConstructor] 'const' can only be used together with a primary constructor declaration.
+//           ^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
+//             ^
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
+//              ^
+// [diag.unexpectedToken] Unexpected text ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.constWithoutPrimaryConstructor, 5, 5),
-      error(diag.missingEnumBody, 13, 1),
-      error(diag.expectedExecutable, 13, 1),
-      error(diag.expectedExecutable, 15, 1),
-      error(diag.unexpectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1745,17 +1924,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum enum E { v }
+//   ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 4),
-      error(diag.missingEnumBody, 5, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1777,17 +1955,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum
+//  ^
+// [diag.missingIdentifier][column 5][length 0] Expected an identifier.
+// [diag.missingEnumBody][column 5][length 0] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 0),
-      error(diag.missingEnumBody, 5, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1799,17 +1976,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum final a = 0;
+//   ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 5),
-      error(diag.missingEnumBody, 5, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1824,21 +2000,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_keyword_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum int f() {}
+//       ^^^
+// [diag.unexpectedTokens] Unexpected tokens.
 ''');
-    parseResult.assertErrors([error(diag.unexpectedTokens, 9, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1850,17 +2027,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum void f() {}
+//   ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 4),
-      error(diag.missingEnumBody, 5, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1884,14 +2060,31 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum int get a => 0;
+//       ^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 9, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: int
+      body: BlockEnumBody
+        leftBracket: { <synthetic>
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1912,17 +2105,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum mixin M {}
+//   ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 5),
-      error(diag.missingEnumBody, 5, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1940,17 +2132,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum set a(b) {}
+//   ^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 3),
-      error(diag.missingEnumBody, 5, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1964,6 +2155,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -1975,17 +2172,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum typedef A = B Function(C, D);
+//   ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 7),
-      error(diag.missingEnumBody, 5, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2003,6 +2199,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -2015,17 +2221,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_keyword_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum var a;
+//   ^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 5, 3),
-      error(diag.missingEnumBody, 5, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2044,17 +2249,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { class A {}
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2076,17 +2281,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { const a = 0;
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2104,24 +2309,24 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_leftBrace_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { enum E { v }
+//       ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 4),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2146,14 +2351,14 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {
+// [diag.expectedToken][column 9][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2165,17 +2370,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { final a = 0;
+//       ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2193,21 +2398,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_leftBrace_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { int f() {}
+//           ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2232,17 +2438,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { void f() {}
+//       ^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 4),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2269,14 +2475,34 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { int get a => 0;
+//           ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: int
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2300,17 +2526,16 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { mixin M {}
+//             ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingFunctionParameters, 15, 1),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2335,14 +2560,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { set a(b) {}
+//           ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2358,6 +2584,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -2369,18 +2601,18 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { typedef A = B Function(C, D);
+//               ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken] Expected to find '}'.
+//                   ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 17, 1),
-      error(diag.expectedToken, 17, 1),
-      error(diag.expectedToken, 21, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2397,13 +2629,21 @@ CompilationUnit
           VariableDeclaration
             name: A
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: B
       semicolon: ; <synthetic>
     FunctionDeclaration
       name: Function
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: C
+            RegularFormalParameter
+              name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: C
@@ -2416,17 +2656,17 @@ CompilationUnit
   }
 
   void test_enum_declaration_leftBrace_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { var a;
+//       ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//       ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 3),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2448,14 +2688,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} class A {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2474,14 +2715,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} const a = 0;
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2496,21 +2738,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_missingName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} enum E { v }
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2532,14 +2775,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2551,14 +2795,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} final a = 0;
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2573,21 +2818,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_missingName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} int f() {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2611,14 +2857,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} void f() {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2642,14 +2889,33 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} int get a => 0;
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: <empty> <synthetic>
+      body: BlockEnumBody
+        leftBracket: {
+        rightBracket: }
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2672,14 +2938,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} mixin M {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2697,14 +2964,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} set a(b) {}
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2718,6 +2986,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -2729,14 +3003,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} typedef A = B Function(C, D);
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2754,6 +3029,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -2766,14 +3051,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_missingName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum {} var a;
+//   ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2792,14 +3078,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E class A {}
+//     ^^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2818,14 +3105,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E const a = 0;
+//     ^^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2840,21 +3128,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_name_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E enum E { v }
+//     ^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2876,14 +3165,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E
+//    ^
+// [diag.missingEnumBody][column 7][length 0] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 0)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2895,14 +3185,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E final a = 0;
+//     ^^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2917,21 +3208,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_name_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E int f() {}
+//     ^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2955,14 +3247,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E void f() {}
+//     ^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2986,14 +3279,33 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E int get a => 0;
+//     ^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: { <synthetic>
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3016,14 +3328,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E mixin M {}
+//     ^^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3041,14 +3354,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E set a(b) {}
+//     ^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3062,6 +3376,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -3073,14 +3393,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E typedef A = B Function(C, D);
+//     ^^^^^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3098,6 +3419,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -3110,14 +3441,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_name_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E var a;
+//     ^^^
+// [diag.missingEnumBody] An enum definition must have a body with at least one constant name.
 ''');
-    parseResult.assertErrors([error(diag.missingEnumBody, 7, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3136,14 +3468,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a class A {}
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3165,14 +3498,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a const a = 0;
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3190,21 +3524,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_value_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a enum E { v }
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3229,14 +3564,14 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a
+// [diag.expectedToken][column 10][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3251,14 +3586,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a final a = 0;
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3276,21 +3612,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_enum_declaration_value_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a int f() {}
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3317,14 +3654,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a void f() {}
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3351,14 +3689,36 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a int get a => 0;
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: E
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: a
+        rightBracket: } <synthetic>
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3384,14 +3744,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a mixin M {}
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3412,14 +3773,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a set a(b) {}
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3436,6 +3798,12 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
           rightParenthesis: )
@@ -3447,14 +3815,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a typedef A = B Function(C, D);
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3475,6 +3844,16 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: C
@@ -3487,14 +3866,15 @@ CompilationUnit
   }
 
   void test_enum_declaration_value_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {a var a;
+//        ^
+// [diag.expectedToken] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3516,17 +3896,16 @@ CompilationUnit
   }
 
   void test_enum_eof_comma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {,
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken][column 10][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 10, 1),
-      error(diag.missingIdentifier, 8, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3541,14 +3920,14 @@ CompilationUnit
   }
 
   void test_enum_eof_leftBrace_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {
+// [diag.expectedToken][column 9][length 1] Expected to find '}'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 9, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters

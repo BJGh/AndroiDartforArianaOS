@@ -27,7 +27,7 @@ import 'package:vm/metadata/table_selector.dart';
 import 'package:vm/metadata/unboxing_info.dart';
 import 'package:vm/metadata/unreachable.dart';
 import 'package:vm/transformations/devirtualization.dart' show Devirtualization;
-import 'package:vm/transformations/pragma.dart';
+import 'package:vm/modular/transformations/pragma.dart';
 
 import 'analysis.dart';
 import 'calls.dart';
@@ -266,13 +266,7 @@ class MoveFieldInitializers {
           }
         }
         final Initializer newInit = initializedFields.contains(f)
-            ? LocalInitializer(
-                VariableDeclaration(
-                  null,
-                  initializer: initExpr,
-                  isSynthesized: true,
-                ),
-              )
+            ? LocalInitializer(SyntheticVariable(), initExpr)
             : FieldInitializer(f, initExpr);
         newInit.parent = c;
         newInitializers.add(newInit);
@@ -314,7 +308,7 @@ class CleanupAnnotations extends RecursiveVisitor {
   }
 
   void _cleanupAnnotations(Node node, List<Expression> annotations) {
-    if (node is VariableDeclaration ||
+    if (node is Variable ||
         node is Member ||
         node is Class ||
         node is Library) {
@@ -397,9 +391,12 @@ class TFADevirtualization extends Devirtualization {
             callSite.isNullableReceiver,
           );
         } else if (!isArtificialNode(singleTarget)) {
+          final bool checkReceiverForNull =
+              callSite.isNullableReceiver &&
+              singleTarget.enclosingClass != coreTypes.objectClass;
           return DirectCallMetadata.targetMember(
             singleTarget,
-            callSite.isNullableReceiver,
+            checkReceiverForNull,
           );
         }
       }
@@ -899,12 +896,12 @@ class AnnotateKernel extends RecursiveVisitor {
   }
 
   @override
-  defaultVariableDeclaration(VariableDeclaration node) {
+  defaultVariable(Variable node) {
     final inferredType = _typeFlowAnalysis.capturedVariableType(node);
     if (inferredType != null) {
       _setInferredType(node, inferredType);
     }
-    super.defaultVariableDeclaration(node);
+    super.defaultVariable(node);
   }
 
   @override
@@ -1076,26 +1073,12 @@ class TreeShaker {
         m.type.accept(typeVisitor);
       } else if (m is Procedure) {
         func = m.function;
-        if (m.concreteForwardingStubTarget != null) {
+        if (m.stubTarget != null) {
           m.stubTarget = fieldMorpher.adjustInstanceCallTarget(
-            m.concreteForwardingStubTarget,
+            m.stubTarget,
             isSetter: m.isSetter,
           );
-          addUsedMember(m.concreteForwardingStubTarget!);
-        }
-        if (m.abstractForwardingStubTarget != null) {
-          m.stubTarget = fieldMorpher.adjustInstanceCallTarget(
-            m.abstractForwardingStubTarget,
-            isSetter: m.isSetter,
-          );
-          addUsedMember(m.abstractForwardingStubTarget!);
-        }
-        if (m.memberSignatureOrigin != null) {
-          m.stubTarget = fieldMorpher.adjustInstanceCallTarget(
-            m.memberSignatureOrigin,
-            isSetter: m.isSetter,
-          );
-          addUsedMember(m.memberSignatureOrigin!);
+          addUsedMember(m.stubTarget!);
         }
       } else if (m is Constructor) {
         func = m.function;
@@ -1150,7 +1133,7 @@ class TreeShaker {
     }
   }
 
-  void addUsedParameters(List<VariableDeclaration> params) {
+  void addUsedParameters(List<FunctionParameter> params) {
     for (var param in params) {
       // Do not visit initializer (default value) of a parameter as it is
       // going to be removed during pass 2.
@@ -1207,8 +1190,8 @@ class FieldMorpher {
     if (isSetter) {
       final isAbstract = !shaker.isFieldSetterReachable(field);
       final parameter =
-          new VariableDeclaration(
-              'value',
+          new PositionalParameter(
+              parameterName: 'value',
               type: field.type,
               isSynthesized: true,
             )
@@ -1436,11 +1419,8 @@ class _TreeShakerPass1 extends RemovingTransformer {
 
   TreeNode _makeUnreachableInitializer(List<Expression> args) {
     return new LocalInitializer(
-      new VariableDeclaration(
-        null,
-        initializer: _makeUnreachableCall(args),
-        isSynthesized: true,
-      ),
+      new SyntheticVariable(),
+      _makeUnreachableCall(args),
     );
   }
 
@@ -1916,12 +1896,10 @@ class _TreeShakerPass1 extends RemovingTransformer {
       if (!shaker.retainField(field)) {
         if (mayHaveSideEffects(node.value)) {
           return LocalInitializer(
-            VariableDeclaration(
-              null,
-              initializer: node.value,
-              isSynthesized: true,
+            SyntheticVariable(
               type: visitDartType(field.type, cannotRemoveSentinel),
             ),
+            node.value,
           );
         } else {
           return removalSentinel!;
@@ -2504,10 +2482,10 @@ class _TreeShakerPass2 extends RemovingTransformer {
 
   void _removeDefaultValuesOfParameters(FunctionNode function) {
     for (var p in function.positionalParameters) {
-      p.initializer = null;
+      p.defaultValue = null;
     }
     for (var p in function.namedParameters) {
-      p.initializer = null;
+      p.defaultValue = null;
     }
   }
 

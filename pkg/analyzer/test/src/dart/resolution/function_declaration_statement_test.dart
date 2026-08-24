@@ -18,7 +18,7 @@ main() {
 class FunctionDeclarationStatementResolutionTest
     extends PubPackageResolutionTest {
   test_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   T g<T, U>(T a, U b) => a;
 //  ^
@@ -26,7 +26,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -50,6 +50,28 @@ FunctionDeclarationStatement
         rightBracket: >
       parameters: FormalParameterList
         leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            type: NamedType
+              name: T
+              element: #E0 T
+              type: T
+            name: a
+            declaredFragment: <testLibraryFragment> a@25
+              element: isPublic
+                type: T
+          RegularFormalParameter
+            type: NamedType
+              name: U
+              element: #E1 U
+              type: U
+            name: b
+            declaredFragment: <testLibraryFragment> b@30
+              element: isPublic
+                type: U
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
+        leftParenthesis: (
         parameter: RegularFormalParameter
           type: NamedType
             name: T
@@ -71,7 +93,7 @@ FunctionDeclarationStatement
         rightParenthesis: )
       body: ExpressionFunctionBody
         functionDefinition: =>
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@25
           staticType: T
@@ -87,7 +109,7 @@ FunctionDeclarationStatement
   }
 
   test_generic_fBounded() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T extends U, U, V extends U>(T x, U y, V z) {}
 //     ^
@@ -95,7 +117,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -132,6 +154,37 @@ FunctionDeclarationStatement
               defaultType: dynamic
         rightBracket: >
       parameters: FormalParameterList
+        leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            type: NamedType
+              name: T
+              element: #E1 T
+              type: T
+            name: x
+            declaredFragment: <testLibraryFragment> x@51
+              element: isPublic
+                type: T
+          RegularFormalParameter
+            type: NamedType
+              name: U
+              element: #E0 U
+              type: U
+            name: y
+            declaredFragment: <testLibraryFragment> y@56
+              element: isPublic
+                type: U
+          RegularFormalParameter
+            type: NamedType
+              name: V
+              element: #E2 V
+              type: V
+            name: z
+            declaredFragment: <testLibraryFragment> z@61
+              element: isPublic
+                type: V
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         parameter: RegularFormalParameter
           type: NamedType
@@ -176,7 +229,7 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_optionalNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>({T? a}) {}
 //     ^
@@ -184,7 +237,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -203,6 +256,23 @@ FunctionDeclarationStatement
               defaultType: dynamic
         rightBracket: >
       parameters: FormalParameterList
+        leftParenthesis: (
+        delimitedFormalParameters: DelimitedFormalParameters
+          leftDelimiter: {
+          formalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: T
+                question: ?
+                element: #E0 T
+                type: T?
+              name: a
+              declaredFragment: <testLibraryFragment> a@27
+                element: isPublic
+                  type: T?
+          rightDelimiter: }
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         leftDelimiter: {
         parameter: RegularFormalParameter
@@ -232,7 +302,7 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_optionalPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>([T? a]) {}
 //     ^
@@ -240,7 +310,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -259,6 +329,23 @@ FunctionDeclarationStatement
               defaultType: dynamic
         rightBracket: >
       parameters: FormalParameterList
+        leftParenthesis: (
+        delimitedFormalParameters: DelimitedFormalParameters
+          leftDelimiter: [
+          formalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: T
+                question: ?
+                element: #E0 T
+                type: T?
+              name: a
+              declaredFragment: <testLibraryFragment> a@27
+                element: isPublic
+                  type: T?
+          rightDelimiter: ]
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         leftDelimiter: [
         parameter: RegularFormalParameter
@@ -288,7 +375,7 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_requiredNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>({required T? a}) {}
 //     ^
@@ -296,7 +383,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -315,6 +402,24 @@ FunctionDeclarationStatement
               defaultType: dynamic
         rightBracket: >
       parameters: FormalParameterList
+        leftParenthesis: (
+        delimitedFormalParameters: DelimitedFormalParameters
+          leftDelimiter: {
+          formalParameters
+            RegularFormalParameter
+              requiredKeyword: required
+              type: NamedType
+                name: T
+                question: ?
+                element: #E0 T
+                type: T?
+              name: a
+              declaredFragment: <testLibraryFragment> a@36
+                element: isPublic
+                  type: T?
+          rightDelimiter: }
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         leftDelimiter: {
         parameter: RegularFormalParameter
@@ -345,7 +450,7 @@ FunctionDeclarationStatement
   }
 
   test_generic_formalParameters_requiredPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   void g<T>(T a) {}
 //     ^
@@ -353,7 +458,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -372,6 +477,19 @@ FunctionDeclarationStatement
               defaultType: dynamic
         rightBracket: >
       parameters: FormalParameterList
+        leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            type: NamedType
+              name: T
+              element: #E0 T
+              type: T
+            name: a
+            declaredFragment: <testLibraryFragment> a@25
+              element: isPublic
+                type: T
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         parameter: RegularFormalParameter
           type: NamedType
@@ -398,7 +516,7 @@ FunctionDeclarationStatement
   }
 
   test_returnType_implicit_blockBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   g() {}
 //^
@@ -406,7 +524,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -430,7 +548,7 @@ FunctionDeclarationStatement
   }
 
   test_returnType_implicit_expressionBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   g() => 0;
 //^
@@ -438,7 +556,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement;
+    var node = result.findNode.singleFunctionDeclarationStatement;
     assertResolvedNodeText(node, r'''
 FunctionDeclarationStatement
   functionDeclaration: FunctionDeclaration
@@ -449,7 +567,7 @@ FunctionDeclarationStatement
         rightParenthesis: )
       body: ExpressionFunctionBody
         functionDefinition: =>
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         semicolon: ;

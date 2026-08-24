@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't use constant patterns with type literals.";
 
 class TypeLiteralInConstantPattern extends AnalysisRule {
-  TypeLiteralInConstantPattern()
+  new()
     : super(
         name: LintNames.type_literal_in_constant_pattern,
         description: _desc,
@@ -34,16 +34,23 @@ class TypeLiteralInConstantPattern extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   visitConstantPattern(ConstantPattern node) {
     // `const (MyType)` is fine.
     if (node.constKeyword != null) {
+      return;
+    }
+
+    // OK to use raw types if the matched value is of type Type.
+    var matchedValueType = node.matchedValueType;
+    if (matchedValueType != null &&
+        // Have to use `isSubtypeOf` to catch generic type parameters.
+        context.typeSystem.isSubtypeOf(
+          matchedValueType,
+          context.typeProvider.typeType,
+        )) {
       return;
     }
 

@@ -17,11 +17,11 @@ main() {
 @reflectiveTest
 class ExtensionDeclarationResolutionTest extends PubPackageResolutionTest {
   test_blockBody_empty() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {}
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -40,13 +40,13 @@ ExtensionDeclaration
   }
 
   test_blockBody_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   static int f = 0;
 }
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -71,7 +71,7 @@ ExtensionDeclaration
             VariableDeclaration
               name: f
               equals: =
-              initializer: IntegerLiteral
+              initializer2: IntegerLiteral
                 literal: 0
                 staticType: int
               declaredFragment: <testLibraryFragment> f@34
@@ -83,13 +83,13 @@ ExtensionDeclaration
   }
 
   test_blockBody_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   int get g => 0;
 }
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -112,7 +112,7 @@ ExtensionDeclaration
         name: g
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           semicolon: ;
@@ -125,13 +125,13 @@ ExtensionDeclaration
   }
 
   test_blockBody_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   void m() {}
 }
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -167,13 +167,13 @@ ExtensionDeclaration
   }
 
   test_blockBody_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   set s(int v) {}
 }
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -191,6 +191,19 @@ ExtensionDeclaration
         propertyKeyword: set
         name: s
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+                element: dart:core::@class::int
+                type: int
+              name: v
+              declaredFragment: <testLibraryFragment> v@33
+                element: isPublic
+                  type: int
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -215,11 +228,11 @@ ExtensionDeclaration
   }
 
   test_emptyBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int;
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension
@@ -236,15 +249,15 @@ ExtensionDeclaration
 ''');
   }
 
-  test_emptyBody_language310() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.10
+  test_emptyBody_beforePrimaryConstructors() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: primary-constructors
 extension E on int;
 //                ^
 // [diag.experimentNotEnabled] This requires the 'primary-constructors' language feature to be enabled.
 ''');
 
-    var node = findNode.singleExtensionDeclaration;
+    var node = result.findNode.singleExtensionDeclaration;
     assertResolvedNodeText(node, r'''
 ExtensionDeclaration
   extensionKeyword: extension

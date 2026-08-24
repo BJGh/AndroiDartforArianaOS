@@ -26,7 +26,6 @@ sealed class JsInteropMemberData {
   String get pragmaName;
   Constant? get toPragmaValue;
   bool get isImport;
-  bool get isWeakExport => !isImport;
   void applyToMember(Member member, CoreTypes coreTypes) {
     addPragma(member, pragmaName, coreTypes, value: toPragmaValue);
   }
@@ -112,7 +111,6 @@ class JsTrampolineData extends JsInteropMemberData {
 class JsTrampolineWrapperData extends JsInteropMemberData {
   static const String _pragmaName = 'wasm:js-trampoline-wrapper';
   final int numJsParameters;
-  final Procedure trampoline;
   final bool captureThis;
   final bool needsCastClosure;
 
@@ -124,19 +122,16 @@ class JsTrampolineWrapperData extends JsInteropMemberData {
 
   JsTrampolineWrapperData({
     required this.numJsParameters,
-    required this.trampoline,
     required this.captureThis,
     required this.needsCastClosure,
   });
 
   factory JsTrampolineWrapperData.fromPragmaValue(ListConstant constant) {
-    final trampoline = (constant.entries[0] as StaticTearOffConstant).target;
-    final numJsParameters = (constant.entries[1] as IntConstant).value;
-    final captureThis = (constant.entries[2] as BoolConstant).value;
-    final needsCastClosure = (constant.entries[3] as BoolConstant).value;
+    final numJsParameters = (constant.entries[0] as IntConstant).value;
+    final captureThis = (constant.entries[1] as BoolConstant).value;
+    final needsCastClosure = (constant.entries[2] as BoolConstant).value;
     return JsTrampolineWrapperData(
       numJsParameters: numJsParameters,
-      trampoline: trampoline,
       captureThis: captureThis,
       needsCastClosure: needsCastClosure,
     );
@@ -144,13 +139,12 @@ class JsTrampolineWrapperData extends JsInteropMemberData {
 
   @override
   ListConstant get toPragmaValue => ListConstant(DynamicType(), [
-    StaticTearOffConstant(trampoline),
     IntConstant(numJsParameters),
     BoolConstant(captureThis),
     BoolConstant(needsCastClosure),
   ]);
 
-  String jsCode(String trampolineExportName) {
+  String jsCode() {
     final jsParameters = <String>[];
     for (int i = 0; i < numJsParameters; i++) {
       jsParameters.add('x$i');
@@ -163,10 +157,10 @@ class JsTrampolineWrapperData extends JsInteropMemberData {
         ? 'arguments.length + 1'
         : 'arguments.length';
     String dartArguments = 'f,$argumentsLength';
-    String jsMethodParams = '(module,f)';
+    String jsMethodParams = '(wasmFunction,f)';
     if (needsCastClosure) {
       dartArguments = '$dartArguments,castClosure';
-      jsMethodParams = '(module,f,castClosure)';
+      jsMethodParams = '(wasmFunction,f,castClosure)';
     }
     if (captureThis) dartArguments = '$dartArguments,this';
     if (jsParameters.isNotEmpty) {
@@ -176,7 +170,7 @@ class JsTrampolineWrapperData extends JsInteropMemberData {
     // Note: We have to use a regular function for the inner closure in some
     // cases because we need access to `arguments`.
     return "$jsMethodParams => finalizeWrapper(f, function($jsWrapperParams) {"
-        " return module.exports.$trampolineExportName($dartArguments) })";
+        " return wasmFunction($dartArguments) })";
   }
 }
 
@@ -221,6 +215,8 @@ class CoreTypesUtil {
   final Class wasmArrayRefClass;
   final Procedure wrapDartFunctionTarget;
   final Procedure exportWasmFunctionTarget;
+  final Procedure wasmInternalizeNonNullable;
+  final Procedure unsafeCastOpaqueTarget;
   final Member wasmExternRefNullRef;
   final Class wasmI32Class;
   final Procedure wasmI32ToIntSigned;
@@ -258,7 +254,8 @@ class CoreTypesUtil {
   final Procedure jsifyJSArrayBufferImpl; // JS ByteBuffer
   final Procedure jsArrayBufferFromDartByteBuffer; // Wasm ByteBuffer
   final Procedure jsifyFunction;
-  final Procedure thisModuleGetter;
+  final Class wasmFuncRefClass;
+  final Procedure wasmFunctionFromFunction;
 
   // Classes used in type tests for the converters.
   final Class jsInt8ArrayImplClass;
@@ -503,6 +500,14 @@ class CoreTypesUtil {
         'get:nullRef',
       ),
       wasmVoidClass = coreTypes.index.getClass('dart:_wasm', 'WasmVoid'),
+      wasmInternalizeNonNullable = coreTypes.index.getTopLevelProcedure(
+        'dart:_wasm',
+        '_internalizeNonNullable',
+      ),
+      unsafeCastOpaqueTarget = coreTypes.index.getTopLevelProcedure(
+        'dart:_internal',
+        'unsafeCastOpaque',
+      ),
       wasmArrayClass = coreTypes.index.getClass('dart:_wasm', 'WasmArray'),
       wasmArrayRefClass = coreTypes.index.getClass(
         'dart:_wasm',
@@ -643,9 +648,11 @@ class CoreTypesUtil {
         'dart:_js_helper',
         'jsifyFunction',
       ),
-      thisModuleGetter = coreTypes.index.getTopLevelProcedure(
-        'dart:_js_helper',
-        'get:thisModule',
+      wasmFuncRefClass = coreTypes.index.getClass('dart:_wasm', 'WasmFuncRef'),
+      wasmFunctionFromFunction = coreTypes.index.getProcedure(
+        'dart:_wasm',
+        'WasmFunction',
+        'fromFunction',
       ),
       jsInt8ArrayImplClass = coreTypes.index.getClass(
         'dart:_js_types',
@@ -735,6 +742,9 @@ class CoreTypesUtil {
   DartType get nonNullableWasmExternRefType =>
       wasmExternRefClass.getThisType(coreTypes, Nullability.nonNullable);
 
+  DartType get nonNullableWasmFuncRefType =>
+      wasmFuncRefClass.getThisType(coreTypes, Nullability.nonNullable);
+
   DartType get nullableJSValueType =>
       InterfaceType(jsValueClass, Nullability.nullable);
 
@@ -746,16 +756,14 @@ class CoreTypesUtil {
       extensionIndex.isStaticInteropType(type) ||
       extensionIndex.isExternalDartReferenceType(type);
 
-  Expression variableCheckConstant(
-    VariableDeclaration variable,
-    Constant constant,
-  ) => StaticInvocation(
-    coreTypes.identicalProcedure,
-    Arguments([VariableGet(variable), ConstantExpression(constant)]),
-  );
+  Expression variableCheckConstant(Variable variable, Constant constant) =>
+      StaticInvocation(
+        coreTypes.identicalProcedure,
+        Arguments([VariableGet(variable), ConstantExpression(constant)]),
+      );
 
   Expression variableGreaterThanOrEqualToConstant(
-    VariableDeclaration variable,
+    Variable variable,
     Constant constant,
   ) => InstanceInvocation(
     InstanceAccessKind.Instance,
@@ -807,15 +815,16 @@ class CoreTypesUtil {
       final conversionProcedure = _dartConversionProcedure(
         expectedTypeExtensionTypeErasure,
       );
-      final invocationValueVar = VariableDeclaration(
-        '#jsInvocation',
-        initializer: invocation,
+      final invocationValueCache = CachedExpression.fromValue(
+        cosmeticName: '#jsInvocation',
+        value: invocation,
         type: nullableWasmExternRefType,
-        isSynthesized: true,
       );
-      expression = Let(
-        invocationValueVar,
-        invokeOneArg(conversionProcedure, VariableGet(invocationValueVar)),
+      expression = invocationValueCache.createLet(
+        body: invokeOneArg(
+          conversionProcedure,
+          invocationValueCache.createRead(),
+        ),
       );
     }
 
@@ -839,32 +848,28 @@ class CoreTypesUtil {
       //      } else {
       //        throw;
       //      }
-      VariableDeclaration v = VariableDeclaration(
-        '#vardouble',
-        initializer: AsExpression(expression, coreTypes.doubleNullableRawType),
+      CachedExpression expressionCache = CachedExpression.fromValue(
+        cosmeticName: '#vardouble',
+        value: AsExpression(expression, coreTypes.doubleNullableRawType),
         type: coreTypes.doubleNullableRawType,
-        isSynthesized: true,
       );
-      VariableDeclaration v2 = VariableDeclaration(
-        '#varint',
-        initializer: invokeMethod(v, numToIntTarget),
+      CachedExpression resultCache = CachedExpression.fromValue(
+        cosmeticName: '#varint',
+        value: invokeMethod(expressionCache.createRead(), numToIntTarget),
         type: coreTypes.intNonNullableRawType,
-        isSynthesized: true,
       );
-      expression = Let(
-        v,
-        ConditionalExpression(
-          variableCheckConstant(v, NullConstant()),
+      expression = expressionCache.createLet(
+        body: ConditionalExpression(
+          variableCheckConstant(expressionCache.variable, NullConstant()),
           ConstantExpression(NullConstant()),
-          Let(
-            v2,
-            ConditionalExpression(
+          resultCache.createLet(
+            body: ConditionalExpression(
               invokeMethod(
-                v,
+                expressionCache.createRead(),
                 coreTypes.objectEquals,
-                Arguments([VariableGet(v2)]),
+                Arguments([resultCache.createRead()]),
               ),
-              VariableGet(v2),
+              resultCache.createRead(),
               Throw(
                 StringLiteral('Expected integer value, but was not integer.'),
               ),
@@ -951,12 +956,12 @@ StaticInvocation invokeOneArg(Procedure target, Expression arg) =>
     StaticInvocation(target, Arguments([arg]));
 
 InstanceInvocation invokeMethod(
-  VariableDeclaration receiver,
+  Expression receiver,
   Procedure target, [
   Arguments? arguments,
 ]) => InstanceInvocation(
   InstanceAccessKind.Instance,
-  VariableGet(receiver),
+  receiver,
   target.name,
   arguments ?? Arguments([]),
   interfaceTarget: target,
@@ -967,7 +972,7 @@ bool parametersNeedParens(List<String> parameters) =>
     parameters.isEmpty || parameters.length > 1;
 
 Expression jsifyValue(
-  VariableDeclaration variable,
+  Variable variable,
   DartType expectedType,
   CoreTypesUtil coreTypes,
   TypeEnvironment typeEnv,

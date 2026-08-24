@@ -39,7 +39,7 @@ abstract class DartLanguageServerBenchmark {
 
   final bool _lsp;
 
-  DartLanguageServerBenchmark(List<String> args, {required bool useLspProtocol})
+  new(List<String> args, {required bool useLspProtocol})
     : _lsp = useLspProtocol,
       executableToUse = extractDartParamOrDefault(args) {
     _checkCorrectDart();
@@ -401,14 +401,23 @@ abstract class DartLanguageServerBenchmark {
         Map<String, dynamic> message =
             json.decode(messageString) as Map<String, dynamic>;
 
-        // LSP: {"jsonrpc":"2.0","method":"$/analyzerStatus","params":{"isAnalyzing":false}}
+        // For standard LSP progress notifications we need to respond to
+        // the server calling 'window/workDoneProgress/create' before it will
+        // send the progress notification.
+        if (_lsp && message['method'] == r'window/workDoneProgress/create') {
+          sendNoFlush(LspMessages.response(message['id'], null));
+        }
+
+        // LSP: {"jsonrpc":"2.0","method":"$/progress","params":{"token":"ANALYZING","value":{"kind":"begin"...
         // Analyzer: {"event":"server.status","params":{"analysis":{"isAnalyzing":true}}}
-        if ((_lsp && message['method'] == r'$/analyzerStatus') ||
+        if ((_lsp &&
+                message['method'] == r'$/progress' &&
+                message['params']['token'] == 'ANALYZING') ||
             (!_lsp && message['event'] == 'server.status')) {
           dynamic params = message['params'];
           if (params is Map) {
             dynamic isAnalyzing = _lsp
-                ? params['isAnalyzing']
+                ? (params['value']?['kind'] == 'begin')
                 : params['analysis']?['isAnalyzing'];
             if (isAnalyzing is bool) {
               latestIsAnalyzing = isAnalyzing;
@@ -501,7 +510,7 @@ class DurationInfo {
   final String name;
   final Duration duration;
 
-  DurationInfo(this.name, this.duration);
+  new(this.name, this.duration);
 }
 
 enum LaunchFrom { source, dart, aot, aotWithPerf }
@@ -510,13 +519,13 @@ class MemoryInfo {
   final String name;
   final int kb;
 
-  MemoryInfo(this.name, this.kb);
+  new(this.name, this.kb);
 }
 
 class OutstandingRequest {
   final Stopwatch stopwatch = Stopwatch();
   final Completer<Map<String, dynamic>> completer = Completer();
-  OutstandingRequest() {
+  new() {
     stopwatch.start();
   }
 }
@@ -524,7 +533,7 @@ class OutstandingRequest {
 class _Uint8ListHelper {
   Uint8List data;
   int length = 0;
-  _Uint8ListHelper() : data = Uint8List(1024);
+  new() : data = Uint8List(1024);
 
   int operator [](int index) {
     if (index < 0 || index >= length) throw 'Out of bounds: $index';

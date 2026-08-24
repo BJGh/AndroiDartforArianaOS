@@ -345,7 +345,7 @@ abstract class FragmentFactory {
     required int formalsOffset,
     required int endOffset,
     required String? nativeMethodName,
-    required Token? beginInitializers,
+    required Token? initializersStartToken,
     required bool hasNewKeyword,
     required bool forAbstractClassOrEnumOrMixin,
   });
@@ -368,7 +368,7 @@ abstract class FragmentFactory {
     required Token beginToken,
     required List<MetadataBuilder>? metadata,
     required int endOffset,
-    required Token? beginInitializers,
+    required Token? initializersStartToken,
     required bool hasBody,
     required int bodyOffset,
   });
@@ -487,6 +487,13 @@ abstract class FragmentFactory {
     required Token? initializerToken,
   });
 
+  FunctionTypeParameterBuilder addFunctionTypeParameter({
+    required FormalParameterKind kind,
+    required TypeBuilder type,
+    required String? name,
+    required int fileOffset,
+  });
+
   ConstructorReferenceBuilder addConstructorReference(
     TypeName name,
     List<TypeBuilder>? typeArguments,
@@ -511,7 +518,7 @@ abstract class FragmentFactory {
   FunctionTypeBuilder addFunctionType(
     TypeBuilder returnType,
     List<SourceStructuralParameterBuilder>? structuralParameterBuilders,
-    List<FormalParameterBuilder>? formals,
+    List<FunctionTypeParameterBuilder>? formals,
     NullabilityBuilder nullabilityBuilder,
     Uri fileUri,
     int charOffset, {
@@ -546,12 +553,9 @@ class SynthesizedExtensionSignature {
   final List<SourceNominalParameterBuilder>? clonedDeclarationTypeParameters;
   final FormalParameterBuilder thisFormal;
 
-  SynthesizedExtensionSignature._(
-    this.clonedDeclarationTypeParameters,
-    this.thisFormal,
-  );
+  new _(this.clonedDeclarationTypeParameters, this.thisFormal);
 
-  factory SynthesizedExtensionSignature({
+  factory({
     required ExtensionBuilder declarationBuilder,
     required List<TypeParameterFragment>? extensionTypeParameterFragments,
     required TypeBuilder onTypeBuilder,
@@ -585,8 +589,7 @@ class SynthesizedExtensionSignature {
       fileOffset: fileOffset,
       fileUri: fileUri,
       isExtensionThis: true,
-      hasImmediatelyDeclaredInitializer: false,
-      isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+      hasImmediatelyDeclaredDefaultValue: false,
     );
     return new SynthesizedExtensionSignature._(
       clonedDeclarationTypeParameters,
@@ -601,12 +604,9 @@ class SynthesizedExtensionTypeSignature {
   final List<SourceNominalParameterBuilder>? clonedDeclarationTypeParameters;
   final FormalParameterBuilder thisFormal;
 
-  SynthesizedExtensionTypeSignature._(
-    this.clonedDeclarationTypeParameters,
-    this.thisFormal,
-  );
+  new _(this.clonedDeclarationTypeParameters, this.thisFormal);
 
-  factory SynthesizedExtensionTypeSignature({
+  factory({
     required ExtensionTypeDeclarationBuilder extensionTypeDeclarationBuilder,
     required List<TypeParameterFragment>? extensionTypeTypeParameters,
     required TypeParameterFactory typeParameterFactory,
@@ -656,8 +656,7 @@ class SynthesizedExtensionTypeSignature {
       fileOffset: fileOffset,
       fileUri: fileUri,
       isExtensionThis: true,
-      hasImmediatelyDeclaredInitializer: false,
-      isClosureContextLoweringEnabled: isClosureContextLoweringEnabled,
+      hasImmediatelyDeclaredDefaultValue: false,
     );
 
     return new SynthesizedExtensionTypeSignature._(
@@ -673,7 +672,7 @@ class FieldInfo {
   final Token? beforeLast;
   final int endOffset;
 
-  const FieldInfo(
+  const new(
     this.identifier,
     this.initializerToken,
     this.beforeLast,

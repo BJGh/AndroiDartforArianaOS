@@ -388,9 +388,7 @@ String? _qualifiedTypeParameterGenericDeclarationNameToString(
         includeLibraryName: includeLibraryName,
       );
     case LocalFunction():
-      if (recurseOnLocalFunction &&
-          declaration is FunctionDeclaration &&
-          declaration.variable.name != null) {
+      if (recurseOnLocalFunction && declaration is FunctionDeclaration) {
         TreeNode? parent = declaration.parent;
         while (parent != null && parent is! GenericDeclaration) {
           parent = parent.parent;

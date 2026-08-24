@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid shadowing type parameters.';
 
 class AvoidShadowingTypeParameters extends AnalysisRule {
-  AvoidShadowingTypeParameters()
+  new()
     : super(
         name: LintNames.avoid_shadowing_type_parameters,
         description: _desc,
@@ -40,16 +40,12 @@ class AvoidShadowingTypeParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule, RuleContext context)
+    extends SimpleAstVisitor<void> {
   /// Whether the `wildcard_variables` feature is enabled.
-  final bool _wildCardVariablesEnabled;
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule, RuleContext context)
-    : _wildCardVariablesEnabled = context.isFeatureEnabled(
-        Feature.wildcard_variables,
-      );
+  final bool _wildCardVariablesEnabled = context.isFeatureEnabled(
+    Feature.wildcard_variables,
+  );
 
   @override
   void visitFunctionDeclarationStatement(FunctionDeclarationStatement node) {
@@ -129,7 +125,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       } else if (parent is ExtensionTypeDeclaration) {
         _checkForShadowing(
           typeParameters,
-          parent.primaryConstructor.typeParameters,
+          parent.namePart.typeParameters,
           'extension type',
         );
       } else if (parent is MethodDeclaration) {

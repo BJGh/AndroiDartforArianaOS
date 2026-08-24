@@ -2,15 +2,18 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:cfg/ir/constant_value.dart';
 import 'package:cfg/ir/flow_graph_builder.dart';
+import 'package:cfg/ir/functions.dart';
 import 'package:cfg/ir/global_context.dart';
 import 'package:cfg/ir/instructions.dart';
+import 'package:cfg/ir/ir_to_text.dart';
 import 'package:cfg/ir/types.dart';
 import 'package:kernel/ast.dart' as ast;
 import 'package:kernel/library_index.dart' show LibraryIndex;
 
-/// Build a fragment of IR corresponding to the body of
-/// recognized method or recognized call.
+/// Build a fragment of IR corresponding to the recognized call or a function body.
+/// Parameters are already pushed onto the [builder]'s stack.
 typedef BuildIR = void Function(FlowGraphBuilder builder);
 
 /// Base class for recognizing calls depending
@@ -20,19 +23,25 @@ abstract class RecognizedCallMatcher {
   BuildIR? match(List<CType> args);
 }
 
+/// Recognizes calls with arbitrary argument types.
+class const AnyArgsMatcher(final BuildIR builder)
+    implements RecognizedCallMatcher {
+  @override
+  BuildIR? match(List<CType> args) => builder;
+}
+
 /// Recognizes calls to binary [num] operations (except [num./]).
-class BinaryNumOp implements RecognizedCallMatcher {
-  final BinaryIntOpcode intOp;
-  final BinaryDoubleOpcode doubleOp;
-
-  const BinaryNumOp(this.intOp, this.doubleOp);
-
+class const BinaryNumOp(
+  final BinaryIntOpcode intOp,
+  final BinaryDoubleOpcode doubleOp,
+) implements RecognizedCallMatcher {
   /// Recognizes the following combinations of argument types:
   ///
   /// int op int -> int
   /// int op double -> double
   /// double op int -> double
   /// double op double -> double
+  @override
   BuildIR? match(List<CType> args) {
     switch (args) {
       case [IntType(), IntType()]:
@@ -61,9 +70,8 @@ class BinaryNumOp implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to [num./].
-class NumDiv implements RecognizedCallMatcher {
-  const NumDiv();
-
+class const NumDiv() implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     switch (args) {
       case [IntType(), IntType()]:
@@ -95,10 +103,31 @@ class NumDiv implements RecognizedCallMatcher {
   }
 }
 
-/// Recognizes calls to [num.toDouble].
-class NumToDouble implements RecognizedCallMatcher {
-  const NumToDouble();
+/// Recognizes calls to [num.isNaN].
+class const NumIsNaN() implements RecognizedCallMatcher {
+  @override
+  BuildIR? match(List<CType> args) {
+    switch (args) {
+      case [IntType()]:
+        return (FlowGraphBuilder builder) {
+          builder.pop();
+          builder.addBoolConstant(false);
+        };
+      case [DoubleType()]:
+        return (FlowGraphBuilder builder) {
+          final x = builder.pop();
+          builder.push(x);
+          builder.push(x);
+          builder.addComparison(.doubleNotEqual);
+        };
+    }
+    return null;
+  }
+}
 
+/// Recognizes calls to [num.toDouble].
+class const NumToDouble() implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     switch (args) {
       case [IntType()]:
@@ -115,9 +144,8 @@ class NumToDouble implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to [num.toInt].
-class NumToInt implements RecognizedCallMatcher {
-  const NumToInt();
-
+class const NumToInt() implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     switch (args) {
       case [IntType()]:
@@ -134,12 +162,11 @@ class NumToInt implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to [num] comparisons.
-class NumComparison implements RecognizedCallMatcher {
-  final ComparisonOpcode intOp;
-  final ComparisonOpcode doubleOp;
-
-  const NumComparison(this.intOp, this.doubleOp);
-
+class const NumComparison(
+  final ComparisonOpcode intOp,
+  final ComparisonOpcode doubleOp,
+) implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     switch (args) {
       case [IntType(), IntType()]:
@@ -157,11 +184,9 @@ class NumComparison implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to binary [int] operations.
-class BinaryIntOp implements RecognizedCallMatcher {
-  final BinaryIntOpcode op;
-
-  const BinaryIntOp(this.op);
-
+class const BinaryIntOp(final BinaryIntOpcode op)
+    implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     assert(args[0] is IntType && args[1] is IntType);
     return (FlowGraphBuilder builder) {
@@ -171,11 +196,9 @@ class BinaryIntOp implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to unary [int] operations.
-class UnaryIntOp implements RecognizedCallMatcher {
-  final UnaryIntOpcode op;
-
-  const UnaryIntOp(this.op);
-
+class const UnaryIntOp(final UnaryIntOpcode op)
+    implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     assert(args[0] is IntType);
     return (FlowGraphBuilder builder) {
@@ -185,11 +208,9 @@ class UnaryIntOp implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to binary [double] operations.
-class BinaryDoubleOp implements RecognizedCallMatcher {
-  final BinaryDoubleOpcode op;
-
-  const BinaryDoubleOp(this.op);
-
+class const BinaryDoubleOp(final BinaryDoubleOpcode op)
+    implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     assert(args[0] is DoubleType);
     switch (args[1]) {
@@ -209,15 +230,47 @@ class BinaryDoubleOp implements RecognizedCallMatcher {
 }
 
 /// Recognizes calls to unary [double] operations.
-class UnaryDoubleOp implements RecognizedCallMatcher {
-  final UnaryDoubleOpcode op;
-
-  const UnaryDoubleOp(this.op);
-
+class const UnaryDoubleOp(final UnaryDoubleOpcode op)
+    implements RecognizedCallMatcher {
+  @override
   BuildIR? match(List<CType> args) {
     assert(args[0] is DoubleType);
     return (FlowGraphBuilder builder) {
       builder.addUnaryDoubleOp(op);
+    };
+  }
+}
+
+class const UnsafeCast() implements RecognizedCallMatcher {
+  @override
+  BuildIR? match(List<CType> args) {
+    return (FlowGraphBuilder builder) {
+      final value = builder.pop();
+      final typeArgs = builder.pop();
+      final testedType = CType.fromStaticType(switch (typeArgs) {
+        TypeArguments() => typeArgs.types.single,
+        Constant(
+          value: ConstantValue(constant: TypeArgumentsConstant(:var types)),
+        ) =>
+          types.single,
+        _ =>
+          throw 'Unexpected unsafeCast type arguments ${IrToText.instruction(typeArgs)}',
+      });
+      final typeParameters = switch (typeArgs) {
+        TypeArguments() => [
+          for (var i = 0, n = typeArgs.inputCount; i < n; ++i)
+            typeArgs.inputDefAt(i),
+        ],
+        Constant() => <Definition>[],
+        _ =>
+          throw 'Unexpected unsafeCast type arguments ${IrToText.instruction(typeArgs)}',
+      };
+      builder.push(value);
+      builder.addTypeCast(
+        testedType,
+        typeParameters: typeParameters,
+        isChecked: false,
+      );
     };
   }
 }
@@ -230,14 +283,21 @@ abstract class RecognizedMethods {
 
   /// Recognized instance getter calls.
   Map<ast.Member, RecognizedCallMatcher> get instanceGetters;
+
+  /// Recognized static method calls.
+  Map<ast.Member, RecognizedCallMatcher> get staticInvocations;
+
+  /// Function body of the recognized functions.
+  BuildIR? getRecognizedFunctionBody(CFunction function);
 }
 
 /// Recognized methods shared by all back-ends.
 class CommonRecognizedMethods implements RecognizedMethods {
   final LibraryIndex index;
 
-  CommonRecognizedMethods() : index = GlobalContext.instance.coreTypes.index;
+  CommonRecognizedMethods() : index = GlobalContext.instance.coreLibraries;
 
+  @override
   late final instanceInvocations = <ast.Member, RecognizedCallMatcher>{
     index.getProcedure('dart:core', 'num', '+'): const BinaryNumOp(
       BinaryIntOpcode.add,
@@ -361,12 +421,42 @@ class CommonRecognizedMethods implements RecognizedMethods {
         const UnaryDoubleOp(UnaryDoubleOpcode.truncateToDouble),
   };
 
+  @override
   late final instanceGetters = <ast.Member, RecognizedCallMatcher>{
+    index.getProcedure('dart:core', 'num', 'get:isNaN'): const NumIsNaN(),
     index.getProcedure('dart:core', 'int', 'get:sign'): const UnaryIntOp(
       UnaryIntOpcode.sign,
+    ),
+    index.getProcedure('dart:core', 'int', 'get:bitLength'): const UnaryIntOp(
+      UnaryIntOpcode.bitLength,
     ),
     index.getProcedure('dart:core', 'double', 'get:sign'): const UnaryDoubleOp(
       UnaryDoubleOpcode.sign,
     ),
   };
+
+  late final _recognizedMembers = <ast.Member, BuildIR>{
+    // dart:core
+    index.getTopLevelProcedure(
+      'dart:core',
+      'identical',
+    ): (FlowGraphBuilder builder) {
+      builder.addComparison(.identical);
+    },
+  };
+
+  @override
+  late final staticInvocations = <ast.Member, RecognizedCallMatcher>{
+    for (final MapEntry(key: member, value: builder)
+        in _recognizedMembers.entries)
+      member: AnyArgsMatcher(builder),
+
+    // dart:_internal
+    index.getTopLevelProcedure('dart:_internal', 'unsafeCast'):
+        const UnsafeCast(),
+  };
+
+  @override
+  BuildIR? getRecognizedFunctionBody(CFunction function) =>
+      _recognizedMembers[function.member];
 }

@@ -82,6 +82,9 @@ final List<Option> options = [
   Flag("omit-bounds-checks", (o, value) {
     o.translatorOptions.omitBoundsChecksOverride = value;
   }, defaultsTo: _d.translatorOptions.omitBoundsChecks),
+  Flag("omit-error-details", (o, value) {
+    o.translatorOptions.omitErrorDetailsOverride = value;
+  }, defaultsTo: _d.translatorOptions.omitErrorDetails),
   Flag(
     "verbose",
     (o, value) => o.translatorOptions.verbose = value,
@@ -196,9 +199,9 @@ final List<Option> options = [
   ),
 
   Flag(
-    "require-js-string-builtin",
-    (o, value) => o.translatorOptions.requireJsStringBuiltin = value,
-    defaultsTo: _d.translatorOptions.requireJsStringBuiltin,
+    "strip-toolchain-annotations",
+    (o, value) => o.stripToolchainAnnotations = value,
+    defaultsTo: _d.stripToolchainAnnotations,
   ),
 
   UriOption("wasm-opt", (o, value) => o.wasmOptPath = value),
@@ -215,6 +218,12 @@ final List<Option> options = [
     (o, value) => o.moduleIdsToOptimize = value.toSet(),
   ),
   UriOption("recorded-uses", (o, value) => o.recordedUsesFile = value),
+  Flag(
+    "supports-es6-modules",
+    (o, value) => o.supportsES6Modules = value,
+    defaultsTo: _d.supportsES6Modules,
+    negatable: true,
+  ),
 ];
 
 Map<fe.ExperimentalFlag, bool> processFeExperimentalFlags(

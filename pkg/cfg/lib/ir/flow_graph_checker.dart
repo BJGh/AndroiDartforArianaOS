@@ -134,13 +134,27 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
       final user = use.getInstruction(graph);
       switch (user) {
         case CallInstruction():
-          assert(user.hasTypeArguments);
-          assert(user.typeArguments == def);
+          if (!user.hasTypeArguments) {
+            // Exception: direct call to _instantiateClosure from dart:_internal
+            // may take type arguments as a regular argument.
+            final target = (user as DirectCall).target;
+            assert(target.member.name.text == '_instantiateClosure');
+            assert(
+              target.member.enclosingLibrary.importUri.toString() ==
+                  'dart:_internal',
+            );
+          } else {
+            assert(user.typeArguments == def);
+          }
         case AllocateObject():
           assert(user.typeArguments == def);
         case AllocateListLiteral():
           assert(user.typeArguments == def);
         case AllocateMapLiteral():
+          assert(user.typeArguments == def);
+        case AllocateArray():
+          assert(user.typeArguments == def);
+        case InstantiateClosure():
           assert(user.typeArguments == def);
         case EnterSuspendableFunction():
           assert(user.typeArguments == def);
@@ -308,6 +322,11 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
   }
 
   @override
+  void visitExternalCall(ExternalCall instr) {
+    verifyCall(instr);
+  }
+
+  @override
   void visitParameter(Parameter instr) {
     assert(parametersAllowed);
     final block = instr.block!;
@@ -340,6 +359,25 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
   void visitStoreStaticField(StoreStaticField instr) {}
 
   @override
+  void visitLoadExternalField(LoadExternalField instr) {}
+
+  @override
+  void visitLoadArrayElement(LoadArrayElement instr) {
+    assert(instr.index.type is IntType);
+  }
+
+  @override
+  void visitStoreArrayElement(StoreArrayElement instr) {
+    assert(instr.index.type is IntType);
+  }
+
+  @override
+  void visitLoadExternalArrayElement(LoadExternalArrayElement instr) {
+    assert(instr.array.type is IntType);
+    assert(instr.index.type is IntType);
+  }
+
+  @override
   void visitThrow(Throw instr) {
     assert(instr.next == null);
     assert(instr.block!.successors.isEmpty);
@@ -350,14 +388,29 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
   void visitNullCheck(NullCheck instr) {}
 
   @override
+  void visitIndexCheck(IndexCheck instr) {
+    assert(instr.index.type is IntType);
+    assert(instr.length.type is IntType);
+  }
+
+  @override
+  void visitSubtypeCheck(SubtypeCheck instr) {
+    assert(instr.bound is! TopType);
+    assert(instr.bound is! ExtendedType);
+    assert(instr.type is! ExtendedType);
+  }
+
+  @override
   void visitTypeParameters(TypeParameters instr) {
     assert(instr.block is EntryBlock);
     // TypeParameters can only be used in TypeCast, TypeTest,
-    // TypeArguments, TypeLiteral and StoreInstanceField for capturing.
+    // TypeArguments, TypeLiteral, SubtypeCheck and StoreInstanceField
+    // for capturing.
     for (final use in instr.inputUses) {
       final user = use.getInstruction(graph);
       switch (user) {
         case TypeCast() || TypeTest() || TypeArguments() || TypeLiteral():
+        case SubtypeCheck():
         case StoreInstanceField(:var field)
             when field.isSynthetic &&
                 (field.asSynthetic is ClosureField ||
@@ -417,6 +470,11 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
 
   @override
   void visitStringInterpolation(StringInterpolation instr) {}
+
+  @override
+  void visitInstantiateClosure(InstantiateClosure instr) {
+    verifyTypeArgumentsInput(instr.typeArguments, instr);
+  }
 
   @override
   void visitEnterSuspendableFunction(EnterSuspendableFunction instr) {
@@ -485,10 +543,11 @@ final class FlowGraphChecker extends Pass implements InstructionVisitor<void> {
   }
 
   @override
-  void visitAllocateList(AllocateList instr) {}
-
-  @override
-  void visitSetListElement(SetListElement instr) {}
+  void visitAllocateArray(AllocateArray instr) {
+    if (instr.hasTypeArguments) {
+      verifyTypeArgumentsInput(instr.typeArguments!, instr);
+    }
+  }
 
   @override
   void visitAllocateRecord(AllocateRecord instr) {}

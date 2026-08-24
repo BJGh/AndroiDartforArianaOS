@@ -27,7 +27,7 @@ void f() {
   }
 
   test_class_instanceField_ofSelf() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   var x = 0;
 
@@ -39,7 +39,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singlePatternAssignment;
+    var node = result.findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ParenthesizedPattern
@@ -51,7 +51,7 @@ PatternAssignment
     rightParenthesis: )
     matchedValueType: InvalidType
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _
@@ -60,7 +60,7 @@ PatternAssignment
   }
 
   test_class_instanceField_ofSuperClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   var x = 0;
 }
@@ -74,7 +74,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singlePatternAssignment;
+    var node = result.findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ParenthesizedPattern
@@ -86,7 +86,7 @@ PatternAssignment
     rightParenthesis: )
     matchedValueType: InvalidType
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _
@@ -95,7 +95,7 @@ PatternAssignment
   }
 
   test_class_staticField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static var x = 0;
 
@@ -107,7 +107,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singlePatternAssignment;
+    var node = result.findNode.singlePatternAssignment;
     assertResolvedNodeText(node, r'''
 PatternAssignment
   pattern: ParenthesizedPattern
@@ -119,7 +119,7 @@ PatternAssignment
     rightParenthesis: )
     matchedValueType: InvalidType
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _

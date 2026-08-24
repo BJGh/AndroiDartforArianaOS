@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,14 +17,15 @@ main() {
 @reflectiveTest
 class IfStatementTest extends ParserDiagnosticsTest {
   void test_if_statement_condition_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a assert (true); }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -39,13 +39,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: AssertStatement
                   assertKeyword: assert
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   semicolon: ;
@@ -54,14 +54,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -75,7 +76,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: Block
@@ -86,17 +87,17 @@ CompilationUnit
   }
 
   void test_if_statement_condition_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a break; }
+//          ^^^^^
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.breakOutsideOfLoop, 12, 5),
-      error(diag.expectedToken, 12, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -110,7 +111,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: BreakStatement
@@ -121,17 +122,17 @@ CompilationUnit
   }
 
   void test_if_statement_condition_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a continue; }
+//          ^^^^^^^^
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.continueOutsideOfLoop, 12, 8),
-      error(diag.expectedToken, 12, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -145,7 +146,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: ContinueStatement
@@ -156,14 +157,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a do {} while (true); }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -177,7 +179,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: DoStatement
@@ -187,7 +189,7 @@ CompilationUnit
                     rightBracket: }
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   semicolon: ;
@@ -196,18 +198,18 @@ CompilationUnit
   }
 
   void test_if_statement_condition_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a }
+//        ^
+// [diag.expectedToken] Expected to find ';'.
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 12, 1),
-      error(diag.missingIdentifier, 12, 1),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -221,11 +223,11 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -233,14 +235,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a for (var x in y) {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -254,7 +257,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: ForStatement
@@ -265,7 +268,7 @@ CompilationUnit
                       keyword: var
                       name: x
                     inKeyword: in
-                    iterable: SimpleIdentifier
+                    iterable2: SimpleIdentifier
                       token: y
                   rightParenthesis: )
                   body: Block
@@ -276,14 +279,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a if (true) {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -297,13 +301,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: IfStatement
                   ifKeyword: if
                   leftParenthesis: (
-                  expression: BooleanLiteral
+                  expression2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   thenStatement: Block
@@ -314,14 +318,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a l: {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -335,7 +340,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: LabeledStatement
@@ -351,14 +356,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a int f() {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -372,7 +378,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: FunctionDeclarationStatement
@@ -393,14 +399,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a void f() {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -414,7 +421,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: FunctionDeclarationStatement
@@ -435,14 +442,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a var x; }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -456,7 +464,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: VariableDeclarationStatement
@@ -471,14 +479,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a return; }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -492,7 +501,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: ReturnStatement
@@ -503,14 +512,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a switch (x) {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -524,13 +534,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: SwitchStatement
                   switchKeyword: switch
                   leftParenthesis: (
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: x
                   rightParenthesis: )
                   leftBracket: {
@@ -540,14 +550,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a try {} finally {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -561,7 +572,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: TryStatement
@@ -578,14 +589,15 @@ CompilationUnit
   }
 
   void test_if_statement_condition_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if (a while (true) {} }
+//          ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -599,13 +611,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: a
                 rightParenthesis: ) <synthetic>
                 thenStatement: WhileStatement
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   body: Block
@@ -616,17 +628,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if assert (true); }
+//       ^^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 6),
-      error(diag.missingIdentifier, 9, 6),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -640,13 +651,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: AssertStatement
                   assertKeyword: assert
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   semicolon: ;
@@ -655,17 +666,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if {} }
+//       ^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 1),
-      error(diag.missingIdentifier, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -679,7 +689,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: Block
@@ -690,18 +700,17 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if break; }
+//       ^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 5),
-      error(diag.missingIdentifier, 9, 5),
-      error(diag.breakOutsideOfLoop, 9, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -715,7 +724,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: BreakStatement
@@ -726,18 +735,17 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if continue; }
+//       ^^^^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 8),
-      error(diag.missingIdentifier, 9, 8),
-      error(diag.continueOutsideOfLoop, 9, 8),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -751,7 +759,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ContinueStatement
@@ -762,17 +770,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if do {} while (true); }
+//       ^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 2),
-      error(diag.missingIdentifier, 9, 2),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -786,7 +793,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: DoStatement
@@ -796,7 +803,7 @@ CompilationUnit
                     rightBracket: }
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   semicolon: ;
@@ -805,18 +812,18 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if }
+//    ^^
+// [diag.expectedToken] Expected to find ';'.
+//       ^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 1),
-      error(diag.missingIdentifier, 9, 1),
-      error(diag.expectedToken, 6, 2),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -830,11 +837,11 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -842,17 +849,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if for (var x in y) {} }
+//       ^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 3),
-      error(diag.missingIdentifier, 9, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -866,7 +872,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ForStatement
@@ -877,7 +883,7 @@ CompilationUnit
                       keyword: var
                       name: x
                     inKeyword: in
-                    iterable: SimpleIdentifier
+                    iterable2: SimpleIdentifier
                       token: y
                   rightParenthesis: )
                   body: Block
@@ -888,17 +894,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if if (true) {} }
+//       ^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 2),
-      error(diag.missingIdentifier, 9, 2),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -912,13 +917,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: IfStatement
                   ifKeyword: if
                   leftParenthesis: (
-                  expression: BooleanLiteral
+                  expression2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   thenStatement: Block
@@ -929,17 +934,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if l: {} }
+//       ^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 1),
-      error(diag.missingIdentifier, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -953,7 +957,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: LabeledStatement
@@ -969,17 +973,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if int f() {} }
+//       ^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 3),
-      error(diag.missingIdentifier, 9, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -993,7 +996,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: FunctionDeclarationStatement
@@ -1014,17 +1017,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if void f() {} }
+//       ^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 4),
-      error(diag.missingIdentifier, 9, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1038,7 +1040,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: FunctionDeclarationStatement
@@ -1059,17 +1061,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if var x; }
+//       ^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 3),
-      error(diag.missingIdentifier, 9, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1083,7 +1084,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: VariableDeclarationStatement
@@ -1098,17 +1099,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if return; }
+//       ^^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 6),
-      error(diag.missingIdentifier, 9, 6),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1122,7 +1122,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ReturnStatement
@@ -1133,17 +1133,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if switch (x) {} }
+//       ^^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 6),
-      error(diag.missingIdentifier, 9, 6),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1157,13 +1156,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: SwitchStatement
                   switchKeyword: switch
                   leftParenthesis: (
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: x
                   rightParenthesis: )
                   leftBracket: {
@@ -1173,17 +1172,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if try {} finally {} }
+//       ^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 3),
-      error(diag.missingIdentifier, 9, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1197,7 +1195,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: TryStatement
@@ -1214,17 +1212,16 @@ CompilationUnit
   }
 
   void test_if_statement_keyword_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if while (true) {} }
+//       ^^^^^
+// [diag.expectedToken] Expected to find '('.
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 9, 5),
-      error(diag.missingIdentifier, 9, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1238,13 +1235,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: ( <synthetic>
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: WhileStatement
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   body: Block
@@ -1255,14 +1252,15 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( assert (true); }
+//                      ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 24, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1276,12 +1274,12 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: FunctionExpressionInvocation
-                  function: SimpleIdentifier
+                expression2: FunctionExpressionInvocation
+                  function2: SimpleIdentifier
                     token: assert
                   argumentList: ArgumentList
                     leftParenthesis: (
-                    arguments
+                    arguments2
                       BooleanLiteral
                         literal: true
                     rightParenthesis: )
@@ -1293,18 +1291,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( {} }
+//          ^
+// [diag.expectedToken] Expected to find ';'.
+//            ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.missingIdentifier, 14, 1),
-      error(diag.expectedToken, 12, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1318,13 +1316,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SetOrMapLiteral
+                expression2: SetOrMapLiteral
                   leftBracket: {
                   rightBracket: }
                   isMap: false
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -1332,18 +1330,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( break; }
+//         ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 5),
-      error(diag.breakOutsideOfLoop, 11, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1357,7 +1355,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: BreakStatement
@@ -1368,18 +1366,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( continue; }
+//         ^^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 8),
-      error(diag.continueOutsideOfLoop, 11, 8),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1393,7 +1391,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ContinueStatement
@@ -1404,17 +1402,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( do {} while (true); }
+//         ^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 2),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1428,7 +1426,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: DoStatement
@@ -1438,7 +1436,7 @@ CompilationUnit
                     rightBracket: }
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   semicolon: ;
@@ -1447,18 +1445,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( }
+//       ^
+// [diag.expectedToken] Expected to find ';'.
+//         ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 11, 1),
-      error(diag.missingIdentifier, 11, 1),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1472,11 +1470,11 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -1484,17 +1482,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( for (var x in y) {} }
+//         ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1508,7 +1506,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: ForStatement
@@ -1519,7 +1517,7 @@ CompilationUnit
                       keyword: var
                       name: x
                     inKeyword: in
-                    iterable: SimpleIdentifier
+                    iterable2: SimpleIdentifier
                       token: y
                   rightParenthesis: )
                   body: Block
@@ -1530,17 +1528,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( if (true) {} }
+//         ^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 2),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1554,13 +1552,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: IfStatement
                   ifKeyword: if
                   leftParenthesis: (
-                  expression: BooleanLiteral
+                  expression2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   thenStatement: Block
@@ -1571,19 +1569,19 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( l: {} }
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.unexpectedToken] Unexpected text ';'.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 11, 1),
-      error(diag.missingIdentifier, 12, 1),
-      error(diag.unexpectedToken, 12, 1),
-      error(diag.expectedToken, 12, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1597,15 +1595,15 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: l
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
               ExpressionStatement
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 semicolon: ; <synthetic>
               Block
@@ -1616,19 +1614,20 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( int f() {} }
+//             ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                  ^
+// [diag.expectedToken] Expected to find ';'.
+//                    ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
-      error(diag.namedFunctionExpression, 15, 1),
-      error(diag.missingIdentifier, 22, 1),
-      error(diag.expectedToken, 20, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1642,7 +1641,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: FunctionExpression
+                expression2: FunctionExpression
                   parameters: FormalParameterList
                     leftParenthesis: (
                     rightParenthesis: )
@@ -1652,7 +1651,7 @@ CompilationUnit
                       rightBracket: }
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -1660,19 +1659,20 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( void f() {} }
+//              ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                   ^
+// [diag.expectedToken] Expected to find ';'.
+//                     ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 23, 1),
-      error(diag.namedFunctionExpression, 16, 1),
-      error(diag.missingIdentifier, 23, 1),
-      error(diag.expectedToken, 21, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1686,7 +1686,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: FunctionExpression
+                expression2: FunctionExpression
                   parameters: FormalParameterList
                     leftParenthesis: (
                     rightParenthesis: )
@@ -1696,7 +1696,7 @@ CompilationUnit
                       rightBracket: }
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -1704,17 +1704,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( var x; }
+//         ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1728,7 +1728,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: VariableDeclarationStatement
@@ -1743,18 +1743,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( return; }
+//         ^^^^^^
+// [diag.unexpectedToken] Unexpected text 'return'.
+//               ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.unexpectedToken, 11, 6),
-      error(diag.missingIdentifier, 17, 1),
-      error(diag.expectedToken, 17, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1768,7 +1768,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: EmptyStatement
@@ -1778,18 +1778,18 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( switch (x) {} }
+//                     ^
+// [diag.expectedToken] Expected to find ';'.
+//                       ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 25, 1),
-      error(diag.missingIdentifier, 25, 1),
-      error(diag.expectedToken, 23, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1803,17 +1803,17 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SwitchExpression
+                expression2: SwitchExpression
                   switchKeyword: switch
                   leftParenthesis: (
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: x
                   rightParenthesis: )
                   leftBracket: {
                   rightBracket: }
                 rightParenthesis: ) <synthetic>
                 thenStatement: ExpressionStatement
-                  expression: SimpleIdentifier
+                  expression2: SimpleIdentifier
                     token: <empty> <synthetic>
                   semicolon: ; <synthetic>
             rightBracket: }
@@ -1821,17 +1821,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( try {} finally {} }
+//         ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1845,7 +1845,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: TryStatement
@@ -1862,17 +1862,17 @@ CompilationUnit
   }
 
   void test_if_statement_leftParen_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { if ( while (true) {} }
+//         ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//         ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 11, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1886,13 +1886,13 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 rightParenthesis: ) <synthetic>
                 thenStatement: WhileStatement
                   whileKeyword: while
                   leftParenthesis: (
-                  condition: BooleanLiteral
+                  condition2: BooleanLiteral
                     literal: true
                   rightParenthesis: )
                   body: Block

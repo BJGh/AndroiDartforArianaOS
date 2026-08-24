@@ -115,7 +115,7 @@ final class Simplification extends Pass
     }
     // Move constant operand to the right.
     if (left is Constant) {
-      instr.op = instr.op.flipOperands();
+      instr.op = instr.op.swapped;
       instr.replaceInputAt(0, right);
       instr.replaceInputAt(1, left);
       left = instr.left;
@@ -137,6 +137,14 @@ final class Simplification extends Pass
         case ComparisonOpcode.intGreater:
           return graph.getConstant(ConstantValue.fromBool(false));
         default:
+      }
+    }
+    // Simplify identical to equal/intEqual.
+    if (instr.op == .identical || instr.op == .notIdentical) {
+      if (!left.type.canBeNum || !right.type.canBeNum) {
+        instr.op = instr.op == .identical ? .equal : .notEqual;
+      } else if (left.type is IntType && right.type is IntType) {
+        instr.op = instr.op == .identical ? .intEqual : .intNotEqual;
       }
     }
     return instr;
@@ -175,6 +183,9 @@ final class Simplification extends Pass
   Instruction visitDynamicCall(DynamicCall instr) => instr;
 
   @override
+  Instruction visitExternalCall(ExternalCall instr) => instr;
+
+  @override
   Instruction visitParameter(Parameter instr) => instr;
 
   @override
@@ -196,16 +207,46 @@ final class Simplification extends Pass
   Instruction visitStoreStaticField(StoreStaticField instr) => instr;
 
   @override
+  Instruction visitLoadExternalField(LoadExternalField instr) => instr;
+
+  @override
+  Instruction visitLoadArrayElement(LoadArrayElement instr) => instr;
+
+  @override
+  Instruction visitStoreArrayElement(StoreArrayElement instr) => instr;
+
+  @override
+  Instruction visitLoadExternalArrayElement(LoadExternalArrayElement instr) =>
+      instr;
+
+  @override
   Instruction visitThrow(Throw instr) => instr;
 
   @override
   Instruction visitNullCheck(NullCheck instr) {
     final operand = instr.operand;
-    if (!operand.type.isNullable) {
+    if (!operand.canBeNull) {
       return operand;
     }
     return instr;
   }
+
+  @override
+  Instruction visitIndexCheck(IndexCheck instr) {
+    final index = instr.index;
+    final length = instr.length;
+    if (index is Constant && length is Constant) {
+      final indexValue = index.value.intValue;
+      final lengthValue = length.value.intValue;
+      if (0 <= indexValue && indexValue < lengthValue) {
+        return index;
+      }
+    }
+    return instr;
+  }
+
+  @override
+  Instruction visitSubtypeCheck(SubtypeCheck instr) => instr;
 
   @override
   Instruction visitTypeParameters(TypeParameters instr) => instr;
@@ -256,6 +297,10 @@ final class Simplification extends Pass
   Instruction visitStringInterpolation(StringInterpolation instr) {
     final buf = _StringInterpolationBuffer(constantFolding);
     buf.addStringInterpolation(instr);
+    assert(buf.consumed.isEmpty || buf.optimized);
+    for (final i in buf.consumed) {
+      i.removeFromGraph();
+    }
     if (buf.inputs.length == 1) {
       final input = buf.inputs.single;
       if (input is String) {
@@ -283,6 +328,9 @@ final class Simplification extends Pass
   }
 
   @override
+  Instruction visitInstantiateClosure(InstantiateClosure instr) => instr;
+
+  @override
   Instruction visitEnterSuspendableFunction(EnterSuspendableFunction instr) =>
       instr;
 
@@ -290,10 +338,7 @@ final class Simplification extends Pass
   Instruction visitSuspend(Suspend instr) => instr;
 
   @override
-  Instruction visitAllocateList(AllocateList instr) => instr;
-
-  @override
-  Instruction visitSetListElement(SetListElement instr) => instr;
+  Instruction visitAllocateArray(AllocateArray instr) => instr;
 
   @override
   Instruction visitAllocateRecord(AllocateRecord instr) => instr;
@@ -633,6 +678,9 @@ class _StringInterpolationBuffer {
   // Contains either String or Definition.
   final List<Object> inputs = [];
 
+  // Consumed StringInterpolation instructions.
+  final List<StringInterpolation> consumed = [];
+
   bool optimized = false;
 
   _StringInterpolationBuffer(this.constantFolding);
@@ -669,7 +717,11 @@ class _StringInterpolationBuffer {
           break;
         case StringInterpolation() when input.singleUser == instr:
           addStringInterpolation(input);
-          input.removeFromGraph();
+          // Do not remove the consumed instruction from the graph immediately,
+          // as removal may change "has single user" property.
+          // As a result, instruction which is used multiple times would be both added
+          // as input and removed, leaving the graph in the inconsistent state.
+          consumed.add(input);
           optimized = true;
           break;
         default:

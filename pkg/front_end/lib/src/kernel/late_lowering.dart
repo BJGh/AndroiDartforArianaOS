@@ -6,6 +6,7 @@ import 'package:kernel/ast.dart';
 import 'package:kernel/core_types.dart';
 
 import '../source/source_library_builder.dart';
+import 'external_ast_helper.dart' as extern;
 
 const String lateFieldPrefix = '_#';
 const String lateIsSetSuffix = '#isSet';
@@ -65,45 +66,50 @@ Statement createGetterWithInitializer(
       // Generate:
       //
       //    return let # = _#field in isSentinel(#) ? _#field = <init> : #;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead(needsPromotion: false)..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead(needsPromotion: false)
+          ..fileOffset = fileOffset,
         type: type.withDeclaredNullability(Nullability.nullable),
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
             new StaticInvocation(
               coreTypes.isSentinelMethod,
               new Arguments(<Expression>[
-                new VariableGet(variable)..fileOffset = fileOffset,
+                new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
               ])..fileOffset = fileOffset,
             )..fileOffset = fileOffset,
             createVariableWrite(initializer)..fileOffset = fileOffset,
-            new VariableGet(variable, type)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable, type)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
     case IsSetEncoding.useNull:
       // Generate:
       //
       //    return let # = _#field in # == null ? _#field = <init> : #;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead(needsPromotion: false)..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead(needsPromotion: false)
+          ..fileOffset = fileOffset,
         type: type.withDeclaredNullability(Nullability.nullable),
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
-            new EqualsNull(new VariableGet(variable)..fileOffset = fileOffset)
-              ..fileOffset = fileOffset,
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
+            new EqualsNull(
+              new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
+            )..fileOffset = fileOffset,
             createVariableWrite(initializer)..fileOffset = fileOffset,
-            new VariableGet(variable, type)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable, type)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
   }
 }
@@ -138,10 +144,11 @@ Statement createGetterWithInitializerWithRecheck(
         )
         ..fileOffset = fileOffset
         ..forErrorHandling = true;
-  VariableDeclaration temp = new VariableDeclaration.forValue(
-    initializer,
+  CachedExpression initializerCache = extern.createCachedExpression(
+    expression: initializer,
     type: type,
-  )..fileOffset = fileOffset;
+    fileOffset: fileOffset,
+  );
   switch (isSetEncoding) {
     case IsSetEncoding.useIsSetField:
       // Generate:
@@ -158,7 +165,12 @@ Statement createGetterWithInitializerWithRecheck(
           new Not(createIsSetRead()..fileOffset = fileOffset)
             ..fileOffset = fileOffset,
           new Block(<Statement>[
-            new VariableStatement(temp)..fileOffset = temp.fileOffset,
+            new VariableStatement(
+              extern.createVariableDeclaration(
+                initializerCache.variable,
+                initializer: initializerCache.value,
+              ),
+            )..fileOffset = initializerCache.fileOffset,
             new IfStatement(
               createIsSetRead()..fileOffset = fileOffset,
               new ExpressionStatement(exception)..fileOffset = fileOffset,
@@ -166,7 +178,8 @@ Statement createGetterWithInitializerWithRecheck(
             )..fileOffset = fileOffset,
             new ExpressionStatement(
               createVariableWrite(
-                new VariableGet(temp)..fileOffset = fileOffset,
+                new VariableGet(initializerCache.variable)
+                  ..fileOffset = fileOffset,
               )..fileOffset = fileOffset,
             )..fileOffset = fileOffset,
             new ExpressionStatement(
@@ -190,23 +203,24 @@ Statement createGetterWithInitializerWithRecheck(
       //        ? let #2 = <init> in isSentinel(_#field)
       //            ? _#field = #2 : throw '...'
       //        : #1;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead(needsPromotion: false)..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead(needsPromotion: false)
+          ..fileOffset = fileOffset,
         type: type,
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
             new StaticInvocation(
               coreTypes.isSentinelMethod,
               new Arguments(<Expression>[
-                new VariableGet(variable)..fileOffset = fileOffset,
+                new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
               ])..fileOffset = fileOffset,
             )..fileOffset = fileOffset,
-            new Let(
-              temp,
-              new ConditionalExpression(
+            extern.createLet(
+              cache: initializerCache,
+              body: new ConditionalExpression(
                 new StaticInvocation(
                   coreTypes.isSentinelMethod,
                   new Arguments(<Expression>[
@@ -215,16 +229,19 @@ Statement createGetterWithInitializerWithRecheck(
                   ])..fileOffset = fileOffset,
                 )..fileOffset = fileOffset,
                 createVariableWrite(
-                  new VariableGet(temp)..fileOffset = fileOffset,
+                  new VariableGet(initializerCache.variable)
+                    ..fileOffset = fileOffset,
                 )..fileOffset = fileOffset,
                 exception,
                 type,
               )..fileOffset = fileOffset,
+              fileOffset: fileOffset,
             ),
-            new VariableGet(variable)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
     case IsSetEncoding.useNull:
       // Generate:
@@ -233,34 +250,39 @@ Statement createGetterWithInitializerWithRecheck(
       //        ? let #2 = <init> in _#field == null
       //            ? _#field = #2 : throw '...'
       //        : #1;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead(needsPromotion: false)..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead(needsPromotion: false)
+          ..fileOffset = fileOffset,
         type: type.withDeclaredNullability(Nullability.nullable),
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
-            new EqualsNull(new VariableGet(variable)..fileOffset = fileOffset)
-              ..fileOffset = fileOffset,
-            new Let(
-              temp,
-              new ConditionalExpression(
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
+            new EqualsNull(
+              new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
+            )..fileOffset = fileOffset,
+            extern.createLet(
+              cache: initializerCache,
+              body: new ConditionalExpression(
                 new EqualsNull(
                   createVariableRead(needsPromotion: false)
                     ..fileOffset = fileOffset,
                 )..fileOffset = fileOffset,
                 createVariableWrite(
-                  new VariableGet(temp)..fileOffset = fileOffset,
+                  new VariableGet(initializerCache.variable)
+                    ..fileOffset = fileOffset,
                 )..fileOffset = fileOffset,
                 exception,
                 type,
               )..fileOffset = fileOffset,
+              fileOffset: fileOffset,
             ),
-            new VariableGet(variable, type)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable, type)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
   }
 }
@@ -308,45 +330,48 @@ Statement createGetterBodyWithoutInitializer(
       // Generate:
       //
       //    return let # = _#field in isSentinel(#) ? throw '...' : #;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead()..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead()..fileOffset = fileOffset,
         type: type.withDeclaredNullability(Nullability.nullable),
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
             new StaticInvocation(
               coreTypes.isSentinelMethod,
               new Arguments(<Expression>[
-                new VariableGet(variable)..fileOffset = fileOffset,
+                new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
               ])..fileOffset = fileOffset,
             )..fileOffset = fileOffset,
             exception,
-            new VariableGet(variable, type)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable, type)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
     case IsSetEncoding.useNull:
       // Generate:
       //
       //    return let # = _#field in # == null ? throw '...' : #;
-      VariableDeclaration variable = new VariableDeclaration.forValue(
-        createVariableRead()..fileOffset = fileOffset,
+      CachedExpression fieldCache = extern.createCachedExpression(
+        expression: createVariableRead()..fileOffset = fileOffset,
         type: type.withDeclaredNullability(Nullability.nullable),
-      )..fileOffset = fileOffset;
+      );
       return new ReturnStatement(
-        new Let(
-          variable,
-          new ConditionalExpression(
-            new EqualsNull(new VariableGet(variable)..fileOffset = fileOffset)
-              ..fileOffset = fileOffset,
+        extern.createLet(
+          cache: fieldCache,
+          body: new ConditionalExpression(
+            new EqualsNull(
+              new VariableGet(fieldCache.variable)..fileOffset = fileOffset,
+            )..fileOffset = fileOffset,
             exception,
-            new VariableGet(variable, type)..fileOffset = fileOffset,
+            new VariableGet(fieldCache.variable, type)..fileOffset = fileOffset,
             type,
           )..fileOffset = fileOffset,
-        )..fileOffset = fileOffset,
+          fileOffset: fileOffset,
+        ),
       )..fileOffset = fileOffset;
   }
 }
@@ -357,7 +382,7 @@ Statement createSetterBody(
   CoreTypes coreTypes,
   int fileOffset,
   String name,
-  VariableDeclaration parameter,
+  PositionalParameter parameter,
   DartType type, {
   required bool shouldReturnValue,
   required Expression createVariableWrite(Expression value),
@@ -407,7 +432,7 @@ Statement createSetterBodyFinal(
   CoreTypes coreTypes,
   int fileOffset,
   String name,
-  VariableDeclaration parameter,
+  Variable parameter,
   DartType type, {
   required bool shouldReturnValue,
   required Expression createVariableRead(),

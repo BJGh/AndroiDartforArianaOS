@@ -20,7 +20,6 @@ import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/dart/analysis/status.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/element/element.dart';
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:analyzer/src/test_utilities/lint_registration_mixin.dart';
 import 'package:analyzer/src/utilities/extensions/async.dart';
 import 'package:analyzer_testing/package_config_file_builder.dart';
@@ -34,7 +33,6 @@ import '../../../util/diff.dart';
 import '../../../util/element_printer.dart';
 import '../resolution/context_collection_resolution.dart';
 import '../resolution/node_text_expectations.dart';
-import '../resolution/resolution.dart';
 import 'result_printer.dart';
 
 void main() {
@@ -120,7 +118,7 @@ class AnalysisDriver_LintTest extends PubPackageResolutionTest
 
   test_getResolvedUnit_lint_existingFile() async {
     addTestFile('');
-    await resolveTestFile();
+    var result = await resolveTestFile();
 
     // Existing/empty file triggers the lint.
     _assertHasLintReported(
@@ -130,10 +128,10 @@ class AnalysisDriver_LintTest extends PubPackageResolutionTest
   }
 
   test_getResolvedUnit_lint_notExistingFile() async {
-    await resolveTestFile();
+    var result = await resolveTestFile();
 
     // No errors for a file that doesn't exist.
-    assertErrorsInResult([]);
+    expect(result.diagnostics, isEmpty);
   }
 
   void _assertHasLintReported(List<Diagnostic> diagnostics, String name) {
@@ -349,7 +347,7 @@ void f() {
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     driver.addFile2(a);
@@ -364,7 +362,7 @@ void f() {
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     driver.addFile2(a);
@@ -1331,10 +1329,10 @@ final B1 = A1;
         (result) {
           return switch (result.uriStr) {
             'package:test/a.dart' => [
-              result.findElement2.topVar('A1'),
-              result.findElement2.topVar('A2'),
+              result.findElement.topVar('A1'),
+              result.findElement.topVar('A2'),
             ],
-            'package:test/b.dart' => [result.findElement2.topVar('B1')],
+            'package:test/b.dart' => [result.findElement.topVar('B1')],
             _ => [],
           };
         };
@@ -1416,7 +1414,7 @@ final A2 = B1;
         (result) {
           switch (result.uriStr) {
             case 'package:test/a.dart':
-              return [result.findElement2.topVar('V')];
+              return [result.findElement.topVar('V')];
             default:
               return [];
           }
@@ -1527,10 +1525,10 @@ final v = 2;
     expect(
       driver.knownFiles.resources,
       containsAll([
-        sdkRoot.getChildAssumingFile('lib/async/async.dart'),
-        sdkRoot.getChildAssumingFile('lib/collection/collection.dart'),
-        sdkRoot.getChildAssumingFile('lib/core/core.dart'),
-        sdkRoot.getChildAssumingFile('lib/math/math.dart'),
+        sdkRoot.getFile('lib/async/async.dart'),
+        sdkRoot.getFile('lib/collection/collection.dart'),
+        sdkRoot.getFile('lib/core/core.dart'),
+        sdkRoot.getFile('lib/math/math.dart'),
       ]),
     );
   }
@@ -1673,7 +1671,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getErrors('A1', a);
@@ -1691,7 +1689,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getErrors('A1', a);
@@ -2075,7 +2073,7 @@ void f() {
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getIndex('A1', a);
@@ -2091,7 +2089,7 @@ void f() {
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getIndex('A1', a);
@@ -2163,7 +2161,7 @@ class B {}
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     newFile('$testPackageLibPath/a.dart', '');
     collector.getLibraryByUri('A1', 'package:test/a.dart');
@@ -2181,7 +2179,7 @@ class B {}
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     newFile('$testPackageLibPath/a.dart', '');
     collector.getLibraryByUri('A1', 'package:test/a.dart');
@@ -2438,7 +2436,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedLibrary('A1', a);
@@ -2459,7 +2457,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedLibrary('A1', a);
@@ -2631,7 +2629,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedLibraryByUri('A1', Uri.parse('package:test/a.dart'));
@@ -2652,7 +2650,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedLibraryByUri('A1', Uri.parse('package:test/a.dart'));
@@ -2990,7 +2988,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedUnit('A1', a);
@@ -3011,7 +3009,7 @@ part of 'a.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getResolvedUnit('A1', a);
@@ -3038,7 +3036,7 @@ final foo = 0;
 
     configuration.libraryConfiguration.unitConfiguration.variableTypesSelector =
         (result) {
-          return [result.findElement2.topVar('foo')];
+          return [result.findElement.topVar('foo')];
         };
 
     // The extension of the file does not matter.
@@ -3069,13 +3067,12 @@ linter:
     - omit_local_variable_types
 ''');
 
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 library my.lib;
 part 'a.dart';
-''',
-      [error(diag.uriDoesNotExist, 21, 8)],
-    );
+//   ^^^^^^^^
+// [diag.uriDoesNotExist] Target of URI doesn't exist: 'package:test/a.dart'.
+''');
   }
 
   test_getResolvedUnit_part_empty_lints() async {
@@ -3087,13 +3084,12 @@ linter:
 
     newFile('$testPackageLibPath/a.dart', '');
 
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 library my.lib;
 part 'a.dart';
-''',
-      [error(diag.partOfNonPart, 21, 8)],
-    );
+//   ^^^^^^^^
+// [diag.partOfNonPart] The included part 'package:test/a.dart' must have a part-of directive.
+''');
   }
 
   test_getResolvedUnit_part_hasPartOfName_notThisLibrary_lints() async {
@@ -3107,13 +3103,12 @@ linter:
 part of other.lib;
 ''');
 
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 library my.lib;
 part 'a.dart';
-''',
-      [error(diag.partOfDifferentLibrary, 21, 8)],
-    );
+//   ^^^^^^^^
+// [diag.partOfDifferentLibrary] Expected this library to be part of 'my.lib', not 'other.lib'.
+''');
   }
 
   test_getResolvedUnit_part_hasPartOfUri_notThisLibrary_lints() async {
@@ -3127,13 +3122,12 @@ linter:
 part of 'not_test.dart';
 ''');
 
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 library my.lib;
 part 'a.dart';
-''',
-      [error(diag.partOfDifferentLibrary, 21, 8)],
-    );
+//   ^^^^^^^^
+// [diag.partOfDifferentLibrary] Expected this library to be part of 'package:test/test.dart', not 'package:test/a.dart'.
+''');
   }
 
   test_getResolvedUnit_part_library() async {
@@ -3447,7 +3441,7 @@ import 'package:test/b.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/async/async.dart').delete();
+    sdkRoot.getFile('lib/async/async.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getUnitElement('A1', a);
@@ -3465,7 +3459,7 @@ import 'package:test/b.dart';
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
 
-    sdkRoot.getChildAssumingFile('lib/core/core.dart').delete();
+    sdkRoot.getFile('lib/core/core.dart').delete();
 
     var a = newFile('$testPackageLibPath/a.dart', '');
     collector.getUnitElement('A1', a);
@@ -3497,7 +3491,7 @@ final B = A;
         (result) {
           switch (result.uriStr) {
             case 'package:test/b.dart':
-              return [result.findElement2.topVar('B')];
+              return [result.findElement.topVar('B')];
             default:
               return [];
           }
@@ -3651,7 +3645,7 @@ driver
         (result) {
           switch (result.uriStr) {
             case 'package:test/a.dart':
-              return [result.findElement2.topVar('V')];
+              return [result.findElement.topVar('V')];
             default:
               return [];
           }
@@ -3886,7 +3880,7 @@ class A {}
       var result = driver.parseFileSync2(a) as ParsedUnitResult;
       assertParsedNodeText(result.unit, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -3935,7 +3929,7 @@ class A {}
     var result = driver.parseFileSync2(a) as ParsedUnitResult;
     assertParsedNodeText(result.unit, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -3951,20 +3945,24 @@ CompilationUnit
   test_partOfName_getErrors_afterLibrary() async {
     // Note, we put the library into a different directory.
     // Otherwise we will discover it.
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4012,20 +4010,24 @@ final a = A();
   }
 
   test_partOfName_getErrors_beforeLibrary_addedFiles() async {
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// preEnhancedParts
-// @dart = 3.4
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4062,20 +4064,21 @@ final a = A();
   }
 
   test_partOfName_getErrors_beforeLibrary_discovered() async {
-    newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    newFileWithLanguageFeatureDirective('$testPackageLibPath/a.dart', r'''
+// %before-language-feature: enhanced-parts
 library a;
 part 'b.dart';
 class A {}
 ''');
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4109,20 +4112,24 @@ final a = new A();
   }
 
   test_partOfName_getErrors_beforeLibrary_notDiscovered() async {
-    newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4143,7 +4150,7 @@ final a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      60 +1 CREATION_WITH_NON_TYPE
+      40 +1 CREATION_WITH_NON_TYPE
 [status] idle
 [future] getErrors B1
   ErrorsResult #1
@@ -4151,25 +4158,29 @@ final a = new A();
     uri: package:test/b.dart
     flags: isPart
     errors
-      60 +1 CREATION_WITH_NON_TYPE
+      40 +1 CREATION_WITH_NON_TYPE
 ''');
   }
 
   test_partOfName_getResolvedUnit_afterLibrary() async {
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4220,20 +4231,24 @@ final a = new A();
   }
 
   test_partOfName_getResolvedUnit_beforeLibrary_addedFiles() async {
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4266,20 +4281,24 @@ final a = new A();
   }
 
   test_partOfName_getResolvedUnit_beforeLibrary_notDiscovered() async {
-    newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4298,7 +4317,7 @@ final a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      60 +1 CREATION_WITH_NON_TYPE
+      40 +1 CREATION_WITH_NON_TYPE
 [status] idle
 [future] getResolvedUnit B1
   ResolvedUnitResult #0
@@ -4306,12 +4325,14 @@ final a = new A();
   }
 
   test_partOfName_getResolvedUnit_changePart_invalidatesLibraryCycle() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 import 'dart:async';
 part 'b.dart';
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4330,20 +4351,22 @@ part 'b.dart';
     uri: package:test/a.dart
     flags: exists isLibrary
     errors
-      61 +8 URI_DOES_NOT_EXIST
-      42 +12 UNUSED_IMPORT
+      41 +8 URI_DOES_NOT_EXIST
+      22 +12 UNUSED_IMPORT
 [status] idle
 ''');
 
     // Create the part file.
     // This should invalidate library file state (specifically the library
     // cycle), so that we can re-link the library, and get new dependencies.
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of 'a.dart';
 Future<int>? f;
-''');
+''',
+    );
     driver.changeFile2(b);
 
     // This should not crash.
@@ -4370,18 +4393,22 @@ Future<int>? f;
   }
 
   test_partOfName_getResolvedUnit_hasLibrary_noPart() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library my.lib;
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of my.lib;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4402,7 +4429,7 @@ final a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      65 +1 CREATION_WITH_NON_TYPE
+      45 +1 CREATION_WITH_NON_TYPE
 [status] idle
 [future] getResolvedUnit B1
   ResolvedUnitResult #0
@@ -4410,12 +4437,14 @@ final a = new A();
   }
 
   test_partOfName_getResolvedUnit_noLibrary() async {
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of my.lib;
 var a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4433,7 +4462,7 @@ var a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      63 +1 CREATION_WITH_NON_TYPE
+      43 +1 CREATION_WITH_NON_TYPE
 [status] idle
 [future] getResolvedUnit B1
   ResolvedUnitResult #0
@@ -4441,20 +4470,24 @@ var a = new A();
   }
 
   test_partOfName_getUnitElement_afterLibrary() async {
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4495,20 +4528,24 @@ final a = new A();
   }
 
   test_partOfName_getUnitElement_beforeLibrary_addedFiles() async {
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4544,12 +4581,14 @@ final a = new A();
   }
 
   test_partOfName_getUnitElement_noLibrary() async {
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4571,20 +4610,24 @@ final a = new A();
   test_partOfName_results_afterLibrary() async {
     // Note, we put the library into a different directory.
     // Otherwise we will discover it.
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4618,20 +4661,24 @@ final a = new A();
   test_partOfName_results_beforeLibrary() async {
     // Note, we put the library into a different directory.
     // Otherwise we will discover it.
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4665,20 +4712,24 @@ final a = new A();
   test_partOfName_results_beforeLibrary_priority() async {
     // Note, we put the library into a different directory.
     // Otherwise we will discover it.
-    var a = newFile('$testPackageLibPath/hidden/a.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var a = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/hidden/a.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 library a;
 part '../b.dart';
 class A {}
-''');
+''',
+    );
 
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4711,12 +4762,14 @@ final a = new A();
   }
 
   test_partOfName_results_noLibrary() async {
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4738,18 +4791,20 @@ final a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      60 +1 CREATION_WITH_NON_TYPE
+      40 +1 CREATION_WITH_NON_TYPE
 [status] idle
 ''');
   }
 
   test_partOfName_results_noLibrary_priority() async {
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-// @dart = 3.4
-// preEnhancedParts
+    var b = newFileWithLanguageFeatureDirective(
+      '$testPackageLibPath/b.dart',
+      r'''
+// %before-language-feature: enhanced-parts
 part of a;
 final a = new A();
-''');
+''',
+    );
 
     var driver = driverFor(testFile);
     var collector = DriverEventCollector(driver);
@@ -4770,7 +4825,7 @@ final a = new A();
     uri: package:test/b.dart
     flags: exists isPart
     errors
-      60 +1 CREATION_WITH_NON_TYPE
+      40 +1 CREATION_WITH_NON_TYPE
 [status] idle
 ''');
   }
@@ -5227,9 +5282,9 @@ final B = 0;
         (result) {
           switch (result.uriStr) {
             case 'package:test/a.dart':
-              return [result.findElement2.topVar('A')];
+              return [result.findElement.topVar('A')];
             case 'package:test/b.dart':
-              return [result.findElement2.topVar('B')];
+              return [result.findElement.topVar('B')];
             default:
               return [];
           }
@@ -23846,13 +23901,6 @@ export 'dart:core' show int, dynamic, Never;
       package:test/a.dart
         libraryMetadataId: #M5
         exportMapId: #M2
-        exportMap
-          Never: <null>
-          Never=: <null>
-          dynamic: <null>
-          dynamic=: <null>
-          int: <null>
-          int=: <null>
 [status] idle
 ''',
       updatedA: r'''
@@ -38195,7 +38243,7 @@ library;
 [status] idle
 ''',
       updateFiles: () {
-        var core = sdkRoot.getChildAssumingFile('lib/core/core.dart');
+        var core = sdkRoot.getFile('lib/core/core.dart');
         var newCode = core.readAsStringSync().replaceFirst(
           'abstract final class int extends num {',
           '@deprecated abstract final class int extends num {',
@@ -59115,6 +59163,48 @@ class B extends A {
     );
   }
 
+  test_manifest_class_constructor_isRedirecting_unresolved() async {
+    await _runLibraryManifestScenario(
+      initialCode: r'''
+class A {
+  A.foo();
+}
+''',
+      expectedInitialEvents: r'''
+[operation] linkLibraryCycle SDK
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredClasses
+      A: #M0
+        declaredConstructors
+          foo: #M1
+        interface: #M2
+    exportMapId: #M3
+    exportMap
+      A: #M0
+''',
+      updatedCode: r'''
+class A {
+  A.foo() : this.missing();
+}
+''',
+      expectedUpdatedEvents: r'''
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H1
+    declaredClasses
+      A: #M0
+        declaredConstructors
+          foo: #M4
+        interface: #M2
+    exportMapId: #M3
+    exportMap
+      A: #M0
+''',
+    );
+  }
+
   test_manifest_class_constructor_isSynthetic() async {
     configuration.includeDefaultConstructors();
     await _runLibraryManifestScenario(
@@ -76895,6 +76985,68 @@ const b = 0;
     );
   }
 
+  test_manifest_constInitializer_nullAssertionExpression() async {
+    configuration.withElementManifests = true;
+    await _runLibraryManifestScenario(
+      initialCode: r'''
+const a = 0!;
+''',
+      expectedInitialEvents: r'''
+[operation] linkLibraryCycle SDK
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredGetters
+      a: #M0
+        flags: isOriginVariable isSimplyBounded isStatic
+        returnType: int @ dart:core
+    declaredVariables
+      a: #M1
+        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
+        type: int @ dart:core
+        constInitializer
+          tokenBuffer: 0!
+          tokenLengthList: [1, 1]
+    exportMapId: #M2
+    exportMap
+      a: #M0
+''',
+      updatedCode: r'''
+const a = 0!;
+const b = 0;
+''',
+      expectedUpdatedEvents: r'''
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H1
+    declaredGetters
+      a: #M0
+        flags: isOriginVariable isSimplyBounded isStatic
+        returnType: int @ dart:core
+      b: #M3
+        flags: isOriginVariable isSimplyBounded isStatic
+        returnType: int @ dart:core
+    declaredVariables
+      a: #M1
+        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
+        type: int @ dart:core
+        constInitializer
+          tokenBuffer: 0!
+          tokenLengthList: [1, 1]
+      b: #M4
+        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
+        type: int @ dart:core
+        constInitializer
+          tokenBuffer: 0
+          tokenLengthList: [1]
+    exportMapId: #M5
+    exportMap
+      a: #M0
+      b: #M3
+''',
+    );
+  }
+
   test_manifest_constInitializer_postfixExpression_increment() async {
     configuration.withElementManifests = true;
     await _runLibraryManifestScenario(
@@ -76973,66 +77125,6 @@ const c = 0;
       a: #M0
       b: #M1
       c: #M5
-''',
-    );
-  }
-
-  test_manifest_constInitializer_postfixExpression_nullAssert() async {
-    configuration.withElementManifests = true;
-    await _runLibraryManifestScenario(
-      initialCode: r'''
-const a = 0!;
-''',
-      expectedInitialEvents: r'''
-[operation] linkLibraryCycle SDK
-[operation] linkLibraryCycle
-  package:test/test.dart
-    hashForRequirements: #H0
-    declaredGetters
-      a: #M0
-        flags: isOriginVariable isSimplyBounded isStatic
-        returnType: int @ dart:core
-    declaredVariables
-      a: #M1
-        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
-        type: int @ dart:core
-        constInitializer
-          isValid: false
-    exportMapId: #M2
-    exportMap
-      a: #M0
-''',
-      updatedCode: r'''
-const a = 0!;
-const b = 0;
-''',
-      expectedUpdatedEvents: r'''
-[operation] linkLibraryCycle
-  package:test/test.dart
-    hashForRequirements: #H1
-    declaredGetters
-      a: #M0
-        flags: isOriginVariable isSimplyBounded isStatic
-        returnType: int @ dart:core
-      b: #M3
-        flags: isOriginVariable isSimplyBounded isStatic
-        returnType: int @ dart:core
-    declaredVariables
-      a: #M4
-        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
-        type: int @ dart:core
-        constInitializer
-          isValid: false
-      b: #M5
-        flags: hasImplicitType hasInitializer isConst isOriginDeclaration isStatic isTypeInferredFromInitializer
-        type: int @ dart:core
-        constInitializer
-          tokenBuffer: 0
-          tokenLengthList: [1]
-    exportMapId: #M6
-    exportMap
-      a: #M0
-      b: #M3
 ''',
     );
   }
@@ -85273,6 +85365,198 @@ int get a => 0;
     exportMapId: #M4
     exportMap
       a: #M3
+''',
+    );
+  }
+
+  test_manifest_metadata_genericFunctionType() async {
+    configuration.withElementManifests = true;
+    await _runLibraryManifestScenario(
+      initialCode: r'''
+class A {
+  const A(a);
+}
+@A(<void Function<T>(T)>[])
+void foo() {}
+''',
+      expectedInitialEvents: r'''
+[operation] linkLibraryCycle SDK
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredClasses
+      A: #M0
+        flags: isSimplyBounded
+        supertype: Object @ dart:core
+        interface: #M1
+    declaredFunctions
+      foo: #M2
+        flags: isOriginDeclaration isSimplyBounded isStatic
+        metadata
+          [0]
+            tokenBuffer: @A(<voidFunction<T>(T)>[])
+            tokenLengthList: [1, 1, 1, 1, 4, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            elements
+              [0] (package:test/test.dart, class_, A) <null>
+              [1] (package:test/test.dart, interfaceConstructor, A, new) <null>
+            elementIndexList
+              7 = element 0
+              0 = null
+              6 = typeParameter 0
+              23 = element 1
+        functionType: FunctionType
+          returnType: void
+    exportMapId: #M3
+    exportMap
+      A: #M0
+      foo: #M2
+''',
+      updatedCode: r'''
+class A {
+  const A(a);
+}
+@A(<void Function<T>(T)>[])
+void foo() {}
+final b = 0;
+''',
+      expectedUpdatedEvents: r'''
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H1
+    declaredClasses
+      A: #M0
+        flags: isSimplyBounded
+        supertype: Object @ dart:core
+        interface: #M1
+    declaredGetters
+      b: #M4
+        flags: isOriginVariable isSimplyBounded isStatic
+        returnType: int @ dart:core
+    declaredFunctions
+      foo: #M2
+        flags: isOriginDeclaration isSimplyBounded isStatic
+        metadata
+          [0]
+            tokenBuffer: @A(<voidFunction<T>(T)>[])
+            tokenLengthList: [1, 1, 1, 1, 4, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            elements
+              [0] (package:test/test.dart, class_, A) <null>
+              [1] (package:test/test.dart, interfaceConstructor, A, new) <null>
+            elementIndexList
+              7 = element 0
+              0 = null
+              6 = typeParameter 0
+              23 = element 1
+        functionType: FunctionType
+          returnType: void
+    declaredVariables
+      b: #M5
+        flags: hasImplicitType hasInitializer isFinal isOriginDeclaration isStatic isTypeInferredFromInitializer
+        type: int @ dart:core
+    exportMapId: #M6
+    exportMap
+      A: #M0
+      b: #M4
+      foo: #M2
+''',
+    );
+  }
+
+  test_manifest_metadata_genericFunctionType_nested() async {
+    configuration.withElementManifests = true;
+    await _runLibraryManifestScenario(
+      initialCode: r'''
+class A {
+  const A(a);
+}
+@A(<void Function<T>(void Function<U extends T>(T, U))>[])
+void foo() {}
+''',
+      expectedInitialEvents: r'''
+[operation] linkLibraryCycle SDK
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredClasses
+      A: #M0
+        flags: isSimplyBounded
+        supertype: Object @ dart:core
+        interface: #M1
+    declaredFunctions
+      foo: #M2
+        flags: isOriginDeclaration isSimplyBounded isStatic
+        metadata
+          [0]
+            tokenBuffer: @A(<voidFunction<T>(voidFunction<UextendsT>(T,U))>[])
+            tokenLengthList: [1, 1, 1, 1, 4, 8, 1, 1, 1, 1, 4, 8, 1, 1, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            elements
+              [0] (package:test/test.dart, class_, A) <null>
+              [1] (package:test/test.dart, interfaceConstructor, A, new) <null>
+            elementIndexList
+              7 = element 0
+              0 = null
+              0 = null
+              22 = typeParameter 1
+              22 = typeParameter 1
+              6 = typeParameter 0
+              23 = element 1
+        functionType: FunctionType
+          returnType: void
+    exportMapId: #M3
+    exportMap
+      A: #M0
+      foo: #M2
+''',
+      updatedCode: r'''
+class A {
+  const A(a);
+}
+@A(<void Function<T>(void Function<U extends T>(T, U))>[])
+void foo() {}
+final b = 0;
+''',
+      expectedUpdatedEvents: r'''
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H1
+    declaredClasses
+      A: #M0
+        flags: isSimplyBounded
+        supertype: Object @ dart:core
+        interface: #M1
+    declaredGetters
+      b: #M4
+        flags: isOriginVariable isSimplyBounded isStatic
+        returnType: int @ dart:core
+    declaredFunctions
+      foo: #M2
+        flags: isOriginDeclaration isSimplyBounded isStatic
+        metadata
+          [0]
+            tokenBuffer: @A(<voidFunction<T>(voidFunction<UextendsT>(T,U))>[])
+            tokenLengthList: [1, 1, 1, 1, 4, 8, 1, 1, 1, 1, 4, 8, 1, 1, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            elements
+              [0] (package:test/test.dart, class_, A) <null>
+              [1] (package:test/test.dart, interfaceConstructor, A, new) <null>
+            elementIndexList
+              7 = element 0
+              0 = null
+              0 = null
+              22 = typeParameter 1
+              22 = typeParameter 1
+              6 = typeParameter 0
+              23 = element 1
+        functionType: FunctionType
+          returnType: void
+    declaredVariables
+      b: #M5
+        flags: hasImplicitType hasInitializer isFinal isOriginDeclaration isStatic isTypeInferredFromInitializer
+        type: int @ dart:core
+    exportMapId: #M6
+    exportMap
+      A: #M0
+      b: #M4
+      foo: #M2
 ''',
     );
   }
@@ -95484,6 +95768,42 @@ final b = 1;
     );
   }
 
+  test_manifest_topLevelVariable_initializer_functionType_defaultValue() async {
+    await _runLibraryManifestScenario(
+      initialCode: r'''
+final x = ([int a = 0]) => a;
+''',
+      expectedInitialEvents: r'''
+[operation] linkLibraryCycle SDK
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredGetters
+      x: #M0
+    declaredVariables
+      x: #M1
+    exportMapId: #M2
+    exportMap
+      x: #M0
+''',
+      updatedCode: r'''
+final x = ([int a = 1]) => a;
+''',
+      expectedUpdatedEvents: r'''
+[operation] linkLibraryCycle
+  package:test/test.dart
+    hashForRequirements: #H0
+    declaredGetters
+      x: #M0
+    declaredVariables
+      x: #M1
+    exportMapId: #M2
+    exportMap
+      x: #M0
+''',
+    );
+  }
+
   test_manifest_topLevelVariable_initializer_type() async {
     await _runLibraryManifestScenario(
       initialCode: r'''
@@ -102557,8 +102877,8 @@ class _AlwaysReportedLint extends AnalysisRule {
   DiagnosticCode get diagnosticCode => code;
 
   @override
-  void registerNodeProcessors(
-    RuleVisitorRegistry registry,
+  void registerNodeProcessors2(
+    RuleVisitorRegistry2 registry,
     RuleContext context,
   ) {
     var visitor = _AlwaysReportedLintVisitor(this);
@@ -102567,7 +102887,7 @@ class _AlwaysReportedLint extends AnalysisRule {
 }
 
 /// A visitor for [_AlwaysReportedLint] that reports the lint for all files.
-class _AlwaysReportedLintVisitor extends SimpleAstVisitor<void> {
+class _AlwaysReportedLintVisitor extends SimpleAstVisitor2<void> {
   final AnalysisRule rule;
 
   _AlwaysReportedLintVisitor(this.rule);
@@ -102611,7 +102931,9 @@ mixin _EventsMixin {
     var actual = buffer.toString();
     if (actual != expected) {
       NodeTextExpectationsCollector.add(actual);
-      printPrettyDiff(expected, actual);
+      if (NodeTextExpectationsCollector.shouldPrintFailureDetails) {
+        printPrettyDiff(expected, actual);
+      }
       fail('See the difference above.');
     }
   }

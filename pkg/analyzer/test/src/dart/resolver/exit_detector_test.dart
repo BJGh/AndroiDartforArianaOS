@@ -9,13 +9,15 @@ import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../diagnostics/parser_diagnostics.dart';
 import '../resolution/context_collection_resolution.dart';
+import '../resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ExitDetectorParsedStatementTest);
     defineReflectiveTests(ExitDetectorResolvedStatementTest);
-    defineReflectiveTests(ExitDetectorResolvedStatementTest_Language219);
+    defineReflectiveTests(ExitDetectorResolvedStatementTest_BeforePatterns);
     defineReflectiveTests(ExitDetectorForCodeAsUiTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -116,21 +118,17 @@ class ExitDetectorForCodeAsUiTest extends ParserDiagnosticsTest {
   }
 
   void _assertHasReturn(String expressionCode, bool expected) {
-    var parseResult = parseStringWithErrors('''
+    var parseResult = parseTestCodeWithDiagnostics('''
 void f() { // ref
   $expressionCode;
 }
 ''');
-    parseResult.assertNoErrors();
 
     var findNode = parseResult.findNode;
 
     var block = findNode.block('{ // ref');
     var statement = block.statements.single as ExpressionStatement;
-    var expression = statement.expression;
-
-    var actual = ExitDetector.exits(expression);
-    expect(actual, expected);
+    expect(ExitDetector.exits(statement.expression), expected);
   }
 
   void _assertTrue(String expressionCode) {
@@ -163,7 +161,7 @@ class ExitDetectorParsedStatementTest extends ParserDiagnosticsTest {
     _assertFalse('v = 1;');
   }
 
-  @failingTest
+  @failingTest // TODO(scheglov): fix it
   test_assignmentExpression_compound_lazy() async {
     _assertFalse('v ||= false;');
   }
@@ -342,6 +340,14 @@ class ExitDetectorParsedStatementTest extends ParserDiagnosticsTest {
 
   test_conditionalCall_rhs2() async {
     _assertFalse('null?.b(throw 42);');
+  }
+
+  test_constructorInvocation() async {
+    _assertFalse('new A(b);');
+  }
+
+  test_constructorInvocation_argumentThrows() async {
+    _assertTrue('new A(throw 42);');
   }
 
   test_doStatement_break_and_throw() async {
@@ -598,14 +604,6 @@ class ExitDetectorParsedStatementTest extends ParserDiagnosticsTest {
     _assertTrue("(throw 42)[b];");
   }
 
-  test_instanceCreationExpression() async {
-    _assertFalse('new A(b);');
-  }
-
-  test_instanceCreationExpression_argumentThrows() async {
-    _assertTrue('new A(throw 42);');
-  }
-
   test_isExpression() async {
     _assertFalse('A is B;');
   }
@@ -652,6 +650,21 @@ class ExitDetectorParsedStatementTest extends ParserDiagnosticsTest {
 
   test_methodInvocation_target() async {
     _assertTrue("(throw 42).b(c);");
+  }
+
+  test_nullAssertion_v1() {
+    var parseResult = parseTestCodeWithDiagnostics('''
+void f(Object? x) { // ref
+  x!;
+}
+''');
+    var block = parseResult.findNode.block('{ // ref');
+    var statement = block.statements.single as ExpressionStatement;
+
+    var expression = statement.expression;
+
+    expect(expression, isA<PostfixExpression>());
+    expect(ExitDetector.exits(expression), isFalse);
   }
 
   test_parenthesizedExpression() async {
@@ -918,20 +931,18 @@ on String catch (e, s) { return 1; }
   }
 
   void _assertHasReturn(String statementCode, bool expected) {
-    var parseResult = parseStringWithErrors('''
+    var parseResult = parseTestCodeWithDiagnostics('''
 void f() { // ref
   $statementCode
 }
 ''');
-    parseResult.assertNoErrors();
 
     var findNode = parseResult.findNode;
 
     var block = findNode.block('{ // ref');
     var statement = block.statements.single;
 
-    var actual = ExitDetector.exits(statement);
-    expect(actual, expected);
+    expect(ExitDetector.exits(statement), expected);
   }
 
   void _assertTrue(String code) {
@@ -944,9 +955,9 @@ class ExitDetectorResolvedStatementTest extends PubPackageResolutionTest
     with ExitDetectorResolvedStatementTestCases {}
 
 @reflectiveTest
-class ExitDetectorResolvedStatementTest_Language219
+class ExitDetectorResolvedStatementTest_BeforePatterns
     extends PubPackageResolutionTest
-    with WithLanguage219Mixin, ExitDetectorResolvedStatementTestCases {}
+    with BeforePatternsMixin, ExitDetectorResolvedStatementTestCases {}
 
 /// Tests for the [ExitDetector] that require that the AST be resolved.
 ///
@@ -1217,7 +1228,7 @@ void f() sync* {
   }
 
   Future<void> _assertHasReturn(String code, int n, bool expected) async {
-    await resolveTestCode(code);
+    var result = await resolveTestCode(code);
 
     var function = result.unit.declarations.last as FunctionDeclaration;
     var body = function.functionExpression.body as BlockFunctionBody;

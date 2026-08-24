@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class IsExpressionResolutionTest extends PubPackageResolutionTest {
   test_expression_super() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   void f() {
     super is T;
@@ -27,10 +27,10 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleIsExpression;
+    var node = result.findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: A<T>
   isOperator: is
@@ -43,7 +43,7 @@ IsExpression
   }
 
   test_expression_switchExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Object? x) {
   (switch (x) {
     _ => 0,
@@ -51,13 +51,13 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.isExpression('is double');
+    var node = result.findNode.isExpression('is double');
     assertResolvedNodeText(node, r'''
 IsExpression
-  expression: SwitchExpression
+  expression2: SwitchExpression
     switchKeyword: switch
     leftParenthesis: (
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object?
@@ -70,7 +70,7 @@ IsExpression
             name: _
             matchedValueType: Object?
         arrow: =>
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
     rightBracket: }
@@ -85,16 +85,16 @@ IsExpression
   }
 
   test_is() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Object? a) {
   a is int;
 }
 ''');
 
-    var node = findNode.singleIsExpression;
+    var node = result.findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: Object?
@@ -108,16 +108,16 @@ IsExpression
   }
 
   test_isNot() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Object? a) {
   a is! int;
 }
 ''');
 
-    var node = findNode.singleIsExpression;
+    var node = result.findNode.singleIsExpression;
     assertResolvedNodeText(node, r'''
 IsExpression
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: Object?

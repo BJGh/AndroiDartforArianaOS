@@ -2,14 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
+import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ImplementsDisallowedClassTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -29,18 +30,18 @@ abstract class A implements Enum {}
 ''');
   }
 
-  test_class_dartCoreEnum_language216_abstract() async {
+  test_class_dartCoreEnum_beforeEnhancedEnums_abstract() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+// %before-language-feature: enhanced-enums
 abstract class A implements Enum {}
 //                          ^^^^
 // [diag.implementsDisallowedClass] Classes and mixins can't implement 'Enum'.
 ''');
   }
 
-  test_class_dartCoreEnum_language216_concrete() async {
+  test_class_dartCoreEnum_beforeEnhancedEnums_concrete() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+// %before-language-feature: enhanced-enums
 class A implements Enum {}
 //                 ^^^^
 // [diag.implementsDisallowedClass] Classes and mixins can't implement 'Enum'.
@@ -132,22 +133,12 @@ class A implements String {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
+  @FailingTest() // TODO(scheglov): implement augmentation
   test_class_String_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
+    await resolveTestCodeWithDiagnostics(r'''
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
 augment class A implements String {}
 ''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(diag.implementsDisallowedClass, 45, 6),
-    ]);
   }
 
   test_class_String_num() async {
@@ -177,9 +168,9 @@ abstract class A = Object with M implements Enum;
 ''');
   }
 
-  test_classTypeAlias_dartCoreEnum_language216_abstract() async {
+  test_classTypeAlias_dartCoreEnum_beforeEnhancedEnums_abstract() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+// %before-language-feature: enhanced-enums
 mixin M {}
 abstract class A = Object with M implements Enum;
 //                                          ^^^^
@@ -187,9 +178,9 @@ abstract class A = Object with M implements Enum;
 ''');
   }
 
-  test_classTypeAlias_dartCoreEnum_language216_concrete() async {
+  test_classTypeAlias_dartCoreEnum_beforeEnhancedEnums_concrete() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+// %before-language-feature: enhanced-enums
 mixin M {}
 class A = Object with M implements Enum;
 //                                 ^^^^
@@ -286,9 +277,9 @@ mixin M implements Enum {}
 ''');
   }
 
-  test_mixin_dartCoreEnum_language216() async {
+  test_mixin_dartCoreEnum_beforeEnhancedEnums() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+// %before-language-feature: enhanced-enums
 mixin M implements Enum {}
 //                 ^^^^
 // [diag.implementsDisallowedClass] Classes and mixins can't implement 'Enum'.
@@ -296,13 +287,13 @@ mixin M implements Enum {}
   }
 
   test_mixin_int() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M implements int {}
 //                 ^^^
 // [diag.implementsDisallowedClass] Classes and mixins can't implement 'int'.
 ''');
 
-    var node = findNode.singleImplementsClause;
+    var node = result.findNode.singleImplementsClause;
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements

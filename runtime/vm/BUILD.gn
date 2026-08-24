@@ -100,6 +100,7 @@ library_for_all_configs("libdart_vm") {
   sources = vm_sources + rebase_path(compiler_api_sources, ".", "./compiler/") +
             rebase_path(disassembler_sources, ".", "./compiler/") +
             rebase_path(ffi_sources, ".", "./ffi/") +
+            rebase_path(ffi_shared_sources, ".", "./ffi/") +
             rebase_path(heap_sources, ".", "./heap/") +
             rebase_path(regexp_sources, ".", "./regexp/")
   if (is_android) {
@@ -108,7 +109,7 @@ library_for_all_configs("libdart_vm") {
     # uses different assembler syntax.
     sources += [ "thread_interrupter_android_arm.S" ]
   }
-  if (!is_win) {
+  if (!is_win && (current_cpu == "arm64" || current_cpu == "arm64e")) {
     sources += [ "ffi_trampolines_arm64.S" ]
   }
   include_dirs = [
@@ -163,12 +164,8 @@ template("gen_vm_platform") {
   }
   compile_platform(target_name) {
     output_postfix = invoker.output_postfix
-    if (defined(invoker.add_implicit_vm_platform_dependency)) {
-      add_implicit_vm_platform_dependency =
-          invoker.add_implicit_vm_platform_dependency
-    }
     single_root_scheme = "org-dartlang-sdk"
-    single_root_base = rebase_path("../../")
+    single_root_base = rebase_path("../../", root_build_dir)
     libraries_specification_uri = "org-dartlang-sdk:///sdk/lib/libraries.json"
     outputs = [
       "$root_out_dir/vm_platform" + output_postfix + ".dill",
@@ -185,18 +182,15 @@ template("gen_vm_platform") {
     if (defined(invoker.exclude_source) && invoker.exclude_source) {
       args += [ "--exclude-source" ]
     }
-    outline = "vm_outline" + output_postfix + ".dill"
   }
 }
 
 gen_vm_platform("vm_platform") {
-  add_implicit_vm_platform_dependency = false
   exclude_source = false
   output_postfix = ""
 }
 
 gen_vm_platform("vm_platform_product") {
-  add_implicit_vm_platform_dependency = false
   exclude_source = false
   output_postfix = "_product"
 
@@ -206,7 +200,6 @@ gen_vm_platform("vm_platform_product") {
 }
 
 gen_vm_platform("vm_platform_stripped") {
-  add_implicit_vm_platform_dependency = false
   exclude_source = true
   output_postfix = "_stripped"
 }

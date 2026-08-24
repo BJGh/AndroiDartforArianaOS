@@ -2,33 +2,43 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../dart/resolution/node_text_expectations.dart';
 import 'parser_diagnostics.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ExtraneousModifierTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class ExtraneousModifierTest extends ParserDiagnosticsTest {
   test_class_constructor_formalParameter_requiredPositional_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(const a);
+//  ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'const' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 5)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: const
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: const
@@ -40,19 +50,28 @@ ConstructorDeclaration
   }
 
   test_class_constructor_formalParameter_requiredPositional_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(final a);
+//  ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 5)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: final
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: final
@@ -63,21 +82,28 @@ ConstructorDeclaration
 ''');
   }
 
-  test_class_constructor_formalParameter_requiredPositional_final_language310() {
-    var parseResult = parseStringWithErrors(r'''
-// @dart = 3.10
+  test_class_constructor_formalParameter_requiredPositional_final_beforePrimaryConstructors() {
+    var parseResult = parseTestCodeWithDiagnostics(r'''
+// %before-language-feature: primary-constructors
 class A {
   A(final a);
 }
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: final
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: final
@@ -89,19 +115,28 @@ ConstructorDeclaration
   }
 
   test_class_constructor_formalParameter_requiredPositional_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(var a);
+//  ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 3)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: var
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: var
@@ -112,21 +147,28 @@ ConstructorDeclaration
 ''');
   }
 
-  test_class_constructor_formalParameter_requiredPositional_var_language310() {
-    var parseResult = parseStringWithErrors(r'''
-// @dart = 3.10
+  test_class_constructor_formalParameter_requiredPositional_var_beforePrimaryConstructors() {
+    var parseResult = parseTestCodeWithDiagnostics(r'''
+// %before-language-feature: primary-constructors
 class A {
   A(var a);
 }
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: var
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: var
@@ -138,19 +180,30 @@ ConstructorDeclaration
   }
 
   test_class_constructor_superFormalParameter_requiredPositional_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(const super.a);
+//  ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'const' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 5)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      SuperFormalParameter
+        constFinalOrVarKeyword: const
+        superKeyword: super
+        period: .
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: SuperFormalParameter
       constFinalOrVarKeyword: const
@@ -164,19 +217,30 @@ ConstructorDeclaration
   }
 
   test_class_constructor_superFormalParameter_requiredPositional_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(final super.a);
+//  ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 5)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      SuperFormalParameter
+        constFinalOrVarKeyword: final
+        superKeyword: super
+        period: .
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: SuperFormalParameter
       constFinalOrVarKeyword: final
@@ -190,19 +254,30 @@ ConstructorDeclaration
   }
 
   test_class_constructor_superFormalParameter_requiredPositional_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A(var super.a);
+//  ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 3)]);
 
     var node = parseResult.findNode.singleConstructorDeclaration;
     assertParsedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: A
+  typeName(v1): SimpleIdentifier
     token: A
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      SuperFormalParameter
+        constFinalOrVarKeyword: var
+        superKeyword: super
+        period: .
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: SuperFormalParameter
       constFinalOrVarKeyword: var
@@ -216,12 +291,13 @@ ConstructorDeclaration
   }
 
   test_class_method_formalParameter_optionalNamed_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({final int a}) {}
+//          ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 22, 5)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -230,6 +306,18 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -247,15 +335,14 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_optionalNamed_var_hasType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({var int a}) {}
+//          ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
+// [diag.varAndType] Variables can't be declared using both 'var' and a type name.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.extraneousModifier, 22, 3),
-      error(diag.varAndType, 22, 3),
-    ]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -264,6 +351,18 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: var
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -281,12 +380,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_optionalNamed_var_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({var a}) {}
+//          ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 22, 3)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -295,6 +395,16 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: var
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -310,12 +420,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_optionalPositional_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo([final int a]) {}
+//          ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 22, 5)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -324,6 +435,18 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: [
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: ]
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
     parameter: RegularFormalParameter
@@ -341,15 +464,14 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_optionalPositional_var_hasType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo([var int a]) {}
+//          ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
+// [diag.varAndType] Variables can't be declared using both 'var' and a type name.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.extraneousModifier, 22, 3),
-      error(diag.varAndType, 22, 3),
-    ]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -358,6 +480,18 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: [
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: var
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: ]
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
     parameter: RegularFormalParameter
@@ -375,12 +509,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_optionalPositional_var_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo([var a]) {}
+//          ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 22, 3)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -389,6 +524,16 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: [
+      formalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: var
+          name: a
+      rightDelimiter: ]
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
     parameter: RegularFormalParameter
@@ -404,12 +549,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredNamed_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({required final int a}) {}
+//                   ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 31, 5)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -418,6 +564,19 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          requiredKeyword: required
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -436,15 +595,14 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredNamed_var_hasType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({required var int a}) {}
+//                   ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
+// [diag.varAndType] Variables can't be declared using both 'var' and a type name.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.extraneousModifier, 31, 3),
-      error(diag.varAndType, 31, 3),
-    ]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -453,6 +611,19 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          requiredKeyword: required
+          constFinalOrVarKeyword: var
+          type: NamedType
+            name: int
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -471,12 +642,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredNamed_var_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo({required var a}) {}
+//                   ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 31, 3)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -485,6 +657,17 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          requiredKeyword: required
+          constFinalOrVarKeyword: var
+          name: a
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -501,12 +684,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredPositional_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo(final int a) {}
+//         ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 21, 5)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -515,6 +699,15 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: final
+        type: NamedType
+          name: int
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: final
@@ -530,15 +723,14 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredPositional_var_hasType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo(var int a) {}
+//         ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
+// [diag.varAndType] Variables can't be declared using both 'var' and a type name.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.extraneousModifier, 21, 3),
-      error(diag.varAndType, 21, 3),
-    ]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -547,6 +739,15 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: var
+        type: NamedType
+          name: int
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: var
@@ -562,12 +763,13 @@ MethodDeclaration
   }
 
   test_class_method_formalParameter_requiredPositional_var_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   void foo(var a) {}
+//         ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 21, 3)]);
 
     var node = parseResult.findNode.singleMethodDeclaration;
     assertParsedNodeText(node, r'''
@@ -576,6 +778,13 @@ MethodDeclaration
     name: void
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: var
+        name: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: var
@@ -589,17 +798,25 @@ MethodDeclaration
   }
 
   test_closure_formalParameter_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void f() {
   (final value) => null;
+// ^^^^^
+// [diag.extraneousModifier] Can't have modifier 'final' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 5)]);
 
     var node = parseResult.findNode.functionExpression('(final');
     assertParsedNodeText(node, r'''
 FunctionExpression
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: final
+        name: value
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: final
@@ -607,23 +824,31 @@ FunctionExpression
     rightParenthesis: )
   body: ExpressionFunctionBody
     functionDefinition: =>
-    expression: NullLiteral
+    expression2: NullLiteral
       literal: null
 ''');
   }
 
   test_closure_formalParameter_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void f() {
   (var value) => null;
+// ^^^
+// [diag.extraneousModifier] Can't have modifier 'var' here.
 }
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 14, 3)]);
 
     var node = parseResult.findNode.functionExpression('(var');
     assertParsedNodeText(node, r'''
 FunctionExpression
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        constFinalOrVarKeyword: var
+        name: value
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       constFinalOrVarKeyword: var
@@ -631,7 +856,7 @@ FunctionExpression
     rightParenthesis: )
   body: ExpressionFunctionBody
     functionDefinition: =>
-    expression: NullLiteral
+    expression2: NullLiteral
       literal: null
 ''');
   }

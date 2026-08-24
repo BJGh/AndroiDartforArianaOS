@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class ReferencedBeforeDeclarationTest extends PubPackageResolutionTest {
   test_block_patternVariable_after() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 var v = 0;
 void f() {
   v;
@@ -29,11 +29,11 @@ void f() {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@149
+  element: v@34
   staticType: InvalidType
 ''');
   }
@@ -148,7 +148,7 @@ print(x) {}
   }
 
   test_hideInSwitchCase_function() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 var v = 0;
 
 void f(int a) {
@@ -164,18 +164,18 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@194
+  element: v@75
   staticType: void Function()
 ''');
   }
 
-  test_hideInSwitchCase_function_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_hideInSwitchCase_function_beforePatterns() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: patterns
 var v = 0;
 
 void f(int a) {
@@ -191,17 +191,17 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@210
+  element: v@91
   staticType: void Function()
 ''');
   }
 
   test_hideInSwitchCase_local() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 var v = 0;
 
 void f(int a) {
@@ -217,18 +217,18 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@193
+  element: v@74
   staticType: dynamic
 ''');
   }
 
-  test_hideInSwitchCase_local_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_hideInSwitchCase_local_beforePatterns() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: patterns
 var v = 0;
 
 void f(int a) {
@@ -244,17 +244,17 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@209
+  element: v@90
   staticType: dynamic
 ''');
   }
 
   test_hideInSwitchDefault_function() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 var v = 0;
 
 void f(int a) {
@@ -270,18 +270,18 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@195
+  element: v@76
   staticType: void Function()
 ''');
   }
 
-  test_hideInSwitchDefault_function_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_hideInSwitchDefault_function_beforePatterns() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: patterns
 var v = 0;
 
 void f(int a) {
@@ -297,17 +297,17 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@211
+  element: v@92
   staticType: void Function()
 ''');
   }
 
   test_hideInSwitchDefault_local() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 var v = 0;
 
 void f(int a) {
@@ -323,18 +323,18 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@194
+  element: v@75
   staticType: dynamic
 ''');
   }
 
-  test_hideInSwitchDefault_local_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_hideInSwitchDefault_local_beforePatterns() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: patterns
 var v = 0;
 
 void f(int a) {
@@ -350,11 +350,11 @@ void f(int a) {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
-  element: v@210
+  element: v@91
   staticType: dynamic
 ''');
   }
@@ -383,8 +383,35 @@ main() {
 ''');
   }
 
-  test_labeledStatement_function() async {
+  test_inInitializer_incrementOrDecrement() async {
     await resolveTestCodeWithDiagnostics(r'''
+void f() {
+  var a = ++a;
+//    ^
+// [context 1] The declaration of 'a' is here.
+//          ^
+// [diag.referencedBeforeDeclaration][context 1] Local variable 'a' can't be referenced before it is declared.
+  var b = --b;
+//    ^
+// [context 2] The declaration of 'b' is here.
+//          ^
+// [diag.referencedBeforeDeclaration][context 2] Local variable 'b' can't be referenced before it is declared.
+  var c = c++;
+//    ^
+// [context 3] The declaration of 'c' is here.
+//        ^
+// [diag.referencedBeforeDeclaration][context 3] Local variable 'c' can't be referenced before it is declared.
+  var d = d--;
+//    ^
+// [context 4] The declaration of 'd' is here.
+//        ^
+// [diag.referencedBeforeDeclaration][context 4] Local variable 'd' can't be referenced before it is declared.
+}
+''');
+  }
+
+  test_labeledStatement_function() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_label
   label: void v() {}
@@ -392,7 +419,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v
@@ -402,7 +429,7 @@ SimpleIdentifier
   }
 
   test_labeledStatement_local() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   // ignore:unused_label
   label: var v = 0;
@@ -410,7 +437,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.simple('v;');
+    var node = result.findNode.simple('v;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: v

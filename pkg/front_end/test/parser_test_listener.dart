@@ -24,7 +24,7 @@ class ParserTestListener implements Listener {
   final StringBuffer sb = new StringBuffer();
   final bool trace;
 
-  ParserTestListener(this.trace);
+  new(this.trace);
 
   String createTrace() {
     List<String> traceLines = StackTrace.current.toString().split("\n");
@@ -615,11 +615,13 @@ class ParserTestListener implements Listener {
   }
 
   @override
-  void beginPrimaryConstructorBody(Token token) {
+  void beginPrimaryConstructorBody(Token token, Token? augmentToken) {
     seen(token);
+    seen(augmentToken);
     doPrint(
       'beginPrimaryConstructorBody('
-      '$token)',
+      '$token, '
+      '$augmentToken)',
     );
     indent++;
   }

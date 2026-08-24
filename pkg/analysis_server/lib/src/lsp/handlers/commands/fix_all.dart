@@ -18,7 +18,7 @@ import 'package:analysis_server/src/services/correction/bulk_fix_processor.dart'
 import 'package:analysis_server/src/utilities/source_change_merger.dart';
 
 class FixAllCommandHandler extends SimpleEditCommandHandler<LspAnalysisServer> {
-  FixAllCommandHandler(super.server);
+  new(super.server);
 
   @override
   String get commandName => 'Fix All';
@@ -96,7 +96,7 @@ class _FixAllOperation extends TemporaryOverlayOperation
   final String path;
   final bool autoTriggered;
 
-  _FixAllOperation({
+  new({
     required AnalysisServer server,
     required this.message,
     required this.path,
@@ -120,17 +120,25 @@ class _FixAllOperation extends TemporaryOverlayOperation
 
     var processor = IterativeBulkFixProcessor(
       instrumentationService: server.instrumentationService,
-      context: context,
+      byteStore: server.byteStore,
       applyTemporaryOverlayEdits: applyTemporaryOverlayEdits,
       applyOverlays: applyOverlays,
       cancellationToken: cancellationToken,
     );
 
-    var changes = await processor.fixErrorsForFile(
+    var result = await processor.fixErrorsForFile(
       message.performance,
+      context,
       path,
       autoTriggered: autoTriggered,
     );
+    var errorMessage = result.errorMessage;
+    if (errorMessage != null) {
+      return ErrorOr.error(
+        ResponseError(code: ErrorCodes.RequestFailed, message: errorMessage),
+      );
+    }
+    var changes = result.edits;
     if (changes.isEmpty) {
       return success(null);
     }

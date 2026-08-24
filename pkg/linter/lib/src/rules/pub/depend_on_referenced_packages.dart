@@ -17,7 +17,7 @@ import '../../diagnostic.dart' as diag;
 const _desc = r'Depend on referenced packages.';
 
 class DependOnReferencedPackages extends AnalysisRule {
-  DependOnReferencedPackages()
+  new()
     : super(name: LintNames.depend_on_referenced_packages, description: _desc);
 
   @override
@@ -55,18 +55,16 @@ class DependOnReferencedPackages extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(
+  final DependOnReferencedPackages rule,
+  final List<String> availableDeps,
+) extends SimpleAstVisitor<void> {
   /// Virtual packages will not have explicit dependencies
   /// and get skipped.
   static const virtualPackages = [
     //https://github.com/dart-lang/linter/issues/3308
     'flutter_gen',
   ];
-
-  final DependOnReferencedPackages rule;
-  final List<String> availableDeps;
-
-  _Visitor(this.rule, this.availableDeps);
 
   @override
   void visitExportDirective(ExportDirective node) => _checkDirective(node);

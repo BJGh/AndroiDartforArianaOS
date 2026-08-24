@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use generic function type syntax for parameters.';
 
 class UseFunctionTypeSyntaxForParameters extends AnalysisRule {
-  UseFunctionTypeSyntaxForParameters()
+  new()
     : super(
         name: LintNames.use_function_type_syntax_for_parameters,
         description: _desc,
@@ -39,11 +39,7 @@ class UseFunctionTypeSyntaxForParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFieldFormalParameter(FieldFormalParameter node) {
     _check(node);

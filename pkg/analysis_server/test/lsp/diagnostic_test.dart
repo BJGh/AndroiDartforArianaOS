@@ -16,6 +16,7 @@ import 'package:linter/src/rules.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../utils/lsp_protocol_extensions.dart';
 import '../utils/test_code_extensions.dart';
 import 'server_abstract.dart';
 
@@ -83,7 +84,7 @@ String b = "/*[1*/Test/*1]*/";
 
     var err = diagnostics!.first;
     expect(err.severity, DiagnosticSeverity.Error);
-    expect(err.message, equals('Test error from plugin'));
+    expect(err.message.asString, equals('Test error from plugin'));
     expect(err.code, equals('ERR1'));
     expect(err.range.start.line, errorRange.range.start.line);
     expect(err.range.start.character, errorRange.range.start.character);
@@ -116,6 +117,85 @@ String b = "/*[1*/Test/*1]*/";
 
     // These tests deliberately generate diagnostics.
     failTestOnErrorDiagnostic = false;
+  }
+
+  Future<void> test_additionalData_notSupported_explicitFalse() async {
+    newFile(mainFilePath, '''
+void f() {
+  x = 0;
+}
+''');
+
+    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    await initialize(
+      experimentalCapabilities: {'includeAdditionalDiagnosticData': false},
+    );
+    var diagnostics = await diagnosticsUpdate;
+    expect(diagnostics, hasLength(1));
+    var diagnostic = diagnostics!.first;
+    expect(
+      diagnostic.message.asString,
+      'Undefined name \'x\'.\n'
+      'Try correcting the name to one that is defined, or defining the name.',
+    );
+    expect(diagnostic.data, isNull);
+  }
+
+  Future<void> test_additionalData_notSupported_notProvided() async {
+    newFile(mainFilePath, '''
+void f() {
+  x = 0;
+}
+''');
+
+    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    await initialize();
+    var diagnostics = await diagnosticsUpdate;
+    expect(diagnostics, hasLength(1));
+    var diagnostic = diagnostics!.first;
+    expect(
+      diagnostic.message.asString,
+      'Undefined name \'x\'.\n'
+      'Try correcting the name to one that is defined, or defining the name.',
+    );
+    expect(diagnostic.data, isNull);
+  }
+
+  /// Test additioal data provided for tools like 'dart analyze'.
+  ///
+  /// By setting the additional client capabilities, additional data will be
+  /// provided in `Diagnostic.data` and the correction message will not be
+  /// appended to the diagnostic message.
+
+  Future<void> test_additionalData_supported() async {
+    newFile(mainFilePath, '''
+void f() => x = 0;
+''');
+
+    var diagnosticsUpdate = waitForDiagnostics(mainFileUri);
+    await initialize(
+      experimentalCapabilities: {'includeAdditionalDiagnosticData': true},
+    );
+    var diagnostics = await diagnosticsUpdate;
+    expect(diagnostics, hasLength(1));
+    var diagnostic = diagnostics!.first;
+    expect(
+      diagnostic.message.asString,
+      // No correction message, it's in data.
+      'Undefined name \'x\'.',
+    );
+    expect(
+      diagnostic.data,
+      allOf(
+        containsPair(
+          'correctionMessage',
+          'Try correcting the name to one that is defined, or defining the name.',
+        ),
+        containsPair('offset', 12),
+        containsPair('length', 1),
+        containsPair('type', 'COMPILE_TIME_ERROR'),
+      ),
+    );
   }
 
   Future<void> test_afterDocumentEdits() async {
@@ -190,7 +270,7 @@ f
     var diagnostic = initialDiagnostics!.first;
     expect(diagnostic.severity, DiagnosticSeverity.Error);
     expect(diagnostic.code, 'parse_error');
-    expect(diagnostic.message, "Expected ':'.");
+    expect(diagnostic.message.asString, "Expected ':'.");
   }
 
   Future<void> test_contextMessage() async {
@@ -253,7 +333,11 @@ void f() {
     var diagnostics = await diagnosticsUpdate;
     expect(diagnostics, hasLength(1));
     var diagnostic = diagnostics!.first;
-    expect(diagnostic.message, contains('\nTry'));
+    expect(
+      diagnostic.message.asString,
+      'Undefined name \'x\'.\n'
+      'Try correcting the name to one that is defined, or defining the name.',
+    );
   }
 
   /// Verify that if a nonexistant file is imported, creating that file causes
@@ -536,7 +620,10 @@ version: latest
     await initialize();
     var initialDiagnostics = await initialDiagnosticsFuture;
     expect(initialDiagnostics, hasLength(1));
-    expect(initialDiagnostics!.first.message, contains(serverErrorMessage));
+    expect(
+      initialDiagnostics!.first.message.asString,
+      contains(serverErrorMessage),
+    );
 
     var pluginTriggeredDiagnosticFuture = waitForDiagnostics(mainFileUri);
     var pluginError = plugin.AnalysisError(
@@ -551,7 +638,7 @@ version: latest
 
     var pluginTriggeredDiagnostics = await pluginTriggeredDiagnosticFuture;
     expect(
-      pluginTriggeredDiagnostics!.map((error) => error.message),
+      pluginTriggeredDiagnostics!.map((error) => error.message.asString),
       containsAll([pluginErrorMessage, contains(serverErrorMessage)]),
     );
   }
@@ -574,7 +661,7 @@ version: latest
 
     // Expect only the server diagnostic.
     expect(
-      (await diagnosticsFuture)!.single.message,
+      (await diagnosticsFuture)!.single.message.asString,
       contains(serverErrorMessage),
     );
 
@@ -602,7 +689,10 @@ version: latest
 
     // Wait for the diagnostic updated and ensure it's still empty and no stale
     // error has come back.
-    expect((await diagnosticsFuture)!.single.message, pluginErrorMessage);
+    expect(
+      (await diagnosticsFuture)!.single.message.asString,
+      pluginErrorMessage,
+    );
   }
 
   Future<void> test_fromPlugins_nonDartFile() async {
@@ -678,7 +768,10 @@ void f(dynamic a) => a.foo();
       var diagnostics = await diagnosticsUpdate;
       expect(diagnostics, hasLength(1));
       var diagnostic = diagnostics!.first;
-      expect(diagnostic.message, contains("The function 'Bad' isn't defined"));
+      expect(
+        diagnostic.message.asString,
+        contains("The function 'Bad' isn't defined"),
+      );
     }
 
     // Closing the file should remove the diagnostics.
@@ -718,7 +811,7 @@ void f(dynamic a) => a.foo();
     newFile(newFilePath, '');
 
     // Allow server to catch up.
-    await waitForAnalysisComplete();
+    await workspaceAnalysisComplete();
 
     // Expect unused_import, not uri_does_not_exist.
     expect(diagnostics[mainFileUri]!.single.code, 'unused_import');
@@ -848,13 +941,11 @@ analyzer:
 
     await provideConfig(initialize, {});
     await openFile(mainFileUri, contents);
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
     expect(diagnostics[mainFileUri], isNull);
 
-    await Future.wait([
-      updateConfig({'showTodos': true}),
-      waitForAnalysisComplete(),
-    ]);
+    await updateConfig({'showTodos': true});
+    await workspaceAnalysisComplete();
     expect(diagnostics[mainFileUri], hasLength(1));
   }
 
@@ -873,7 +964,7 @@ analyzer:
       // either.
       'showTodos': ['TODO', 'fixme'],
     });
-    await initialAnalysis;
+    await workspaceAnalysisComplete();
 
     var initialDiagnostics = diagnostics[mainFileUri]!;
     expect(initialDiagnostics, hasLength(2));

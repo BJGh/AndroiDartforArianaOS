@@ -12,9 +12,9 @@ import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/source/line_info.dart';
-import 'package:analyzer/src/analysis_options/options_file_validator.dart';
+import 'package:analyzer/src/analysis_options/analysis_options.dart';
+import 'package:analyzer/src/analysis_options/analysis_options_parser.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
@@ -23,7 +23,6 @@ import 'package:analyzer/src/dart/analysis/file_state.dart';
 import 'package:analyzer/src/dart/analysis/results.dart';
 import 'package:analyzer/src/manifest/manifest_validator.dart';
 import 'package:analyzer/src/pubspec/pubspec_validator.dart';
-import 'package:analyzer/src/source/path_filter.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 import 'package:analyzer/src/util/yaml.dart';
 import 'package:analyzer/src/workspace/pub.dart';
@@ -72,11 +71,8 @@ class Driver implements CommandLineStarter {
   /// Collected analysis statistics.
   final AnalysisStats stats = AnalysisStats();
 
-  /// The [PathFilter] for excluded files with wildcards, etc.
-  late PathFilter pathFilter;
-
   /// Create a new Driver instance.
-  Driver({@Deprecated('This parameter has no effect') bool isTesting = false});
+  new({@Deprecated('This parameter has no effect') bool isTesting = false});
 
   /// Converts the given [filePath] into absolute and normalized.
   String normalizePath(String filePath) {
@@ -237,7 +233,6 @@ class Driver implements CommandLineStarter {
       analysisContext = _analysisContextProvider.analysisContext;
       final analysisDriver = this.analysisDriver =
           _analysisContextProvider.analysisDriver;
-      pathFilter = _analysisContextProvider.pathFilter;
 
       // Add all the files to be analyzed en masse to the context. Skip any
       // files that were added earlier (whether explicitly or implicitly) to
@@ -267,27 +262,28 @@ class Driver implements CommandLineStarter {
           var fileResult = analysisDriver.currentSession.getFile(path);
           if (fileResult is! FileResult) continue;
           var file = fileResult.file;
-          var content = file.readAsStringSync();
-          var lineInfo = LineInfo.fromContent(content);
           var contextRoot =
               analysisDriver.currentSession.analysisContext.contextRoot;
           var package = contextRoot.workspace.findPackageFor(file.path);
           var sdkVersionConstraint = (package is PubPackage)
               ? package.sdkVersionConstraint
               : null;
-          var errors = AnalysisOptionsAnalyzer(
-            initialSource: FileSource(file),
+          var parseResult = AnalysisOptionsParseSession().parse(
             sourceFactory: analysisDriver.sourceFactory,
-            contextRoot: contextRoot.root.path,
+            contextRoot: contextRoot.root,
+            file: file,
             sdkVersionConstraint: sdkVersionConstraint,
-            resourceProvider: resourceProvider,
-          ).walkIncludes(content: content);
-          var analysisOptions = fileResult.analysisOptions;
+          );
+          var fileContent = parseResult.content;
+          if (fileContent == null) continue;
+          var lineInfo = fileContent.lineInfo;
+          var errors = parseResult.diagnostics;
+          var analysisOptions = parseResult.analysisOptions;
           await formatter.formatErrors([
             ErrorsResultImpl(
               session: analysisDriver.currentSession,
               file: file,
-              content: content,
+              content: fileContent.text,
               uri: pathContext.toUri(path),
               lineInfo: lineInfo,
               isLibrary: true,
@@ -442,7 +438,7 @@ class Driver implements CommandLineStarter {
           if ((file_paths.isDart(pathContext, entry.path) ||
                   file_paths.isAndroidManifestXml(pathContext, entry.path)) &&
               entry is io.File &&
-              !pathFilter.ignored(entry.path) &&
+              analysisContext!.contextRoot.isAnalyzed(entry.path) &&
               !_isInHiddenDir(relative)) {
             files.add(entry);
           }
@@ -549,7 +545,7 @@ class _AnalysisContextProvider {
   AnalysisContextCollectionImpl? _collection;
   DriverBasedAnalysisContext? _analysisContext;
 
-  _AnalysisContextProvider(this._resourceProvider)
+  new(this._resourceProvider)
     : _fileContentCache = FileContentCache(_resourceProvider);
 
   DriverBasedAnalysisContext? get analysisContext {
@@ -558,24 +554,6 @@ class _AnalysisContextProvider {
 
   AnalysisDriver get analysisDriver {
     return _analysisContext!.driver;
-  }
-
-  // TODO(scheglov): Use analyzedFiles()
-  PathFilter get pathFilter {
-    var contextRoot = analysisContext!.contextRoot;
-    var optionsFile = contextRoot.optionsFile;
-
-    // If there is no options file, there can be no excludes.
-    if (optionsFile == null) {
-      return PathFilter(contextRoot.root.path, contextRoot.root.path, []);
-    }
-
-    // Exclude patterns are relative to the directory with the options file.
-    return PathFilter(
-      contextRoot.root.path,
-      optionsFile.parent.path,
-      analysisContext!.getAnalysisOptionsForFile(optionsFile).excludePatterns,
-    );
   }
 
   void configureForPath(String path) {
@@ -609,7 +587,7 @@ class _AnalysisContextProvider {
       packageConfigFile: _commandLineOptions!.defaultPackagesPath,
       resourceProvider: _resourceProvider,
       sdkPath: _commandLineOptions!.dartSdkPath,
-      updateAnalysisOptions4: _updateAnalysisOptions,
+      configureAnalysisOptionsBuilder: _configureAnalysisOptionsBuilder,
       fileContentCache: _fileContentCache,
       withFineDependencies: true,
     );
@@ -641,11 +619,15 @@ class _AnalysisContextProvider {
     _pathList = pathList;
   }
 
-  void _setContextForPath(String path) {
-    _analysisContext = _collection!.contextFor(path);
+  void _configureAnalysisOptionsBuilder({
+    required AnalysisOptionsBuilder analysisOptionsBuilder,
+  }) {
+    _commandLineOptions!.configureAnalysisOptionsBuilder(
+      analysisOptionsBuilder,
+    );
   }
 
-  void _updateAnalysisOptions({required AnalysisOptionsImpl analysisOptions}) {
-    _commandLineOptions!.updateAnalysisOptions(analysisOptions);
+  void _setContextForPath(String path) {
+    _analysisContext = _collection!.contextFor(path);
   }
 }

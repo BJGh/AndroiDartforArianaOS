@@ -45,7 +45,7 @@ class WidgetPreviewVerifier {
       return;
     }
 
-    var parent = node.parent;
+    var parent = node.parent2;
     bool isValidApplication = switch (parent) {
       // First, check that the preview application is happening in a supported
       // context.
@@ -53,7 +53,7 @@ class WidgetPreviewVerifier {
       ConstructorDeclaration() => _isValidConstructorPreviewApplication(
         declaration: parent,
         name: parent.name?.lexeme,
-        parentDeclaration: parent.parent?.parent,
+        parentDeclaration: parent.parent2?.parent2,
         isExternal: parent.externalKeyword != null,
         isFactory: parent.factoryKeyword != null,
         parameters: parent.parameters,
@@ -68,7 +68,7 @@ class WidgetPreviewVerifier {
         _isValidConstructorPreviewApplication(
           declaration: parent,
           name: parent.declaration?.constructorName?.name.lexeme,
-          parentDeclaration: parent.parent?.parent,
+          parentDeclaration: parent.parent2?.parent2,
           isExternal: false,
           isFactory: false,
           parameters: declaration.formalParameters,
@@ -85,7 +85,7 @@ class WidgetPreviewVerifier {
     var visitor = _InvalidWidgetPreviewArgumentDetectorVisitor(
       diagnosticReporter: _diagnosticReporter,
     );
-    node.arguments!.accept(visitor);
+    node.arguments!.accept2(visitor);
   }
 
   bool _hasRequiredParameters(NodeList<FormalParameter> parameters) {
@@ -97,15 +97,14 @@ class WidgetPreviewVerifier {
   bool _isPrivateContext({required String? name, required AstNode node}) {
     if (name != null && Identifier.isPrivateName(name)) return true;
 
-    var parent = node.parent?.parent;
+    var parent = node.parent2?.parent2;
     if (parent == null) return false;
 
     var nameToken = switch (parent) {
       ClassDeclaration declaration => declaration.namePart.typeName,
       EnumDeclaration declaration => declaration.namePart.typeName,
       ExtensionDeclaration declaration => declaration.name,
-      ExtensionTypeDeclaration declaration =>
-        declaration.primaryConstructor.typeName,
+      ExtensionTypeDeclaration declaration => declaration.namePart.typeName,
       MixinDeclaration declaration => declaration.name,
       _ => null,
     };
@@ -120,12 +119,12 @@ class WidgetPreviewVerifier {
   /// Currently, this only includes previews defined within classes and at the
   /// top level of a compilation unit.
   bool _isSupportedParent({required AstNode node}) {
-    if (node.parent is CompilationUnit) {
+    if (node.parent2 is CompilationUnit) {
       return true;
     }
 
-    if (node.parent case BlockClassBody body) {
-      if (body.parent is ClassDeclaration) {
+    if (node.parent2 case BlockClassBody body) {
+      if (body.parent2 is ClassDeclaration) {
         return true;
       }
     }
@@ -184,7 +183,7 @@ class WidgetPreviewVerifier {
     )) {
       return !_isPrivateContext(name: name.lexeme, node: declaration) &&
           // Check for nested function.
-          declaration.parent is! FunctionDeclarationStatement &&
+          declaration.parent2 is! FunctionDeclarationStatement &&
           externalKeyword == null &&
           returnType.isValidWidgetPreviewReturnType &&
           !_hasRequiredParameters(parameters);
@@ -214,7 +213,7 @@ class WidgetPreviewVerifier {
       return !_isPrivateContext(name: name.lexeme, node: declaration) &&
           isStatic &&
           // Check for nested function.
-          declaration.parent is! FunctionDeclarationStatement &&
+          declaration.parent2 is! FunctionDeclarationStatement &&
           externalKeyword == null &&
           returnType.isValidWidgetPreviewReturnType &&
           !_hasRequiredParameters(parameters);
@@ -223,7 +222,8 @@ class WidgetPreviewVerifier {
   }
 }
 
-class _InvalidWidgetPreviewArgumentDetectorVisitor extends RecursiveAstVisitor {
+class _InvalidWidgetPreviewArgumentDetectorVisitor
+    extends RecursiveAstVisitor2 {
   final DiagnosticReporter diagnosticReporter;
 
   NamedArgument? rootArgument;
@@ -233,10 +233,10 @@ class _InvalidWidgetPreviewArgumentDetectorVisitor extends RecursiveAstVisitor {
 
   @override
   void visitArgumentList(ArgumentList node) {
-    for (var argument in node.arguments) {
+    for (var argument in node.arguments2) {
       if (argument is NamedArgument) {
         rootArgument = argument;
-        argument.argumentExpression.accept(this);
+        argument.argumentExpression2.accept2(this);
         rootArgument = null;
       }
     }

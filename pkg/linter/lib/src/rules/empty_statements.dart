@@ -15,8 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid empty statements.';
 
 class EmptyStatements extends AnalysisRule {
-  EmptyStatements()
-    : super(name: LintNames.empty_statements, description: _desc);
+  new() : super(name: LintNames.empty_statements, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.emptyStatements;
@@ -31,11 +30,7 @@ class EmptyStatements extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   bool definesSemantics(EmptyStatement node) {
     var parent = node.parent;
     if (parent is! SwitchPatternCase) return false;

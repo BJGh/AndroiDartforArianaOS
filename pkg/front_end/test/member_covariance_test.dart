@@ -134,7 +134,11 @@ void main() {
     new FunctionNode(
       null,
       positionalParameters: [
-        new VariableDeclaration(null, isSynthesized: true),
+        new PositionalParameter(
+          parameterName: 'p',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
       ],
     ),
     fileUri: dummyUri,
@@ -162,11 +166,31 @@ void main() {
     new FunctionNode(
       null,
       positionalParameters: [
-        new VariableDeclaration(null, isSynthesized: true),
-        new VariableDeclaration(null, isSynthesized: true),
-        new VariableDeclaration(null, isSynthesized: true),
-        new VariableDeclaration(null, isSynthesized: true),
-        new VariableDeclaration(null, isSynthesized: true),
+        new PositionalParameter(
+          parameterName: 'p1',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
+        new PositionalParameter(
+          parameterName: 'p2',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
+        new PositionalParameter(
+          parameterName: 'p3',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
+        new PositionalParameter(
+          parameterName: 'p4',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
+        new PositionalParameter(
+          parameterName: 'p5',
+          type: const DynamicType(),
+          isSynthesized: true,
+        ),
       ],
     ),
     fileUri: dummyUri,
@@ -204,11 +228,11 @@ void main() {
     new FunctionNode(
       null,
       namedParameters: [
-        new VariableDeclaration('a'),
-        new VariableDeclaration('b'),
-        new VariableDeclaration('c'),
-        new VariableDeclaration('d'),
-        new VariableDeclaration('e'),
+        new NamedParameter(parameterName: 'a', type: const DynamicType()),
+        new NamedParameter(parameterName: 'b', type: const DynamicType()),
+        new NamedParameter(parameterName: 'c', type: const DynamicType()),
+        new NamedParameter(parameterName: 'd', type: const DynamicType()),
+        new NamedParameter(parameterName: 'e', type: const DynamicType()),
       ],
     ),
     fileUri: dummyUri,

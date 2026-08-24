@@ -132,6 +132,7 @@ class ConstructorItem extends ExecutableItem<ConstructorElementImpl> {
     required _ConstructorItemFlags super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
     required this.constantInitializers,
     required this.redirectedConstructor,
     required this.superConstructor,
@@ -148,6 +149,8 @@ class ConstructorItem extends ExecutableItem<ConstructorElementImpl> {
         flags: _ConstructorItemFlags.encode(element),
         metadata: ManifestMetadata.encode(context, element.metadata),
         functionType: element.type.encode(context),
+        formalParameterDefaultValues: element.formalParameters
+            .encodeDefaultValues(context),
         constantInitializers: element.constantInitializers
             .map((initializer) => ManifestNode.encode(context, initializer))
             .toFixedList(),
@@ -169,6 +172,7 @@ class ConstructorItem extends ExecutableItem<ConstructorElementImpl> {
       flags: _ConstructorItemFlags.read(reader),
       metadata: ManifestMetadata.read(reader),
       functionType: ManifestFunctionType.read(reader),
+      formalParameterDefaultValues: ManifestNode.readListOfOptional(reader),
       constantInitializers: ManifestNode.readList(reader),
       redirectedConstructor: ManifestElement.readOptional(reader),
       superConstructor: ManifestElement.readOptional(reader),
@@ -185,9 +189,14 @@ class ConstructorItem extends ExecutableItem<ConstructorElementImpl> {
           flags.isConst == element.isConst &&
           flags.isFactory == element.isFactory &&
           flags.isOriginDeclaration == element.isOriginDeclaration &&
+          flags.isOriginExtensionTypeRecovery ==
+              element.isOriginExtensionTypeRecovery &&
           flags.isOriginImplicitDefault == element.isOriginImplicitDefault &&
           flags.isOriginMixinApplication == element.isOriginMixinApplication &&
           flags.isPrimary == element.isPrimary &&
+          flags.isRedirecting == element.isRedirecting &&
+          flags.isInRedirectingConstructorCycle ==
+              element.isInRedirectingConstructorCycle &&
           constantInitializers.match(context, element.constantInitializers) &&
           redirectedConstructor.match(context, element.redirectedConstructor) &&
           superConstructor.match(context, element.superConstructor);
@@ -282,12 +291,14 @@ class EnumItem extends InterfaceItem<EnumElementImpl> {
 sealed class ExecutableItem<E extends ExecutableElementImpl>
     extends ManifestItem<E> {
   final ManifestFunctionType functionType;
+  final List<ManifestNode?> formalParameterDefaultValues;
 
   ExecutableItem({
     required super.id,
     required _ExecutableItemFlags super.flags,
     required super.metadata,
     required this.functionType,
+    required this.formalParameterDefaultValues,
   });
 
   @override
@@ -305,13 +316,18 @@ sealed class ExecutableItem<E extends ExecutableElementImpl>
         flags.isExternal == element.isExternal &&
         flags.isSimplyBounded == element.isSimplyBounded &&
         flags.isStatic == element.isStatic &&
-        functionType.match(context, element.type);
+        functionType.match(context, element.type) &&
+        formalParameterDefaultValues.match(
+          context,
+          element.formalParameters.map((e) => e.constantInitializer2).toList(),
+        );
   }
 
   @override
   void write(BinaryWriter writer) {
     super.write(writer);
     functionType.writeNoTag(writer);
+    formalParameterDefaultValues.writeList(writer);
   }
 }
 
@@ -507,7 +523,7 @@ class FieldItem extends VariableItem<FieldElementImpl> {
         flags: _FieldItemFlags.encode(element),
         metadata: ManifestMetadata.encode(context, element.metadata),
         type: element.type.encode(context),
-        constInitializer: element.constantInitializer?.encode(context),
+        constInitializer: element.constantInitializer2?.encode(context),
         typeInferenceError: element.typeInferenceError,
       );
     });
@@ -562,6 +578,7 @@ class GetterItem extends PropertyAccessorItem<GetterElementImpl> {
     required super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
   });
 
   factory GetterItem.fromElement({
@@ -577,6 +594,8 @@ class GetterItem extends PropertyAccessorItem<GetterElementImpl> {
         element.thisOrVariableMetadata,
       ),
       functionType: element.type.encode(context),
+      formalParameterDefaultValues: element.formalParameters
+          .encodeDefaultValues(context),
     );
   }
 
@@ -586,6 +605,7 @@ class GetterItem extends PropertyAccessorItem<GetterElementImpl> {
       flags: _PropertyAccessorItemFlags.read(reader),
       metadata: ManifestMetadata.read(reader),
       functionType: ManifestFunctionType.read(reader),
+      formalParameterDefaultValues: ManifestNode.readListOfOptional(reader),
     );
   }
 
@@ -1082,7 +1102,9 @@ sealed class ManifestItem<E extends ElementImpl> {
 
   @mustCallSuper
   bool match(MatchContext context, E element) {
-    return metadata.match(context, element.effectiveMetadata);
+    return flags.isAugmentationWithoutAugmentedDeclaration ==
+            element.isAugmentationWithoutAugmentedDeclaration &&
+        metadata.match(context, element.effectiveMetadata);
   }
 
   @mustCallSuper
@@ -1222,6 +1244,7 @@ class MethodItem extends ExecutableItem<MethodElementImpl> {
     required _MethodItemFlags super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
     required this.typeInferenceError,
   });
 
@@ -1235,6 +1258,8 @@ class MethodItem extends ExecutableItem<MethodElementImpl> {
       flags: _MethodItemFlags.encode(element),
       metadata: ManifestMetadata.encode(context, element.metadata),
       functionType: element.type.encode(context),
+      formalParameterDefaultValues: element.formalParameters
+          .encodeDefaultValues(context),
       typeInferenceError: element.typeInferenceError,
     );
   }
@@ -1245,6 +1270,7 @@ class MethodItem extends ExecutableItem<MethodElementImpl> {
       flags: _MethodItemFlags.read(reader),
       metadata: ManifestMetadata.read(reader),
       functionType: ManifestFunctionType.read(reader),
+      formalParameterDefaultValues: ManifestNode.readListOfOptional(reader),
       typeInferenceError: TopLevelInferenceError.readOptional(reader),
     );
   }
@@ -1386,6 +1412,7 @@ sealed class PropertyAccessorItem<E extends PropertyAccessorElementImpl>
     required _PropertyAccessorItemFlags super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
   });
 
   @override
@@ -1407,6 +1434,7 @@ class SetterItem extends PropertyAccessorItem<SetterElementImpl> {
     required super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
   });
 
   factory SetterItem.fromElement({
@@ -1422,6 +1450,8 @@ class SetterItem extends PropertyAccessorItem<SetterElementImpl> {
         element.thisOrVariableMetadata,
       ),
       functionType: element.type.encode(context),
+      formalParameterDefaultValues: element.formalParameters
+          .encodeDefaultValues(context),
     );
   }
 
@@ -1431,6 +1461,7 @@ class SetterItem extends PropertyAccessorItem<SetterElementImpl> {
       flags: _PropertyAccessorItemFlags.read(reader),
       metadata: ManifestMetadata.read(reader),
       functionType: ManifestFunctionType.read(reader),
+      formalParameterDefaultValues: ManifestNode.readListOfOptional(reader),
     );
   }
 
@@ -1448,6 +1479,7 @@ class TopLevelFunctionItem extends ExecutableItem<TopLevelFunctionElementImpl> {
     required _TopLevelFunctionItemFlags super.flags,
     required super.metadata,
     required super.functionType,
+    required super.formalParameterDefaultValues,
   });
 
   factory TopLevelFunctionItem.fromElement({
@@ -1460,6 +1492,8 @@ class TopLevelFunctionItem extends ExecutableItem<TopLevelFunctionElementImpl> {
       flags: _TopLevelFunctionItemFlags.encode(element),
       metadata: ManifestMetadata.encode(context, element.metadata),
       functionType: element.type.encode(context),
+      formalParameterDefaultValues: element.formalParameters
+          .encodeDefaultValues(context),
     );
   }
 
@@ -1469,6 +1503,7 @@ class TopLevelFunctionItem extends ExecutableItem<TopLevelFunctionElementImpl> {
       flags: _TopLevelFunctionItemFlags.read(reader),
       metadata: ManifestMetadata.read(reader),
       functionType: ManifestFunctionType.read(reader),
+      formalParameterDefaultValues: ManifestNode.readListOfOptional(reader),
     );
   }
 
@@ -1504,7 +1539,7 @@ class TopLevelVariableItem extends VariableItem<TopLevelVariableElementImpl> {
       flags: _TopLevelVariableItemFlags.encode(element),
       metadata: ManifestMetadata.encode(context, element.metadata),
       type: element.type.encode(context),
-      constInitializer: element.constantInitializer?.encode(context),
+      constInitializer: element.constantInitializer2?.encode(context),
       typeInferenceError: element.typeInferenceError,
     );
   }
@@ -1621,8 +1656,10 @@ sealed class VariableItem<E extends PropertyInducingElementImpl>
         flags.isStatic == element.isStatic &&
         flags.isTypeInferredFromInitializer ==
             element.isTypeInferredFromInitializer &&
+        flags.isTypeInferredFromOverride ==
+            element.isTypeInferredFromOverride &&
         type.match(context, element.type) &&
-        constInitializer.match(context, element.constantInitializer) &&
+        constInitializer.match(context, element.constantInitializer2) &&
         typeInferenceError == element.typeInferenceError;
   }
 
@@ -1649,9 +1686,12 @@ enum _ConstructorItemFlag {
   isConst,
   isFactory,
   isOriginDeclaration,
+  isOriginExtensionTypeRecovery,
   isOriginImplicitDefault,
   isOriginMixinApplication,
   isPrimary,
+  isRedirecting,
+  isInRedirectingConstructorCycle,
 }
 
 enum _ExecutableItemFlag {
@@ -1688,7 +1728,7 @@ enum _InstanceItemFlag { isSimplyBounded }
 
 enum _InterfaceItemFlag { reserved }
 
-enum _ManifestItemFlag { isPlaceholder }
+enum _ManifestItemFlag { isAugmentationWithoutAugmentedDeclaration }
 
 enum _MethodItemFlag {
   isOperatorEqualWithParameterTypeFromObject,
@@ -1722,6 +1762,7 @@ enum _VariableItemFlag {
   isLate,
   isStatic,
   isTypeInferredFromInitializer,
+  isTypeInferredFromOverride,
 }
 
 extension type _ClassItemFlags._(int _bits) implements _InterfaceItemFlags {
@@ -1815,6 +1856,9 @@ extension type _ConstructorItemFlags._(int _bits)
     if (element.isOriginDeclaration) {
       bits |= _maskFor(_ConstructorItemFlag.isOriginDeclaration);
     }
+    if (element.isOriginExtensionTypeRecovery) {
+      bits |= _maskFor(_ConstructorItemFlag.isOriginExtensionTypeRecovery);
+    }
     if (element.isOriginImplicitDefault) {
       bits |= _maskFor(_ConstructorItemFlag.isOriginImplicitDefault);
     }
@@ -1823,6 +1867,12 @@ extension type _ConstructorItemFlags._(int _bits)
     }
     if (element.isPrimary) {
       bits |= _maskFor(_ConstructorItemFlag.isPrimary);
+    }
+    if (element.isRedirecting) {
+      bits |= _maskFor(_ConstructorItemFlag.isRedirecting);
+    }
+    if (element.isInRedirectingConstructorCycle) {
+      bits |= _maskFor(_ConstructorItemFlag.isInRedirectingConstructorCycle);
     }
     return _ConstructorItemFlags._(bits);
   }
@@ -1839,8 +1889,16 @@ extension type _ConstructorItemFlags._(int _bits)
     return _has(_ConstructorItemFlag.isFactory);
   }
 
+  bool get isInRedirectingConstructorCycle {
+    return _has(_ConstructorItemFlag.isInRedirectingConstructorCycle);
+  }
+
   bool get isOriginDeclaration {
     return _has(_ConstructorItemFlag.isOriginDeclaration);
+  }
+
+  bool get isOriginExtensionTypeRecovery {
+    return _has(_ConstructorItemFlag.isOriginExtensionTypeRecovery);
   }
 
   bool get isOriginImplicitDefault {
@@ -1853,6 +1911,10 @@ extension type _ConstructorItemFlags._(int _bits)
 
   bool get isPrimary {
     return _has(_ConstructorItemFlag.isPrimary);
+  }
+
+  bool get isRedirecting {
+    return _has(_ConstructorItemFlag.isRedirecting);
   }
 
   void write(BinaryWriter writer) {
@@ -2159,9 +2221,13 @@ extension type _ManifestItemFlags._(int _bits) {
     return _ManifestItemFlags._(0);
   }
 
-  // ignore: avoid_unused_constructor_parameters
   factory _ManifestItemFlags.encode(ElementImpl element) {
     var bits = 0;
+    if (element.isAugmentationWithoutAugmentedDeclaration) {
+      bits |= _maskFor(
+        _ManifestItemFlag.isAugmentationWithoutAugmentedDeclaration,
+      );
+    }
     return _ManifestItemFlags._(bits);
   }
 
@@ -2169,8 +2235,8 @@ extension type _ManifestItemFlags._(int _bits) {
     return _ManifestItemFlags._(reader.readUint30());
   }
 
-  bool get isPlaceholder {
-    return _has(_ManifestItemFlag.isPlaceholder);
+  bool get isAugmentationWithoutAugmentedDeclaration {
+    return _has(_ManifestItemFlag.isAugmentationWithoutAugmentedDeclaration);
   }
 
   void write(BinaryWriter writer) {
@@ -2486,6 +2552,9 @@ extension type _VariableItemFlags._(int _bits) implements _ManifestItemFlags {
     if (element.isTypeInferredFromInitializer) {
       bits |= _maskFor(_VariableItemFlag.isTypeInferredFromInitializer);
     }
+    if (element.isTypeInferredFromOverride) {
+      bits |= _maskFor(_VariableItemFlag.isTypeInferredFromOverride);
+    }
     return _VariableItemFlags._(bits);
   }
 
@@ -2517,6 +2586,10 @@ extension type _VariableItemFlags._(int _bits) implements _ManifestItemFlags {
     return _has(_VariableItemFlag.isTypeInferredFromInitializer);
   }
 
+  bool get isTypeInferredFromOverride {
+    return _has(_VariableItemFlag.isTypeInferredFromOverride);
+  }
+
   void write(BinaryWriter writer) {
     writer.writeUint30(_bits);
   }
@@ -2529,6 +2602,14 @@ extension type _VariableItemFlags._(int _bits) implements _ManifestItemFlags {
     var bit = _base + flag.index;
     assert(bit < 30);
     return 1 << bit;
+  }
+}
+
+extension on List<InternalFormalParameterElement> {
+  List<ManifestNode?> encodeDefaultValues(EncodeContext context) {
+    return map((element) {
+      return element.constantInitializer2?.encode(context);
+    }).toFixedList();
   }
 }
 

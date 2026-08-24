@@ -15,7 +15,7 @@ main() {
 @reflectiveTest
 class DuplicateVariablePatternTest extends PubPackageResolutionTest {
   test_ifCase() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int x) {
   if (x case var a && var a) {
 //               ^
@@ -27,12 +27,12 @@ void f(int x) {
 }
 ''');
 
-    var node = findNode.singleIfStatement;
+    var node = result.findNode.singleIfStatement;
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: int
@@ -61,7 +61,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@33
           staticType: int
@@ -71,7 +71,7 @@ IfStatement
   }
 
   test_switchStatement() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int x) {
   switch (x) {
     case var a && var a:
@@ -84,7 +84,7 @@ void f(int x) {
 }
 ''');
 
-    var node = findNode.singleSwitchPatternCase;
+    var node = result.findNode.singleSwitchPatternCase;
     assertResolvedNodeText(node, r'''
 SwitchPatternCase
   keyword: case
@@ -109,7 +109,7 @@ SwitchPatternCase
   colon: :
   statements
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@44
         staticType: int
@@ -118,7 +118,7 @@ SwitchPatternCase
   }
 
   test_variableDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var [a, a] = [0, 1];
 //     ^
@@ -129,7 +129,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleBlock;
+    var node = result.findNode.singleBlock;
     assertResolvedNodeText(node, r'''
 Block
   leftBracket: {
@@ -156,9 +156,9 @@ Block
           matchedValueType: List<int>
           requiredType: List<int>
         equals: =
-        expression: ListLiteral
+        expression2: ListLiteral
           leftBracket: [
-          elements
+          elements2
             IntegerLiteral
               literal: 0
               staticType: int
@@ -170,7 +170,7 @@ Block
         patternTypeSchema: List<_>
       semicolon: ;
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@18
         staticType: int

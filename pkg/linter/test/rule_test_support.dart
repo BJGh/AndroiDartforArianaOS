@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/src/lint/registry.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:analyzer_testing/analysis_rule/analysis_rule.dart';
@@ -29,19 +30,107 @@ abstract class LintRuleTest extends AnalysisRuleTest {
   /// The lint rule being tested.
   String get lintRule;
 
-  /// Assert that the given [content] has diagnostics at the marked ranges.
+  /// Asserts that the given [content] has diagnostics at the marked ranges.
   ///
-  /// See the [TestCode] class for more information about the markdown format.
-  Future<void> assertDiagnosticsFromMarkdown(String content) {
+  /// See the [TestCode] class for more information about the markup format.
+  Future<void> assertDiagnosticsFromMarkup(
+    String content, {
+    DiagnosticCode? code,
+  }) {
+    // TODO(brianwilkerson): Generalize this method and remove the specialized
+    //  methods below in favor of this one.
     var testCode = TestCode.parse(content);
     if (testCode.ranges.isEmpty) {
       fail('Either ranges or expected diagnostics must be provided.');
     }
     var expectedDiagnostics = [
       for (var range in testCode.ranges)
-        lint(range.sourceRange.offset, range.sourceRange.length),
+        if (code != null)
+          error(code, range.sourceRange.offset, range.sourceRange.length)
+        else
+          lint(range.sourceRange.offset, range.sourceRange.length),
     ];
     return super.assertDiagnostics(testCode.code, expectedDiagnostics);
+  }
+
+  Future<void> assertDiagnosticsInBinFromMarkup(String content) async {
+    var testCode = TestCode.parse(content);
+    var filePath = '$testPackageRootPath/bin/bin.dart';
+    newFile(filePath, testCode.code);
+    var expectedDiagnostics = [
+      for (var range in testCode.ranges)
+        lint(range.sourceRange.offset, range.sourceRange.length),
+    ];
+    await assertDiagnosticsInFile(filePath, expectedDiagnostics);
+  }
+
+  Future<void> assertDiagnosticsInFileNameFromMarkup(
+    String fileName,
+    String content,
+  ) async {
+    var testCode = TestCode.parse(content);
+    var filePath = '$testPackageLibPath/$fileName';
+    newFile(filePath, testCode.code);
+    var expectedDiagnostics = [
+      for (var range in testCode.ranges)
+        lint(range.sourceRange.offset, range.sourceRange.length),
+    ];
+    await assertDiagnosticsInFile(filePath, expectedDiagnostics);
+  }
+
+  Future<void> assertDiagnosticsInHookFromMarkup(
+    String fileName,
+    String content,
+  ) async {
+    var testCode = TestCode.parse(content);
+    var filePath = '$testPackageRootPath/hook/$fileName';
+    newFile(filePath, testCode.code);
+    var expectedDiagnostics = [
+      for (var range in testCode.ranges)
+        lint(range.sourceRange.offset, range.sourceRange.length),
+    ];
+    await assertDiagnosticsInFile(filePath, expectedDiagnostics);
+  }
+
+  /// Asserts that the given [content] has diagnostics at the marked ranges when
+  /// the file is in the `test` directory of the test package.
+  ///
+  /// See the [TestCode] class for more information about the markup format.
+  Future<void> assertDiagnosticsInTestDirFromMarkup(String content) async {
+    var testCode = TestCode.parse(content);
+    var filePath = '$testPackageRootPath/test/test.dart';
+    newFile(filePath, testCode.code);
+    var expectedDiagnostics = [
+      for (var range in testCode.ranges)
+        lint(range.sourceRange.offset, range.sourceRange.length),
+    ];
+    await assertDiagnosticsInFile(filePath, expectedDiagnostics);
+  }
+
+  Future<void> assertNoDiagnosticsInFileName(
+    String fileName,
+    String content,
+  ) async {
+    var filePath = '$testPackageLibPath/$fileName';
+    newFile(filePath, content);
+    await assertNoDiagnosticsInFile(filePath);
+  }
+
+  Future<void> assertNoDiagnosticsInHook(
+    String fileName,
+    String content,
+  ) async {
+    var filePath = '$testPackageRootPath/hook/$fileName';
+    newFile(filePath, content);
+    await assertNoDiagnosticsInFile(filePath);
+  }
+
+  /// Assert that the given [content] has no diagnostics when the file is in the
+  /// `test` directory of the test package.
+  Future<void> assertNoDiagnosticsInTestDir(String content) async {
+    var filePath = '$testPackageRootPath/test/test.dart';
+    newFile(filePath, content);
+    await assertNoDiagnosticsInFile(filePath);
   }
 
   @mustCallSuper

@@ -17,10 +17,11 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Initialize the field in the field's initializer.";
 
 class InitializeInFieldDeclaration extends AnalysisRule {
-  InitializeInFieldDeclaration()
+  new()
     : super(
         name: LintNames.initialize_in_field_declaration,
         description: _desc,
+        state: .stable(since: .new(3, 13, 0)),
       );
 
   @override
@@ -41,7 +42,7 @@ class _ParameterReferenceVisitor extends RecursiveAstVisitor<void> {
   final ConstructorElement constructorElement;
   bool referencesParameter = false;
 
-  _ParameterReferenceVisitor(this.constructorElement);
+  new(this.constructorElement);
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
@@ -54,11 +55,7 @@ class _ParameterReferenceVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitPrimaryConstructorBody(PrimaryConstructorBody node) {
     var declaration = node.declaration;

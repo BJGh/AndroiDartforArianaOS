@@ -74,7 +74,7 @@ class MessageTestDescription extends TestDescription {
 
   final ({String message, KnownExpectation expectation})? problem;
 
-  MessageTestDescription(
+  new(
     this.uri,
     this.shortName,
     this.name,
@@ -94,6 +94,7 @@ class MessageTestSuite extends ChainContext {
 
   final bool fastOnly;
   final bool interactive;
+  final bool justAddEverything;
   final bool skipSpellCheck;
 
   final Map<String, List<String>?> reportedWordsAndAlternatives = {};
@@ -121,13 +122,18 @@ class MessageTestSuite extends ChainContext {
       reportedWordsDenylisted,
       [spell.Dictionaries.cfeMessages],
       interactive,
+      justAddEverything,
       '"$dartPath" "$suitePath" -DfastOnly=true -Dinteractive=true',
     );
     return new Future.value();
   }
 
-  MessageTestSuite(this.fastOnly, this.interactive, this.skipSpellCheck)
-    : fileSystem = new MemoryFileSystem(Uri.parse("org-dartlang-cfe:///")),
+  new(
+    this.fastOnly,
+    this.interactive,
+    this.justAddEverything,
+    this.skipSpellCheck,
+  ) : fileSystem = new MemoryFileSystem(Uri.parse("org-dartlang-cfe:///")),
       compiler = new BatchCompiler(null);
 
   @override
@@ -605,7 +611,7 @@ abstract class Example {
 
   Map<ExperimentalFlag, bool>? experimentalFlags;
 
-  Example(this.name, this.expectedCode);
+  new(this.name, this.expectedCode);
 
   YamlNode get node;
 
@@ -620,7 +626,7 @@ class BytesExample extends Example {
 
   final Uint8List bytes;
 
-  BytesExample(String name, String code, this.node)
+  new(String name, String code, this.node)
     : bytes = new Uint8List.fromList(node.cast<int>()),
       super(name, code);
 
@@ -636,7 +642,7 @@ class DeclarationExample extends Example {
 
   final String declaration;
 
-  DeclarationExample(String name, String code, this.node)
+  new(String name, String code, this.node)
     : declaration = node.value,
       super(name, code);
 
@@ -659,7 +665,7 @@ class StatementExample extends Example {
 
   final String statement;
 
-  StatementExample(String name, String code, this.node)
+  new(String name, String code, this.node)
     : statement = node.value,
       super(name, code);
 
@@ -681,7 +687,7 @@ class ExpressionExample extends Example {
 
   final String expression;
 
-  ExpressionExample(String name, String code, this.node)
+  new(String name, String code, this.node)
     : expression = node.value,
       super(name, code);
 
@@ -703,7 +709,7 @@ class ScriptExample extends Example {
 
   final Object script;
 
-  ScriptExample(String name, String code, this.node, MessageTestSuite suite)
+  new(String name, String code, this.node, MessageTestSuite suite)
     : script = node.value,
       super(name, code) {
     if (script is! String && script is! Map) {
@@ -741,7 +747,7 @@ class PartWrapExample extends Example {
   @override
   final bool includeErrorContext;
 
-  PartWrapExample(
+  new(
     String name,
     String code,
     this.allowOtherCodes,
@@ -811,7 +817,7 @@ ${preamble}part of "${mainFilename}";
 
 class Validate
     extends Step<MessageTestDescription, Example?, MessageTestSuite> {
-  const Validate();
+  const new();
 
   @override
   String get name => "validate";
@@ -836,7 +842,7 @@ class Validate
 }
 
 class Compile extends Step<Example?, Null, MessageTestSuite> {
-  const Compile();
+  const new();
 
   @override
   String get name => "compile";
@@ -871,9 +877,8 @@ class Compile extends Step<Example?, Null, MessageTestSuite> {
 
     await suite.compiler.batchCompile(
       new CompilerOptions()
-        ..sdkSummary = computePlatformBinariesLocation(
-          forceBuildDir: true,
-        ).resolve("vm_platform.dill")
+        ..sdkSummary = computePlatformBinariesLocation(forceBuildDir: true)
+            .resolve("vm_platform.dill")
         ..explicitExperimentalFlags = example.experimentalFlags ?? {}
         ..target = new VmTarget(new TargetFlags())
         ..fileSystem = new HybridFileSystem(suite.fileSystem)
@@ -998,9 +1003,15 @@ Future<MessageTestSuite> createContext(
 ) {
   final bool fastOnly = environment["fastOnly"] == "true";
   final bool interactive = environment["interactive"] == "true";
+  final bool justAddEverything = environment["justAddEverything"] == "true";
   final bool skipSpellCheck = environment["skipSpellCheck"] == "true";
   return new Future.value(
-    new MessageTestSuite(fastOnly, interactive, skipSpellCheck),
+    new MessageTestSuite(
+      fastOnly,
+      interactive,
+      justAddEverything,
+      skipSpellCheck,
+    ),
   );
 }
 
@@ -1019,9 +1030,9 @@ class Script {
   final String preamble;
   final String? sourceWithoutPreamble;
 
-  Script(this.bytes, this.preamble, this.sourceWithoutPreamble);
+  new(this.bytes, this.preamble, this.sourceWithoutPreamble);
 
-  factory Script.fromSource(String source) {
+  factory fromSource(String source) {
     List<String> lines = source.split('\n');
     String firstLine = lines.first;
     String preamble;

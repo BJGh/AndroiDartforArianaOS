@@ -18,7 +18,7 @@ import '../extensions.dart';
 const _desc = r'Avoid using private types in public APIs.';
 
 class LibraryPrivateTypesInPublicApi extends AnalysisRule {
-  LibraryPrivateTypesInPublicApi()
+  new()
     : super(
         name: LintNames.library_private_types_in_public_api,
         description: _desc,
@@ -32,16 +32,12 @@ class LibraryPrivateTypesInPublicApi extends AnalysisRule {
     RuleVisitorRegistry registry,
     RuleContext context,
   ) {
-    var visitor = Visitor(this);
+    var visitor = _Visitor(this);
     registry.addCompilationUnit(this, visitor);
   }
 }
 
-class Validator extends SimpleAstVisitor<void> {
-  AnalysisRule rule;
-
-  Validator(this.rule);
-
+class Validator(var AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     var namePart = node.namePart;
@@ -93,17 +89,19 @@ class Validator extends SimpleAstVisitor<void> {
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    if (Identifier.isPrivateName(node.primaryConstructor.typeName.lexeme)) {
+    var namePart = node.namePart;
+    if (Identifier.isPrivateName(namePart.typeName.lexeme)) {
       return;
     }
-    node.primaryConstructor.typeParameters?.accept(this);
+    namePart.typeParameters?.accept(this);
 
-    for (var formalParameter
-        in node.primaryConstructor.formalParameters.parameters) {
-      if (formalParameter is RegularFormalParameter) {
-        var name = formalParameter.name;
-        if (name != null && !Identifier.isPrivateName(name.lexeme)) {
-          formalParameter.type?.accept(this);
+    if (namePart is PrimaryConstructorDeclaration) {
+      for (var formalParameter in namePart.formalParameters.parameters) {
+        if (formalParameter is RegularFormalParameter) {
+          var name = formalParameter.name;
+          if (name != null && !Identifier.isPrivateName(name.lexeme)) {
+            formalParameter.type?.accept(this);
+          }
         }
       }
     }
@@ -301,11 +299,7 @@ class Validator extends SimpleAstVisitor<void> {
       name != null && Identifier.isPrivateName(name);
 }
 
-class Visitor extends SimpleAstVisitor<void> {
-  AnalysisRule rule;
-
-  Visitor(this.rule);
-
+class _Visitor(var AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitCompilationUnit(CompilationUnit node) {
     var element = node.declaredFragment?.element;

@@ -1063,6 +1063,35 @@ int get x => 0;
 ''');
   }
 
+  void test_importDirective_exportDirective() async {
+    await resolveTestCodeWithDiagnostics(r'''
+import 'package:meta/meta_meta.dart';
+
+@A()
+// [diag.invalidAnnotationTarget][column 2][length 1] The annotation 'A.new' can only be used on import directives.
+export 'dart:core';
+
+@Target({TargetKind.importDirective})
+class A {
+  const A();
+}
+''');
+  }
+
+  void test_importDirective_importDirective() async {
+    await resolveTestCodeWithDiagnostics(r'''
+import 'package:meta/meta_meta.dart';
+
+@A()
+import 'dart:core';
+
+@Target({TargetKind.importDirective})
+class A {
+  const A();
+}
+''');
+  }
+
   void test_library_class() async {
     await resolveTestCodeWithDiagnostics(r'''
 import 'package:meta/meta_meta.dart';
@@ -1091,7 +1120,7 @@ class A {
   }
 
   void test_library_library() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 @A()
 library test;
 
@@ -1589,7 +1618,7 @@ class D extends C {
   }
 
   void test_override_setter() async {
-    await assertNoErrorsInCode('''
+    await resolveTestCodeWithDiagnostics('''
 class C {
   set a(int p) {}
 }

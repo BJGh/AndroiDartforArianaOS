@@ -111,7 +111,7 @@ class PhaseTiming {
     growable: false,
   );
 
-  PhaseTiming(this.phase);
+  new(this.phase);
 
   void addRuntime(int runtime) {
     _runtime += runtime;
@@ -141,7 +141,7 @@ class SubdivideTiming {
   int _runtime = 0;
   int _count = 0;
 
-  SubdivideTiming(this.phase);
+  new(this.phase);
 
   void addRuntime(int runtime, {required bool addAsCount}) {
     _runtime += runtime;
@@ -175,7 +175,6 @@ enum BenchmarkPhases {
   outline_computeLibraryScopes,
   outline_setupTopAndBottomTypes,
   outline_resolveTypes,
-  outline_computeMacroApplications,
   outline_computeVariances,
   outline_computeDefaultTypes,
   outline_checkSemantics,
@@ -245,8 +244,6 @@ enum BenchmarkPhases {
   incremental_convertSourceLibraryBuildersToDill,
   incremental_end,
 
-  precompileMacros,
-
   // add more here
   //
   end,
@@ -278,7 +275,7 @@ enum BenchmarkSubdivides {
   inferImplicitFieldType,
   inferFieldInitializer,
   inferFunctionBody,
-  inferInitializer,
+  inferInitializers,
   inferMetadata,
   inferParameterInitializer,
   inferRedirectingFactoryTypeArguments,

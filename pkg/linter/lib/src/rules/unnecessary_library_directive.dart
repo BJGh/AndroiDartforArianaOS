@@ -17,7 +17,7 @@ const _desc =
     'annotations.';
 
 class UnnecessaryLibraryDirective extends AnalysisRule {
-  UnnecessaryLibraryDirective()
+  new()
     : super(name: LintNames.unnecessary_library_directive, description: _desc);
 
   @override
@@ -33,11 +33,7 @@ class UnnecessaryLibraryDirective extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitLibraryDirective(LibraryDirective node) {
     var parent = node.parent! as CompilationUnit;

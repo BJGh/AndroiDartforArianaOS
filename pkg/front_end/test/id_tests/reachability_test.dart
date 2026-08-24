@@ -7,6 +7,7 @@ import 'dart:io' show Directory, Platform;
 import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart'
     show DataInterpreter, runTests;
+import 'package:front_end/src/kernel/internal_ast.dart';
 import 'package:front_end/src/source/source_loader.dart';
 import 'package:front_end/src/source/source_member_builder.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
@@ -31,7 +32,7 @@ Future<void> main(List<String> args) async {
 
 class ReachabilityDataComputer
     extends CfeDataComputer<Set<_ReachabilityAssertion>> {
-  const ReachabilityDataComputer();
+  const new();
 
   @override
   DataInterpreter<Set<_ReachabilityAssertion>> get dataValidator =>
@@ -47,9 +48,10 @@ class ReachabilityDataComputer
     Map<Id, ActualData<Set<_ReachabilityAssertion>>> actualMap, {
     bool? verbose,
   }) {
-    SourceMemberBuilder memberBuilder =
-        lookupMemberBuilder(testResultData.compilerResult, member)
-            as SourceMemberBuilder;
+    SourceMemberBuilder memberBuilder = lookupMemberBuilder(
+      testResultData.compilerResult,
+      member,
+    ) as SourceMemberBuilder;
     member.accept(
       new ReachabilityDataExtractor(
         testResultData.compilerResult,
@@ -70,7 +72,7 @@ class ReachabilityDataExtractor
   final SourceLoaderDataForTesting _sourceLoaderDataForTesting;
   final FlowAnalysisResult _flowResult;
 
-  ReachabilityDataExtractor(
+  new(
     InternalCompilerResult compilerResult,
     Map<Id, ActualData<Set<_ReachabilityAssertion>>> actualMap,
     this._flowResult,
@@ -82,7 +84,7 @@ class ReachabilityDataExtractor
   Set<_ReachabilityAssertion>? computeMemberValue(Id id, Member member) {
     Set<_ReachabilityAssertion> result = {};
     if (member.function != null) {
-      TreeNode alias = _sourceLoaderDataForTesting.toOriginal(
+      InternalNode? alias = _sourceLoaderDataForTesting.toInternalNode(
         member.function!.body!,
       );
       if (_flowResult.functionBodiesThatDontComplete.contains(alias)) {
@@ -95,7 +97,7 @@ class ReachabilityDataExtractor
   @override
   Set<_ReachabilityAssertion>? computeNodeValue(Id id, TreeNode node) {
     Set<_ReachabilityAssertion> result = {};
-    TreeNode alias = _sourceLoaderDataForTesting.toOriginal(node);
+    InternalNode? alias = _sourceLoaderDataForTesting.toInternalNode(node);
     if (node is Expression && node.parent is ExpressionStatement) {
       // The reachability of an expression statement and the statement it
       // contains should always be the same.  We check this with an assert
@@ -104,7 +106,7 @@ class ReachabilityDataExtractor
       assert(
         _flowResult.unreachableNodes.contains(alias) ==
             _flowResult.unreachableNodes.contains(
-              _sourceLoaderDataForTesting.toOriginal(node.parent!),
+              _sourceLoaderDataForTesting.toInternalNode(node.parent!),
             ),
       );
     } else if (_flowResult.unreachableNodes.contains(alias)) {
@@ -114,7 +116,7 @@ class ReachabilityDataExtractor
       Statement? body = node.function.body;
       if (body != null &&
           _flowResult.functionBodiesThatDontComplete.contains(
-            _sourceLoaderDataForTesting.toOriginal(body),
+            _sourceLoaderDataForTesting.toInternalNode(body),
           )) {
         result.add(_ReachabilityAssertion.doesNotComplete);
       }
@@ -127,7 +129,7 @@ enum _ReachabilityAssertion { doesNotComplete, unreachable }
 
 class _ReachabilityDataInterpreter
     implements DataInterpreter<Set<_ReachabilityAssertion>> {
-  const _ReachabilityDataInterpreter();
+  const new();
 
   @override
   String getText(

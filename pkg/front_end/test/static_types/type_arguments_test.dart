@@ -38,7 +38,7 @@ Future<void> run(
 }
 
 class TypeArgumentsVisitor extends VerifyingAnalysis {
-  TypeArgumentsVisitor(
+  new(
     DiagnosticMessageHandler onDiagnostic,
     Component component,
     String? allowedListPath,
@@ -93,7 +93,7 @@ class TypeArgumentsVisitor extends VerifyingAnalysis {
             typeArgument,
             variableStatementType,
           )) {
-            // [VariableDeclaration] is used as an exclusive member of, for
+            // [Variable] is used as an exclusive member of, for
             // instance, `FunctionNode.positionalParameters`.
             if (typeArgument != variableStatementType) {
               registerError(

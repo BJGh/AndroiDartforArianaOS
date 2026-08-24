@@ -61,20 +61,22 @@ class _ReachabilityDataExtractor
   @override
   Set<_ReachabilityAssertion>? computeNodeValue(Id id, AstNode node) {
     Set<_ReachabilityAssertion> result = {};
-    if (node is Expression && node.parent is ExpressionStatement) {
+    if (node is Expression && node.parent2 is ExpressionStatement) {
       // The reachability of an expression statement and the statement it
       // contains should always be the same.  We check this with an assert
       // statement, and only annotate the expression statement, to reduce the
       // amount of redundancy in the test files.
       assert(
         _flowResult.unreachableNodes.contains(node) ==
-            _flowResult.unreachableNodes.contains(node.parent),
+            _flowResult.unreachableNodes.contains(node.parent2),
       );
     } else if (_flowResult.unreachableNodes.contains(node)) {
       result.add(_ReachabilityAssertion.unreachable);
     }
     if (node is FunctionDeclaration) {
       _checkBodyCompletion(node.functionExpression.body, result);
+    } else if (node is TopLevelGetterDeclaration) {
+      _checkBodyCompletion(node.body, result);
     } else if (node is ConstructorDeclaration) {
       _checkBodyCompletion(node.body, result);
     } else if (node is MethodDeclaration) {

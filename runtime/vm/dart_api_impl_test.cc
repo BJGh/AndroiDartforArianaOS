@@ -9,6 +9,7 @@
 #include "bin/builtin.h"
 #include "bin/dartutils.h"
 #include "include/dart_api.h"
+#include "include/dart_embedder_api.h"
 #include "include/dart_native_api.h"
 #include "include/dart_tools_api.h"
 #include "platform/assert.h"
@@ -38,7 +39,6 @@ UNIT_TEST_CASE(DartAPI_DartInitializeAfterCleanup) {
   Dart_InitializeParams params;
   memset(&params, 0, sizeof(Dart_InitializeParams));
   params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  params.vm_snapshot_data = TesterState::vm_snapshot_data;
   params.create_group = TesterState::create_callback;
   params.shutdown_isolate = TesterState::shutdown_callback;
   params.cleanup_group = TesterState::group_cleanup_callback;
@@ -64,42 +64,10 @@ UNIT_TEST_CASE(DartAPI_DartInitializeAfterCleanup) {
   EXPECT(Dart_Cleanup() == nullptr);
 }
 
-UNIT_TEST_CASE(DartAPI_DartInitializeCallsCodeObserver) {
-  EXPECT(Dart_SetVMFlags(TesterState::argc, TesterState::argv) == nullptr);
-  Dart_InitializeParams params;
-  memset(&params, 0, sizeof(Dart_InitializeParams));
-  params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  params.vm_snapshot_data = TesterState::vm_snapshot_data;
-  params.create_group = TesterState::create_callback;
-  params.shutdown_isolate = TesterState::shutdown_callback;
-  params.cleanup_group = TesterState::group_cleanup_callback;
-  params.start_kernel_isolate = true;
-
-  bool was_called = false;
-  Dart_CodeObserver code_observer;
-  code_observer.data = &was_called;
-  code_observer.on_new_code = [](Dart_CodeObserver* observer, const char* name,
-                                 uintptr_t base, uintptr_t size) {
-    *static_cast<bool*>(observer->data) = true;
-  };
-  params.code_observer = &code_observer;
-
-  // Reinitialize and ensure we can execute Dart code.
-  EXPECT(Dart_Initialize(&params) == nullptr);
-
-  // Wait for 5 seconds to let the kernel service load the snapshot,
-  // which should trigger calls to the code observer.
-  OS::Sleep(5);
-
-  EXPECT(was_called);
-  EXPECT(Dart_Cleanup() == nullptr);
-}
-
 UNIT_TEST_CASE(DartAPI_DartInitializeHeapSizes) {
   Dart_InitializeParams params;
   memset(&params, 0, sizeof(Dart_InitializeParams));
   params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  params.vm_snapshot_data = TesterState::vm_snapshot_data;
   params.create_group = TesterState::create_callback;
   params.shutdown_isolate = TesterState::shutdown_callback;
   params.cleanup_group = TesterState::group_cleanup_callback;
@@ -166,7 +134,6 @@ UNIT_TEST_CASE(DartAPI_DartCleanupWaitsForGroupCleanupCallbacks) {
   Dart_InitializeParams params;
   memset(&params, 0, sizeof(Dart_InitializeParams));
   params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  params.vm_snapshot_data = TesterState::vm_snapshot_data;
   params.create_group = CreateCallback;
   params.shutdown_isolate = TesterState::shutdown_callback;
   params.cleanup_group = CleanupCallback;
@@ -10628,6 +10595,19 @@ TEST_CASE(DartAPI_InvokeVMServiceMethod_Exp) {
 }
 #endif  // defined(EXPERIMENTAL_VM_SERVICE)
 
+TEST_CASE(DartAPI_VmService_OriginCheckDisabled_Runtime) {
+  embedder::VmServiceConfiguration config;
+  config.ip = "127.0.0.1";
+  config.port = 0;
+  config.dev_mode = false;
+  config.disable_auth_codes = true;
+  config.disable_origin_check = true;
+  EXPECT(config.disable_origin_check);
+  EXPECT(!config.dev_mode);
+
+  InvokeVMServiceMethodCommon();
+}
+
 static Monitor* loop_test_lock = new Monitor();
 static bool loop_test_exit = false;
 static bool loop_reset_count = false;
@@ -10835,7 +10815,6 @@ UNIT_TEST_CASE(DartAPI_TimelineEvents_Loop) {
   Dart_InitializeParams params;
   memset(&params, 0, sizeof(Dart_InitializeParams));
   params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  params.vm_snapshot_data = TesterState::vm_snapshot_data;
   params.create_group = TesterState::create_callback;
   params.shutdown_isolate = TesterState::shutdown_callback;
   params.cleanup_group = TesterState::group_cleanup_callback;
@@ -10880,6 +10859,62 @@ UNIT_TEST_CASE(DartAPI_TimelineEvents_NullFlowIdsHandledGracefully) {
 
 static intptr_t EchoInt(double x) {
   return x;
+}
+
+enum class TestNativeAssetState {
+  kMissing,
+  kLoadError,
+  kNullHandle,
+};
+
+static TestNativeAssetState test_native_asset_state =
+    TestNativeAssetState::kMissing;
+static intptr_t test_native_asset_contains_call_count = 0;
+static intptr_t test_native_asset_dlopen_call_count = 0;
+static intptr_t test_native_asset_dlsym_call_count = 0;
+
+static bool TestNativeAssetsContainsAsset(const char* asset_id) {
+  test_native_asset_contains_call_count++;
+  EXPECT_STREQ(asset_id, "test_asset");
+  return test_native_asset_state != TestNativeAssetState::kMissing;
+}
+
+static void* TestNativeAssetsDlopenAsset(const char* asset_id, char** error) {
+  test_native_asset_dlopen_call_count++;
+  EXPECT_STREQ(asset_id, "test_asset");
+  if (test_native_asset_state == TestNativeAssetState::kLoadError) {
+    *error =
+        Utils::SCreate("embedder failed to load native asset: %s", asset_id);
+  }
+  return nullptr;
+}
+
+static void* TestNativeAssetsDlsym(void* handle,
+                                   const char* symbol,
+                                   char** /*error*/) {
+  test_native_asset_dlsym_call_count++;
+  EXPECT(handle == nullptr);
+  EXPECT_STREQ(symbol, "EchoInt");
+  return reinterpret_cast<void*>(&EchoInt);
+}
+
+static char* TestNativeAssetsAvailableAssets() {
+  return Utils::StrDup("Available native assets: test_asset.");
+}
+
+static void RegisterTestNativeAssets(TestNativeAssetState state) {
+  test_native_asset_state = state;
+  test_native_asset_contains_call_count = 0;
+  test_native_asset_dlopen_call_count = 0;
+  test_native_asset_dlsym_call_count = 0;
+
+  NativeAssetsApi native_assets;
+  memset(&native_assets, 0, sizeof(native_assets));
+  native_assets.contains_asset = &TestNativeAssetsContainsAsset;
+  native_assets.dlopen_asset = &TestNativeAssetsDlopenAsset;
+  native_assets.available_assets = &TestNativeAssetsAvailableAssets;
+  native_assets.dlsym = &TestNativeAssetsDlsym;
+  Dart_InitializeNativeAssetsResolver(&native_assets);
 }
 
 static void* FfiNativeResolver(const char* name, uintptr_t args_n) {
@@ -10946,6 +10981,122 @@ TEST_CASE(Dart_SetFfiNativeResolver_DoesNotResolve) {
 
   result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
   EXPECT_ERROR(result, "Couldn't resolve function: 'DoesNotResolve'");
+}
+
+TEST_CASE(Dart_NativeAssetsMissingAssetFallsBackForNative) {
+  const char* kScriptChars = R"(
+    import 'dart:ffi';
+    @Native<Void Function()>(
+      assetId: 'test_asset',
+      symbol: 'DefinitelyMissingNativeSymbol',
+    )
+    external void missingNativeSymbol();
+    main() => missingNativeSymbol();
+    )";
+  Dart_Handle lib = TestCase::LoadTestScript(kScriptChars, nullptr);
+  EXPECT_VALID(lib);
+
+  RegisterTestNativeAssets(TestNativeAssetState::kMissing);
+
+  Dart_Handle result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
+  EXPECT_ERROR(result, "Attempted to fallback to process lookup.");
+  EXPECT(test_native_asset_contains_call_count >= 1);
+  EXPECT_EQ(0, test_native_asset_dlopen_call_count);
+  EXPECT_EQ(0, test_native_asset_dlsym_call_count);
+}
+
+TEST_CASE(Dart_NativeAssetsLoadErrorDoesNotFallBackForNative) {
+  const char* kScriptChars = R"(
+    import 'dart:ffi';
+    @Native<Void Function()>(
+      assetId: 'test_asset',
+      symbol: 'DefinitelyMissingNativeSymbol',
+    )
+    external void missingNativeSymbol();
+    main() => missingNativeSymbol();
+    )";
+  Dart_Handle lib = TestCase::LoadTestScript(kScriptChars, nullptr);
+  EXPECT_VALID(lib);
+
+  RegisterTestNativeAssets(TestNativeAssetState::kLoadError);
+
+  Dart_Handle result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
+  EXPECT_ERROR(result, "embedder failed to load native asset: test_asset");
+  EXPECT(test_native_asset_contains_call_count >= 1);
+  EXPECT(test_native_asset_dlopen_call_count >= 1);
+  EXPECT_EQ(0, test_native_asset_dlsym_call_count);
+}
+
+TEST_CASE(Dart_NativeAssetsNullHandleSucceedsForNative) {
+  const char* kScriptChars = R"(
+    import 'dart:ffi';
+    @Native<IntPtr Function(Double)>(
+      assetId: 'test_asset',
+      symbol: 'EchoInt',
+      isLeaf: true,
+    )
+    external int echoInt(double x);
+    main() => echoInt(7.0);
+    )";
+  Dart_Handle lib = TestCase::LoadTestScript(kScriptChars, nullptr);
+  EXPECT_VALID(lib);
+
+  RegisterTestNativeAssets(TestNativeAssetState::kNullHandle);
+
+  Dart_Handle result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
+  EXPECT_VALID(result);
+
+  int64_t value = 0;
+  result = Dart_IntegerToInt64(result, &value);
+  EXPECT_VALID(result);
+  EXPECT_EQ(7, value);
+  EXPECT(test_native_asset_contains_call_count >= 1);
+  EXPECT(test_native_asset_dlopen_call_count >= 1);
+  EXPECT(test_native_asset_dlsym_call_count >= 1);
+}
+
+TEST_CASE(Dart_NativeAssetsMissingAssetFailsForCodeAsset) {
+  const char* kScriptChars = R"(
+    import 'dart:ffi';
+    main() => DynamicLibrary.codeAsset('test_asset');
+    )";
+  Dart_Handle lib = TestCase::LoadTestScript(kScriptChars, nullptr);
+  EXPECT_VALID(lib);
+
+  RegisterTestNativeAssets(TestNativeAssetState::kMissing);
+
+  Dart_Handle result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
+  EXPECT_ERROR(result, "No asset with id 'test_asset' found.");
+  EXPECT(test_native_asset_contains_call_count >= 1);
+  EXPECT_EQ(0, test_native_asset_dlopen_call_count);
+  EXPECT_EQ(0, test_native_asset_dlsym_call_count);
+}
+
+TEST_CASE(Dart_NativeAssetsNullHandleSucceedsForCodeAsset) {
+  const char* kScriptChars = R"(
+    import 'dart:ffi';
+    main() {
+      final library = DynamicLibrary.codeAsset('test_asset');
+      final echoInt = library.lookupFunction<
+          IntPtr Function(Double), int Function(double)>('EchoInt');
+      return echoInt(7.0);
+    }
+    )";
+  Dart_Handle lib = TestCase::LoadTestScript(kScriptChars, nullptr);
+  EXPECT_VALID(lib);
+
+  RegisterTestNativeAssets(TestNativeAssetState::kNullHandle);
+
+  Dart_Handle result = Dart_Invoke(lib, NewString("main"), 0, nullptr);
+  EXPECT_VALID(result);
+
+  int64_t value = 0;
+  result = Dart_IntegerToInt64(result, &value);
+  EXPECT_VALID(result);
+  EXPECT_EQ(7, value);
+  EXPECT(test_native_asset_contains_call_count >= 1);
+  EXPECT(test_native_asset_dlopen_call_count >= 1);
+  EXPECT(test_native_asset_dlsym_call_count >= 1);
 }
 
 TEST_CASE(DartAPI_UserTags) {

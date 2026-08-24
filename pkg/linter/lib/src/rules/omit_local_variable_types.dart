@@ -18,8 +18,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Omit type annotations for local variables.';
 
 class OmitLocalVariableTypes extends AnalysisRule {
-  OmitLocalVariableTypes()
-    : super(name: LintNames.omit_local_variable_types, description: _desc);
+  new() : super(name: LintNames.omit_local_variable_types, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.omitLocalVariableTypes;
@@ -41,13 +40,8 @@ class OmitLocalVariableTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  final TypeProvider typeProvider;
-
-  _Visitor(this.rule, this.typeProvider);
-
+class _Visitor(final AnalysisRule rule, final TypeProvider typeProvider)
+    extends SimpleAstVisitor<void> {
   @override
   void visitForStatement(ForStatement node) {
     var loopParts = node.forLoopParts;

@@ -2,7 +2,7 @@ library;
 //
 // Problems in library:
 //
-// pkg/front_end/testcases/general/expressions.dart:74:16: Error: Method not found: 'int.toString'.
+// pkg/front_end/testcases/general/expressions.dart:80:16: Error: Method not found: 'int.toString'.
 //     print(int?.toString());
 //                ^^^^^^^^
 //
@@ -65,12 +65,12 @@ static method main() → dynamic {
   self::caller(([dynamic x = #C1]) → Null {
     core::print("<anon> was called with ${x}");
   });
-  function h({dynamic message = #C1}) → Null {
-    core::print(message);
+  function h({dynamic message##1 = #C1}) → Null {
+    core::print(message##1);
   }
   h(message: "Hello, World"){({message: dynamic}) → Null};
-  self::caller(({dynamic x = #C1}) → Null {
-    core::print("<anon> was called with ${x}");
+  self::caller(({dynamic x##1 = #C1}) → Null {
+    core::print("<anon> was called with ${x##1}");
   });
   core::print(#C4.{core::Type::toString}(){() → core::String});
   core::print(#C4);
@@ -78,13 +78,13 @@ static method main() → dynamic {
     #t5.{core::Type::toString}(){() → core::String};
   } =>#t5);
   try {
-    core::print(invalid-expression "pkg/front_end/testcases/general/expressions.dart:74:16: Error: Method not found: 'int.toString'.
+    core::print(invalid-expression "pkg/front_end/testcases/general/expressions.dart:80:16: Error: Method not found: 'int.toString'.
     print(int?.toString());
                ^^^^^^^^");
     throw "Shouldn't work";
   }
-  on core::NoSuchMethodError catch(final core::NoSuchMethodError e) {
-    core::print("As expected: ${e}");
+  on core::NoSuchMethodError catch(final core::NoSuchMethodError e##1) {
+    core::print("As expected: ${e##1}");
   }
   core::print(core::int::parse("42"));
 }

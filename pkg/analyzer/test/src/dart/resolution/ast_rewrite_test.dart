@@ -15,11 +15,11 @@ main() {
     defineReflectiveTests(AstRewritePrefixedIdentifierTest);
     defineReflectiveTests(UpdateNodeTextExpectations);
 
-    // TODO(srawlins): Add AstRewriteInstanceCreationExpressionTest test, likely
-    // moving many test cases from ConstructorReferenceResolutionTest,
+    // TODO(srawlins): Add AstRewriteConstructorInvocationTest test, likely
+    // moving many test cases from ConstructorTearOffResolutionTest,
     // FunctionReferenceResolutionTest, and TypeLiteralResolutionTest.
     // TODO(srawlins): Add AstRewritePropertyAccessTest test, likely
-    // moving many test cases from ConstructorReferenceResolutionTest,
+    // moving many test cases from ConstructorTearOffResolutionTest,
     // FunctionReferenceResolutionTest, and TypeLiteralResolutionTest.
   });
 }
@@ -27,7 +27,7 @@ main() {
 @reflectiveTest
 class AstRewriteImplicitCallReferenceTest extends PubPackageResolutionTest {
   test_assignment_indexExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -38,10 +38,40 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c;');
+    var node = result.findNode.implicitCallReference('c;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: AssignmentExpression
+  expression2: DirectAssignment
+    target: IndexAssignmentTarget
+      receiver: SimpleIdentifier
+        token: map
+        element: map@83
+        staticType: Map<int, C>
+      leftBracket: [
+      index: IntegerLiteral
+        literal: 1
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: dart:core::@class::Map::@method::[]=::@formalParameter::key
+          substitution: {K: int, V: C}
+        staticType: int
+      rightBracket: ]
+      read: <null>
+      write: MethodIndexWriteResolution
+        element: SubstitutedMethodElementImpl
+          baseElement: dart:core::@class::Map::@method::[]=
+          substitution: {K: int, V: C}
+        invokeType: void Function(int, C)
+        acceptedType: C
+    operator: =
+    value: SimpleIdentifier
+      token: c
+      correspondingParameter: SubstitutedFormalParameterElementImpl
+        baseElement: dart:core::@class::Map::@method::[]=::@formalParameter::value
+        substitution: {K: int, V: C}
+      element: <testLibrary>::@function::foo::@formalParameter::c
+      staticType: C
+    staticType: C
+  expression(v1): AssignmentExpression
     leftHandSide: IndexExpression
       target: SimpleIdentifier
         token: map
@@ -50,7 +80,7 @@ ImplicitCallReference
       leftBracket: [
       index: IntegerLiteral
         literal: 1
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: dart:core::@class::Map::@method::[]=::@formalParameter::key
           substitution: {K: int, V: C}
         staticType: int
@@ -60,14 +90,14 @@ ImplicitCallReference
     operator: =
     rightHandSide: SimpleIdentifier
       token: c
-      correspondingParameter: ParameterMember
+      correspondingParameter: SubstitutedFormalParameterElementImpl
         baseElement: dart:core::@class::Map::@method::[]=::@formalParameter::value
         substitution: {K: int, V: C}
       element: <testLibrary>::@function::foo::@formalParameter::c
       staticType: C
     readElement: <null>
     readType: null
-    writeElement: MethodMember
+    writeElement: SubstitutedMethodElementImpl
       baseElement: dart:core::@class::Map::@method::[]=
       substitution: {K: int, V: C}
     writeType: C
@@ -79,7 +109,7 @@ ImplicitCallReference
   }
 
   test_conditional_else() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {}
 abstract class C extends A {
   void call();
@@ -89,20 +119,20 @@ void Function() f(A a, bool b, C c, dynamic d) => b ? d : (b ? a : c);
     // `c` is in the "else" position of a conditional expression, so implicit
     // call tearoff logic should not apply to it.
     // Therefore the type of `b ? a : c` should be `A`.
-    var expr = findNode.conditionalExpression('b ? a : c');
-    assertResolvedNodeText(expr, r'''
+    var node = result.findNode.conditionalExpression('b ? a : c');
+    assertResolvedNodeText(node, r'''
 ConditionalExpression
-  condition: SimpleIdentifier
+  condition2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: bool
   question: ?
-  thenExpression: SimpleIdentifier
+  thenExpression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
   colon: :
-  elseExpression: SimpleIdentifier
+  elseExpression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -111,7 +141,7 @@ ConditionalExpression
   }
 
   test_conditional_then() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {}
 abstract class C extends A {
   void call();
@@ -121,20 +151,20 @@ void Function() f(A a, bool b, C c, dynamic d) => b ? d : (b ? c : a);
     // `c` is in the "then" position of a conditional expression, so implicit
     // call tearoff logic should not apply to it.
     // Therefore the type of `b ? c : a` should be `A`.
-    var expr = findNode.conditionalExpression('b ? c : a');
-    assertResolvedNodeText(expr, r'''
+    var node = result.findNode.conditionalExpression('b ? c : a');
+    assertResolvedNodeText(node, r'''
 ConditionalExpression
-  condition: SimpleIdentifier
+  condition2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: bool
   question: ?
-  thenExpression: SimpleIdentifier
+  thenExpression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
   colon: :
-  elseExpression: SimpleIdentifier
+  elseExpression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -143,7 +173,7 @@ ConditionalExpression
   }
 
   test_explicitTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   T call<T>(T t) => t;
 }
@@ -154,10 +184,10 @@ void foo() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c<int>');
+    var node = result.findNode.implicitCallReference('c<int>');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: c@55
     staticType: C
@@ -177,7 +207,7 @@ ImplicitCallReference
   }
 
   test_ifNull_lhs() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {}
 abstract class C extends A {
   void call();
@@ -192,9 +222,20 @@ void Function() f(A a, bool b, C c, dynamic d) => b ? d : c ?? a;
     // `c` is on the LHS of an if-null expression, so implicit call tearoff
     // logic should not apply to it.
     // Therefore the type of `c ?? a` should be `A`.
-    var expr = findNode.binary('c ?? a');
-    assertResolvedNodeText(expr, r'''
-BinaryExpression
+    var node = result.findNode.ifNull('c ?? a');
+    assertResolvedNodeText(node, r'''
+IfNull
+  leftOperand: SimpleIdentifier
+    token: c
+    element: <testLibrary>::@function::f::@formalParameter::c
+    staticType: C
+  operator: ??
+  rightOperand: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: A
+  staticType: A
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
@@ -212,7 +253,7 @@ BinaryExpression
   }
 
   test_ifNull_rhs() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -222,10 +263,21 @@ void Function(int) foo(C? c1, C c2) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c1 ?? c2');
+    var node = result.findNode.implicitCallReference('c1 ?? c2');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: BinaryExpression
+  expression2: IfNull
+    leftOperand: SimpleIdentifier
+      token: c1
+      element: <testLibrary>::@function::foo::@formalParameter::c1
+      staticType: C?
+    operator: ??
+    rightOperand: SimpleIdentifier
+      token: c2
+      element: <testLibrary>::@function::foo::@formalParameter::c2
+      staticType: C
+    staticType: C
+  expression(v1): BinaryExpression
     leftOperand: SimpleIdentifier
       token: c1
       element: <testLibrary>::@function::foo::@formalParameter::c1
@@ -245,7 +297,7 @@ ImplicitCallReference
   }
 
   test_listLiteral_element() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -255,10 +307,10 @@ List<void Function(int)> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c]');
+    var node = result.findNode.implicitCallReference('c]');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -268,7 +320,7 @@ ImplicitCallReference
   }
 
   test_listLiteral_forElement() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -280,10 +332,10 @@ List<void Function(int)> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c,');
+    var node = result.findNode.implicitCallReference('c,');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -293,7 +345,7 @@ ImplicitCallReference
   }
 
   test_listLiteral_ifElement() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -305,10 +357,10 @@ List<void Function(int)> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c,');
+    var node = result.findNode.implicitCallReference('c,');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -318,7 +370,7 @@ ImplicitCallReference
   }
 
   test_listLiteral_ifElement_else() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -331,10 +383,10 @@ List<void Function(int)> foo(C c1, C c2) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c2,');
+    var node = result.findNode.implicitCallReference('c2,');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c2
     element: <testLibrary>::@function::foo::@formalParameter::c2
     staticType: C
@@ -344,7 +396,7 @@ ImplicitCallReference
   }
 
   test_parenthesized_cascade_target() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call();
   void m();
@@ -352,18 +404,31 @@ abstract class C {
 void Function() f(C c) => (c)..m();
 ''');
 
-    var node = findNode.implicitCallReference('(c)');
+    var node = result.findNode.implicitCallReference('(c)');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: CascadeExpression
-    target: ParenthesizedExpression
+  expression2: CascadeExpression
+    target2: ParenthesizedExpression
       leftParenthesis: (
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: c
         element: <testLibrary>::@function::f::@formalParameter::c
         staticType: C
       rightParenthesis: )
       staticType: C
+    sections
+      CascadeSection
+        body: MethodInvocation
+          operator: ..
+          methodName: SimpleIdentifier
+            token: m
+            element: <testLibrary>::@class::C::@method::m
+            staticType: void Function()
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+          staticInvokeType: void Function()
+          staticType: void
     cascadeSections
       MethodInvocation
         operator: ..
@@ -383,7 +448,7 @@ ImplicitCallReference
   }
 
   test_prefixedIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   C get c;
   void call(int t) => t;
@@ -394,10 +459,10 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c.c;');
+    var node = result.findNode.implicitCallReference('c.c;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::foo::@formalParameter::c
@@ -415,7 +480,7 @@ ImplicitCallReference
   }
 
   test_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   C get c;
   void call(int t) => t;
@@ -426,11 +491,11 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c.c.c');
+    var node = result.findNode.implicitCallReference('c.c.c');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: c
         element: <testLibrary>::@function::foo::@formalParameter::c
@@ -454,7 +519,7 @@ ImplicitCallReference
   }
 
   test_setOrMapLiteral_element() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -464,10 +529,10 @@ Set<void Function(int)> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c}');
+    var node = result.findNode.implicitCallReference('c}');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -477,7 +542,7 @@ ImplicitCallReference
   }
 
   test_setOrMapLiteral_mapLiteralEntry_key() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -487,10 +552,10 @@ Map<void Function(int), int> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c:');
+    var node = result.findNode.implicitCallReference('c:');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -500,7 +565,7 @@ ImplicitCallReference
   }
 
   test_setOrMapLiteral_mapLiteralEntry_value() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -510,10 +575,10 @@ Map<int, void Function(int)> foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c}');
+    var node = result.findNode.implicitCallReference('c}');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -523,7 +588,7 @@ ImplicitCallReference
   }
 
   test_simpleIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   void call(int t) => t;
 }
@@ -533,10 +598,10 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c;');
+    var node = result.findNode.implicitCallReference('c;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -546,7 +611,7 @@ ImplicitCallReference
   }
 
   test_simpleIdentifier_typeAlias() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void call() {}
 }
@@ -554,10 +619,10 @@ typedef B = A;
 Function f(B b) => b;
 ''');
 
-    var node = findNode.implicitCallReference('b;');
+    var node = result.findNode.implicitCallReference('b;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: b
     element: <testLibrary>::@function::f::@formalParameter::b
     staticType: A
@@ -568,17 +633,17 @@ ImplicitCallReference
   }
 
   test_simpleIdentifier_typeVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void call() {}
 }
 Function f<X extends A>(X x) => x;
 ''');
 
-    var node = findNode.implicitCallReference('x;');
+    var node = result.findNode.implicitCallReference('x;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: X
@@ -588,17 +653,17 @@ ImplicitCallReference
   }
 
   test_simpleIdentifier_typeVariable2() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void call() {}
 }
 Function f<X extends A, Y extends X>(Y y) => y;
 ''');
 
-    var node = findNode.implicitCallReference('y;');
+    var node = result.findNode.implicitCallReference('y;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: y
     element: <testLibrary>::@function::f::@formalParameter::y
     staticType: Y
@@ -608,7 +673,7 @@ ImplicitCallReference
   }
 
   test_simpleIdentifier_typeVariable2_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void call() {}
 }
@@ -618,7 +683,7 @@ Function f<X extends A, Y extends X?>(Y y) => y;
 ''');
 
     // Verify that no ImplicitCallReference was inserted.
-    var node = findNode.expressionFunctionBody('y;').expression;
+    var node = result.findNode.expressionFunctionBody('y;').expression2;
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: y
@@ -628,7 +693,7 @@ SimpleIdentifier
   }
 
   test_simpleIdentifier_typeVariable_nullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void call() {}
 }
@@ -638,7 +703,7 @@ Function f<X extends A>(X? x) => x;
 ''');
 
     // Verify that no ImplicitCallReference was inserted.
-    var node = findNode.expressionFunctionBody('x;').expression;
+    var node = result.findNode.expressionFunctionBody('x;').expression2;
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: x
@@ -654,7 +719,7 @@ class AstRewriteMethodInvocationTest extends PubPackageResolutionTest
 
 mixin AstRewriteMethodInvocationTestCases on PubPackageResolutionTest {
   test_targetNull_cascade() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void foo() {}
 }
@@ -664,7 +729,7 @@ f(A a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('foo();');
+    var node = result.findNode.methodInvocation('foo();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   operator: ..
@@ -681,7 +746,7 @@ MethodInvocation
   }
 
   test_targetNull_class() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A(int a);
 }
@@ -691,9 +756,41 @@ f() {
 }
 ''');
 
-    var node = findNode.instanceCreation('A<int, String>(0);');
+    var node = result.findNode.constructorInvocation('A<int, String>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          NamedType
+            name: String
+            element: dart:core::@class::String
+            type: String
+        rightBracket: >
+      element: <testLibrary>::@class::A
+      type: A<int, String>
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::new
+      substitution: {T: int, U: String}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+          substitution: {T: int, U: String}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int, String>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: A
@@ -711,7 +808,7 @@ InstanceCreationExpression
         rightBracket: >
       element: <testLibrary>::@class::A
       type: A<int, String>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int, U: String}
   argumentList: ArgumentList
@@ -719,7 +816,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
           substitution: {T: int, U: String}
         staticType: int
@@ -729,7 +826,7 @@ InstanceCreationExpression
   }
 
   test_targetNull_extension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E<T> on A {
@@ -740,7 +837,7 @@ f(A a) {
   E<int>(a).foo();
 }
 ''');
-    var node = findNode.extensionOverride('E<int>(a)');
+    var node = result.findNode.extensionOverride('E<int>(a)');
     assertResolvedNodeText(node, r'''
 ExtensionOverride
   name: E
@@ -754,7 +851,7 @@ ExtensionOverride
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: <null>
@@ -770,14 +867,14 @@ ExtensionOverride
   }
 
   test_targetNull_function() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void A<T, U>(int a) {}
 
 f() {
   A<int, String>(0);
 }
 ''');
-    var node = findNode.methodInvocation('A<int, String>(0);');
+    var node = result.findNode.methodInvocation('A<int, String>(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
   methodName: SimpleIdentifier
@@ -798,10 +895,10 @@ MethodInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@function::A::@formalParameter::a
           substitution: {T: int, U: String}
         staticType: int
@@ -815,7 +912,7 @@ MethodInvocation
   }
 
   test_targetNull_typeAlias_interfaceType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A(int _);
 }
@@ -826,9 +923,41 @@ void f() {
   X<int, String>(0);
 }
 ''');
-    var node = findNode.instanceCreation('X<int, String>(0);');
+    var node = result.findNode.constructorInvocation('X<int, String>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: X
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          NamedType
+            name: String
+            element: dart:core::@class::String
+            type: String
+        rightBracket: >
+      element: <testLibrary>::@typeAlias::X
+      type: A<int, String>
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::new
+      substitution: {T: int, U: String}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::_
+          substitution: {T: int, U: String}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int, String>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: X
@@ -846,7 +975,7 @@ InstanceCreationExpression
         rightBracket: >
       element: <testLibrary>::@typeAlias::X
       type: A<int, String>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int, U: String}
   argumentList: ArgumentList
@@ -854,7 +983,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::_
           substitution: {T: int, U: String}
         staticType: int
@@ -864,7 +993,7 @@ InstanceCreationExpression
   }
 
   test_targetNull_typeAlias_Never() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef X = Never;
 
 void f() {
@@ -874,7 +1003,7 @@ void f() {
 }
 ''');
     // Not rewritten.
-    findNode.methodInvocation('X(0)');
+    result.findNode.methodInvocation('X(0)');
   }
 
   test_targetPrefixedIdentifier_prefix_class_constructor() async {
@@ -884,16 +1013,43 @@ class A<T> {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
   prefix.A.named(0);
 }
 ''');
-    var node = findNode.instanceCreation('A.named(0);');
+    var node = result.findNode.constructorInvocation('A.named(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: <testLibraryFragment>::@prefix::prefix
+      name: A
+      element: package:test/a.dart::@class::A
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: package:test/a.dart::@class::A::@constructor::named
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       importPrefix: ImportPrefixReference
@@ -906,11 +1062,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: package:test/a.dart::@class::A::@constructor::named
-        substitution: {T: dynamic}
+        substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
   argumentList: ArgumentList
@@ -918,7 +1074,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -934,7 +1090,7 @@ class A<T> {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
@@ -943,9 +1099,44 @@ f() {
 // [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'prefix.A.named' doesn't have type parameters.
 }
 ''');
-    var node = findNode.instanceCreation('named<int>(0);');
+    var node = result.findNode.constructorInvocation('named<int>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: <testLibraryFragment>::@prefix::prefix
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+        rightBracket: >
+      element: package:test/a.dart::@class::A
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: package:test/a.dart::@class::A::@constructor::named
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       importPrefix: ImportPrefixReference
@@ -966,11 +1157,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: package:test/a.dart::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
   argumentList: ArgumentList
@@ -978,7 +1169,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -994,7 +1185,7 @@ class A<T> {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
@@ -1003,9 +1194,44 @@ f() {
 // [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'prefix.A.new' doesn't have type parameters.
 }
 ''');
-    var node = findNode.instanceCreation('new<int>(0);');
+    var node = result.findNode.constructorInvocation('new<int>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: <testLibraryFragment>::@prefix::prefix
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+        rightBracket: >
+      element: package:test/a.dart::@class::A
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: new
+    element: SubstitutedConstructorElementImpl
+      baseElement: package:test/a.dart::@class::A::@constructor::new
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       importPrefix: ImportPrefixReference
@@ -1026,11 +1252,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: new
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: package:test/a.dart::@class::A::@constructor::new
         substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::new
       substitution: {T: int}
   argumentList: ArgumentList
@@ -1038,7 +1264,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -1056,17 +1282,17 @@ class A {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
   prefix.foo.bar(0);
 }
 ''');
-    var node = findNode.methodInvocation('bar(0);');
+    var node = result.findNode.methodInvocation('bar(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -1085,7 +1311,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: package:test/a.dart::@class::A::@method::bar::@formalParameter::a
@@ -1105,16 +1331,43 @@ class A<T> {
 typedef X<T> = A<T>;
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 void f() {
   prefix.X.named(0);
 }
 ''');
-    var node = findNode.instanceCreation('X.named(0);');
+    var node = result.findNode.constructorInvocation('X.named(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: <testLibraryFragment>::@prefix::prefix
+      name: X
+      element: package:test/a.dart::@typeAlias::X
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: package:test/a.dart::@class::A::@constructor::named
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       importPrefix: ImportPrefixReference
@@ -1127,11 +1380,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: package:test/a.dart::@class::A::@constructor::named
-        substitution: {T: dynamic}
+        substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
   argumentList: ArgumentList
@@ -1139,7 +1392,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -1149,7 +1402,7 @@ InstanceCreationExpression
   }
 
   test_targetSimpleIdentifier_class_constructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named(T a);
 }
@@ -1159,9 +1412,32 @@ f() {
 }
 ''');
 
-    var node = findNode.instanceCreation('A.named(0);');
+    var node = result.findNode.constructorInvocation('A.named(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::named
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: A
@@ -1170,11 +1446,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
-        substitution: {T: dynamic}
+        substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
   argumentList: ArgumentList
@@ -1182,7 +1458,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -1192,7 +1468,7 @@ InstanceCreationExpression
   }
 
   test_targetSimpleIdentifier_class_constructor_typeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A.named(int a);
 }
@@ -1205,9 +1481,44 @@ f() {
 ''');
 
     // TODO(scheglov): Move type arguments
-    var node = findNode.instanceCreation('named<int, String>(0);');
+    var node = result.findNode.constructorInvocation('named<int, String>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A<dynamic, dynamic>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::named
+      substitution: {T: dynamic, U: dynamic}
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+      NamedType
+        name: String
+        element: dart:core::@class::String
+        type: String
+    rightBracket: >
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: dynamic, U: dynamic}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<dynamic, dynamic>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: A
@@ -1216,11 +1527,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: dynamic, U: dynamic}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: dynamic, U: dynamic}
   typeArguments: TypeArgumentList
@@ -1240,7 +1551,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: dynamic, U: dynamic}
         staticType: int
@@ -1250,7 +1561,7 @@ InstanceCreationExpression
   }
 
   test_targetSimpleIdentifier_class_constructor_typeArguments_new() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   A.new(int a);
 }
@@ -1263,9 +1574,44 @@ f() {
 ''');
 
     // TODO(scheglov): Move type arguments
-    var node = findNode.instanceCreation('new<int, String>(0);');
+    var node = result.findNode.constructorInvocation('new<int, String>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A<dynamic, dynamic>
+    selector: ConstructorSelector
+      period: .
+      name2: new
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::new
+      substitution: {T: dynamic, U: dynamic}
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+      NamedType
+        name: String
+        element: dart:core::@class::String
+        type: String
+    rightBracket: >
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+          substitution: {T: dynamic, U: dynamic}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<dynamic, dynamic>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: A
@@ -1274,11 +1620,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: new
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: dynamic, U: dynamic}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: dynamic, U: dynamic}
   typeArguments: TypeArgumentList
@@ -1298,7 +1644,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
           substitution: {T: dynamic, U: dynamic}
         staticType: int
@@ -1308,7 +1654,7 @@ InstanceCreationExpression
   }
 
   test_targetSimpleIdentifier_class_staticMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static void foo(int a) {}
 }
@@ -1317,10 +1663,10 @@ f() {
   A.foo(0);
 }
 ''');
-    var node = findNode.methodInvocation('foo(0);');
+    var node = result.findNode.methodInvocation('foo(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::A
     staticType: null
@@ -1331,7 +1677,7 @@ MethodInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@method::foo::@formalParameter::a
@@ -1349,16 +1695,52 @@ class A<T, U> {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
   prefix.A<int, String>(0);
 }
 ''');
-    var node = findNode.instanceCreation('A<int, String>(0);');
+    var node = result.findNode.constructorInvocation('A<int, String>(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: prefix
+        period: .
+        element: <testLibraryFragment>::@prefix::prefix
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          NamedType
+            name: String
+            element: dart:core::@class::String
+            type: String
+        rightBracket: >
+      element: package:test/a.dart::@class::A
+      type: A<int, String>
+    element: SubstitutedConstructorElementImpl
+      baseElement: package:test/a.dart::@class::A::@constructor::new
+      substitution: {T: int, U: String}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::a
+          substitution: {T: int, U: String}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int, String>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       importPrefix: ImportPrefixReference
@@ -1380,7 +1762,7 @@ InstanceCreationExpression
         rightBracket: >
       element: package:test/a.dart::@class::A
       type: A<int, String>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::new
       substitution: {T: int, U: String}
   argumentList: ArgumentList
@@ -1388,7 +1770,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::a
           substitution: {T: int, U: String}
         staticType: int
@@ -1406,14 +1788,14 @@ extension E<T> on A {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f(prefix.A a) {
   prefix.E<int>(a).foo();
 }
 ''');
-    var node = findNode.extensionOverride('E<int>(a)');
+    var node = result.findNode.extensionOverride('E<int>(a)');
     assertResolvedNodeText(node, r'''
 ExtensionOverride
   importPrefix: ImportPrefixReference
@@ -1431,7 +1813,7 @@ ExtensionOverride
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: <null>
@@ -1451,7 +1833,7 @@ ExtensionOverride
 void A<T, U>(int a) {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 f() {
@@ -1459,10 +1841,10 @@ f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('A<int, String>(0);');
+    var node = result.findNode.methodInvocation('A<int, String>(0);');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: prefix
     element: <testLibraryFragment>::@prefix::prefix
     staticType: null
@@ -1485,10 +1867,10 @@ MethodInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: package:test/a.dart::@function::A::@formalParameter::a
           substitution: {T: int, U: String}
         staticType: int
@@ -1502,7 +1884,7 @@ MethodInvocation
   }
 
   test_targetSimpleIdentifier_typeAlias_interfaceType_constructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A.named(T a);
 }
@@ -1514,9 +1896,32 @@ void f() {
 }
 ''');
 
-    var node = findNode.instanceCreation('X.named(0);');
+    var node = result.findNode.constructorInvocation('X.named(0);');
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: X
+      element: <testLibrary>::@typeAlias::X
+      type: A<int>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::named
+      substitution: {T: int}
+  argumentList: ArgumentList
+    leftParenthesis: (
+    arguments2
+      IntegerLiteral
+        literal: 0
+        correspondingParameter: SubstitutedFormalParameterElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
+          substitution: {T: int}
+        staticType: int
+    rightParenthesis: )
+  staticType: A<int>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: X
@@ -1525,11 +1930,11 @@ InstanceCreationExpression
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
-        substitution: {T: dynamic}
+        substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
   argumentList: ArgumentList
@@ -1537,7 +1942,7 @@ InstanceCreationExpression
     arguments
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
           substitution: {T: int}
         staticType: int
@@ -1549,8 +1954,8 @@ InstanceCreationExpression
 
 @reflectiveTest
 class AstRewritePrefixedIdentifierTest extends PubPackageResolutionTest {
-  test_constructorReference_inAssignment_onLeftSide() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_constructorTearOff_inAssignment_onLeftSide() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 void f() {
@@ -1560,7 +1965,7 @@ void f() {
 }
 ''');
 
-    var identifier = findNode.prefixed('C.new');
+    var identifier = result.findNode.prefixed('C.new');
     // The left side of the assignment is resolved by
     // [PropertyElementResolver._resolveTargetClassElement], which looks for
     // getters and setters on `C`, and does not recover with other elements
@@ -1569,8 +1974,8 @@ void f() {
     expect(identifier.element, isNull);
   }
 
-  test_constructorReference_inAssignment_onRightSide() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_constructorTearOff_inAssignment_onRightSide() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 Function? f;
@@ -1579,9 +1984,20 @@ void g() {
 }
 ''');
 
-    var node = findNode.constructorReference('C.new');
+    var node = result.findNode.constructorTearOff('C.new');
     assertResolvedNodeText(node, r'''
-ConstructorReference
+ConstructorTearOff
+  typeReference: ConstructorTypeReference
+    name: C
+    element: <testLibrary>::@class::C
+    type: C
+  selector: ConstructorSelector
+    period: .
+    name2: new
+  correspondingParameter: <testLibrary>::@setter::f::@formalParameter::value
+  element: <testLibrary>::@class::C::@constructor::new
+  staticType: C Function()
+V1: ConstructorReference
   constructorName: ConstructorName
     type: NamedType
       name: C
@@ -1593,7 +2009,6 @@ ConstructorReference
       element: <testLibrary>::@class::C::@constructor::new
       staticType: null
     element: <testLibrary>::@class::C::@constructor::new
-  correspondingParameter: <testLibrary>::@setter::f::@formalParameter::value
   staticType: C Function()
 ''');
   }

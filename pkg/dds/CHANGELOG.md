@@ -1,3 +1,12 @@
+# 5.5.0-wip
+
+- Require devtools_shared ^14.0.0
+
+# 5.4.0
+
+- [DAP] Print truncated text from `dart:developer`'s `log()` if the full string has been collected.
+- Require devtools_shared ^13.0.0
+
 # 5.3.0
 
 - Add `--app-name` option to `dart development-service`. This is a short, user

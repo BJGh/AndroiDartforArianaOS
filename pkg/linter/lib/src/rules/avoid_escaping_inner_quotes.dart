@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid escaping inner quotes by converting surrounding quotes.';
 
 class AvoidEscapingInnerQuotes extends AnalysisRule {
-  AvoidEscapingInnerQuotes()
+  new()
     : super(name: LintNames.avoid_escaping_inner_quotes, description: _desc);
 
   @override
@@ -32,11 +32,7 @@ class AvoidEscapingInnerQuotes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitSimpleStringLiteral(SimpleStringLiteral node) {
     if (node.isRaw || node.isMultiline) return;

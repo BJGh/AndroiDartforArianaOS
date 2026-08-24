@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/dart/ast/token.dart';
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../src/dart/resolution/node_text_expectations.dart';
@@ -21,14 +20,13 @@ main() {
 @reflectiveTest
 class TopLevelParserTest extends ParserDiagnosticsTest {
   void test_function_literal_allowed_at_toplevel() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = () {};
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -36,7 +34,7 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: FunctionExpression
+            initializer2: FunctionExpression
               parameters: FormalParameterList
                 leftParenthesis: (
                 rightParenthesis: )
@@ -50,16 +48,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_ArgumentList_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = f(() {});
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -68,7 +65,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -76,15 +74,16 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: MethodInvocation
+                expression2: MethodInvocation
                   methodName: SimpleIdentifier
                     token: f
                   argumentList: ArgumentList
                     leftParenthesis: (
-                    arguments
+                    arguments2
                       FunctionExpression
                         parameters: FormalParameterList
                           leftParenthesis: (
@@ -102,16 +101,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_IndexExpression_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = x[() {}];
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -120,7 +118,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -128,10 +127,24 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: x
+                  leftBracket: [
+                  index: FunctionExpression
+                    parameters: FormalParameterList
+                      leftParenthesis: (
+                      rightParenthesis: )
+                    body: BlockFunctionBody
+                      block: Block
+                        leftBracket: {
+                        rightBracket: }
+                  rightBracket: ]
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: x
                   leftBracket: [
@@ -152,16 +165,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_ListLiteral_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = [() {}];
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -170,7 +182,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -178,12 +191,13 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: ListLiteral
+                expression2: ListLiteral
                   leftBracket: [
-                  elements
+                  elements2
                     FunctionExpression
                       parameters: FormalParameterList
                         leftParenthesis: (
@@ -201,16 +215,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_MapLiteral_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = {'key': () {}};
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -219,7 +232,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -227,17 +241,18 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: SetOrMapLiteral
+                expression2: SetOrMapLiteral
                   leftBracket: {
-                  elements
+                  elements2
                     MapLiteralEntry
-                      key: SimpleStringLiteral
+                      key2: SimpleStringLiteral
                         literal: 'key'
                       separator: :
-                      value: FunctionExpression
+                      value2: FunctionExpression
                         parameters: FormalParameterList
                           leftParenthesis: (
                           rightParenthesis: )
@@ -255,16 +270,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_ParenthesizedExpression_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = (() {});
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -273,7 +287,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -281,12 +296,13 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: ParenthesizedExpression
+                expression2: ParenthesizedExpression
                   leftParenthesis: (
-                  expression: FunctionExpression
+                  expression2: FunctionExpression
                     parameters: FormalParameterList
                       leftParenthesis: (
                       rightParenthesis: )
@@ -303,16 +319,15 @@ CompilationUnit
 
   void
   test_function_literal_allowed_in_StringInterpolation_in_ConstructorFieldInitializer() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   C() : a = "${() {}}";
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -321,7 +336,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: C
+            typeName(v1): SimpleIdentifier
               token: C
             parameters: FormalParameterList
               leftParenthesis: (
@@ -329,16 +345,17 @@ CompilationUnit
             separator: :
             initializers
               ConstructorFieldInitializer
-                fieldName: SimpleIdentifier
+                fieldName2: a
+                fieldName(v1): SimpleIdentifier
                   token: a
                 equals: =
-                expression: StringInterpolation
+                expression2: StringInterpolation
                   elements
                     InterpolationString
                       contents: "
                     InterpolationExpression
                       leftBracket: ${
-                      expression: FunctionExpression
+                      expression2: FunctionExpression
                         parameters: FormalParameterList
                           leftParenthesis: (
                           rightParenthesis: )
@@ -357,10 +374,9 @@ CompilationUnit
   }
 
   void test_import_as_show() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'dart:math' as M show E;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -370,23 +386,26 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'dart:math'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: M
+      prefixName: M
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: E
           shownNames
             SimpleIdentifier
               token: E
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: M
 ''');
   }
 
   void test_import_show_hide() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'import1_lib.dart' show hide, show hide ugly;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -398,6 +417,11 @@ CompilationUnit
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: hide
+            CombinatorName
+              name: show
           shownNames
             SimpleIdentifier
               token: hide
@@ -405,6 +429,9 @@ CompilationUnit
               token: show
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: ugly
           hiddenNames
             SimpleIdentifier
               token: ugly
@@ -413,11 +440,10 @@ CompilationUnit
   }
 
   void test_import_withDocComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 import "foo.dart";
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -434,18 +460,19 @@ CompilationUnit
   }
 
   void test_parse_missing_type_in_list_at_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 Future<List<>>
+//          ^^
+// [diag.expectedTypeName] Expected a type name.
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//            ^
+// [diag.missingIdentifier][column 15][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedTypeName, 12, 2),
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -470,14 +497,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_abstract() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       abstractKeyword: abstract
       classKeyword: class
@@ -490,14 +516,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_empty() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -509,14 +534,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_extends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -532,14 +556,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_extendsAndImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B implements C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -560,14 +583,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_extendsAndWith() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B with C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -588,14 +610,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_extendsAndWithAndImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B with C implements D {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -621,14 +642,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_implements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A implements C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -645,18 +665,17 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_metadata() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @A
 @B(2)
 @C.foo(3)
 @d.E.bar(4, 5)
 class X {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       metadata
         Annotation
@@ -669,7 +688,7 @@ CompilationUnit
             token: B
           arguments: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 2
             rightParenthesis: )
@@ -683,7 +702,7 @@ CompilationUnit
               token: foo
           arguments: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 3
             rightParenthesis: )
@@ -700,7 +719,7 @@ CompilationUnit
             token: bar
           arguments: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 4
               IntegerLiteral
@@ -716,14 +735,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_native() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A native "nativeValue" {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -739,17 +757,16 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_native_allowedWithFields() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A native 'something' {
   final int x;
   A() {}
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -771,7 +788,8 @@ CompilationUnit
                   name: x
             semicolon: ;
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: A
+            typeName(v1): SimpleIdentifier
               token: A
             parameters: FormalParameterList
               leftParenthesis: (
@@ -785,14 +803,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_native_missing_literal() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A native {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -806,16 +823,15 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_nonEmpty() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   var f;
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -835,14 +851,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_typeAlias_implementsC() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A = Object with B implements C;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: A
@@ -864,14 +879,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_typeAlias_withB() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A = Object with B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: A
@@ -888,14 +902,13 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_typeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A<B> {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -913,14 +926,15 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_typeParameters_extends_void() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C<T extends void>{}
+//                ^^^^
+// [diag.expectedTypeName] Expected a type name.
 ''');
-    parseResult.assertErrors([error(diag.expectedTypeName, 18, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -941,15 +955,14 @@ CompilationUnit
   }
 
   void test_parseClassDeclaration_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 class C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       documentationComment: Comment
         tokens
@@ -964,15 +977,14 @@ CompilationUnit
   }
 
   void test_parseClassTypeAlias_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 class C = D with E;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       documentationComment: Comment
         tokens
@@ -992,14 +1004,14 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_abstractAsPrefix_parameterized() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract<dynamic> _abstract = new abstract.A();
+// [diag.builtInIdentifierAsType][column 1][length 8] The built-in identifier 'abstract' can't be used as a type.
 ''');
-    parseResult.assertErrors([error(diag.builtInIdentifierAsType, 0, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1014,7 +1026,18 @@ CompilationUnit
           VariableDeclaration
             name: _abstract
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: abstract
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1034,8 +1057,8 @@ CompilationUnit
       if (keyword.isBuiltIn || keyword.isPseudo) {
         String lexeme = keyword.lexeme;
         if (lexeme == 'Function') continue;
-        parseStringWithErrors('$lexeme(x) => 0;').assertNoErrors();
-        parseStringWithErrors('class C {$lexeme(x) => 0;}').assertNoErrors();
+        parseTestCodeWithDiagnostics('$lexeme(x) => 0;');
+        parseTestCodeWithDiagnostics('class C {$lexeme(x) => 0;}');
       }
     }
   }
@@ -1047,8 +1070,8 @@ CompilationUnit
         if (lexeme == 'Function') continue;
         // The fasta type resolution phase will report an error
         // on type arguments on `dynamic` (e.g. `dynamic<int>`).
-        parseStringWithErrors('$lexeme<T>(x) => 0;').assertNoErrors();
-        parseStringWithErrors('class C {$lexeme<T>(x) => 0;}').assertNoErrors();
+        parseTestCodeWithDiagnostics('$lexeme<T>(x) => 0;');
+        parseTestCodeWithDiagnostics('class C {$lexeme<T>(x) => 0;}');
       }
     }
   }
@@ -1057,19 +1080,18 @@ CompilationUnit
     for (Keyword keyword in Keyword.values) {
       if (keyword.isBuiltIn || keyword.isPseudo) {
         String lexeme = keyword.lexeme;
-        parseStringWithErrors('get $lexeme => 0;').assertNoErrors();
-        parseStringWithErrors('class C {get $lexeme => 0;}').assertNoErrors();
+        parseTestCodeWithDiagnostics('get $lexeme => 0;');
+        parseTestCodeWithDiagnostics('class C {get $lexeme => 0;}');
       }
     }
   }
 
   void test_parseCompilationUnit_directives_multiple() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 
 part 'a.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1089,10 +1111,9 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_directives_single() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1107,10 +1128,9 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_empty() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1118,14 +1138,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_exportAsPrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export.A _export = new export.A();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1137,7 +1156,18 @@ CompilationUnit
           VariableDeclaration
             name: _export
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: export
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1153,14 +1183,14 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_exportAsPrefix_parameterized() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export<dynamic> _export = new export.A();
+// [diag.builtInIdentifierAsType][column 1][length 6] The built-in identifier 'export' can't be used as a type.
 ''');
-    parseResult.assertErrors([error(diag.builtInIdentifierAsType, 0, 6)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1175,7 +1205,18 @@ CompilationUnit
           VariableDeclaration
             name: _export
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: export
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1191,14 +1232,14 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_operatorAsPrefix_parameterized() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 operator<dynamic> _operator = new operator.A();
+// [diag.builtInIdentifierAsType][column 1][length 8] The built-in identifier 'operator' can't be used as a type.
 ''');
-    parseResult.assertErrors([error(diag.builtInIdentifierAsType, 0, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1213,7 +1254,18 @@ CompilationUnit
           VariableDeclaration
             name: _operator
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: operator
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1232,10 +1284,10 @@ CompilationUnit
     for (Keyword keyword in Keyword.values) {
       if (keyword.isPseudo) {
         String lexeme = keyword.lexeme;
-        parseStringWithErrors('$lexeme f;').assertNoErrors();
-        parseStringWithErrors('class C {$lexeme f;}').assertNoErrors();
-        parseStringWithErrors('f($lexeme g) {}').assertNoErrors();
-        parseStringWithErrors('f() {$lexeme g;}').assertNoErrors();
+        parseTestCodeWithDiagnostics('$lexeme f;');
+        parseTestCodeWithDiagnostics('class C {$lexeme f;}');
+        parseTestCodeWithDiagnostics('f($lexeme g) {}');
+        parseTestCodeWithDiagnostics('f() {$lexeme g;}');
       }
     }
   }
@@ -1244,17 +1296,16 @@ CompilationUnit
     for (Keyword keyword in Keyword.values) {
       if (keyword.isPseudo) {
         String lexeme = keyword.lexeme;
-        parseStringWithErrors('M.$lexeme f;').assertNoErrors();
-        parseStringWithErrors('class C {M.$lexeme f;}').assertNoErrors();
+        parseTestCodeWithDiagnostics('M.$lexeme f;');
+        parseTestCodeWithDiagnostics('class C {M.$lexeme f;}');
       }
     }
   }
 
   void test_parseCompilationUnit_script() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 #! /bin/dart
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1264,16 +1315,15 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_skipFunctionBody_withInterpolation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   "${n}";
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1285,13 +1335,13 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: StringInterpolation
+                expression2: StringInterpolation
                   elements
                     InterpolationString
                       contents: "
                     InterpolationExpression
                       leftBracket: ${
-                      expression: SimpleIdentifier
+                      expression2: SimpleIdentifier
                         token: n
                       rightBracket: }
                     InterpolationString
@@ -1303,14 +1353,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_topLevelDeclaration() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -1322,14 +1371,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnit_typedefAsPrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef.A _typedef = new typedef.A();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1341,7 +1389,18 @@ CompilationUnit
           VariableDeclaration
             name: _typedef
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: typedef
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1357,14 +1416,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_abstractAsPrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract.A _abstract = new abstract.A();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -1376,7 +1434,18 @@ CompilationUnit
           VariableDeclaration
             name: _abstract
             equals: =
-            initializer: InstanceCreationExpression
+            initializer2: ConstructorInvocation
+              keyword: new
+              constructorReference: ConstructorReference2
+                typeReference: ConstructorTypeReference
+                  importPrefix: ImportPrefixReference
+                    name: abstract
+                    period: .
+                  name: A
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+            initializer(v1): InstanceCreationExpression
               keyword: new
               constructorName: ConstructorName
                 type: NamedType
@@ -1392,14 +1461,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -1411,14 +1479,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_classTypeAlias() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract class A = B with C;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       abstractKeyword: abstract
       typedefKeyword: class
@@ -1436,14 +1503,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_constVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const int x = 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1453,21 +1519,20 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_expressionFunctionBody_tokens() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() => 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1476,21 +1541,20 @@ CompilationUnit
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
           semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_finalVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final x = 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -1498,21 +1562,20 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_function_external_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external f();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       externalKeyword: external
       name: f
@@ -1526,14 +1589,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_external_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external int f();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       externalKeyword: external
       returnType: NamedType
@@ -1549,14 +1611,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_generic_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f<E>() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1578,14 +1639,13 @@ CompilationUnit
 
   void
   test_parseCompilationUnitMember_function_generic_noReturnType_annotated() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f<@a E>() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1611,14 +1671,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_generic_returnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 E f<E>() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: E
@@ -1641,14 +1700,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_generic_void() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void f<T>(T t) {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -1661,6 +1719,14 @@ CompilationUnit
               name: T
           rightBracket: >
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: T
+              name: t
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -1675,14 +1741,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_gftReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void Function<A>(core.List<core.int> x) f() => null;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: GenericFunctionType
         returnType: NamedType
@@ -1696,6 +1761,26 @@ CompilationUnit
           rightBracket: >
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                importPrefix: ImportPrefixReference
+                  name: core
+                  period: .
+                name: List
+                typeArguments: TypeArgumentList
+                  leftBracket: <
+                  arguments
+                    NamedType
+                      importPrefix: ImportPrefixReference
+                        name: core
+                        period: .
+                      name: int
+                  rightBracket: >
+              name: x
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               importPrefix: ImportPrefixReference
@@ -1720,21 +1805,20 @@ CompilationUnit
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: NullLiteral
+          expression2: NullLiteral
             literal: null
           semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_function_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 Function<A>(core.List<core.int> x) f() => null;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: GenericFunctionType
         functionKeyword: Function
@@ -1746,6 +1830,26 @@ CompilationUnit
           rightBracket: >
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                importPrefix: ImportPrefixReference
+                  name: core
+                  period: .
+                name: List
+                typeArguments: TypeArgumentList
+                  leftBracket: <
+                  arguments
+                    NamedType
+                      importPrefix: ImportPrefixReference
+                        name: core
+                        period: .
+                      name: int
+                  rightBracket: >
+              name: x
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               importPrefix: ImportPrefixReference
@@ -1770,21 +1874,20 @@ CompilationUnit
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: NullLiteral
+          expression2: NullLiteral
             literal: null
           semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_function_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1799,14 +1902,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int f() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -1823,14 +1925,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_function_void() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void f() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -1847,14 +1948,20 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_getter_external_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external get p;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      externalKeyword: external
+      getKeyword: get
+      name: p
+      body: EmptyFunctionBody
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       externalKeyword: external
       propertyKeyword: get
@@ -1866,14 +1973,22 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_getter_external_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external int get p;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      externalKeyword: external
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: p
+      body: EmptyFunctionBody
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       externalKeyword: external
       returnType: NamedType
@@ -1887,14 +2002,22 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_getter_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 get p => 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: p
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       propertyKeyword: get
       name: p
@@ -1908,14 +2031,24 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_getter_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int get p => 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: p
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -1931,20 +2064,25 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_setter_external_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external set p(v);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       externalKeyword: external
       propertyKeyword: set
       name: p
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: v
@@ -1955,14 +2093,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_setter_external_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external void set p(int v);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       externalKeyword: external
       returnType: NamedType
@@ -1971,6 +2108,14 @@ CompilationUnit
       name: p
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -1983,19 +2128,24 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_setter_noType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 set p(v) {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: p
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: v
@@ -2008,14 +2158,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_setter_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void set p(int v) {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -2023,6 +2172,14 @@ CompilationUnit
       name: p
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -2037,14 +2194,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typeAlias_abstract() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract class C = S with M;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       abstractKeyword: abstract
       typedefKeyword: class
@@ -2062,14 +2218,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typeAlias_generic() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C<E> = S<E> with M<E> implements I<E>;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: C
@@ -2115,14 +2270,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typeAlias_implements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C = S with M implements I;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: C
@@ -2144,14 +2298,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typeAlias_noImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C = S with M;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: C
@@ -2168,14 +2321,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       name: F
@@ -2187,15 +2339,14 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typedef_withDocComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 typedef F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       documentationComment: Comment
         tokens
@@ -2210,14 +2361,13 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_typedVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int x = 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -2226,21 +2376,20 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_variable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -2248,21 +2397,20 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_variable_gftType_gftReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 Function(int) Function(String) v;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: GenericFunctionType
@@ -2270,12 +2418,26 @@ CompilationUnit
             functionKeyword: Function
             parameters: FormalParameterList
               leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  type: NamedType
+                    name: int
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
+              leftParenthesis: (
               parameter: RegularFormalParameter
                 type: NamedType
                   name: int
               rightParenthesis: )
           functionKeyword: Function
           parameters: FormalParameterList
+            leftParenthesis: (
+            requiredPositionalFormalParameters
+              RegularFormalParameter
+                type: NamedType
+                  name: String
+            rightParenthesis: )
+          parameters(v1): FormalParameterList
             leftParenthesis: (
             parameter: RegularFormalParameter
               type: NamedType
@@ -2289,19 +2451,28 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_variable_gftType_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 Function(int, String) v;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: GenericFunctionType
           functionKeyword: Function
           parameters: FormalParameterList
+            leftParenthesis: (
+            requiredPositionalFormalParameters
+              RegularFormalParameter
+                type: NamedType
+                  name: int
+              RegularFormalParameter
+                type: NamedType
+                  name: String
+            rightParenthesis: )
+          parameters(v1): FormalParameterList
             leftParenthesis: (
             parameter: RegularFormalParameter
               type: NamedType
@@ -2318,15 +2489,14 @@ CompilationUnit
   }
 
   void test_parseCompilationUnitMember_variable_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 var x = 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       documentationComment: Comment
         tokens
@@ -2337,21 +2507,20 @@ CompilationUnit
           VariableDeclaration
             name: x
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_variableGet() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 String get = null;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -2360,21 +2529,20 @@ CompilationUnit
           VariableDeclaration
             name: get
             equals: =
-            initializer: NullLiteral
+            initializer2: NullLiteral
               literal: null
       semicolon: ;
 ''');
   }
 
   void test_parseCompilationUnitMember_variableSet() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 String set = null;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -2383,17 +2551,16 @@ CompilationUnit
           VariableDeclaration
             name: set
             equals: =
-            initializer: NullLiteral
+            initializer2: NullLiteral
               literal: null
       semicolon: ;
 ''');
   }
 
   void test_parseDirective_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2407,11 +2574,10 @@ CompilationUnit
   }
 
   void test_parseDirective_export_withDocComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 export 'foo.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2428,10 +2594,9 @@ CompilationUnit
   }
 
   void test_parseDirective_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2445,10 +2610,9 @@ CompilationUnit
   }
 
   void test_parseDirective_library() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2463,10 +2627,9 @@ CompilationUnit
   }
 
   void test_parseDirective_library_1_component() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library a;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2481,10 +2644,9 @@ CompilationUnit
   }
 
   void test_parseDirective_library_2_components() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library a.b;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2501,10 +2663,9 @@ CompilationUnit
   }
 
   void test_parseDirective_library_3_components() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library a.b.c;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2523,11 +2684,10 @@ CompilationUnit
   }
 
   void test_parseDirective_library_annotation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @A
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2547,11 +2707,10 @@ CompilationUnit
   }
 
   void test_parseDirective_library_annotation2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @A
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2571,10 +2730,9 @@ CompilationUnit
   }
 
   void test_parseDirective_library_unnamed() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2586,11 +2744,10 @@ CompilationUnit
   }
 
   void test_parseDirective_library_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2608,10 +2765,9 @@ CompilationUnit
   }
 
   void test_parseDirective_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2625,10 +2781,11 @@ CompilationUnit
   }
 
   void test_parseDirective_part_of_1_component() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of a;
+//      ^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2644,10 +2801,11 @@ CompilationUnit
   }
 
   void test_parseDirective_part_of_2_components() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of a.b;
+//      ^^^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2665,10 +2823,11 @@ CompilationUnit
   }
 
   void test_parseDirective_part_of_3_components() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of a.b.c;
+//      ^^^^^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 8, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2688,11 +2847,12 @@ CompilationUnit
   }
 
   void test_parseDirective_part_of_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 part of a;
+//      ^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 16, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2711,11 +2871,10 @@ CompilationUnit
   }
 
   void test_parseDirective_part_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 part 'lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2732,10 +2891,11 @@ CompilationUnit
   }
 
   void test_parseDirective_partOf() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of l;
+//      ^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2751,14 +2911,13 @@ CompilationUnit
   }
 
   void test_parseDirectives_annotations() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @A
 library l;
 
 @B
 import 'foo.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2788,14 +2947,13 @@ CompilationUnit
   }
 
   void test_parseDirectives_complete() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 #! /bin/dart
 
 library l;
 
 class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2808,7 +2966,7 @@ CompilationUnit
         tokens
           l
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -2820,10 +2978,9 @@ CompilationUnit
   }
 
   void test_parseDirectives_empty() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2831,10 +2988,11 @@ CompilationUnit
   }
 
   void test_parseDirectives_mixed() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l; class A {} part 'foo.dart';
+//                    ^^^^
+// [diag.directiveAfterDeclaration] Directives must appear before any declarations.
 ''');
-    parseResult.assertErrors([error(diag.directiveAfterDeclaration, 22, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2850,7 +3008,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'foo.dart'
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -2862,12 +3020,11 @@ CompilationUnit
   }
 
   void test_parseDirectives_multiple() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 
 part 'a.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2887,10 +3044,9 @@ CompilationUnit
   }
 
   void test_parseDirectives_script() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 #! /bin/dart
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2900,10 +3056,9 @@ CompilationUnit
   }
 
   void test_parseDirectives_single() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2918,14 +3073,13 @@ CompilationUnit
   }
 
   void test_parseDirectives_topLevelDeclaration() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -2937,14 +3091,13 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_one() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { ONE }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2959,14 +3112,13 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_trailingComma() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { ONE }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -2981,14 +3133,13 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_two() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E { ONE, TWO }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3005,15 +3156,14 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_withDocComment_onEnum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 enum E { ONE }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       documentationComment: Comment
         tokens
@@ -3031,17 +3181,16 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_withDocComment_onValue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {
   /// Doc
   ONE,
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3059,18 +3208,17 @@ CompilationUnit
   }
 
   void test_parseEnumDeclaration_withDocComment_onValue_annotated() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 enum E {
   /// Doc
   @annotation
   ONE,
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -3093,10 +3241,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_configuration_multiple() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' if (a) 'b.dart' if (c) 'd.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3131,10 +3278,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_configuration_single() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' if (a.b == 'c.dart') '';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3164,10 +3310,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_hide() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' hide A, B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3179,6 +3324,11 @@ CompilationUnit
       combinators
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
+            CombinatorName
+              name: B
           hiddenNames
             SimpleIdentifier
               token: A
@@ -3189,10 +3339,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_hide_show() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' hide A show B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3204,11 +3353,17 @@ CompilationUnit
       combinators
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
           hiddenNames
             SimpleIdentifier
               token: A
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: B
@@ -3217,10 +3372,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_noCombinator() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3234,10 +3388,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_show() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' show A, B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3249,6 +3402,11 @@ CompilationUnit
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: A
@@ -3259,10 +3417,9 @@ CompilationUnit
   }
 
   void test_parseExportDirective_show_hide() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 export 'lib/lib.dart' show B hide A;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -3274,11 +3431,17 @@ CompilationUnit
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: B
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
           hiddenNames
             SimpleIdentifier
               token: A
@@ -3287,15 +3450,14 @@ CompilationUnit
   }
 
   void test_parseFunctionDeclaration_function() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 T f() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       documentationComment: Comment
         tokens
@@ -3315,15 +3477,14 @@ CompilationUnit
   }
 
   void test_parseFunctionDeclaration_functionWithTypeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 T f<E>() {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       documentationComment: Comment
         tokens
@@ -3349,15 +3510,28 @@ CompilationUnit
   }
 
   void test_parseFunctionDeclaration_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 T get p => 0;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      documentationComment: Comment
+        tokens
+          /// Doc
+      returnType: NamedType
+        name: T
+      getKeyword: get
+      name: p
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       documentationComment: Comment
         tokens
@@ -3376,20 +3550,96 @@ CompilationUnit
   }
 
   void test_parseFunctionDeclaration_metadata() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 T f(@A a, @B(2) Foo b, {@C.foo(3) c: 0, @d.E.bar(4, 5) x: 0}) {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: T
       name: f
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              metadata
+                Annotation
+                  atSign: @
+                  name: SimpleIdentifier
+                    token: A
+              name: a
+            RegularFormalParameter
+              metadata
+                Annotation
+                  atSign: @
+                  name: SimpleIdentifier
+                    token: B
+                  arguments: ArgumentList
+                    leftParenthesis: (
+                    arguments2
+                      IntegerLiteral
+                        literal: 2
+                    rightParenthesis: )
+              type: NamedType
+                name: Foo
+              name: b
+          delimitedFormalParameters: DelimitedFormalParameters
+            leftDelimiter: {
+            formalParameters
+              RegularFormalParameter
+                metadata
+                  Annotation
+                    atSign: @
+                    name: PrefixedIdentifier
+                      prefix: SimpleIdentifier
+                        token: C
+                      period: .
+                      identifier: SimpleIdentifier
+                        token: foo
+                    arguments: ArgumentList
+                      leftParenthesis: (
+                      arguments2
+                        IntegerLiteral
+                          literal: 3
+                      rightParenthesis: )
+                name: c
+                defaultClause: FormalParameterDefaultClause
+                  separator: :
+                  value2: IntegerLiteral
+                    literal: 0
+              RegularFormalParameter
+                metadata
+                  Annotation
+                    atSign: @
+                    name: PrefixedIdentifier
+                      prefix: SimpleIdentifier
+                        token: d
+                      period: .
+                      identifier: SimpleIdentifier
+                        token: E
+                    period: .
+                    constructorName: SimpleIdentifier
+                      token: bar
+                    arguments: ArgumentList
+                      leftParenthesis: (
+                      arguments2
+                        IntegerLiteral
+                          literal: 4
+                        IntegerLiteral
+                          literal: 5
+                      rightParenthesis: )
+                name: x
+                defaultClause: FormalParameterDefaultClause
+                  separator: :
+                  value2: IntegerLiteral
+                    literal: 0
+            rightDelimiter: }
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             metadata
@@ -3471,15 +3721,14 @@ CompilationUnit
   }
 
   void test_parseFunctionDeclaration_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 T set p(v) {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       documentationComment: Comment
         tokens
@@ -3490,6 +3739,12 @@ CompilationUnit
       name: p
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: v
@@ -3502,14 +3757,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_noTypeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = int Function(int);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3520,6 +3774,13 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: int
@@ -3529,14 +3790,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = T Function(T);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3552,6 +3812,13 @@ CompilationUnit
           name: T
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: T
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3562,14 +3829,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = T Function(T);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3586,6 +3852,13 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: T
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: T
@@ -3595,14 +3868,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters3() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3620,6 +3892,22 @@ CompilationUnit
       type: GenericFunctionType
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3639,14 +3927,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters3_gtEq() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3664,6 +3951,22 @@ CompilationUnit
       type: GenericFunctionType
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3683,14 +3986,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters_extends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C extends D<E>> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3717,6 +4019,22 @@ CompilationUnit
       type: GenericFunctionType
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3736,14 +4054,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters_extends3() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C extends D<E, G, H>> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3774,6 +4091,22 @@ CompilationUnit
       type: GenericFunctionType
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3793,14 +4126,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters_extends3_gtGtEq() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C extends D<E, G, H>> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3832,6 +4164,22 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: A
@@ -3850,14 +4198,13 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_typeParameters_extends_gtGtEq() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<A, B, C extends D<E>> = Function(A a, B b, C c);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3885,6 +4232,22 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: A
+              name: a
+            RegularFormalParameter
+              type: NamedType
+                name: B
+              name: b
+            RegularFormalParameter
+              type: NamedType
+                name: C
+              name: c
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: A
@@ -3903,14 +4266,15 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_TypeParametersInProgress1() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F< = int Function(int);
+//         ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 11, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3927,6 +4291,13 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: int
@@ -3936,14 +4307,15 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_TypeParametersInProgress2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<>= int Function(int);
+//        ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 10, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3959,6 +4331,13 @@ CompilationUnit
           name: int
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -3969,14 +4348,15 @@ CompilationUnit
   }
 
   void test_parseGenericTypeAlias_TypeParametersInProgress3() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<> = int Function(int);
+//        ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 10, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -3993,6 +4373,13 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: int
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: int
@@ -4002,10 +4389,9 @@ CompilationUnit
   }
 
   void test_parseImportDirective_configuration_multiple() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' if (a) 'b.dart' if (c) 'd.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4040,10 +4426,9 @@ CompilationUnit
   }
 
   void test_parseImportDirective_configuration_single() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' if (a.b == 'c.dart') '';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4073,10 +4458,9 @@ CompilationUnit
   }
 
   void test_parseImportDirective_deferred() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' deferred as a;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4087,17 +4471,17 @@ CompilationUnit
         literal: 'lib/lib.dart'
       deferredKeyword: deferred
       asKeyword: as
+      prefixName: a
+      semicolon: ;
       prefix: SimpleIdentifier
         token: a
-      semicolon: ;
 ''');
   }
 
   void test_parseImportDirective_hide() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' hide A, B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4109,6 +4493,11 @@ CompilationUnit
       combinators
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
+            CombinatorName
+              name: B
           hiddenNames
             SimpleIdentifier
               token: A
@@ -4119,10 +4508,9 @@ CompilationUnit
   }
 
   void test_parseImportDirective_noCombinator() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4136,10 +4524,9 @@ CompilationUnit
   }
 
   void test_parseImportDirective_prefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' as a;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4149,17 +4536,17 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'lib/lib.dart'
       asKeyword: as
+      prefixName: a
+      semicolon: ;
       prefix: SimpleIdentifier
         token: a
-      semicolon: ;
 ''');
   }
 
   void test_parseImportDirective_prefix_hide_show() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' as a hide A show B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4169,28 +4556,34 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'lib/lib.dart'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: a
+      prefixName: a
       combinators
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
           hiddenNames
             SimpleIdentifier
               token: A
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: B
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: a
 ''');
   }
 
   void test_parseImportDirective_prefix_show_hide() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' as a show B hide A;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4200,28 +4593,34 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'lib/lib.dart'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: a
+      prefixName: a
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: B
         HideCombinator
           keyword: hide
+          names
+            CombinatorName
+              name: A
           hiddenNames
             SimpleIdentifier
               token: A
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: a
 ''');
   }
 
   void test_parseImportDirective_show() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'lib/lib.dart' show A, B;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4233,6 +4632,11 @@ CompilationUnit
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: A
@@ -4243,10 +4647,9 @@ CompilationUnit
   }
 
   void test_parseLibraryDirective() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library l;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4261,14 +4664,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_empty() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4279,14 +4681,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_implements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A implements B {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4302,14 +4703,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_implements2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A implements B<T>, C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4333,15 +4733,14 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_metadata() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @Z
 mixin A {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       metadata
         Annotation
@@ -4357,14 +4756,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_on() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A on B {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4380,14 +4778,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_on2() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A on B, C<T> {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4411,14 +4808,13 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_onAndImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A on B implements C {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4439,7 +4835,7 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_simple() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A {
   int f;
   int get g => f;
@@ -4450,11 +4846,10 @@ mixin A {
   int add(int v) => f = f + v;
 }
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -4476,13 +4871,21 @@ CompilationUnit
             name: g
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: SimpleIdentifier
+              expression2: SimpleIdentifier
                 token: f
               semicolon: ;
           MethodDeclaration
             propertyKeyword: set
             name: s
             parameters: FormalParameterList
+              leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  type: NamedType
+                    name: int
+                  name: v
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
               leftParenthesis: (
               parameter: RegularFormalParameter
                 type: NamedType
@@ -4494,7 +4897,13 @@ CompilationUnit
                 leftBracket: {
                 statements
                   ExpressionStatement
-                    expression: AssignmentExpression
+                    expression2: DirectAssignment
+                      target: UnqualifiedNameAssignmentTarget
+                        name: f
+                      operator: =
+                      value: SimpleIdentifier
+                        token: v
+                    expression(v1): AssignmentExpression
                       leftHandSide: SimpleIdentifier
                         token: f
                       operator: =
@@ -4508,6 +4917,14 @@ CompilationUnit
             name: add
             parameters: FormalParameterList
               leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  type: NamedType
+                    name: int
+                  name: v
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
+              leftParenthesis: (
               parameter: RegularFormalParameter
                 type: NamedType
                   name: int
@@ -4515,7 +4932,18 @@ CompilationUnit
               rightParenthesis: )
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: AssignmentExpression
+              expression2: DirectAssignment
+                target: UnqualifiedNameAssignmentTarget
+                  name: f
+                operator: =
+                value: BinaryOperatorInvocation
+                  leftOperand: SimpleIdentifier
+                    token: f
+                  operator: +
+                  rightOperand: SimpleIdentifier
+                    token: v
+                  binaryOperator: add
+              expression(v1): AssignmentExpression
                 leftHandSide: SimpleIdentifier
                   token: f
                 operator: =
@@ -4531,15 +4959,14 @@ CompilationUnit
   }
 
   void test_parseMixinDeclaration_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 mixin M {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       documentationComment: Comment
         tokens
@@ -4553,10 +4980,9 @@ CompilationUnit
   }
 
   void test_parsePartDirective() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'lib/lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4570,10 +4996,11 @@ CompilationUnit
   }
 
   void test_parsePartOfDirective_name() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of l;
+//      ^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 ''');
-    parseResult.assertErrors([error(diag.partOfName, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4589,10 +5016,9 @@ CompilationUnit
   }
 
   void test_parsePartOfDirective_uri() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part of 'lib.dart';
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -4607,14 +5033,13 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_external() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external int i;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       externalKeyword: external
       variables: VariableDeclarationList
@@ -4628,14 +5053,14 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_external_late() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external late int? i;
+// [diag.externalLateField][column 1][length 8] External fields cannot be late.
 ''');
-    parseResult.assertErrors([error(diag.externalLateField, 0, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       externalKeyword: external
       variables: VariableDeclarationList
@@ -4651,14 +5076,14 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_external_late_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external late final int? i;
+// [diag.externalLateField][column 1][length 8] External fields cannot be late.
 ''');
-    parseResult.assertErrors([error(diag.externalLateField, 0, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       externalKeyword: external
       variables: VariableDeclarationList
@@ -4675,14 +5100,15 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_final_late() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 final late a;
+//    ^^^^
+// [diag.modifierOutOfOrder] The modifier 'late' should be before the modifier 'final'.
 ''');
-    parseResult.assertErrors([error(diag.modifierOutOfOrder, 6, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         lateKeyword: late
@@ -4695,14 +5121,15 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_late() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 late a;
+//   ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
 ''');
-    parseResult.assertErrors([error(diag.missingConstFinalVarOrType, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         lateKeyword: late
@@ -4714,14 +5141,13 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_late_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 late final a;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         lateKeyword: late
@@ -4734,14 +5160,15 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_late_init() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 late a = 0;
+//   ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
 ''');
-    parseResult.assertErrors([error(diag.missingConstFinalVarOrType, 5, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         lateKeyword: late
@@ -4749,21 +5176,20 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_parseTopLevelVariable_late_type() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 late A a;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         lateKeyword: late
@@ -4777,14 +5203,13 @@ CompilationUnit
   }
 
   void test_parseTopLevelVariable_non_external() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int i;
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -4797,14 +5222,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_noParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef bool F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       returnType: NamedType
@@ -4818,14 +5242,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       name: F
@@ -4837,14 +5260,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_parameterizedReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef A<B> F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       returnType: NamedType
@@ -4864,20 +5286,27 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_parameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef bool F(Object value);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       returnType: NamedType
         name: bool
       name: F
       parameters: FormalParameterList
+        leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            type: NamedType
+              name: Object
+            name: value
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
         leftParenthesis: (
         parameter: RegularFormalParameter
           type: NamedType
@@ -4889,14 +5318,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_typeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef bool F<E>();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       returnType: NamedType
@@ -4916,14 +5344,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_function_voidReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef void F();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionTypeAlias
       typedefKeyword: typedef
       returnType: NamedType
@@ -4937,14 +5364,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_noParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = bool Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -4961,14 +5387,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -4983,14 +5408,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_parameterizedReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = A<B> Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5013,14 +5437,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_parameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = bool Function(Object value);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5030,6 +5453,14 @@ CompilationUnit
           name: bool
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: Object
+              name: value
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -5041,14 +5472,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = bool Function<E>();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5071,14 +5501,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters_noParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = bool Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5101,14 +5530,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters_noReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5130,14 +5558,13 @@ CompilationUnit
 
   void
   test_parseTypeAlias_genericFunction_typeParameters_parameterizedReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = A<B> Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5166,14 +5593,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters_parameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = bool Function(Object value);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5190,6 +5616,14 @@ CompilationUnit
         functionKeyword: Function
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: Object
+              name: value
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
               name: Object
@@ -5200,14 +5634,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters_typeParameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = bool Function<E>();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5236,14 +5669,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_typeParameters_voidReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F<T> = void Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5266,14 +5698,13 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_voidReturnType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 typedef F = void Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: F
@@ -5290,15 +5721,14 @@ CompilationUnit
   }
 
   void test_parseTypeAlias_genericFunction_withDocComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 /// Doc
 typedef F = bool Function();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     GenericTypeAlias
       documentationComment: Comment
         tokens
@@ -5318,17 +5748,16 @@ CompilationUnit
   }
 
   void test_parseTypeVariable_withDocumentationComment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A<
   /// Doc
   B
 > {}
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters

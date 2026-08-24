@@ -18,8 +18,12 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use a primary constructor.';
 
 class UsePrimaryConstructors extends AnalysisRule {
-  UsePrimaryConstructors()
-    : super(name: LintNames.use_primary_constructors, description: _desc);
+  new()
+    : super(
+        name: LintNames.use_primary_constructors,
+        description: _desc,
+        state: .testing(since: .new(3, 13, 0)),
+      );
 
   @override
   DiagnosticCode get diagnosticCode => diag.usePrimaryConstructors;
@@ -36,11 +40,7 @@ class UsePrimaryConstructors extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     // There can only be one primary constructor.

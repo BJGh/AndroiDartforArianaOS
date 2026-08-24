@@ -16,7 +16,7 @@ const _desc =
     r'Use => for short members whose body is a single return statement.';
 
 class PreferExpressionFunctionBodies extends AnalysisRule {
-  PreferExpressionFunctionBodies()
+  new()
     : super(
         name: LintNames.prefer_expression_function_bodies,
         description: _desc,
@@ -35,11 +35,7 @@ class PreferExpressionFunctionBodies extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitBlockFunctionBody(BlockFunctionBody node) {
     var statements = node.block.statements;

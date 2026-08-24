@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,10 +17,11 @@ main() {
 @reflectiveTest
 class PartDirectivesTest extends ParserDiagnosticsTest {
   void test_part_directive_emptyUri_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' class A {}
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -31,7 +31,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -43,10 +43,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' const a = 0;
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -56,7 +57,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -64,17 +65,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_emptyUri_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' enum E { v }
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -84,7 +86,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -99,10 +101,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part ''
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -116,10 +119,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' final a = 0;
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -129,7 +133,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -137,17 +141,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_emptyUri_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' int f() {}
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -157,7 +162,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -174,10 +179,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' void f() {}
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -187,7 +193,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -204,10 +210,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' int get a => 0;
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -217,7 +224,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -233,10 +251,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' mixin M {}
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -246,7 +265,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -257,10 +276,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' part 'a.dart';
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -279,10 +299,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' set a(b) {}
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -292,12 +313,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -310,10 +337,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' typedef A = B Function(C, D);
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -323,7 +351,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -333,6 +361,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -346,10 +384,11 @@ CompilationUnit
   }
 
   void test_part_directive_emptyUri_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part '' var a;
+//   ^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -359,7 +398,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: ''
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -371,13 +410,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part class A {}
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 5),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -387,7 +425,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -399,13 +437,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part const a = 0;
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 5),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -415,7 +452,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -423,20 +460,19 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_keyword_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part enum E { v }
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 4),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -446,7 +482,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -461,13 +497,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//  ^
+// [diag.expectedStringLiteral][column 5][length 0] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 0),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -481,13 +516,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part final a = 0;
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 5),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -497,7 +531,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -505,20 +539,19 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_keyword_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part int f() {}
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 3),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -528,7 +561,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -545,13 +578,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part void f() {}
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 4),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -561,7 +593,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -578,13 +610,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part int get a => 0;
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 3),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -594,7 +625,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -610,13 +652,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part mixin M {}
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 5),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -626,7 +667,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -637,13 +678,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part part 'a.dart';
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 4),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -662,13 +702,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part set a(b) {}
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 3),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -678,12 +717,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -696,13 +741,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part typedef A = B Function(C, D);
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^^^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 7),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -712,7 +756,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -722,6 +766,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -735,13 +789,12 @@ CompilationUnit
   }
 
   void test_part_directive_keyword_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part var a;
+// [diag.expectedToken][column 1][length 4] Expected to find ';'.
+//   ^^^
+// [diag.expectedStringLiteral] Expected a string literal.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedStringLiteral, 5, 3),
-      error(diag.expectedToken, 0, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -751,7 +804,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: "" <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -763,10 +816,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' class A {}
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -776,7 +830,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -788,10 +842,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' const a = 0;
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -801,7 +856,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -809,17 +864,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_uri_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' enum E { v }
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -829,7 +885,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -844,10 +900,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart'
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -861,10 +918,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' final a = 0;
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -874,7 +932,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -882,17 +940,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_part_directive_uri_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' int f() {}
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -902,7 +961,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -919,10 +978,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' void f() {}
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -932,7 +992,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -949,10 +1009,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' int get a => 0;
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -962,7 +1023,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -978,10 +1050,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' mixin M {}
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -991,7 +1064,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -1002,10 +1075,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' part 'a.dart';
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1024,10 +1098,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' set a(b) {}
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1037,12 +1112,18 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -1055,10 +1136,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' typedef A = B Function(C, D);
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1068,7 +1150,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -1078,6 +1160,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -1091,10 +1183,11 @@ CompilationUnit
   }
 
   void test_part_directive_uri_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 part 'a.dart' var a;
+//   ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 5, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1104,7 +1197,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'a.dart'
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var

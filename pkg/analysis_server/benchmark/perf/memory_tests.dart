@@ -145,7 +145,7 @@ class LspAnalysisServerBenchmarkTest extends AbstractBenchmarkTest
   int _fileVersion = 1;
 
   @override
-  Future<void> get analysisFinished => _test.initialAnalysis;
+  Future<void> get analysisFinished => _test.workspaceAnalysisComplete();
 
   @override
   Future<void> closeFile(String filePath) {
@@ -198,7 +198,7 @@ class LspAnalysisServerBenchmarkTest extends AbstractBenchmarkTest
 
   @override
   Future<void> shutdown() async {
-    _test.tearDown();
+    await _test.tearDown();
     await _logger.shutdown();
   }
 
@@ -216,8 +216,9 @@ class LspAnalysisServerMemoryUsageTest
   Map<String, List<lsp.Diagnostic>> currentAnalysisErrors = {};
 
   @override
-  void expect(Object? actual, Matcher matcher, {String? reason}) =>
-      outOfTestExpect(actual, matcher, reason: reason);
+  void expect(Object? actual, Object? matcher, {String? reason}) {
+    outOfTestExpect(actual, matcher, reason: reason);
+  }
 
   /// The server is automatically started before every test.
   @override
@@ -239,7 +240,7 @@ class LspAnalysisServerMemoryUsageTest
   }
 
   /// After every test, the server is stopped.
-  Future<void> shutdown() async => this.tearDown();
+  Future<void> shutdown() => this.tearDown();
 }
 
 mixin ServerMemoryUsageMixin {
@@ -276,7 +277,7 @@ class ServiceProtocol {
   int _id = 0;
   final Map<String, Completer<Map<Object?, Object?>>> _completers = {};
 
-  ServiceProtocol._(this.socket) {
+  new _(this.socket) {
     socket.listen(_handleMessage);
   }
 

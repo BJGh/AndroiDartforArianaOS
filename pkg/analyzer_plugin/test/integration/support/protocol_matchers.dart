@@ -4,7 +4,10 @@
 //
 // This file has been automatically generated. Please do not edit it manually.
 // To regenerate the file, use the script
-// "pkg/analysis_server/tool/spec/generate_files".
+// "pkg/analyzer_plugin/tool/spec/generate_all.dart".
+
+// ignore_for_file: unnecessary_ignore, duplicate_ignore
+// ignore_for_file: unnecessary_type_name_in_constructor
 
 /// Matchers for data types defined in the analysis server API.
 library;
@@ -808,6 +811,19 @@ final Matcher isParameterKind = MatchesEnum('ParameterKind', [
   'REQUIRED_POSITIONAL',
 ]);
 
+/// PluginConfiguration
+///
+///     {
+///       "enabled": bool
+///       "diagnosticSeverities": Map<String, String>
+///     }
+final Matcher isPluginConfiguration = LazyMatcher(
+  () => MatchesJsonObject('PluginConfiguration', {
+    'enabled': isBool,
+    'diagnosticSeverities': isMapOf(isString, isString),
+  }),
+);
+
 /// PluginDetails
 ///
 ///     {
@@ -1214,6 +1230,44 @@ final Matcher isAnalysisOutlineParams = LazyMatcher(
     'file': isFilePath,
     'outline': isListOf(isOutline),
   }),
+);
+
+/// analysis.setAnalysisRoots params
+///
+///     {
+///       "included": List<FilePath>
+///       "excluded": List<FilePath>
+///     }
+final Matcher isAnalysisSetAnalysisRootsParams = LazyMatcher(
+  () => MatchesJsonObject('analysis.setAnalysisRoots params', {
+    'included': isListOf(isFilePath),
+    'excluded': isListOf(isFilePath),
+  }),
+);
+
+/// analysis.setAnalysisRoots result
+final Matcher isAnalysisSetAnalysisRootsResult = isNull;
+
+/// analysis.setConfigurations params
+///
+///     {
+///       "configurations": Map<FilePath, Map<String, PluginConfiguration>>
+///     }
+final Matcher isAnalysisSetConfigurationsParams = LazyMatcher(
+  () => MatchesJsonObject('analysis.setConfigurations params', {
+    'configurations': isMapOf(
+      isFilePath,
+      isMapOf(isString, isPluginConfiguration),
+    ),
+  }),
+);
+
+/// analysis.setConfigurations result
+///
+///     {
+///     }
+final Matcher isAnalysisSetConfigurationsResult = LazyMatcher(
+  () => MatchesJsonObject('analysis.setConfigurations result', null),
 );
 
 /// analysis.setContextRoots params

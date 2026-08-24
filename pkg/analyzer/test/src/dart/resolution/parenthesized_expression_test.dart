@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -17,7 +19,7 @@ main() {
 @reflectiveTest
 class ParenthesizedExpressionResolutionTest extends PubPackageResolutionTest {
   test_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     (super);
@@ -27,15 +29,27 @@ class A {
 }
 ''');
 
-    var node = findNode.singleParenthesizedExpression;
+    var node = result.findNode.singleParenthesizedExpression;
     assertResolvedNodeText(node, r'''
 ParenthesizedExpression
   leftParenthesis: (
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: A
   rightParenthesis: )
   staticType: A
 ''');
+  }
+
+  test_unParenthesized_views() async {
+    var result = await resolveTestCode(r'''
+void f(int? x) {
+  ((x!));
+}
+''');
+
+    var node = result.findNode.parenthesized('((x!))');
+    expect(node.unParenthesized, isA<PostfixExpression>());
+    expect(node.unParenthesized2, isA<NullAssertionExpression>());
   }
 }

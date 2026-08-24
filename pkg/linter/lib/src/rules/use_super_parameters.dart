@@ -29,7 +29,7 @@ Set<FormalParameterElement> _referencedParameters(FunctionBody? body) {
 }
 
 class UseSuperParameters extends MultiAnalysisRule {
-  UseSuperParameters()
+  new()
     : super(
         name: LintNames.use_super_parameters,
         description: _desc,
@@ -67,12 +67,8 @@ class _ReferencedParameterCollector extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final RuleContext context;
-  final MultiAnalysisRule rule;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final MultiAnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   void check(
     SourceRange errorRange,
     SuperConstructorInvocation superInvocation,

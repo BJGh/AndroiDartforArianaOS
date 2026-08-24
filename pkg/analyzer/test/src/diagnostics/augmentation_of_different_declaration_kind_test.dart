@@ -144,7 +144,7 @@ class A {
   int foo = 0;
 }
 augment class A {
-  augment int foo = 1;
+  augment abstract int foo;
 }
 ''');
   }
@@ -158,7 +158,7 @@ class A {
 }
 augment class A {
   augment int foo = 0;
-//^^^^^^^
+//            ^^^
 // [diag.augmentationOfDifferentDeclarationKind][context 1] Can't augment a method with a field.
 }
 ''');
@@ -281,7 +281,7 @@ class A {
 }
 augment class A {
   augment static int foo = 0;
-//^^^^^^^
+//                   ^^^
 // [diag.augmentationOfDifferentDeclarationKind][context 1] Can't augment a constructor with a field.
 }
 ''');
@@ -296,7 +296,7 @@ class A {
 }
 augment class A {
   augment static int foo = 0;
-//^^^^^^^
+//                   ^^^
 // [diag.augmentationOfDifferentDeclarationKind][context 1] Can't augment a method with a field.
 }
 ''');
@@ -432,17 +432,6 @@ augment enum A {}
 ''');
   }
 
-  test_enum_constant_augments_constant() async {
-    await resolveTestCodeWithDiagnostics(r'''
-enum A {
-  foo
-}
-augment enum A {
-  augment foo(),
-}
-''');
-  }
-
   test_enum_constant_augments_instanceMethod() async {
     await resolveTestCodeWithDiagnostics(r'''
 enum A {
@@ -451,9 +440,8 @@ enum A {
 }
 augment enum A {
   augment foo(),
-//^^^^^^^
-// [diag.augmentationWithoutDeclaration] The declaration being augmented doesn't exist.
 //        ^^^
+// [diag.constantVariableAugmentation] Variable augmentations can't be const.
 // [diag.conflictingStaticAndInstance] Class 'A' can't define static member 'foo' and have instance member 'A.foo' with the same name.
 }
 ''');
@@ -489,7 +477,7 @@ augment extension A {}
 class A {}
 //    ^
 // [context 1] The declaration being augmented.
-augment extension type A(int it) {}
+augment extension type A {}
 // [diag.augmentationOfDifferentDeclarationKind][column 1][length 7][context 1] Can't augment a class with a extension type.
 ''');
   }
@@ -528,7 +516,8 @@ class A {}
 //    ^
 // [context 1] The declaration being augmented.
 augment int A = 0;
-// [diag.augmentationOfDifferentDeclarationKind][column 1][length 7][context 1] Can't augment a class with a top level variable.
+//          ^
+// [diag.augmentationOfDifferentDeclarationKind][context 1] Can't augment a class with a top level variable.
 ''');
   }
 
@@ -538,7 +527,8 @@ void foo() {}
 //   ^^^
 // [context 1] The declaration being augmented.
 augment int foo = 0;
-// [diag.augmentationOfDifferentDeclarationKind][column 1][length 7][context 1] Can't augment a function with a top level variable.
+//          ^^^
+// [diag.augmentationOfDifferentDeclarationKind][context 1] Can't augment a function with a top level variable.
 ''');
   }
 }

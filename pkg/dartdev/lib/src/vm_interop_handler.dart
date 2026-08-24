@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -9,6 +11,16 @@ import 'dart:isolate';
 ///
 /// Messages are received in runtime/bin/dartdev_isolate.cc.
 abstract class VmInteropHandler {
+  static final Map<String, String> _environmentOverrides = {};
+
+  /// Environment variables that have been modified via [setEnvironmentVariable].
+  ///
+  /// This map can be passed to [Process.start] or [Process.run] to ensure
+  /// child processes inherit modifications made to the environment during the
+  /// execution of DartDev.
+  static Map<String, String> get environmentOverrides =>
+      UnmodifiableMapView(_environmentOverrides);
+
   /// Initializes [VmInteropHandler] to utilize [port] to communicate with the
   /// VM.
   static void initialize(SendPort? port) => _port = port;
@@ -33,6 +45,14 @@ abstract class VmInteropHandler {
     // See https://github.com/dart-lang/sdk/issues/53576
     bool markMainIsolateAsSystemIsolate = false,
     bool useExecProcess = false,
+
+    /// When [useExecProcess] pass this path to signal that it originates from
+    /// another file. Used for launching from a dill file while behaving as if
+    /// launched directly from a dart file.
+    String? scriptUriOverride,
+
+    /// Directory path that will be recursively deleted on VM shutdown.
+    String? deleteTempDirOnShutdown,
   }) {
     List<String> argsList;
     if (useExecProcess && Platform.isWindows) {
@@ -43,6 +63,12 @@ abstract class VmInteropHandler {
       if (script.contains(' ') && !script.contains('"')) {
         // Escape paths that may contain spaces
         script = '"$script"';
+      }
+      if (scriptUriOverride != null &&
+          scriptUriOverride.contains(' ') &&
+          !scriptUriOverride.contains('"')) {
+        // Escape paths that may contain spaces
+        scriptUriOverride = '"$scriptUriOverride"';
       }
       argsList = [
         for (int i = 0; i < args.length; i++) _windowsArgumentEscape(args[i]),
@@ -56,9 +82,11 @@ abstract class VmInteropHandler {
     final message = <dynamic>[
       useExecProcess ? _kResultRunExec : _kResultRun,
       script,
+      if (useExecProcess) scriptUriOverride,
       packageConfigOverride,
       markMainIsolateAsSystemIsolate,
       argsList,
+      deleteTempDirOnShutdown,
     ];
     port.send(message);
   }
@@ -75,11 +103,28 @@ abstract class VmInteropHandler {
   /// Sets the environment variable [name] to [value] for the current process.
   ///
   /// If [value] is null, the environment variable is removed.
-  static void setEnvironmentVariable(String name, String? value) {
+  static Future<void> setEnvironmentVariable(String name, String? value) async {
+    if (value != null) {
+      _environmentOverrides[name] = value;
+    } else {
+      _environmentOverrides.remove(name);
+    }
     final port = _port;
     if (port == null) return;
-    final message = <dynamic>[_kResultSetEnvironmentVariable, name, value];
+    final replyPort = RawReceivePort();
+    final completer = Completer<void>();
+    replyPort.handler = (message) {
+      completer.complete();
+      replyPort.close();
+    };
+    final message = <dynamic>[
+      _kResultSetEnvironmentVariable,
+      replyPort.sendPort,
+      name,
+      value,
+    ];
     port.send(message);
+    await completer.future;
   }
 
   /// This code is identical to the one in process_patch.dart, please ensure

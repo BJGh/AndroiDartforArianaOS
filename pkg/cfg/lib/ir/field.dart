@@ -32,12 +32,12 @@ sealed class SyntheticField extends ast.Field {
 /// Field of the context object.
 /// Context fields hold values of captured variables.
 final class ContextField extends SyntheticField {
-  final ast.VariableDeclaration variable;
+  final ast.Variable variable;
   final int index;
 
   ContextField(this.variable, this.index)
     : super(
-        '#context-field:${variable.name}',
+        '#context-field:${variable.cosmeticName}',
         type: variable.type,
         isFinal: variable.isFinal,
         isLate: variable.isLate,
@@ -116,6 +116,16 @@ class ClosureLayout {
     return (hasDelayedTypeArgs ? 1 : 0) +
         (hasClassTypeArgs ? 1 : 0) +
         (hasFunctionTypeArgs ? 1 : 0);
+  }
+
+  @override
+  String toString() {
+    return [
+      if (hasDelayedTypeArgs) 'delayed:$delayedTypeArgsIndex',
+      if (hasClassTypeArgs) 'cls:$classTypeArgsIndex',
+      if (hasFunctionTypeArgs) 'fun:$functionTypeArgsIndex',
+      'len:$length',
+    ].join(', ');
   }
 }
 

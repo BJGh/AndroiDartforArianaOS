@@ -40,6 +40,7 @@ import 'compiler_options.dart' as compiler;
 import 'constant_evaluator.dart';
 import 'deferred_loading.dart';
 import 'dry_run.dart';
+import 'generate_wasm.dart';
 import 'io_util.dart';
 import 'js/runtime_generator.dart' as js;
 import 'modules.dart';
@@ -165,15 +166,17 @@ const List<String> _binaryenFlags = [
   '--enable-bulk-memory',
   '--enable-threads',
   '--enable-simd',
-  '--no-inline=*<noInline>*',
   '--closed-world',
   '--traps-never-happen',
+  '--string-lifting',
+  '--pass-arg=string-constants-module@',
   '--type-unfinalizing',
   '-Os',
   '--type-ssa',
   '--gufa',
   '-Os',
   '--type-merging',
+  '--string-lowering-magic-imports-assert',
   '-Os',
   '--type-finalizing',
   '--minimize-rec-groups',
@@ -189,9 +192,13 @@ const List<String> _binaryenFlagsMultiModule = [
   '--enable-bulk-memory',
   '--enable-threads',
   '--enable-simd',
-  '--no-inline=*<noInline>*',
   '--traps-never-happen',
+  '--string-lifting',
+  '--pass-arg=string-constants-module@',
   '-Os',
+  '--gufa',
+  '-Os',
+  '--string-lowering-magic-imports-assert',
   '-Os',
 ];
 
@@ -425,11 +432,13 @@ Future<CompilationResult> _runTfaPhase(
     );
   }
 
-  js.performJSInteropTransformations(
-    component.libraries,
-    coreTypes,
-    classHierarchy,
-  );
+  if (!options.translatorOptions.standalone) {
+    js.performJSInteropTransformations(
+      component.libraries,
+      coreTypes,
+      classHierarchy,
+    );
+  }
 
   final librariesToTransform = component.libraries;
   final constantEvaluator = ConstantEvaluator(
@@ -635,39 +644,41 @@ Future<CompilationResult> _runCodegenPhase(
   });
   await Future.wait(writeFutures);
 
-  final jsRuntimeFinalizer = js.RuntimeFinalizer(
-    coreTypes,
-    translator.interopMemberNamer,
-  );
+  if (!options.translatorOptions.standalone) {
+    final jsRuntimeFinalizer = js.RuntimeFinalizer(
+      coreTypes,
+      translator.interopMemberNamer,
+    );
 
-  final jsRuntime = jsRuntimeFinalizer.generate(
-    moduleOutputData.mainModule.moduleImportName,
-    translator.functions.translatedProcedures,
-    translator.internalizedStringsForJSRuntime,
-    translator.options.requireJsStringBuiltin,
-    translator.options.enableDeferredLoading ||
-        translator.options.enableMultiModuleStressTestMode,
-  );
+    final jsRuntime = jsRuntimeFinalizer.generate(
+      moduleOutputData.mainModule.moduleImportName,
+      translator.functions.translatedProcedures,
+      translator.internalizedStringsForJSRuntime,
+      translator.options.enableDeferredLoading ||
+          translator.options.enableMultiModuleStressTestMode,
+      options.supportsES6Modules,
+    );
 
-  final supportJs = _generateSupportJs(options.translatorOptions);
+    final supportJs = _generateSupportJs(options.translatorOptions);
 
-  final deferredMapFile = options.deferredMapUri;
-  if (deferredMapFile != null) {
-    await writeDeferredMapFile(component, coreTypes, options, loadingMap);
+    final deferredMapFile = options.deferredMapUri;
+    if (deferredMapFile != null) {
+      await writeDeferredMapFile(component, coreTypes, options, loadingMap);
+    }
+
+    await ioManager.writeJsRuntime(jsRuntime);
+    await ioManager.writeSupportJs(supportJs);
   }
 
   final wasmOutputFilename = path.basename(options.outputFile);
   final moduleIds = modules.keys
       .map<int>(
-        (moduleMetadata) => options.idForModuleName(
+        (moduleMetadata) => WasmCompilerOptions.idForModuleName(
           wasmOutputFilename,
           moduleMetadata.moduleName,
         )!,
       )
       .toSet();
-
-  await ioManager.writeJsRuntime(jsRuntime);
-  await ioManager.writeSupportJs(supportJs);
 
   if (options.recordedUsesFile != null) {
     record_use.LoadingUnit loadingUnitForNode(TreeNode node) {
@@ -713,15 +724,19 @@ Future<CompilationResult> _runOptPhase(
         : options.maxActiveWasmOptProcesses,
   );
 
+  final wasmOptFlags = <String>[
+    ...(options.useMultiModuleOpt ? _binaryenFlagsMultiModule : _binaryenFlags),
+    if (options.stripToolchainAnnotations) '--strip-toolchain-annotations',
+    '--emit-module-names',
+  ];
+
   await Future.wait([
     for (final moduleId in moduleIdsToOptimize)
       optPool.withResource(() async {
         await ioManager.runWasmOpt(
           codegenResult.mainWasmFile,
           moduleId,
-          options.useMultiModuleOpt
-              ? _binaryenFlagsMultiModule
-              : _binaryenFlags,
+          wasmOptFlags,
         );
       }),
   ]);
@@ -854,6 +869,20 @@ String _generateSupportJs(TranslatorOptions options) {
   const String supportsWasmGC =
       'WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,95,1,120,0]))';
 
+  // Copied from
+  // https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/main/src/detectors/simd/module.wat
+  //
+  // Uses `i8x16.popcnt` so only engines with full Wasm SIMD support validate:
+  // ```
+  //     (module
+  //       (func (result v128)
+  //         i32.const 0
+  //         i8x16.splat
+  //         i8x16.popcnt))
+  // ```
+  const String supportsWasmSimd =
+      'WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]))';
+
   // Imports a `js-string` builtin spec function *with wrong signature*. An engine
   //
   //   * *without* knowledge about `js-string` builtin would accept such an import at
@@ -872,7 +901,8 @@ String _generateSupportJs(TranslatorOptions options) {
 
   final requiredFeatures = [
     supportsWasmGC,
-    if (options.requireJsStringBuiltin) supportsJsStringBuiltins,
+    supportsWasmSimd,
+    supportsJsStringBuiltins,
   ];
   return '(${requiredFeatures.join('&&')})';
 }

@@ -2,19 +2,137 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:analyzer/diagnostic/diagnostic.dart';
+import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer_testing/utilities/extensions/diagnostic_code.dart';
 
+/// Returns [content] with generated diagnostic expectation marker lines removed.
+String removeDiagnosticExpectations(String content) {
+  var allLines = _Line.parse(content);
+  var codeLines = allLines
+      .where((line) => !_LineMarker.isMarker(line))
+      .toList();
+  var buffer = StringBuffer();
+  for (var i = 0; i < codeLines.length; i++) {
+    var line = codeLines[i];
+    buffer.write(line.text);
+    // Write terminators as separators between retained lines; a terminator
+    // before a removed marker line should not become a trailing terminator.
+    if (i < codeLines.length - 1) {
+      buffer.write(line.lineTerminator);
+    }
+  }
+  return buffer.toString();
+}
+
+/// Returns [content] with one trailing line terminator removed, if present.
+///
+/// Diagnostic expectation tests often use multiline string literals where the
+/// final line terminator exists only to keep the closing quote on its own line.
+String removeTrailingLineTerminator(String content) {
+  if (content.endsWith('\r\n')) {
+    return content.substring(0, content.length - 2);
+  } else if (content.endsWith('\n') || content.endsWith('\r')) {
+    return content.substring(0, content.length - 1);
+  }
+  return content;
+}
+
 /// Returns [content] with canonical diagnostic expectation markers.
 ///
-/// Existing diagnostic expectation marker lines are removed before the new
-/// markers are inserted, so [content] can be either unmarked or already marked.
+/// The [content] must not include diagnostic expectation marker lines. Use
+/// [removeDiagnosticExpectations] before analysis, and pass the analyzed
+/// content here.
 String updateExpectedDiagnostics({
   required String content,
   required List<Diagnostic> actualDiagnostics,
 }) {
   return _ExpectedDiagnosticsUpdater(content).update(actualDiagnostics);
+}
+
+/// Returns each file's content with canonical diagnostic expectation markers.
+///
+/// This is the multi-file form of [updateExpectedDiagnostics]. It supports
+/// diagnostics whose context messages are located in another file in
+/// [contentByFile].
+Map<File, String> updateExpectedDiagnosticsForFiles({
+  required Map<File, String> contentByFile,
+  required Map<File, List<Diagnostic>> actualDiagnosticsByFile,
+}) {
+  return _ExpectedDiagnosticsForFilesUpdater(
+    contentByFile,
+  ).update(actualDiagnosticsByFile);
+}
+
+final class _ExpectedDiagnosticsForFilesUpdater {
+  final Map<File, _ExpectedDiagnosticsUpdater> updatersByFile = {};
+  final Map<String, _ExpectedDiagnosticsUpdater> updatersByPath = {};
+
+  int nextMarkerIndex = 0;
+  int nextContextId = 1;
+
+  _ExpectedDiagnosticsForFilesUpdater(Map<File, String> contentByFile) {
+    for (var entry in contentByFile.entries) {
+      var updater = _ExpectedDiagnosticsUpdater(entry.value);
+      updatersByFile[entry.key] = updater;
+      updatersByPath[entry.key.path] = updater;
+    }
+  }
+
+  Map<File, String> update(
+    Map<File, List<Diagnostic>> actualDiagnosticsByFile,
+  ) {
+    for (var entry in actualDiagnosticsByFile.entries) {
+      var updater = _updaterForPath(entry.key.path);
+      var sortedDiagnostics = entry.value.toList()
+        ..sort((first, second) => first.offset.compareTo(second.offset));
+      for (var diagnostic in sortedDiagnostics) {
+        _generateDiagnosticMarkers(updater, diagnostic);
+      }
+    }
+
+    return {
+      for (var entry in updatersByFile.entries)
+        entry.key: entry.value._writeContent(),
+    };
+  }
+
+  void _generateDiagnosticMarkers(
+    _ExpectedDiagnosticsUpdater diagnosticUpdater,
+    Diagnostic diagnostic,
+  ) {
+    var contextRefs = <int>[];
+    for (var contextMessage in diagnostic.contextMessages) {
+      var contextUpdater = _updaterForPath(contextMessage.filePath);
+      var id = nextContextId++;
+      contextRefs.add(id);
+      contextUpdater._addContextMessageMarker(
+        contextMessage,
+        id: id,
+        index: nextMarkerIndex++,
+      );
+    }
+
+    diagnosticUpdater._addDiagnosticMarker(
+      diagnostic,
+      index: nextMarkerIndex++,
+      contextRefs: contextRefs,
+    );
+  }
+
+  _ExpectedDiagnosticsUpdater _updaterForPath(String path) {
+    var updater = updatersByPath[path];
+    if (updater == null) {
+      throw StateError(
+        'Cannot generate diagnostic expectations for $path: '
+        'no content was provided.',
+      );
+    }
+    return updater;
+  }
 }
 
 final class _ExpectedDiagnosticsUpdater {
@@ -27,11 +145,75 @@ final class _ExpectedDiagnosticsUpdater {
 
   _ExpectedDiagnosticsUpdater(String content)
     : lines = _Line.parse(content),
-      lineInfo = LineInfo.fromContent(content);
+      lineInfo = LineInfo.fromContent(content) {
+    for (var line in lines) {
+      if (_LineMarker.isMarker(line)) {
+        throw StateError(
+          'Expected content without diagnostic expectation markers, '
+          'found one on line ${line.number}.',
+        );
+      }
+    }
+  }
 
   String update(List<Diagnostic> actualDiagnostics) {
     _generateMarkers(actualDiagnostics);
     return _writeContent();
+  }
+
+  void _addContextMessageMarker(
+    DiagnosticMessage contextMessage, {
+    required int id,
+    required int index,
+  }) {
+    var location = _markerLocation(offset: contextMessage.offset);
+    var line = lines[location.lineNumber - 1];
+    var presentation = _markerPresentation(
+      line,
+      column: location.column,
+      length: contextMessage.length,
+    );
+    _addMarker(
+      location.lineNumber,
+      _GeneratedMarker.context(
+        offset: contextMessage.offset,
+        index: index,
+        id: id,
+        column: location.column,
+        length: contextMessage.length,
+        caretLength: presentation.caretLength,
+        includeExplicitLocation: presentation.includeExplicitLocation,
+        message: _messageText(contextMessage),
+      ),
+    );
+  }
+
+  void _addDiagnosticMarker(
+    Diagnostic diagnostic, {
+    required int index,
+    required List<int> contextRefs,
+  }) {
+    var location = _markerLocation(offset: diagnostic.offset);
+    var line = lines[location.lineNumber - 1];
+    var presentation = _markerPresentation(
+      line,
+      column: location.column,
+      length: diagnostic.length,
+    );
+    _addMarker(
+      location.lineNumber,
+      _GeneratedMarker.diagnostic(
+        offset: diagnostic.offset,
+        index: index,
+        constantName: diagnostic.diagnosticCode.constantName,
+        column: location.column,
+        length: diagnostic.length,
+        caretLength: presentation.caretLength,
+        includeExplicitLocation: presentation.includeExplicitLocation,
+        contextRefs: contextRefs,
+        message: _messageText(diagnostic.problemMessage),
+      ),
+    );
   }
 
   void _addMarker(int lineNumber, _GeneratedMarker marker) {
@@ -47,64 +229,25 @@ final class _ExpectedDiagnosticsUpdater {
     var contextRefs = <int>[];
     for (var contextMessage in diagnostic.contextMessages) {
       if (contextMessage.filePath != diagnostic.problemMessage.filePath) {
-        // TODO(scheglov): Support generating expectations for context
-        // messages in other files.
         throw StateError(
           'Cannot generate a diagnostic expectation with a context message '
-          'in another file.',
+          'in another file. Use updateExpectedDiagnosticsForFiles instead.',
         );
       }
 
       var id = nextContextId++;
       contextRefs.add(id);
-      var location = _markerLocation(
-        offset: contextMessage.offset,
-        length: contextMessage.length,
-      );
-      var line = lines[location.lineNumber - 1];
-      var presentation = _markerPresentation(
-        line,
-        column: location.column,
-        length: contextMessage.length,
-      );
-      _addMarker(
-        location.lineNumber,
-        _GeneratedMarker.context(
-          offset: contextMessage.offset,
-          index: nextMarkerIndex++,
-          id: id,
-          column: location.column,
-          length: contextMessage.length,
-          caretLength: presentation.caretLength,
-          includeExplicitLocation: presentation.includeExplicitLocation,
-          message: _messageText(contextMessage),
-        ),
+      _addContextMessageMarker(
+        contextMessage,
+        id: id,
+        index: nextMarkerIndex++,
       );
     }
 
-    var location = _markerLocation(
-      offset: diagnostic.offset,
-      length: diagnostic.length,
-    );
-    var line = lines[location.lineNumber - 1];
-    var presentation = _markerPresentation(
-      line,
-      column: location.column,
-      length: diagnostic.length,
-    );
-    _addMarker(
-      location.lineNumber,
-      _GeneratedMarker.diagnostic(
-        offset: diagnostic.offset,
-        index: nextMarkerIndex++,
-        constantName: diagnostic.diagnosticCode.constantName,
-        column: location.column,
-        length: diagnostic.length,
-        caretLength: presentation.caretLength,
-        includeExplicitLocation: presentation.includeExplicitLocation,
-        contextRefs: contextRefs,
-        message: _messageText(diagnostic.problemMessage),
-      ),
+    _addDiagnosticMarker(
+      diagnostic,
+      index: nextMarkerIndex++,
+      contextRefs: contextRefs,
     );
   }
 
@@ -117,32 +260,8 @@ final class _ExpectedDiagnosticsUpdater {
   }
 
   /// Returns where a generated marker should be written for an actual range.
-  ///
-  /// For a normal diagnostic range, the marker belongs on the line reported by
-  /// [LineInfo]. For a zero-length diagnostic, the diagnostic is often an
-  /// insertion point rather than a source span. If the input is already
-  /// marked, that insertion point can be pushed into the existing marker
-  /// comments, or to the empty line after them, even though the marker should
-  /// still be attached to the preceding real source line. In that case, keep
-  /// the marker on the source line and express the insertion point as the
-  /// column after its last character.
-  ({int lineNumber, int column}) _markerLocation({
-    required int offset,
-    required int length,
-  }) {
+  ({int lineNumber, int column}) _markerLocation({required int offset}) {
     var location = lineInfo.getLocation(offset);
-    if (length == 0) {
-      // Only zero-length diagnostics can legitimately move onto marker-only
-      // text from a previous update. A non-zero range on a marker line would
-      // describe the marker comment itself, not an insertion point in code.
-      var targetLine = _targetLineForMarkerShift(location.lineNumber);
-      if (targetLine != null) {
-        return (
-          lineNumber: targetLine.number,
-          column: targetLine.text.length + 1,
-        );
-      }
-    }
     return (lineNumber: location.lineNumber, column: location.columnNumber);
   }
 
@@ -171,94 +290,50 @@ final class _ExpectedDiagnosticsUpdater {
     );
   }
 
-  /// Finds the real source line that owns a shifted zero-length marker.
-  ///
-  /// The updater accepts both clean source and source that already contains
-  /// diagnostic expectation comments. Existing marker comments are removed when
-  /// the new content is written, but actual diagnostics are computed before
-  /// that removal. This matters for zero-length diagnostics near the end of a
-  /// line or file: after a previous update, the analyzer may report the same
-  /// insertion point as being on a marker line, or on the empty line
-  /// immediately following marker lines.
-  ///
-  /// This method recognizes only those shifted positions. If [lineNumber]
-  /// points at ordinary source text, or at an empty line that is not directly
-  /// after a marker, there is nothing to repair and `null` is returned.
-  /// Otherwise the search walks backward over marker lines and returns the
-  /// nearest preceding non-marker line, which is where the regenerated marker
-  /// should be attached.
-  _Line? _targetLineForMarkerShift(int lineNumber) {
-    if (lineNumber < 1 || lineNumber > lines.length) {
-      return null;
-    }
-
-    var line = lines[lineNumber - 1];
-    if (!_LineMarker.isMarker(line)) {
-      // A non-marker line normally owns the reported offset. The one exception
-      // is the synthetic empty line after existing markers, which can be where
-      // EOF-style zero-length diagnostics land.
-      var previousLine = lineNumber > 1 ? lines[lineNumber - 2] : null;
-      if (line.text.isNotEmpty ||
-          previousLine == null ||
-          !_LineMarker.isMarker(previousLine)) {
-        return null;
-      }
-    }
-
-    // The reported line is either a marker line or the empty line just after
-    // marker lines. Walk back to the line these markers annotate.
-    for (var index = lineNumber - 2; index >= 0; index--) {
-      var previousLine = lines[index];
-      if (!_LineMarker.isMarker(previousLine)) {
-        return previousLine;
-      }
-    }
-    return null;
-  }
-
   String _writeContent() {
     var buffer = StringBuffer();
-    var isFirstLine = true;
     for (var line in lines) {
-      if (_LineMarker.isMarker(line)) {
-        continue;
-      }
-
-      if (isFirstLine) {
-        isFirstLine = false;
-      } else {
-        buffer.writeln();
-      }
       buffer.write(line.text);
 
       var markers = markersByLine[line.number];
       if (markers != null) {
+        var markerLineTerminator = line.lineTerminator;
+
+        // Use a separator when adding markers after an unterminated final line.
+        if (markerLineTerminator.isEmpty) {
+          markerLineTerminator = '\n';
+        }
+
         markers.sort(_GeneratedMarker.compare);
         ({int column, int length})? currentCaret;
         for (var marker in markers) {
           if (marker.caretLength case var caretLength?) {
             var markerCaret = (column: marker.column, length: caretLength);
             if (markerCaret != currentCaret) {
-              buffer.writeln();
+              buffer.write(markerLineTerminator);
               buffer.write(_caretLine(marker.column, caretLength));
               currentCaret = markerCaret;
             }
           }
-          buffer.writeln();
+          buffer.write(markerLineTerminator);
           buffer.write(marker.expectationText);
         }
       }
+
+      buffer.write(line.lineTerminator);
     }
     return buffer.toString();
   }
 
   static String _messageText(DiagnosticMessage message) {
     var text = message.messageText(includeUrl: false);
-    return _toPosixPaths(text).trim();
+    text = _toPosixPaths(text).trim();
+    text = LineSplitter.split(text).join(r'\n');
+    return text;
   }
 
   static String _toPosixPaths(String message) {
-    return message.replaceAllMapped(RegExp(r'C:\\([a-zA-Z0-9_.\\]+)'), (match) {
+    return message.replaceAllMapped(RegExp(r'C:\\([a-zA-Z0-9_.\\]*)'), (match) {
       var path = match.group(1)!;
       var posixPath = path.replaceAll(r'\', '/');
       return '/$posixPath';
@@ -383,7 +458,14 @@ final class _Line {
   /// The line text without the trailing newline characters.
   final String text;
 
-  _Line({required this.number, required this.text});
+  /// The line terminator, if present.
+  final String lineTerminator;
+
+  _Line({
+    required this.number,
+    required this.text,
+    required this.lineTerminator,
+  });
 
   /// Splits [content] into lines while preserving each line's offset.
   ///
@@ -397,24 +479,34 @@ final class _Line {
     for (var index = 0; index < content.length; index++) {
       var codeUnit = content.codeUnitAt(index);
       if (codeUnit == 0x0D || codeUnit == 0x0A) {
-        result.add(
-          _Line(
-            number: lineNumber++,
-            text: content.substring(lineStart, index),
-          ),
-        );
+        var lineText = content.substring(lineStart, index);
 
-        // Consume the `\n` in a `\r\n` line break.
+        var lineTerminator = content.substring(index, index + 1);
         if (codeUnit == 0x0D &&
             index + 1 < content.length &&
             content.codeUnitAt(index + 1) == 0x0A) {
+          lineTerminator = content.substring(index, index + 2);
           index++;
         }
+
+        result.add(
+          _Line(
+            number: lineNumber++,
+            text: lineText,
+            lineTerminator: lineTerminator,
+          ),
+        );
         lineStart = index + 1;
       }
     }
 
-    result.add(_Line(number: lineNumber, text: content.substring(lineStart)));
+    result.add(
+      _Line(
+        number: lineNumber,
+        text: content.substring(lineStart),
+        lineTerminator: '',
+      ),
+    );
     return result;
   }
 }

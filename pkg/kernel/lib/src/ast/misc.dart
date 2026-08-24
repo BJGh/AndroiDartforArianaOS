@@ -6,7 +6,7 @@ part of '../../ast.dart';
 
 /// Any type of node in the IR.
 abstract class Node {
-  const Node();
+  const new();
 
   R accept<R>(Visitor<R> v);
   R accept1<R, A>(Visitor1<R, A> v, A arg);
@@ -133,8 +133,7 @@ abstract class TreeNode extends Node {
 abstract class NamedNode extends TreeNode {
   final Reference reference;
 
-  NamedNode(Reference? reference)
-    : this.reference = reference ?? new Reference() {
+  new(Reference? reference) : this.reference = reference ?? new Reference() {
     this.reference.node = this;
   }
 
@@ -180,7 +179,7 @@ class Version extends Object {
   final int major;
   final int minor;
 
-  const Version(this.major, this.minor);
+  const new(this.major, this.minor);
 
   bool operator <(Version other) {
     if (major < other.major) return true;
@@ -236,4 +235,47 @@ class Version extends Object {
   String toString() {
     return "Version(major=$major, minor=$minor)";
   }
+}
+
+/// Helper class for creating [Let] and [LocalInitializer] objects.
+class CachedExpression({
+  required final SyntheticVariable variable,
+  required final Expression value,
+}) {
+  new fromValue({
+    required Expression value,
+    required DartType type,
+    int? fileOffset,
+    String? cosmeticName,
+    // TODO(johnniwinther): This should always be final.
+    bool isFinal = false,
+  }) : this(
+         variable: new SyntheticVariable(
+           type: type,
+           cosmeticName: cosmeticName,
+           isFinal: isFinal,
+         )..fileOffset = fileOffset ?? value.fileOffset,
+         value: value,
+       );
+
+  DartType get type => variable.type;
+
+  int get fileOffset => variable.fileOffset;
+
+  /// Creates a [VariableGet] that reads the cached [variable]
+  VariableGet createRead({DartType? promotedType, int? fileOffset}) =>
+      new VariableGet(variable, promotedType)
+        ..fileOffset = fileOffset ?? this.fileOffset;
+
+  Let createLet({required Expression body, int? fileOffset}) {
+    return new Let(variable: variable, value: value, body: body)
+      ..fileOffset = fileOffset ?? variable.fileOffset;
+  }
+
+  LocalInitializer createLocalInitializer() {
+    return new LocalInitializer(variable, value)..fileOffset = fileOffset;
+  }
+
+  @override
+  String toString() => '$runtimeType(variable=$variable,value=$value)';
 }

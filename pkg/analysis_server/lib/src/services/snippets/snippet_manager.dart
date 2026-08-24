@@ -28,11 +28,10 @@ import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/src/util/file_paths.dart' as file_paths;
 
-typedef SnippetProducerGenerator =
-    SnippetProducer Function(
-      DartSnippetRequest, {
-      required Map<Element, LibraryElement?> elementImportCache,
-    });
+typedef SnippetProducerGenerator = SnippetProducer Function(
+  DartSnippetRequest, {
+  required Map<Element, LibraryElement?> elementImportCache,
+});
 
 /// [DartSnippetManager] determines if a snippet request is Dart specific
 /// and forwards those requests to all Snippet Producers that return `true` from
@@ -40,7 +39,7 @@ typedef SnippetProducerGenerator =
 class DartSnippetManager {
   final producerGenerators =
       const <SnippetContext, List<SnippetProducerGenerator>>{
-        SnippetContext.atTopLevel: [
+        .atTopLevel: [
           ClassDeclaration.new,
           FlutterStatefulWidget.new,
           FlutterStatefulWidgetWithAnimationController.new,
@@ -48,7 +47,7 @@ class DartSnippetManager {
           FunctionDeclaration.new,
           MainFunction.new,
         ],
-        SnippetContext.inBlock: [
+        .inBlock: [
           DoStatement.new,
           ForInStatement.new,
           ForStatement.new,
@@ -61,9 +60,9 @@ class DartSnippetManager {
           TryCatchStatement.new,
           WhileStatement.new,
         ],
-        SnippetContext.inClass: [FunctionDeclaration.new],
-        SnippetContext.inEnumMembers: [FunctionDeclaration.new],
-        SnippetContext.inExpression: [SwitchExpression.new],
+        .inClassBody: [FunctionDeclaration.new],
+        .inEnumMembers: [FunctionDeclaration.new],
+        .inExpression: [SwitchExpression.new],
       };
 
   Future<List<Snippet>> computeSnippets(

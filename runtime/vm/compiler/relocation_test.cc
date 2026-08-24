@@ -179,8 +179,7 @@ struct RelocatorTestHelper {
       }
 
       GrowableArray<ImageWriterCommand> commands;
-      CodeRelocator::Relocate(thread, &raw_codes, &commands,
-                              /*is_vm_isolate=*/false);
+      CodeRelocator::Relocate(thread, &raw_codes, &commands);
 
       uword expected_offset = 0;
       fun(commands, &expected_offset);
@@ -195,6 +194,12 @@ struct RelocatorTestHelper {
         }
       }
     }
+
+#if defined(TARGET_ARCH_ARM64E)
+    entrypoint = reinterpret_cast<uword>(ptrauth_sign_unauthenticated(
+        reinterpret_cast<void*>(entrypoint), ptrauth_key_function_pointer, 0));
+#endif
+
     typedef intptr_t (*Fun)() DART_UNUSED;
 #if defined(TARGET_ARCH_X64)
     EXPECT_EQ(42, reinterpret_cast<Fun>(entrypoint)());

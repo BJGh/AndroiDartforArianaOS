@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid single cascade in expression statements.';
 
 class AvoidSingleCascadeInExpressionStatements extends AnalysisRule {
-  AvoidSingleCascadeInExpressionStatements()
+  new()
     : super(
         name: LintNames.avoid_single_cascade_in_expression_statements,
         description: _desc,
@@ -36,11 +36,7 @@ class AvoidSingleCascadeInExpressionStatements extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   String operatorFor(Expression section) {
     Token? operator;
     if (section is PropertyAccess) {

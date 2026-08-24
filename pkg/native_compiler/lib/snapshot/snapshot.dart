@@ -17,8 +17,10 @@ import 'package:kernel/type_environment.dart'
     as ast_type_environment
     show StaticTypeContext;
 import 'package:native_compiler/back_end/code.dart';
+import 'package:native_compiler/back_end/code_metadata.dart';
 import 'package:native_compiler/back_end/object_pool.dart';
 import 'package:native_compiler/configuration.dart';
+import 'package:native_compiler/runtime/constant_objects.dart';
 import 'package:native_compiler/runtime/names.dart';
 import 'package:native_compiler/runtime/object_layout.dart';
 import 'package:native_compiler/runtime/type_utils.dart';
@@ -26,7 +28,7 @@ import 'package:native_compiler/runtime/vm_defs.dart';
 
 /// Kinds of Dart snapshots.
 /// Should match Snapshot::Kind enum in runtime/vm/snapshot.h.
-enum SnapshotKind { full, fullCore, fullJIT, fullAOT, module, none, invalid }
+enum SnapshotKind { full, fullJIT, fullAOT, module, invalid }
 
 /// Dart snapshot constants.
 class Snapshot {
@@ -65,6 +67,8 @@ enum PredefinedClusters {
   closureRefs,
   argumentsDescriptorRefs,
   recordShapeRefs,
+  closureDatas,
+  functions,
   ints,
   doubles,
   lists,
@@ -82,23 +86,12 @@ enum PredefinedClusters {
   icDatas,
   subtypeTestCaches,
   objectPools,
+  exceptionHandlers,
+  pcDescriptors,
+  catchEntryMoves,
+  compressedStackMaps,
+  codeSourceMap,
   instances, // Separate cluster for every class.
-}
-
-/// Function kinds in the module snapshots.
-///
-/// This enum should match ModuleSnapshot::FunctionKind
-/// enum declared in runtime/vm/module_snapshot.cc.
-enum FunctionKind {
-  regular,
-  getter,
-  setter,
-  generativeConstructor,
-  factoryConstructor,
-  implicitGetter,
-  implicitSetter,
-  fieldInitializer,
-  methodExtractor,
 }
 
 /// Object pool entry kinds in the module snapshots.
@@ -113,6 +106,7 @@ enum ObjectPoolEntryKind {
   dynamicCall,
   unboxedInt,
   unboxedDouble,
+  nativeFunction,
 }
 
 abstract base class SerializationCluster {
@@ -143,6 +137,7 @@ class SnapshotSerializer {
   final TargetCPU targetCPU;
   final FunctionRegistry functionRegistry;
   final ObjectLayout objectLayout;
+  final bool compilePlatform;
   int numBaseObjects = 0;
   int numObjects = 0;
   final List<Object?> _objects = [];
@@ -155,7 +150,12 @@ class SnapshotSerializer {
   final Map<ast.Class, SerializationCluster> _instanceClusters = {};
   final SnapshotStreamWriter out = SnapshotStreamWriter();
 
-  SnapshotSerializer(this.targetCPU, this.functionRegistry, this.objectLayout) {
+  SnapshotSerializer(
+    this.targetCPU,
+    this.functionRegistry,
+    this.objectLayout, {
+    required this.compilePlatform,
+  }) {
     addBaseObject(null);
     addBaseObject(true);
     addBaseObject(false);
@@ -165,6 +165,13 @@ class SnapshotSerializer {
     addBaseObject(const ast.NullType());
     addBaseObject(const ast.NeverType.nonNullable());
     addBaseObject(ast.ListConstant(const ast.DynamicType(), const []));
+    addBaseObject(UndefinedConstant());
+    addBaseObject(ExceptionHandlers(hasAsyncHandler: false));
+    addBaseObject(ExceptionHandlers(hasAsyncHandler: true));
+    addBaseObject(PcDescriptors());
+    addBaseObject(RuntimeConstantObject(.uninitializedIndex));
+    addBaseObject(RuntimeConstantObject(.uninitializedData));
+    addBaseObject(RuntimeConstantObject(.mutableEmptyList));
     // TODO: generate these stubs instead of referencing them from the VM.
     addBaseObject(StubCode.Subtype1TestCache);
     addBaseObject(StubCode.Subtype2TestCache);
@@ -183,6 +190,8 @@ class SnapshotSerializer {
     addBaseObject(StubCode.ReturnAsync);
     addBaseObject(StubCode.ReturnAsyncNotFuture);
     addBaseObject(StubCode.ReturnAsyncStar);
+    addBaseObject(StubCode.CloneSuspendState);
+    addBaseObject(StubCode.CallBootstrapNative);
     numObjects = numBaseObjects;
   }
 
@@ -193,9 +202,9 @@ class SnapshotSerializer {
     out.writeUint(numBaseObjects);
     out.writeUint(numObjects);
 
-    final codeCluster =
-        getPredefinedCluster(PredefinedClusters.codes)
-            as CodeSerializationCluster;
+    final codeCluster = getPredefinedCluster(
+      PredefinedClusters.codes,
+    ) as CodeSerializationCluster;
     final lastCode = codeCluster._objects.last;
     out.writeUint(
       lastCode.instructionsImageOffset! + lastCode.instructions.lengthInBytes,
@@ -315,6 +324,9 @@ class SnapshotSerializer {
     ast.Library() => getPredefinedCluster(PredefinedClusters.libraryRefs),
     ast.Class() => getPredefinedCluster(PredefinedClusters.classRefs),
     ast.Field() => getPredefinedCluster(PredefinedClusters.fieldRefs),
+    LocalFunction() when compilePlatform => getPredefinedCluster(
+      PredefinedClusters.functions,
+    ),
     ClosureFunction() => getPredefinedCluster(
       PredefinedClusters.closureFunctionRefs,
     ),
@@ -324,6 +336,7 @@ class SnapshotSerializer {
       PredefinedClusters.argumentsDescriptorRefs,
     ),
     RecordShape() => getPredefinedCluster(PredefinedClusters.recordShapeRefs),
+    ClosureData() => getPredefinedCluster(PredefinedClusters.closureDatas),
     // Constants.
     String() => getPredefinedCluster(
       OneByteStringSerializationCluster.isOneByteString(obj)
@@ -360,6 +373,7 @@ class SnapshotSerializer {
     ast.StructuralParameterType() => getPredefinedCluster(
       PredefinedClusters.typeParameterTypes,
     ),
+    TypeParameters() => getPredefinedCluster(PredefinedClusters.typeParameters),
     TypeArgumentsConstant() => getPredefinedCluster(
       PredefinedClusters.typeArguments,
     ),
@@ -370,6 +384,17 @@ class SnapshotSerializer {
       PredefinedClusters.subtypeTestCaches,
     ),
     ObjectPool() => getPredefinedCluster(PredefinedClusters.objectPools),
+    ExceptionHandlers() => getPredefinedCluster(
+      PredefinedClusters.exceptionHandlers,
+    ),
+    PcDescriptors() => getPredefinedCluster(PredefinedClusters.pcDescriptors),
+    CatchEntryMoves() => getPredefinedCluster(
+      PredefinedClusters.catchEntryMoves,
+    ),
+    CompressedStackMaps() => getPredefinedCluster(
+      PredefinedClusters.compressedStackMaps,
+    ),
+    CodeSourceMap() => getPredefinedCluster(PredefinedClusters.codeSourceMap),
     _ => throw 'Unxpected ${obj.runtimeType} $obj',
   };
 
@@ -379,56 +404,59 @@ class SnapshotSerializer {
   SerializationCluster getInstanceCluster(ast.Class cls) =>
       (_instanceClusters[cls] ??= InstanceSerializationCluster(cls));
 
-  SerializationCluster _createPredefinedCluster(
-    PredefinedClusters clusterId,
-  ) => switch (clusterId) {
-    .libraryRefs => LibraryRefSerializationCluster(),
-    .classRefs => ClassRefSerializationCluster(),
-    .fieldRefs => FieldRefSerializationCluster(),
-    .functionRefs => FunctionRefSerializationCluster(),
-    .closureFunctionRefs => ClosureFunctionRefSerializationCluster(),
-    .closureRefs => ClosureRefSerializationCluster(),
-    .argumentsDescriptorRefs => ArgumentsDescriptorRefSerializationCluster(),
-    .recordShapeRefs => RecordShapeRefSerializationCluster(),
-    .oneByteStrings => OneByteStringSerializationCluster(),
-    .twoByteStrings => TwoByteStringSerializationCluster(),
-    .privateNames => PrivateNameSerializationCluster(),
-    .ints => IntSerializationCluster(),
-    .doubles => DoubleSerializationCluster(),
-    .lists => ListSerializationCluster(),
-    .maps => MapSerializationCluster(),
-    .sets => SetSerializationCluster(),
-    .records => RecordSerializationCluster(),
-    .instantiatedClosures => throw 'Unimplemented cluster $clusterId',
-    .typeParameters =>
-      throw 'Unimplemented cluster $clusterId', // TypeParametersSerializationCluster(),
-    .typeArguments => TypeArgumentsSerializationCluster(),
-    .interfaceTypes => InterfaceTypeSerializationCluster(),
-    .functionTypes => FunctionTypeSerializationCluster(),
-    .recordTypes => RecordTypeSerializationCluster(),
-    .typeParameterTypes => TypeParameterTypeSerializationCluster(),
-    .codes => CodeSerializationCluster(),
-    .icDatas => ICDataSerializationCluster(),
-    .subtypeTestCaches => SubtypeTestCacheSerializationCluster(),
-    .objectPools => ObjectPoolSerializationCluster(),
-    .instances => throw 'Each class has a separate instance cluster',
-  };
+  SerializationCluster _createPredefinedCluster(PredefinedClusters clusterId) =>
+      switch (clusterId) {
+        .libraryRefs => LibraryRefSerializationCluster(),
+        .classRefs => ClassRefSerializationCluster(),
+        .fieldRefs => FieldRefSerializationCluster(),
+        .functionRefs => FunctionRefSerializationCluster(),
+        .closureFunctionRefs => ClosureFunctionRefSerializationCluster(),
+        .closureRefs => ClosureRefSerializationCluster(),
+        .argumentsDescriptorRefs =>
+          ArgumentsDescriptorRefSerializationCluster(),
+        .recordShapeRefs => RecordShapeRefSerializationCluster(),
+        .closureDatas => ClosureDataSerializationCluster(),
+        .oneByteStrings => OneByteStringSerializationCluster(),
+        .twoByteStrings => TwoByteStringSerializationCluster(),
+        .privateNames => PrivateNameSerializationCluster(),
+        .functions => FunctionSerializationCluster(),
+        .ints => IntSerializationCluster(),
+        .doubles => DoubleSerializationCluster(),
+        .lists => ListSerializationCluster(),
+        .maps => MapSerializationCluster(),
+        .sets => SetSerializationCluster(),
+        .records => RecordSerializationCluster(),
+        .instantiatedClosures => throw 'Unimplemented cluster $clusterId',
+        .typeParameters => TypeParametersSerializationCluster(),
+        .typeArguments => TypeArgumentsSerializationCluster(),
+        .interfaceTypes => InterfaceTypeSerializationCluster(),
+        .functionTypes => FunctionTypeSerializationCluster(),
+        .recordTypes => RecordTypeSerializationCluster(),
+        .typeParameterTypes => TypeParameterTypeSerializationCluster(),
+        .codes => CodeSerializationCluster(),
+        .icDatas => ICDataSerializationCluster(),
+        .subtypeTestCaches => SubtypeTestCacheSerializationCluster(),
+        .objectPools => ObjectPoolSerializationCluster(),
+        .exceptionHandlers => ExceptionHandlersSerializationCluster(),
+        .pcDescriptors => PcDescriptorsSerializationCluster(),
+        .catchEntryMoves => CatchEntryMovesSerializationCluster(),
+        .compressedStackMaps => CompressedStackMapsSerializationCluster(),
+        .codeSourceMap => CodeSourceMapSerializationCluster(),
+        .instances => throw 'Each class has a separate instance cluster',
+      };
 }
 
 /// AST Constant which wraps an arbitrary object.
 /// Used during snapshot serialization in order to embed arbitrary objects
 /// (such as Name) into other constants (such as ListConstant).
-class WrapperConstant extends ast.AuxiliaryConstant {
-  final Object? unwrap;
-
-  WrapperConstant(this.unwrap);
-
+class WrapperConstant(final Object? unwrap) extends ast.AuxiliaryConstant {
   @override
   void visitChildren(ast.Visitor v) => throw 'Should not be called.';
 
   @override
-  void toTextInternal(ast_printer.AstPrinter printer) =>
-      throw 'Should not be called.';
+  void toTextInternal(ast_printer.AstPrinter printer) {
+    printer.write('WrapperConstant(${unwrap})');
+  }
 
   @override
   ast.DartType getType(ast_type_environment.StaticTypeContext context) =>
@@ -549,7 +577,6 @@ final class FunctionRefSerializationCluster extends SerializationCluster {
       case ClosureFunction():
         throw 'Unexpected ${function.runtimeType} in FunctionRefSerializationCluster';
     }
-    ;
   }
 
   @override
@@ -561,15 +588,18 @@ final class FunctionRefSerializationCluster extends SerializationCluster {
       final kind = switch (function) {
         RegularFunction() =>
           (function.member as ast.Procedure).isFactory
-              ? FunctionKind.factoryConstructor
-              : FunctionKind.regular,
-        GenerativeConstructor() => FunctionKind.generativeConstructor,
-        ImplicitFieldGetter() => FunctionKind.implicitGetter,
-        ImplicitFieldSetter() => FunctionKind.implicitSetter,
-        FieldInitializerFunction() => FunctionKind.fieldInitializer,
-        MethodExtractor() => FunctionKind.methodExtractor,
-        GetterFunction() => FunctionKind.getter,
-        SetterFunction() => FunctionKind.setter,
+              ? FunctionKind.Constructor
+              : FunctionKind.RegularFunction,
+        GenerativeConstructor() => FunctionKind.Constructor,
+        ImplicitFieldGetter() =>
+          function.member.isInstanceMember
+              ? FunctionKind.ImplicitGetter
+              : FunctionKind.ImplicitStaticGetter,
+        ImplicitFieldSetter() => FunctionKind.ImplicitSetter,
+        FieldInitializerFunction() => FunctionKind.FieldInitializer,
+        MethodExtractor() => FunctionKind.MethodExtractor,
+        GetterFunction() => FunctionKind.GetterFunction,
+        SetterFunction() => FunctionKind.SetterFunction,
         ClosureFunction() =>
           throw 'Unexpected ${function.runtimeType} in FunctionRefSerializationCluster',
       };
@@ -715,6 +745,147 @@ final class RecordShapeRefSerializationCluster extends SerializationCluster {
       for (final name in shape.named) {
         serializer.writeRefId(name);
       }
+    }
+  }
+}
+
+class ClosureData(final CFunction parentFunction);
+
+final class ClosureDataSerializationCluster extends SerializationCluster {
+  final List<ClosureData> _objects = [];
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final closureData = object as ClosureData;
+    _objects.add(closureData);
+    serializer.push(closureData.parentFunction);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.closureDatas.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final closureData in _objects) {
+      serializer.assignRef(closureData);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (final closureData in _objects) {
+      serializer.writeRefId(closureData.parentFunction);
+    }
+  }
+}
+
+final class FunctionSerializationCluster extends SerializationCluster {
+  static const String anonymousClosureName = '<anonymous closure>';
+
+  final List<CFunction> _objects = [];
+  final List<
+    ({
+      Object /*ast.Name|String*/ name,
+      ast.TreeNode /*ast.Class|ast.Library*/ owner,
+      ast.FunctionType signature,
+      Object? /*ClosureData|???*/ data,
+      ast.ListConstant positionalParameterNames,
+      int startFileOffset,
+      int endFileOffset,
+      int kindTags,
+      int localFunctionId,
+    })
+  >
+  _fields = [];
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final function = object as CFunction;
+    _objects.add(function);
+
+    FunctionKind kind;
+    Object name;
+    ast.FunctionType signature;
+    Object? data;
+    ast.ListConstant positionalParameterNames;
+    int startFileOffset, endFileOffset;
+    var localFunctionId = 0;
+
+    switch (function) {
+      case LocalFunction():
+        kind = FunctionKind.ClosureFunction;
+        final localFunction = function.localFunction;
+        final functionNode = function.functionNode!;
+        name = (localFunction is ast.FunctionDeclaration)
+            ? localFunction.variable.name
+            : anonymousClosureName;
+        signature = functionNode.computeThisFunctionType(.nonNullable);
+        data = ClosureData(function.enclosingFunction);
+        positionalParameterNames = getListConstant([
+          '#closure', // Implicit closure parameter.
+          for (final p in functionNode.positionalParameters) p.parameterName,
+        ]);
+        startFileOffset = functionNode.fileOffset;
+        endFileOffset = functionNode.fileEndOffset;
+        localFunctionId = localFunction.id.toInt();
+        assert(localFunctionId > 0);
+        break;
+      default:
+        throw 'Unimplemented FunctionSerializationCluster for ${function.runtimeType}';
+    }
+    final owner =
+        function.member.enclosingClass ?? function.member.enclosingLibrary;
+    // TODO: async modifier and flag bits
+    final vmOffsets = serializer.objectLayout.vmOffsets;
+    final kindTags = (kind.index << vmOffsets.Function_kKindBitsPos);
+
+    serializer.push(name);
+    serializer.push(owner);
+    serializer.push(signature);
+    serializer.push(data);
+    serializer.push(positionalParameterNames);
+    _fields.add((
+      name: name,
+      owner: owner,
+      signature: signature,
+      data: data,
+      positionalParameterNames: positionalParameterNames,
+      startFileOffset: startFileOffset,
+      endFileOffset: endFileOffset,
+      kindTags: kindTags,
+      localFunctionId: localFunctionId,
+    ));
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.functions.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final function in _objects) {
+      serializer.assignRef(function);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (var i = 0; i < _objects.length; i++) {
+      final fields = _fields[i];
+      serializer.writeRefId(fields.name);
+      serializer.writeRefId(fields.owner);
+      serializer.writeRefId(fields.signature);
+      serializer.writeRefId(fields.data);
+      serializer.writeRefId(fields.positionalParameterNames);
+      serializer.writeUint(fields.startFileOffset + 1);
+      serializer.writeUint(fields.endFileOffset + 1);
+      serializer.writeUint(fields.kindTags);
+      serializer.writeUint(fields.localFunctionId);
     }
   }
 }
@@ -1220,9 +1391,55 @@ final class InterfaceTypeSerializationCluster extends SerializationCluster {
 }
 
 /// Declaration of type parameters, corresponds to the VM TypeParameters object.
-class TypeParameters {
-  final List<ast.StructuralParameter> params;
-  TypeParameters(this.params);
+class TypeParameters._(
+  final ast.ListConstant names,
+  final TypeArgumentsConstant bounds,
+  final TypeArgumentsConstant defaultTypes,
+) {
+  factory fromStructuralParameters(List<ast.StructuralParameter> params) {
+    final names = getListConstant([for (final p in params) p.name!]);
+    final bounds = TypeArgumentsConstant([for (final p in params) p.bound]);
+    final defaultTypes = TypeArgumentsConstant([
+      for (final p in params) p.defaultType,
+    ]);
+    return TypeParameters._(names, bounds, defaultTypes);
+  }
+}
+
+final class TypeParametersSerializationCluster extends SerializationCluster {
+  final List<TypeParameters> _objects = [];
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final obj = object as TypeParameters;
+    _objects.add(obj);
+    serializer.push(obj.names);
+    serializer.push(obj.bounds);
+    serializer.push(obj.defaultTypes);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.typeParameters.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final obj in _objects) {
+      serializer.assignRef(obj);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (var i = 0; i < _objects.length; i++) {
+      final obj = _objects[i];
+      serializer.writeRefId(obj.names);
+      serializer.writeRefId(obj.bounds);
+      serializer.writeRefId(obj.defaultTypes);
+    }
+  }
 }
 
 final class FunctionTypeSerializationCluster extends SerializationCluster {
@@ -1242,15 +1459,15 @@ final class FunctionTypeSerializationCluster extends SerializationCluster {
     _objects.add(type);
     if (type.typeParameters.isNotEmpty) {
       // Establish StructuralParameter -> owner links.
-      final typeParamCluster =
-          serializer.getPredefinedCluster(PredefinedClusters.typeParameterTypes)
-              as TypeParameterTypeSerializationCluster;
+      final typeParamCluster = serializer.getPredefinedCluster(
+        PredefinedClusters.typeParameterTypes,
+      ) as TypeParameterTypeSerializationCluster;
       for (final tp in type.typeParameters) {
         typeParamCluster._structuralParameterOwner[tp] = type;
       }
     }
     final typeParameters = type.typeParameters.isNotEmpty
-        ? TypeParameters(type.typeParameters)
+        ? TypeParameters.fromStructuralParameters(type.typeParameters)
         : null;
     final parameterTypes = getListConstant([
       const ast.DynamicType(), // implicit closure parameter
@@ -1461,6 +1678,11 @@ final class CodeSerializationCluster extends SerializationCluster {
     _objects.add(code);
     serializer.push(code.function);
     serializer.push(code.objectPool);
+    serializer.push(code.exceptionHandlers);
+    serializer.push(code.pcDescriptors);
+    serializer.push(code.catchEntryMoves);
+    serializer.push(code.compressedStackMaps);
+    serializer.push(code.codeSourceMap);
   }
 
   @override
@@ -1481,17 +1703,21 @@ final class CodeSerializationCluster extends SerializationCluster {
     for (final code in _objects) {
       serializer.writeRefId(code.objectPool);
       serializer.writeRefId(code.function);
+      serializer.writeRefId(code.exceptionHandlers);
+      serializer.writeRefId(code.pcDescriptors);
+      serializer.writeRefId(code.catchEntryMoves);
+      serializer.writeRefId(code.compressedStackMaps);
+      serializer.writeRefId(code.codeSourceMap);
       serializer.writeUint(code.instructions.lengthInBytes);
     }
   }
 }
 
-class ICData {
-  final CFunction owner;
-  final ArgumentsShape argumentsShape;
-  final Name targetName;
-  ICData(this.owner, this.argumentsShape, this.targetName);
-}
+class ICData(
+  final CFunction owner,
+  final ArgumentsShape argumentsShape,
+  final Name targetName,
+);
 
 final class ICDataSerializationCluster extends SerializationCluster {
   final List<ICData> _objects = [];
@@ -1580,6 +1806,10 @@ final class ObjectPoolSerializationCluster extends SerializationCluster {
               entry.selector,
             );
             serializer.push(icData);
+          case SubtypeTestCacheWithName():
+            serializer.push(entry.stc);
+            serializer.push(entry.name);
+          case NativeFunction():
           case ReservedEntry():
             break;
         }
@@ -1622,6 +1852,13 @@ final class ObjectPoolSerializationCluster extends SerializationCluster {
             case DynamicCallEntry():
               serializer.writeUint(ObjectPoolEntryKind.dynamicCall.index);
               serializer.writeRefId(icDatas[entry]);
+            case SubtypeTestCacheWithName():
+              serializer.writeUint(ObjectPoolEntryKind.objectRef.index);
+              serializer.writeRefId(entry.stc);
+              serializer.writeUint(ObjectPoolEntryKind.objectRef.index);
+              serializer.writeRefId(entry.name);
+            case NativeFunction():
+              serializer.writeUint(ObjectPoolEntryKind.nativeFunction.index);
             case ReservedEntry():
           }
         } else if (entry is UnboxedIntConstant) {
@@ -1639,11 +1876,304 @@ final class ObjectPoolSerializationCluster extends SerializationCluster {
   }
 }
 
+final class ExceptionHandlersSerializationCluster extends SerializationCluster {
+  final List<ExceptionHandlers> _objects = [];
+  final List<ast.ListConstant> _guardTypes = [];
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final exceptionHandlers = object as ExceptionHandlers;
+    _objects.add(exceptionHandlers);
+    final guardTypes = getListConstant([
+      for (final handler in exceptionHandlers.handlers)
+        getListConstant(handler.guardTypes),
+    ]);
+    _guardTypes.add(guardTypes);
+    serializer.push(guardTypes);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.exceptionHandlers.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final eh in _objects) {
+      serializer.assignRef(eh);
+      serializer.writeUint(eh.handlers.length);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (var i = 0, n = _objects.length; i < n; ++i) {
+      final eh = _objects[i];
+      final guardTypes = _guardTypes[i];
+      serializer.writeUint(eh.handlers.length);
+      serializer.writeUint(eh.hasAsyncHandler ? 1 : 0);
+      serializer.writeRefId(guardTypes);
+      for (final handler in eh.handlers) {
+        serializer.writeUint(handler.pcOffset);
+        serializer.writeUint(handler.outerIndex + 1);
+        serializer.writeUint(handler.needsStackTrace ? 1 : 0);
+        serializer.writeUint(handler.hasCatchAll ? 1 : 0);
+        serializer.writeUint(handler.isSynthetic ? 1 : 0);
+      }
+    }
+  }
+}
+
+final class PcDescriptorsSerializationCluster extends SerializationCluster {
+  final List<PcDescriptors> _objects = [];
+  final List<SnapshotStreamWriter> _encoded = [];
+
+  SnapshotStreamWriter _encode(
+    SnapshotSerializer serializer,
+    PcDescriptors pcDescriptors,
+  ) {
+    final vmOffsets = serializer.objectLayout.vmOffsets;
+    final stream = SnapshotStreamWriter(initialSize: 32);
+    var previousPcOffset = 0;
+    var previousFileOffset = 0;
+    for (final cs in pcDescriptors.callSites) {
+      final packedFields =
+          (PcDescriptorKind.Other.index <<
+              vmOffsets.UntaggedPcDescriptors_kKindBitsPos) |
+          ((cs.exceptionHandlerIndex + 1) <<
+              vmOffsets.UntaggedPcDescriptors_kTryIndexBitsPos);
+      stream.writeSLEB128(packedFields);
+      final pcOffset = cs.pcOffset;
+      stream.writeSLEB128(pcOffset - previousPcOffset);
+      previousPcOffset = pcOffset;
+      stream.writeSLEB128(0); // Delta-encoded deoptId.
+      final fileOffset = cs.sourcePosition.fileOffset;
+      stream.writeSLEB128(fileOffset - previousFileOffset);
+      previousFileOffset = fileOffset;
+    }
+    return stream;
+  }
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final pcDescriptors = object as PcDescriptors;
+    _objects.add(pcDescriptors);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.pcDescriptors.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final pcDescriptors in _objects) {
+      serializer.assignRef(pcDescriptors);
+      final encoded = _encode(serializer, pcDescriptors);
+      _encoded.add(encoded);
+      serializer.writeUint(encoded.position);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (final encoded in _encoded) {
+      serializer.writeUint(encoded.position);
+      for (final buf in encoded.getContents()) {
+        serializer.out.writeUint8List(buf);
+      }
+    }
+  }
+}
+
+final class CatchEntryMovesSerializationCluster extends SerializationCluster {
+  final List<CatchEntryMoves> _objects = [];
+  final List<SnapshotStreamWriter> _encoded = [];
+
+  SnapshotStreamWriter _encode(
+    SnapshotSerializer serializer,
+    CatchEntryMoves catchEntryMoves,
+  ) {
+    final stream = SnapshotStreamWriter(initialSize: 16);
+    for (final es in catchEntryMoves.exceptionSites) {
+      stream.writeInt(es.pcOffset);
+      // TODO: write moves
+      stream.writeInt(0); // length
+      stream.writeInt(0); // suffix length
+      stream.writeInt(0); // suffix offset
+    }
+    return stream;
+  }
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final catchEntryMoves = object as CatchEntryMoves;
+    _objects.add(catchEntryMoves);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.catchEntryMoves.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final catchEntryMoves in _objects) {
+      serializer.assignRef(catchEntryMoves);
+      final encoded = _encode(serializer, catchEntryMoves);
+      _encoded.add(encoded);
+      serializer.writeUint(encoded.position);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (final encoded in _encoded) {
+      serializer.writeUint(encoded.position);
+      for (final buf in encoded.getContents()) {
+        serializer.out.writeUint8List(buf);
+      }
+    }
+  }
+}
+
+final class CompressedStackMapsSerializationCluster
+    extends SerializationCluster {
+  final List<CompressedStackMaps> _objects = [];
+  final List<SnapshotStreamWriter> _encoded = [];
+
+  static const int bitsPerByte = 8;
+
+  SnapshotStreamWriter _encode(
+    SnapshotSerializer serializer,
+    CompressedStackMaps compressedStackMaps,
+  ) {
+    final stream = SnapshotStreamWriter(initialSize: 16);
+    var currentPcOffset = 0;
+    for (final map in compressedStackMaps.stackMaps) {
+      stream.writeSLEB128(map.pcOffset - currentPcOffset);
+      currentPcOffset = map.pcOffset;
+      stream.writeSLEB128(map.prefixBits);
+      stream.writeSLEB128(map.suffixBits);
+      final numBytes =
+          (map.prefixBits + map.suffixBits + bitsPerByte - 1) ~/ bitsPerByte;
+      stream.writeUint8List(map.bits.buffer.asUint8List(0, numBytes));
+    }
+    return stream;
+  }
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final compressedStackMaps = object as CompressedStackMaps;
+    _objects.add(compressedStackMaps);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.compressedStackMaps.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final compressedStackMaps in _objects) {
+      serializer.assignRef(compressedStackMaps);
+      final encoded = _encode(serializer, compressedStackMaps);
+      _encoded.add(encoded);
+      serializer.writeUint(encoded.position);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (final encoded in _encoded) {
+      serializer.writeUint(encoded.position);
+      for (final buf in encoded.getContents()) {
+        serializer.out.writeUint8List(buf);
+      }
+    }
+  }
+}
+
+enum CodeSourceMapOp {
+  changePosition,
+  advancePC,
+  pushFunction,
+  popFunction,
+  nullCheck,
+}
+
+final class CodeSourceMapSerializationCluster extends SerializationCluster {
+  final List<CodeSourceMap> _objects = [];
+  final List<SnapshotStreamWriter> _encoded = [];
+
+  static const int opBits = 3;
+  static const int argMask = (1 << (32 - opBits)) - 1;
+  static const int startPosition = -12; // kDartCodePrologue
+
+  SnapshotStreamWriter _encode(
+    SnapshotSerializer serializer,
+    CodeSourceMap codeSourceMap,
+  ) {
+    final stream = SnapshotStreamWriter(initialSize: 16);
+    var previousPcOffset = 0;
+    var previousFileOffset = startPosition;
+    for (final sp in codeSourceMap.sourcePositions) {
+      // TODO: encode inline stacks
+      final fileOffset = sp.sourcePosition.fileOffset;
+      stream.writeInt(
+        CodeSourceMapOp.changePosition.index |
+            ((fileOffset - previousFileOffset) & argMask) << opBits,
+      );
+      previousFileOffset = fileOffset;
+      final pcOffset = sp.pcOffset;
+      stream.writeInt(
+        CodeSourceMapOp.advancePC.index |
+            ((pcOffset - previousPcOffset) & argMask) << opBits,
+      );
+      previousPcOffset = pcOffset;
+    }
+    return stream;
+  }
+
+  @override
+  void trace(SnapshotSerializer serializer, Object object) {
+    final codeSourceMap = object as CodeSourceMap;
+    _objects.add(codeSourceMap);
+  }
+
+  @override
+  void writePreLoad(SnapshotSerializer serializer) {
+    serializer.writeUint(PredefinedClusters.codeSourceMap.index);
+  }
+
+  @override
+  void writeAlloc(SnapshotSerializer serializer) {
+    serializer.writeUint(_objects.length);
+    for (final codeSourceMap in _objects) {
+      serializer.assignRef(codeSourceMap);
+      final encoded = _encode(serializer, codeSourceMap);
+      _encoded.add(encoded);
+      serializer.writeUint(encoded.position);
+    }
+  }
+
+  @override
+  void writeFill(SnapshotSerializer serializer) {
+    for (final encoded in _encoded) {
+      serializer.writeUint(encoded.position);
+      for (final buf in encoded.getContents()) {
+        serializer.out.writeUint8List(buf);
+      }
+    }
+  }
+}
+
 /// Buffers snapshot writing.
 class SnapshotStreamWriter {
-  /// Initial size of the buffer.
-  static const int initialSize = 1024;
-
   // Constants for variable-length encoding used by snapshots.
   static const int dataBitsPerByte = 7;
   static const int byteMask = (1 << dataBitsPerByte) - 1;
@@ -1659,10 +2189,11 @@ class SnapshotStreamWriter {
   // Total length of data in [_buffers].
   int _buffersLength = 0;
 
-  Uint8List _currentBuffer = Uint8List(initialSize);
+  Uint8List _currentBuffer;
   int _currentLength = 0;
 
-  SnapshotStreamWriter();
+  SnapshotStreamWriter({int initialSize = 1024})
+    : _currentBuffer = Uint8List(initialSize);
 
   List<Uint8List> getContents() {
     final list = <Uint8List>[];
@@ -1774,11 +2305,24 @@ class SnapshotStreamWriter {
     _currentBuffer[_currentLength++] = ((value >> 0) & 127) | 128;
   }
 
+  @pragma('vm:prefer-inline')
+  void writeSLEB128(int value) {
+    var last = false;
+    do {
+      int part = value & 0x7f;
+      value >>= 7;
+      if ((value == 0 && (part & 0x40) == 0) ||
+          (value == -1 && (part & 0x40) != 0)) {
+        last = true;
+      } else {
+        part |= 0x80;
+      }
+      writeByte(part);
+    } while (!last);
+  }
+
   void writeDouble(double value) {
-    final buf = ByteData(8);
-    buf.setFloat64(0, value, Endian.little);
-    final intValue = buf.getInt64(0, Endian.little);
-    writeInt(intValue);
+    writeInt(doubleToIntBits(value));
   }
 
   ByteData _bufferAt(int offset) {

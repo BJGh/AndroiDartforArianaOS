@@ -70,6 +70,9 @@ abstract class Feature {
   /// Feature information for inference-update-4.
   static final inference_update_4 = ExperimentalFeatures.inference_update_4;
 
+  /// Feature information for type promotion of 'this'.
+  static final this_promotion = ExperimentalFeatures.this_promotion;
+
   /// Feature information for inline classes.
   static final inline_class = ExperimentalFeatures.inline_class;
 
@@ -132,6 +135,10 @@ abstract class Feature {
 
   /// Feature information for wildcard variables.
   static final wildcard_variables = ExperimentalFeatures.wildcard_variables;
+
+  /// Type inference of generic receivers in non-empty contexts.
+  static final receiver_type_inference =
+      ExperimentalFeatures.receiver_type_inference;
 
   /// If the feature may be enabled or disabled on the command line, the
   /// experimental flag that may be used to enable it.  Otherwise `null`.

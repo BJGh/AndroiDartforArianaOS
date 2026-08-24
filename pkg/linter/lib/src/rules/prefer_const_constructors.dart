@@ -18,8 +18,7 @@ import '../extensions.dart';
 const _desc = r'Prefer `const` with constant constructors.';
 
 class PreferConstConstructors extends AnalysisRule {
-  PreferConstConstructors()
-    : super(name: LintNames.prefer_const_constructors, description: _desc);
+  new() : super(name: LintNames.prefer_const_constructors, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.preferConstConstructors;
@@ -35,11 +34,7 @@ class PreferConstConstructors extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitDotShorthandConstructorInvocation(
     DotShorthandConstructorInvocation node,

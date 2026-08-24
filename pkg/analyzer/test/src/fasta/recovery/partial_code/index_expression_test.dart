@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,14 +17,15 @@ main() {
 @reflectiveTest
 class IndexStatementTest extends ParserDiagnosticsTest {
   void test_index_assignment_missing_index_no_space_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[] = 0; }
+//            ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 14, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -37,7 +37,18 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: AssignmentExpression
+                expression2: DirectAssignment
+                  target: IndexAssignmentTarget
+                    receiver: SimpleIdentifier
+                      token: intList
+                    leftBracket: [
+                    index: SimpleIdentifier
+                      token: <empty> <synthetic>
+                    rightBracket: ]
+                  operator: =
+                  value: IntegerLiteral
+                    literal: 0
+                expression(v1): AssignmentExpression
                   leftHandSide: IndexExpression
                     target: SimpleIdentifier
                       token: intList
@@ -54,14 +65,15 @@ CompilationUnit
   }
 
   void test_index_assignment_missing_index_with_space_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ ] = 0; }
+//             ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 15, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -73,7 +85,18 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: AssignmentExpression
+                expression2: DirectAssignment
+                  target: IndexAssignmentTarget
+                    receiver: SimpleIdentifier
+                      token: intList
+                    leftBracket: [
+                    index: SimpleIdentifier
+                      token: <empty> <synthetic>
+                    rightBracket: ]
+                  operator: =
+                  value: IntegerLiteral
+                    literal: 0
+                expression(v1): AssignmentExpression
                   leftHandSide: IndexExpression
                     target: SimpleIdentifier
                       token: intList
@@ -90,14 +113,15 @@ CompilationUnit
   }
 
   void test_index_assignment_trailing_comma_and_identifier_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x,y] = 0; }
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 15, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -109,7 +133,18 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: AssignmentExpression
+                expression2: DirectAssignment
+                  target: IndexAssignmentTarget
+                    receiver: SimpleIdentifier
+                      token: intList
+                    leftBracket: [
+                    index: SimpleIdentifier
+                      token: x
+                    rightBracket: ]
+                  operator: =
+                  value: IntegerLiteral
+                    literal: 0
+                expression(v1): AssignmentExpression
                   leftHandSide: IndexExpression
                     target: SimpleIdentifier
                       token: intList
@@ -126,14 +161,15 @@ CompilationUnit
   }
 
   void test_index_assignment_trailing_comma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x,] = 0; }
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 15, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -145,7 +181,18 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: AssignmentExpression
+                expression2: DirectAssignment
+                  target: IndexAssignmentTarget
+                    receiver: SimpleIdentifier
+                      token: intList
+                    leftBracket: [
+                    index: SimpleIdentifier
+                      token: x
+                    rightBracket: ]
+                  operator: =
+                  value: IntegerLiteral
+                    literal: 0
+                expression(v1): AssignmentExpression
                   leftHandSide: IndexExpression
                     target: SimpleIdentifier
                       token: intList
@@ -162,14 +209,15 @@ CompilationUnit
   }
 
   void test_index_assignment_trailing_identifier_no_comma_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x y] = 0; }
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 16, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -181,7 +229,18 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: AssignmentExpression
+                expression2: DirectAssignment
+                  target: IndexAssignmentTarget
+                    receiver: SimpleIdentifier
+                      token: intList
+                    leftBracket: [
+                    index: SimpleIdentifier
+                      token: x
+                    rightBracket: ]
+                  operator: =
+                  value: IntegerLiteral
+                    literal: 0
+                expression(v1): AssignmentExpression
                   leftHandSide: IndexExpression
                     target: SimpleIdentifier
                       token: intList
@@ -198,18 +257,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x assert (true); }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 6),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -221,7 +281,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -232,7 +299,7 @@ CompilationUnit
               AssertStatement
                 assertKeyword: assert
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -241,17 +308,17 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -263,7 +330,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -279,19 +353,20 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x break; }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^
+// [diag.expectedToken] Expected to find ']'.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 5),
-      error(diag.breakOutsideOfLoop, 16, 5),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -303,7 +378,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -319,19 +401,20 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x continue; }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^^^^
+// [diag.expectedToken] Expected to find ']'.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 8),
-      error(diag.continueOutsideOfLoop, 16, 8),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -343,7 +426,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -359,18 +449,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x do {} while (true); }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 2),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -382,7 +473,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -397,7 +495,7 @@ CompilationUnit
                   rightBracket: }
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -406,17 +504,17 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 16, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -428,7 +526,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -441,18 +546,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x for (var x in y) {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 3),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -464,7 +570,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -480,7 +593,7 @@ CompilationUnit
                     keyword: var
                     name: x
                   inKeyword: in
-                  iterable: SimpleIdentifier
+                  iterable2: SimpleIdentifier
                     token: y
                 rightParenthesis: )
                 body: Block
@@ -491,18 +604,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x if (true) {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 2),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -514,7 +628,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -525,7 +646,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: BooleanLiteral
+                expression2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 thenStatement: Block
@@ -536,17 +657,17 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x l: {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -558,7 +679,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -579,18 +707,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x int f() {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 3),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -602,7 +731,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -628,18 +764,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x void f() {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 4),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -651,7 +788,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -677,18 +821,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x var x; }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 3),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -700,7 +845,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -720,18 +872,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x return; }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 6),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -743,7 +896,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -759,18 +919,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x switch (x) {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 6),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -782,7 +943,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -793,7 +961,7 @@ CompilationUnit
               SwitchStatement
                 switchKeyword: switch
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: x
                 rightParenthesis: )
                 leftBracket: {
@@ -803,18 +971,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x try {} finally {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 3),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -826,7 +995,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -848,18 +1024,19 @@ CompilationUnit
   }
 
   void test_index_partial_identifier_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[x while (true) {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^^^^^
+// [diag.expectedToken] Expected to find ']'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedToken, 16, 5),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -871,7 +1048,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: x
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -882,7 +1066,7 @@ CompilationUnit
               WhileStatement
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 body: Block
@@ -893,14 +1077,15 @@ CompilationUnit
   }
 
   void test_index_partial_open_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ assert (true); }
+//                          ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 28, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -912,7 +1097,21 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: FunctionExpressionInvocation
+                    function2: SimpleIdentifier
+                      token: assert
+                    argumentList: ArgumentList
+                      leftParenthesis: (
+                      arguments2
+                        BooleanLiteral
+                          literal: true
+                      rightParenthesis: )
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -932,17 +1131,17 @@ CompilationUnit
   }
 
   void test_index_partial_open_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ {} }
+//              ^
+// [diag.expectedToken] Expected to find ';'.
+//                ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 18, 1),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -954,7 +1153,16 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SetOrMapLiteral
+                    leftBracket: {
+                    rightBracket: }
+                    isMap: false
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -969,20 +1177,21 @@ CompilationUnit
   }
 
   void test_index_partial_open_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ break; }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 5),
-      error(diag.expectedToken, 15, 5),
-      error(diag.breakOutsideOfLoop, 15, 5),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -994,7 +1203,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1010,20 +1226,21 @@ CompilationUnit
   }
 
   void test_index_partial_open_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ continue; }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 8),
-      error(diag.expectedToken, 15, 8),
-      error(diag.continueOutsideOfLoop, 15, 8),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1035,7 +1252,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1051,19 +1275,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ do {} while (true); }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 2),
-      error(diag.expectedToken, 15, 2),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1075,7 +1300,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1090,7 +1322,7 @@ CompilationUnit
                   rightBracket: }
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -1099,18 +1331,18 @@ CompilationUnit
   }
 
   void test_index_partial_open_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 15, 1),
-      error(diag.missingIdentifier, 15, 1),
-      error(diag.expectedToken, 13, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1122,7 +1354,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1135,19 +1374,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ for (var x in y) {} }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 3),
-      error(diag.expectedToken, 15, 3),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1159,7 +1399,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1175,7 +1422,7 @@ CompilationUnit
                     keyword: var
                     name: x
                   inKeyword: in
-                  iterable: SimpleIdentifier
+                  iterable2: SimpleIdentifier
                     token: y
                 rightParenthesis: )
                 body: Block
@@ -1186,19 +1433,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ if (true) {} }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 2),
-      error(diag.expectedToken, 15, 2),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1210,7 +1458,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1221,7 +1476,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: BooleanLiteral
+                expression2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 thenStatement: Block
@@ -1232,19 +1487,19 @@ CompilationUnit
   }
 
   void test_index_partial_open_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ l: {} }
+//             ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.expectedToken] Expected to find ']'.
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.unexpectedToken] Unexpected text ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 15, 1),
-      error(diag.expectedToken, 16, 1),
-      error(diag.missingIdentifier, 16, 1),
-      error(diag.unexpectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1256,7 +1511,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: l
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1265,7 +1527,7 @@ CompilationUnit
                   rightBracket: ] <synthetic>
                 semicolon: ; <synthetic>
               ExpressionStatement
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: <empty> <synthetic>
                 semicolon: ; <synthetic>
               Block
@@ -1276,18 +1538,19 @@ CompilationUnit
   }
 
   void test_index_partial_open_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ int f() {} }
+//                 ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                      ^
+// [diag.expectedToken] Expected to find ';'.
+//                        ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 26, 1),
-      error(diag.namedFunctionExpression, 19, 1),
-      error(diag.expectedToken, 24, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1299,7 +1562,20 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: FunctionExpression
+                    parameters: FormalParameterList
+                      leftParenthesis: (
+                      rightParenthesis: )
+                    body: BlockFunctionBody
+                      block: Block
+                        leftBracket: {
+                        rightBracket: }
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1318,18 +1594,19 @@ CompilationUnit
   }
 
   void test_index_partial_open_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ void f() {} }
+//                  ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                       ^
+// [diag.expectedToken] Expected to find ';'.
+//                         ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 27, 1),
-      error(diag.namedFunctionExpression, 20, 1),
-      error(diag.expectedToken, 25, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1341,7 +1618,20 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: FunctionExpression
+                    parameters: FormalParameterList
+                      leftParenthesis: (
+                      rightParenthesis: )
+                    body: BlockFunctionBody
+                      block: Block
+                        leftBracket: {
+                        rightBracket: }
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1360,19 +1650,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ var x; }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 3),
-      error(diag.expectedToken, 15, 3),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1384,7 +1675,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1404,18 +1702,18 @@ CompilationUnit
   }
 
   void test_index_partial_open_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ return; }
+//             ^^^^^^
+// [diag.unexpectedToken] Unexpected text 'return'.
+//                   ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.unexpectedToken, 15, 6),
-      error(diag.missingIdentifier, 21, 1),
-      error(diag.expectedToken, 21, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1427,7 +1725,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1440,17 +1745,17 @@ CompilationUnit
   }
 
   void test_index_partial_open_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ switch (x) {} }
+//                         ^
+// [diag.expectedToken] Expected to find ';'.
+//                           ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 29, 1),
-      error(diag.expectedToken, 27, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1462,7 +1767,20 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SwitchExpression
+                    switchKeyword: switch
+                    leftParenthesis: (
+                    expression2: SimpleIdentifier
+                      token: x
+                    rightParenthesis: )
+                    leftBracket: {
+                    rightBracket: }
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1481,19 +1799,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ try {} finally {} }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 3),
-      error(diag.expectedToken, 15, 3),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1505,7 +1824,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1527,19 +1853,20 @@ CompilationUnit
   }
 
   void test_index_partial_open_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { intList[ while (true) {} }
+//           ^
+// [diag.expectedToken] Expected to find ';'.
+//             ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ']'.
+//             ^
+// [diag.expectedToken] Expected to find ']'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 15, 5),
-      error(diag.expectedToken, 15, 5),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1551,7 +1878,14 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: IndexExpression
+                expression2: IndexExpression2
+                  receiver: SimpleIdentifier
+                    token: intList
+                  leftBracket: [
+                  index: SimpleIdentifier
+                    token: <empty> <synthetic>
+                  rightBracket: ] <synthetic>
+                expression(v1): IndexExpression
                   target: SimpleIdentifier
                     token: intList
                   leftBracket: [
@@ -1562,7 +1896,7 @@ CompilationUnit
               WhileStatement
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 body: Block

@@ -301,8 +301,9 @@ mixin LspRequestHelpersMixin {
     );
   }
 
-  void expect(Object? actual, Matcher matcher, {String? reason}) =>
-      test.expect(actual, matcher, reason: reason);
+  void expect(Object? actual, Object? matcher, {String? reason}) {
+    test.expect(actual, matcher, reason: reason);
+  }
 
   Future<T> expectSuccessfulResponseTo<T, R>(
     RequestMessage request,
@@ -987,6 +988,16 @@ mixin LspRequestHelpersMixin {
     );
   }
 
+  Future<InteractiveExecuteCommandParams> resolveCommand(
+    ExecuteCommandParams command,
+  ) {
+    var request = makeRequest(CustomMethods.resolveCommand, command);
+    return expectSuccessfulResponseTo(
+      request,
+      InteractiveExecuteCommandParams.fromJson,
+    );
+  }
+
   Future<CompletionItem> resolveCompletion(CompletionItem item) {
     var request = makeRequest(Method.completionItem_resolve, item);
     return expectSuccessfulResponseTo(request, CompletionItem.fromJson);
@@ -1025,6 +1036,11 @@ mixin LspRequestHelpersMixin {
       CustomMethods.updateDiagnosticInformation,
       params,
     );
+    return expectSuccessfulResponseTo(request, (Null n) => n);
+  }
+
+  Future<void> workspaceAnalysisComplete() {
+    var request = makeRequest(CustomMethods.workspaceAnalysisComplete, null);
     return expectSuccessfulResponseTo(request, (Null n) => n);
   }
 

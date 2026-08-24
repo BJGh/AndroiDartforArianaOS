@@ -22,8 +22,6 @@ AVAILABLE_ARCHS = utils.ARCH_FAMILY.keys()
 DART_USE_TOOLCHAIN = "DART_USE_TOOLCHAIN"  # Use instead of --toolchain-prefix
 DART_USE_SYSROOT = "DART_USE_SYSROOT"  # Use instead of --target-sysroot
 DART_USE_CRASHPAD = "DART_USE_CRASHPAD"  # Use instead of --use-crashpad
-# use instead of --platform-sdk
-DART_MAKE_PLATFORM_SDK = "DART_MAKE_PLATFORM_SDK"
 
 DART_GN_ARGS = "DART_GN_ARGS"
 
@@ -38,10 +36,6 @@ def TargetSysroot(args):
     if args.target_sysroot:
         return args.target_sysroot
     return os.environ.get(DART_USE_SYSROOT)
-
-
-def MakePlatformSDK():
-    return DART_MAKE_PLATFORM_SDK in os.environ
 
 
 def GetGNArgs(args):
@@ -83,6 +77,8 @@ def HostCpuForArch(arch):
         candidates = ['arm', 'x86', 'riscv32', 'arm64', 'x64', 'riscv64']
     elif arch in ['arm64', 'arm64c', 'simarm64', 'simarm64c']:
         candidates = ['arm64', 'x64', 'riscv64']
+    elif arch in ['arm64e']:
+        candidates = ['arm64e', 'arm64', 'x64']
     elif arch in ['riscv32', 'simriscv32']:
         candidates = ['riscv32', 'arm', 'x86', 'riscv64', 'arm64', 'x64']
     elif arch in ['riscv64', 'simriscv64']:
@@ -107,6 +103,8 @@ def TargetCpuForArch(arch):
         return 'x86'
     elif arch.startswith('x64'):
         return 'x64'
+    elif arch.startswith('arm64e'):
+        return 'arm64e'
     elif arch.startswith('arm64'):
         return 'arm64'
     elif arch.startswith('arm'):
@@ -233,11 +231,6 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash,
     else:
         gn_args['dart_snapshot_kind'] = 'app-jit'
 
-    # We only want the fallback root certs in the standalone VM on
-    # Linux and Windows.
-    if gn_args['target_os'] in ['linux', 'win']:
-        gn_args['dart_use_fallback_root_certificates'] = True
-
     if gn_args['target_os'] == 'linux':
         if gn_args['target_cpu'] == 'arm':
             # Default to -mfloat-abi=hard and -mfpu=neon for arm on Linux as we're
@@ -277,23 +270,9 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash,
     gn_args['is_hwasan'] = sanitizer == 'hwasan'
     gn_args['is_qemu'] = args.use_qemu
 
-    if not args.platform_sdk:
-        gn_args['dart_platform_sdk'] = args.platform_sdk
-
-    if args.include_experimental_vm_service:
+    if args.include_experimental_vm_service is not None:
         gn_args[
             'include_experimental_vm_service'] = args.include_experimental_vm_service
-
-    # We don't support stripping on Windows
-    if host_os != 'win':
-        gn_args['dart_stripped_binary'] = 'exe.stripped/dart'
-        gn_args['dartvm_stripped_binary'] = 'exe.stripped/dartvm'
-        gn_args['dart_aotruntime_stripped_binary'] = (
-            'exe.stripped/dartaotruntime_product')
-        gn_args['gen_snapshot_stripped_binary'] = (
-            'exe.stripped/gen_snapshot_product')
-        gn_args['analyze_snapshot_binary'] = ('exe.stripped/analyze_snapshot')
-        gn_args['wasm_opt_stripped_binary'] = 'exe.stripped/wasm-opt'
 
     # Setup the user-defined sysroot.
     if UseSysroot(args, gn_args):
@@ -327,8 +306,16 @@ def ToGnArgs(args, mode, arch, target_os, sanitizer, verify_sdk_hash,
     gn_args['verify_sdk_hash'] = verify_sdk_hash
     gn_args['dart_version_git_info'] = git_version
 
-    if args.codesigning_identity != '':
+    if args.codesigning_identity:
         gn_args['codesigning_identity'] = args.codesigning_identity
+    elif sanitizer == 'none':
+        # Enable ad-hoc code signing by default, but not for sanitizer builds.
+        # The santizers use dynamic linking on Mac, and fail library
+        # validation under the hardened runtime. We'd need to either disable
+        # the hardened runtime, add the disable-library-validation entitlement
+        # to every executable, or get a proper signing identity with a team set
+        # and also sign the sanitizer libraries.
+        gn_args['codesigning_identity'] = '-'
 
     return gn_args
 
@@ -420,13 +407,6 @@ def ProcessOptions(args):
        (socket.getfqdn().endswith('.corp.google.com') or
         socket.getfqdn().endswith('.c.googlers.com')):
         print('You can speed up your build by following: go/dart-rbe')
-    old_rbe_cfg = 'win-intel.cfg' if HOST_OS == 'win32' else 'linux-intel.cfg'
-    new_rbe_cfg = 'windows.cfg' if HOST_OS == 'win32' else 'unix.cfg'
-    if os.environ.get('RBE_cfg') == os.path.join(os.getcwd(), 'build', 'rbe',
-                                                 old_rbe_cfg):
-        print(f'warning: {old_rbe_cfg} is deprecated, please update your '
-              f'RBE_cfg variable to {new_rbe_cfg} use RBE=1 instead per '
-              'go/dart-rbe')
     return True
 
 
@@ -455,7 +435,7 @@ def AddCommonGnOptionArgs(parser):
                             os.environ.get('DART_RBE') == '1' or \
                             os.environ.get('RBE_cfg') != None)
     parser.add_argument('--rbe-expensive-exec-strategy',
-                        default=os.environ.get('RBE_exec_strategy'),
+                        default=os.environ.get('RBE_expensive_exec_strategy'),
                         help='Strategy for expensive RBE compilations',
                         type=str)
 
@@ -490,11 +470,6 @@ def AddCommonGnOptionArgs(parser):
                         action='store_false')
     parser.set_defaults(clang=True)
 
-    parser.add_argument(
-        '--platform-sdk',
-        help='Directs the create_sdk target to create a smaller "Platform" SDK',
-        default=MakePlatformSDK(),
-        action='store_true')
     parser.add_argument('--use-crashpad',
                         default=False,
                         dest='use_crashpad',
@@ -550,20 +525,21 @@ def AddCommonGnOptionArgs(parser):
         '-s',
         type=str,
         help='Comma-separated list of arch=/path/to/sysroot mappings')
-    parser.add_argument('--use-mallinfo2',
-                        help='Use mallinfo2 to collect malloc stats.',
-                        default=False,
-                        dest='use_mallinfo2',
-                        action='store_true')
     parser.add_argument('--codesigning-identity',
                         help='Sign executables using the given identity.',
-                        default='',
                         type=str)
     parser.add_argument(
         '--include-experimental-vm-service',
         help='Use the Dart Runtime Service based VM service implementation.',
-        default=False,
+        dest='include_experimental_vm_service',
         action='store_true')
+    parser.add_argument(
+        '--no-include-experimental-vm-service',
+        help=
+        'Do not use the Dart Runtime Service based VM service implementation.',
+        dest='include_experimental_vm_service',
+        action='store_false')
+    parser.set_defaults(include_experimental_vm_service=None)
 
 
 def AddCommonConfigurationArgs(parser):

@@ -295,6 +295,10 @@ const Code& StubCodeAllocateArray() {
   return dart::StubCode::AllocateArray();
 }
 
+const Code& StubCodeSubtype1TestCache() {
+  return dart::StubCode::Subtype1TestCache();
+}
+
 const Code& StubCodeSubtype2TestCache() {
   return dart::StubCode::Subtype2TestCache();
 }
@@ -957,7 +961,7 @@ uword Code::EntryPointOf(const dart::Code& code) {
 }
 
 bool CanEmbedAsRawPointerInGeneratedCode(const dart::Object& obj) {
-  return obj.IsSmi() || obj.InVMIsolateHeap();
+  return obj.IsSmi() || obj.IsNull() || obj.IsCode();
 }
 
 word ToRawPointer(const dart::Object& a) {
@@ -977,11 +981,6 @@ word RegExp::function_offset(classid_t cid, bool sticky) {
   return dart::RegExp::function_offset(cid, sticky);
 #endif
 }
-
-const word Symbols::kNumberOfOneCharCodeSymbols =
-    dart::Symbols::kNumberOfOneCharCodeSymbols;
-const word Symbols::kNullCharCodeSymbolOffset =
-    dart::Symbols::kNullCharCodeSymbolOffset;
 
 const word String::kHashBits = dart::String::kHashBits;
 

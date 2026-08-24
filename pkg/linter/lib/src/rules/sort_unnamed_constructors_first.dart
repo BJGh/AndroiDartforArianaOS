@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Sort unnamed constructor declarations first.';
 
 class SortUnnamedConstructorsFirst extends AnalysisRule {
-  SortUnnamedConstructorsFirst()
+  new()
     : super(
         name: LintNames.sort_unnamed_constructors_first,
         description: _desc,
@@ -36,11 +36,7 @@ class SortUnnamedConstructorsFirst extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void check(NodeList<ClassMember> members) {
     var seenNamedConstructor = false;
     // Members are sorted by source position in the AST.

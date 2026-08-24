@@ -21,10 +21,7 @@ class ExtractWidgetTest extends RefactoringTest {
   late ExtractWidgetRefactoringImpl refactoring;
 
   @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfig(flutter: true);
-  }
+  bool get addFlutterPackageDep => true;
 
   Future<void> test_checkAllConditions_selection() async {
     await indexTestUnit('''
@@ -127,7 +124,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -178,7 +175,7 @@ Widget f() {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -214,7 +211,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -247,7 +244,7 @@ Widget f() {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -300,7 +297,7 @@ Widget f() {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -403,7 +400,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.c,
   });
@@ -455,7 +452,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -519,7 +516,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.foo,
     required this.p1,
@@ -574,7 +571,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.n,
     this.i,
@@ -623,7 +620,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     this.value,
   });
@@ -688,7 +685,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.foo,
     required this.p1,
@@ -747,7 +744,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.c,
   });
@@ -790,7 +787,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
   });
 
@@ -898,7 +895,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.c,
   });
@@ -962,7 +959,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.local,
   });
@@ -1032,7 +1029,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this._field,
   });
@@ -1081,7 +1078,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.field,
     required String field2,
@@ -1186,7 +1183,7 @@ class MyWidget extends StatelessWidget {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.field,
     required this.local,
@@ -1251,7 +1248,7 @@ Widget f() {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.index,
     required this.a,
@@ -1416,7 +1413,7 @@ class _MyWidgetState extends State<MyWidget> {
 }
 
 class Test extends StatelessWidget {
-  const Test({
+  const new({
     super.key,
     required this.widget,
   });

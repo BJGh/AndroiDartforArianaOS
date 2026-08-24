@@ -59,7 +59,6 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   Thread* thread() const { return flow_graph_builder_->thread_; }
 
   void ParseKernelASTFunction();
-  void ReadForwardingStubTarget(const Function& function);
   void SetupDefaultParameterValues();
 
   FlowGraph* BuildGraphOfFieldInitializer();
@@ -370,7 +369,9 @@ class StreamingFlowGraphBuilder : public KernelReaderHelper {
   Fragment BuildTryCatch(TokenPosition* position);
   Fragment BuildTryFinally(TokenPosition* position);
   Fragment BuildYieldStatement(TokenPosition* position);
+  Fragment BuildVariableStatement(TokenPosition* position);
   Fragment BuildVariableDeclaration(TokenPosition* position);
+  Fragment BuildVariable(TokenPosition* position);
   Fragment BuildFunctionDeclaration(TokenPosition* position);
   Fragment BuildFunctionNode(intptr_t local_function_id,
                              intptr_t func_decl_offset);

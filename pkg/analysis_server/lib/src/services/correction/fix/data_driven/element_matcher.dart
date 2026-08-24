@@ -41,7 +41,7 @@ class ElementMatcher {
   /// Initialize a newly created matcher representing a reference to an element
   /// whose name matches the given [components] and element [kinds] in a library
   /// that imports the [importedUris].
-  ElementMatcher({
+  new({
     required this.importedUris,
     required this.components,
     required List<ElementKind> kinds,
@@ -198,7 +198,7 @@ class _MatcherBuilder {
 
   final LibraryElement libraryElement;
 
-  _MatcherBuilder(this.importedUris, this.libraryElement);
+  new(this.importedUris, this.libraryElement);
 
   void buildMatchersForNode(AstNode? node, Token? nameToken) {
     if (node is ArgumentList) {
@@ -211,7 +211,7 @@ class _MatcherBuilder {
       _buildFromExtensionOverride(node);
     } else if (node is FunctionDeclaration) {
       _addMatcher(components: [node.name.lexeme], kinds: []);
-    } else if (node is ImportDirective) {
+    } else if (node is NamespaceDirective) {
       _addMatcher(
         components: [node.uri.stringValue ?? ''],
         kinds: [ElementKind.libraryKind],
@@ -225,7 +225,7 @@ class _MatcherBuilder {
       if (parent is ArgumentList) {
         _buildFromArgumentList(parent);
       }
-      if (parent is ImportDirective && node is SimpleStringLiteral) {
+      if (parent is NamespaceDirective && node is SimpleStringLiteral) {
         _addMatcher(
           components: [node.value],
           kinds: [ElementKind.libraryKind],
@@ -292,14 +292,14 @@ class _MatcherBuilder {
     } else if (parent is RedirectingConstructorInvocation) {
       var grandparent = parent.parent;
       if (grandparent is ConstructorDeclaration) {
-        _addMatcher(
-          components: [
-            parent.constructorName?.name ?? '',
-            // TODO(scheglov): support primary constructors
-            grandparent.typeName!.name,
-          ],
-          kinds: [ElementKind.constructorKind],
-        );
+        var typeName =
+            grandparent.declaredFragment?.element.enclosingElement.name;
+        if (typeName != null) {
+          _addMatcher(
+            components: [parent.constructorName?.name ?? '', typeName],
+            kinds: [ElementKind.constructorKind],
+          );
+        }
       }
     } else if (parent is SuperConstructorInvocation) {
       var superclassName = parent.element?.enclosingElement.name;

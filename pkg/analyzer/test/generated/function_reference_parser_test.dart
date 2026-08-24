@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/dart/analysis/features.dart';
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -21,19 +20,20 @@ main() {
 @reflectiveTest
 class FunctionReferenceParserTest extends ParserDiagnosticsTest {
   void test_feature_disabled() {
-    var parseResult = parseStringWithErrors(
-      'void f() { f<a, b>; }',
+    var parseResult = parseTestCodeWithDiagnostics(
+      r'''void f() { f<a, b>; }
+//          ^^^^^^
+// [diag.experimentNotEnabled] This requires the 'constructor-tearoffs' language feature to be enabled.''',
       featureSet: FeatureSet.fromEnableFlags2(
         sdkLanguageVersion: Version.parse('2.13.0'),
         flags: [],
       ),
     );
-    parseResult.assertErrors([error(diag.experimentNotEnabled, 12, 6)]);
 
-    var node = parseResult.findNode.singleExpressionStatement.expression;
+    var node = parseResult.findNode.singleExpressionStatement.expression2;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -47,14 +47,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_closeBrace() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = {f<a, b>};
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleSetOrMapLiteral.elements[0];
+    var node = parseResult.findNode.singleSetOrMapLiteral.elements2[0];
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -68,14 +67,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_closeBracket() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = [f<a, b>];
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleListLiteral.elements[0];
+    var node = parseResult.findNode.singleListLiteral.elements2[0];
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -89,15 +87,14 @@ FunctionReference
   }
 
   void test_followingToken_accepted_closeParen() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = g(f<a, b>);
 ''');
-    parseResult.assertNoErrors();
     var node =
-        parseResult.findNode.singleMethodInvocation.argumentList.arguments[0];
+        parseResult.findNode.singleMethodInvocation.argumentList.arguments2[0];
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -111,14 +108,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_colon() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = {f<a, b>: null};
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.mapLiteralEntry('null').key;
+    var node = parseResult.findNode.mapLiteralEntry('null').key2;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -132,14 +128,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_comma() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = [f<a, b>, null];
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleListLiteral.elements[0];
+    var node = parseResult.findNode.singleListLiteral.elements2[0];
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -153,14 +148,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_equals() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b> == null;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleBinaryExpression.leftOperand;
+    var node = parseResult.findNode.singleBinaryOperatorInvocation.leftOperand;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -174,14 +168,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_not_equals() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b> != null;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleBinaryExpression.leftOperand;
+    var node = parseResult.findNode.singleBinaryOperatorInvocation.leftOperand;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -195,10 +188,9 @@ FunctionReference
   }
 
   void test_followingToken_accepted_openParen() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b>();
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -219,13 +211,30 @@ MethodInvocation
   }
 
   void test_followingToken_accepted_period_methodInvocation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b>.toString();
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleInstanceCreationExpression;
+    var node = parseResult.findNode.singleConstructorInvocation;
     assertParsedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: f
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: a
+          NamedType
+            name: b
+        rightBracket: >
+    selector: ConstructorSelector
+      period: .
+      name2: toString
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: f
@@ -247,14 +256,13 @@ InstanceCreationExpression
   }
 
   void test_followingToken_accepted_period_methodInvocation_generic() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b>.foo<c>();
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleMethodInvocation.target!;
+    var node = parseResult.findNode.singleMethodInvocation.target2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -268,14 +276,13 @@ FunctionReference
   }
 
   void test_followingToken_accepted_period_propertyAccess() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a, b>.hashCode;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singlePropertyAccess.target!;
+    var node = parseResult.findNode.singlePropertyAccess.target2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -289,16 +296,15 @@ FunctionReference
   }
 
   void test_followingToken_accepted_semicolon() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 void f() {
   f<a, b>;
 }
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleExpressionStatement.expression;
+    var node = parseResult.findNode.singleExpressionStatement.expression2;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -312,10 +318,11 @@ FunctionReference
   }
 
   void test_followingToken_rejected_ampersand() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>&d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -323,7 +330,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: &
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: bitwiseAnd
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -345,10 +372,9 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_as() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > as);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -356,7 +382,22 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: SimpleIdentifier
+          token: as
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -374,10 +415,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_asterisk() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>*d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -385,7 +427,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: *
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: multiply
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -407,10 +469,9 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_bang_openBracket() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > ![d]);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -418,7 +479,28 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: LogicalNot
+          operator: !
+          operand: ListLiteral
+            leftBracket: [
+            elements2
+              SimpleIdentifier
+                token: d
+            rightBracket: ]
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -442,10 +524,9 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_bang_paren() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > !(d));
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -453,7 +534,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: LogicalNot
+          operator: !
+          operand: ParenthesizedExpression
+            leftParenthesis: (
+            expression2: SimpleIdentifier
+              token: d
+            rightParenthesis: )
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -476,10 +577,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_bar() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>|d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -487,7 +589,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: |
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: bitwiseOr
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -509,10 +631,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_caret() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>^d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -520,7 +643,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: ^
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: bitwiseXor
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -542,10 +685,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_is() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c> is int);
+//               ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 17, 2)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -553,7 +697,32 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      IsExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          binaryOperator: greaterThan
+        expression(v1): BinaryExpression
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+        isOperator: is
+        type: NamedType
+          name: int
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -575,16 +744,35 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_lessThan() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f<a><b>;
+//         ^
+// [diag.equalityCannotBeEqualityOperand] A comparison expression can't be an operand of another comparison expression.
+//             ^
+// [diag.expectedToken] Expected to find '['.
 ''');
-    parseResult.assertErrors([
-      error(diag.equalityCannotBeEqualityOperand, 11, 1),
-      error(diag.expectedToken, 15, 1),
-    ]);
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
-BinaryExpression
+BinaryOperatorInvocation
+  leftOperand: BinaryOperatorInvocation
+    leftOperand: SimpleIdentifier
+      token: f
+    operator: <
+    rightOperand: SimpleIdentifier
+      token: a
+    binaryOperator: lessThan
+  operator: >
+  rightOperand: ListLiteral
+    typeArguments: TypeArgumentList
+      leftBracket: <
+      arguments
+        NamedType
+          name: b
+      rightBracket: >
+    leftBracket: [ <synthetic>
+    rightBracket: ] <synthetic>
+  binaryOperator: greaterThan
+V1: BinaryExpression
   leftOperand: BinaryExpression
     leftOperand: SimpleIdentifier
       token: f
@@ -605,10 +793,9 @@ BinaryExpression
   }
 
   void test_followingToken_rejected_minus() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > -d);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -616,7 +803,25 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: UnaryOperatorInvocation
+          operator: -
+          operand: SimpleIdentifier
+            token: d
+          unaryOperator: negate
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -636,10 +841,9 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_openBracket() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > [d]);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -647,7 +851,26 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: ListLiteral
+          leftBracket: [
+          elements2
+            SimpleIdentifier
+              token: d
+          rightBracket: ]
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -669,12 +892,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_openBracket_error() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>[d]>e);
+//                 ^
+// [diag.equalityCannotBeEqualityOperand] A comparison expression can't be an operand of another comparison expression.
 ''');
-    parseResult.assertErrors([
-      error(diag.equalityCannotBeEqualityOperand, 19, 1),
-    ]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -682,7 +904,31 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: ListLiteral
+            leftBracket: [
+            elements2
+              SimpleIdentifier
+                token: d
+            rightBracket: ]
+          binaryOperator: greaterThan
+        operator: >
+        rightOperand: SimpleIdentifier
+          token: e
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -708,10 +954,9 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_openBracket_unambiguous() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a < b, c > [d, e]);
 ''');
-    parseResult.assertNoErrors();
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -719,7 +964,28 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: ListLiteral
+          leftBracket: [
+          elements2
+            SimpleIdentifier
+              token: d
+            SimpleIdentifier
+              token: e
+          rightBracket: ]
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -743,10 +1009,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_percent() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>%d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -754,7 +1021,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: %
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: modulo
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -776,10 +1063,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_period_period() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>..toString());
+//              ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 2)]);
     var node = parseResult.findNode.methodInvocation('f(');
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -787,7 +1075,46 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      CascadeExpression
+        target2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          binaryOperator: greaterThan
+        target(v1): BinaryExpression
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+        sections
+          CascadeSection
+            body: MethodInvocation
+              operator: ..
+              methodName: SimpleIdentifier
+                token: toString
+              argumentList: ArgumentList
+                leftParenthesis: (
+                rightParenthesis: )
+        cascadeSections
+          MethodInvocation
+            operator: ..
+            methodName: SimpleIdentifier
+              token: toString
+            argumentList: ArgumentList
+              leftParenthesis: (
+              rightParenthesis: )
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -814,10 +1141,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_plus() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>+d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -825,7 +1153,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: +
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: add
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -847,10 +1195,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c> ? null : null);
+//               ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 17, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -858,7 +1207,35 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      ConditionalExpression
+        condition2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          binaryOperator: greaterThan
+        condition(v1): BinaryExpression
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+        question: ?
+        thenExpression2: NullLiteral
+          literal: null
+        colon: :
+        elseExpression2: NullLiteral
+          literal: null
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -883,10 +1260,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question_period_methodInvocation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>?.toString());
+//              ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 2)]);
     var node = parseResult.findNode.methodInvocation('f(');
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -894,7 +1272,29 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: MethodInvocation
+          target2: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: ?.
+          methodName: SimpleIdentifier
+            token: toString
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -919,10 +1319,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question_period_methodInvocation_generic() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>?.foo<c>());
+//              ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 2)]);
     var node = parseResult.findNode.methodInvocation('f(');
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -930,7 +1331,35 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: MethodInvocation
+          target2: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: ?.
+          methodName: SimpleIdentifier
+            token: foo
+          typeArguments: TypeArgumentList
+            leftBracket: <
+            arguments
+              NamedType
+                name: c
+            rightBracket: >
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -961,13 +1390,13 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question_period_period() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>?..toString());
+//              ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//                 ^^^^^^^^
+// [diag.expectedToken] Expected to find ','.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 16, 3),
-      error(diag.expectedToken, 19, 8),
-    ]);
     var node = parseResult.findNode.methodInvocation('f(');
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -975,7 +1404,28 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: SimpleIdentifier
+          token: <empty> <synthetic>
+        binaryOperator: greaterThan
+      MethodInvocation
+        methodName: SimpleIdentifier
+          token: toString
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -999,10 +1449,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question_period_propertyAccess() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>?.hashCode);
+//              ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 2)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -1010,7 +1461,26 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: PropertyAccess
+          target2: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: ?.
+          propertyName: SimpleIdentifier
+            token: hashCode
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -1032,10 +1502,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_question_question() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c> ?? d);
+//               ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 17, 2)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -1043,7 +1514,26 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      IfNull
+        leftOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: c
+          operator: >
+          rightOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          binaryOperator: greaterThan
+        operator: ??
+        rightOperand: SimpleIdentifier
+          token: d
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -1065,10 +1555,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_slash() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>/d);
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 1)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -1076,7 +1567,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: /
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: divide
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -1098,10 +1609,11 @@ MethodInvocation
   }
 
   void test_followingToken_rejected_tilde_slash() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f(a<b,c>~/d);
+//              ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 16, 2)]);
     var node = parseResult.findNode.singleMethodInvocation;
     assertParsedNodeText(node, r'''
 MethodInvocation
@@ -1109,7 +1621,27 @@ MethodInvocation
     token: f
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: a
+        operator: <
+        rightOperand: SimpleIdentifier
+          token: b
+        binaryOperator: lessThan
+      BinaryOperatorInvocation
+        leftOperand: SimpleIdentifier
+          token: c
+        operator: >
+        rightOperand: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: <empty> <synthetic>
+          operator: ~/
+          rightOperand: SimpleIdentifier
+            token: d
+          binaryOperator: truncatingDivide
+        binaryOperator: greaterThan
+    arguments(v1)
       BinaryExpression
         leftOperand: SimpleIdentifier
           token: a
@@ -1131,14 +1663,20 @@ MethodInvocation
   }
 
   void test_functionReference_after_indexExpression() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = x[0]<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: IndexExpression
+  function2: IndexExpression2
+    receiver: SimpleIdentifier
+      token: x
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+    rightBracket: ]
+  function(v1): IndexExpression
     target: SimpleIdentifier
       token: x
     leftBracket: [
@@ -1157,14 +1695,22 @@ FunctionReference
   }
 
   void test_functionReference_after_indexExpression_bang() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = x[0]!<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: PostfixExpression
+  function2: NullAssertionExpression
+    operand: IndexExpression2
+      receiver: SimpleIdentifier
+        token: x
+      leftBracket: [
+      index: IntegerLiteral
+        literal: 0
+      rightBracket: ]
+    operator: !
+  function(v1): PostfixExpression
     operand: IndexExpression
       target: SimpleIdentifier
         token: x
@@ -1185,15 +1731,21 @@ FunctionReference
   }
 
   void test_functionReference_after_indexExpression_functionCall() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = x[0]()<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: FunctionExpressionInvocation
-    function: IndexExpression
+  function2: FunctionExpressionInvocation
+    function2: IndexExpression2
+      receiver: SimpleIdentifier
+        token: x
+      leftBracket: [
+      index: IntegerLiteral
+        literal: 0
+      rightBracket: ]
+    function(v1): IndexExpression
       target: SimpleIdentifier
         token: x
       leftBracket: [
@@ -1215,14 +1767,21 @@ FunctionReference
   }
 
   void test_functionReference_after_indexExpression_nullAware() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = x?[0]<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: IndexExpression
+  function2: IndexExpression2
+    receiver: SimpleIdentifier
+      token: x
+    question: ?
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+    rightBracket: ]
+  function(v1): IndexExpression
     target: SimpleIdentifier
       token: x
     question: ?
@@ -1242,15 +1801,14 @@ FunctionReference
   }
 
   void test_methodTearoff() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f().m<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: MethodInvocation
+  function2: PropertyAccess
+    target2: MethodInvocation
       methodName: SimpleIdentifier
         token: f
       argumentList: ArgumentList
@@ -1271,14 +1829,15 @@ FunctionReference
   }
 
   void test_methodTearoff_cascaded() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = f()..m<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleCascadeExpression.cascadeSections[0];
+    var node = parseResult.findNode.singleCascadeExpression.cascadeSections2[0];
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: CascadePropertyExtraction
+    propertyName: m
+  function(v1): PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: m
@@ -1294,14 +1853,13 @@ FunctionReference
   }
 
   void test_prefixedIdentifier() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = prefix.f<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
     period: .
@@ -1319,15 +1877,14 @@ FunctionReference
   }
 
   void test_three_identifiers() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 var x = prefix.ClassName.m<a, b>;
 ''');
-    parseResult.assertNoErrors();
-    var node = parseResult.findNode.singleVariableDeclaration.initializer!;
+    var node = parseResult.findNode.singleVariableDeclaration.initializer2!;
     assertParsedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
       period: .

@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
@@ -24,7 +23,7 @@ class ArgumentTypeNotAssignableTest extends PubPackageResolutionTest {
     newFile('$testPackageLibPath/lib2.dart', '''
 class _A {}
 g(h(_A a)) {}''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'lib2.dart';
 class _A {}
 f() {
@@ -398,6 +397,46 @@ class A {
 ''');
   }
 
+  test_incrementAndDecrement_implicitArgument_contextTypeDouble() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  A operator +(double p) => this;
+  A operator -(double p) => this;
+}
+
+void f(A a) {
+  ++a;
+  --a;
+  a++;
+  a--;
+}
+''');
+  }
+
+  test_incrementAndDecrement_implicitArgument_notAssignable() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {
+  A operator +(String p) => this;
+  A operator -(String p) => this;
+}
+
+void f(A a) {
+  ++a;
+//^^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
+  --a;
+//^^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
+  a++;
+// ^^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
+  a--;
+// ^^
+// [diag.argumentTypeNotAssignable] The argument type 'int' can't be assigned to the parameter type 'String'.
+}
+''');
+  }
+
   test_index_invalidRead() async {
     await resolveTestCodeWithDiagnostics(r'''
 class A {
@@ -747,22 +786,6 @@ main() {
 }
 ''');
   }
-
-  @failingTest
-  test_tearOff_required() async {
-    await assertErrorsInCode(
-      '''
-class C {
-  Object/*=T*/ f/*<T>*/(Object/*=T*/ x) => x;
-}
-g(C c) {
-  var h = c.f/*<int>*/;
-  print(h('s'));
-}
-''',
-      [error(diag.argumentTypeNotAssignable, 99, 1)],
-    );
-  }
 }
 
 @reflectiveTest
@@ -770,37 +793,50 @@ class ArgumentTypeNotAssignableWithStrictCastsTest
     extends PubPackageResolutionTest
     with WithStrictCastsMixin {
   test_extensionTypePrimaryConstructor() async {
-    await assertErrorsWithStrictCasts(
-      '''
+    await assertTestCodeWithStrictCastsDiagnostics('''
 extension type E(int i) {}
 
 dynamic a;
 var e = E(a);
-''',
-      [error(diag.argumentTypeNotAssignable, 49, 1)],
-    );
+//        ^
+// [diag.argumentTypeNotAssignable] The argument type 'dynamic' can't be assigned to the parameter type 'int'.
+''');
   }
 
   test_functionCall() async {
-    await assertErrorsWithStrictCasts(
-      '''
+    await assertTestCodeWithStrictCastsDiagnostics('''
 void f(int i) {}
 void foo(dynamic a) {
   f(a);
+//  ^
+// [diag.argumentTypeNotAssignable] The argument type 'dynamic' can't be assigned to the parameter type 'int'.
 }
-''',
-      [error(diag.argumentTypeNotAssignable, 43, 1)],
-    );
+''');
+  }
+
+  test_incrementAndDecrement_implicitArgument_contextTypeDouble() async {
+    await assertTestCodeWithStrictCastsDiagnostics('''
+class A {
+  A(double value);
+}
+
+void f() {
+  var ordinal = 0.0;
+  A(++ordinal);
+  A(--ordinal);
+  A(ordinal++);
+  A(ordinal--);
+}
+''');
   }
 
   test_operator() async {
-    await assertErrorsWithStrictCasts(
-      '''
+    await assertTestCodeWithStrictCastsDiagnostics('''
 void foo(int i, dynamic a) {
   i + a;
+//    ^
+// [diag.argumentTypeNotAssignable] The argument type 'dynamic' can't be assigned to the parameter type 'num'.
 }
-''',
-      [error(diag.argumentTypeNotAssignable, 35, 1)],
-    );
+''');
   }
 }

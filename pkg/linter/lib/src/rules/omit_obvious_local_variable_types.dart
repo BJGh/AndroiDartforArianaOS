@@ -19,7 +19,7 @@ import '../util/obvious_types.dart';
 const _desc = r'Omit obvious type annotations for local variables.';
 
 class OmitObviousLocalVariableTypes extends AnalysisRule {
-  OmitObviousLocalVariableTypes()
+  new()
     : super(
         name: LintNames.omit_obvious_local_variable_types,
         description: _desc,
@@ -43,11 +43,7 @@ class OmitObviousLocalVariableTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitForStatement(ForStatement node) {
     var loopParts = node.forLoopParts;

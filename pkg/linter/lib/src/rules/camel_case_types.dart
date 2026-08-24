@@ -18,8 +18,7 @@ import '../utils.dart';
 const _desc = r'Name types using UpperCamelCase.';
 
 class CamelCaseTypes extends AnalysisRule {
-  CamelCaseTypes()
-    : super(name: LintNames.camel_case_types, description: _desc);
+  new() : super(name: LintNames.camel_case_types, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.camelCaseTypes;
@@ -40,11 +39,7 @@ class CamelCaseTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void check(Token name) {
     var lexeme = name.lexeme;
     if (!isCamelCase(lexeme)) {
@@ -75,7 +70,7 @@ class _Visitor extends SimpleAstVisitor<void> {
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
     if (node.isAugmentation) return;
 
-    check(node.primaryConstructor.typeName);
+    check(node.namePart.typeName);
   }
 
   @override

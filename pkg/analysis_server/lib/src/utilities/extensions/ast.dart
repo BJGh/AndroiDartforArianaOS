@@ -19,7 +19,7 @@ class ThrowStatement {
   final ExpressionStatement statement;
   final ThrowExpression expression;
 
-  ThrowStatement({required this.statement, required this.expression});
+  new({required this.statement, required this.expression});
 }
 
 class _ReferencedUnprefixedNamesCollector extends RecursiveAstVisitor<void> {
@@ -350,20 +350,6 @@ extension MethodInvocationExtension on MethodInvocation {
   bool get isCastMethodInvocation {
     var element = methodName.element;
     return element is MethodElement && element.isCastMethod;
-  }
-
-  /// Returns whether this expression is an invocation of the method `toList`
-  /// from `Iterable`.
-  bool get isToListMethodInvocation {
-    var element = methodName.element;
-    return element is MethodElement && element.isToListMethod;
-  }
-
-  /// Returns whether this expression is an invocation of the method `toSet`
-  /// from `Iterable`.
-  bool get isToSetMethodInvocation {
-    var element = methodName.element;
-    return element is MethodElement && element.isToSetMethod;
   }
 }
 

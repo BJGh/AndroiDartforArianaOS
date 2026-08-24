@@ -20,7 +20,7 @@ const _desc =
     r'Avoid overloading operator == and hashCode on classes not marked `@immutable`.';
 
 class AvoidEqualsAndHashCodeOnMutableClasses extends AnalysisRule {
-  AvoidEqualsAndHashCodeOnMutableClasses()
+  new()
     : super(
         name: LintNames.avoid_equals_and_hash_code_on_mutable_classes,
         description: _desc,
@@ -40,11 +40,7 @@ class AvoidEqualsAndHashCodeOnMutableClasses extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     if (node.isAugmentation) return;

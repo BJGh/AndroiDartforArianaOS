@@ -14,8 +14,6 @@ import 'package:analyzer_testing/src/mock_packages/flutter/cupertino.dart'
     as mock_flutter_cupertino;
 import 'package:analyzer_testing/src/mock_packages/flutter/foundation.dart'
     as mock_flutter_foundation;
-import 'package:analyzer_testing/src/mock_packages/flutter_localizations/flutter_localizations.dart'
-    as mock_flutter_localizations;
 import 'package:analyzer_testing/src/mock_packages/flutter/material.dart'
     as mock_flutter_material;
 import 'package:analyzer_testing/src/mock_packages/flutter/painting.dart'
@@ -26,6 +24,8 @@ import 'package:analyzer_testing/src/mock_packages/flutter/widget_previews.dart'
     as mock_flutter_widget_previews;
 import 'package:analyzer_testing/src/mock_packages/flutter/widgets.dart'
     as mock_flutter_widgets;
+import 'package:analyzer_testing/src/mock_packages/flutter_localizations/flutter_localizations.dart'
+    as mock_flutter_localizations;
 import 'package:analyzer_testing/src/mock_packages/meta/meta.dart' as mock_meta;
 import 'package:analyzer_testing/src/mock_packages/mock_library.dart';
 import 'package:analyzer_testing/src/mock_packages/test_reflective_loader/test_reflective_loader.dart'
@@ -91,12 +91,12 @@ mixin MockPackagesMixin {
 
   Folder addFfi() {
     var packageFolder = _addFiles('ffi', mock_ffi.units);
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
   }
 
   Folder addFixnum() {
     var packageFolder = _addFiles('fixnum', mock_fixnum.units);
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
   }
 
   Folder addFlutter() {
@@ -111,12 +111,20 @@ mixin MockPackagesMixin {
       ...mock_flutter_widget_previews.units,
       ...mock_flutter_widgets.units,
     ]);
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
+  }
+
+  Folder addFlutterLocalizations() {
+    var packageFolder = _addFiles(
+      'flutter_localizations',
+      mock_flutter_localizations.units,
+    );
+    return packageFolder.getFolder('lib');
   }
 
   Folder addMeta() {
     var packageFolder = _addFiles('meta', mock_meta.units);
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
   }
 
   Folder addTestReflectiveLoader() {
@@ -124,7 +132,7 @@ mixin MockPackagesMixin {
       'test_reflective_loader',
       mock_test_reflective_loader.units,
     );
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
   }
 
   /// Adds a mock sky_engine package with an `_embedder.yaml` file, and returns
@@ -140,11 +148,8 @@ mixin MockPackagesMixin {
     var skyEngineFolder = resourceProvider.getFolder(
       resourceProvider.convertPath('$packagesRootPath/sky_engine'),
     )..create();
-    var skyEngineLibFolder = skyEngineFolder.getChildAssumingFolder('lib')
-      ..create();
-    var embedderFile = skyEngineLibFolder.getChildAssumingFile(
-      '_embedder.yaml',
-    );
+    var skyEngineLibFolder = skyEngineFolder.getFolder('lib')..create();
+    var embedderFile = skyEngineLibFolder.getFile('_embedder.yaml');
     // SDK-relative paths.
     var embeddedSdkLibRelativePaths = {
       'dart:async': 'lib/async/async.dart',
@@ -194,7 +199,7 @@ mixin MockPackagesMixin {
 
   Folder addVectorMath() {
     var packageFolder = _addFiles('vector_math', mock_vector_math.units);
-    return packageFolder.getChildAssumingFolder('lib');
+    return packageFolder.getFolder('lib');
   }
 
   /// Adds files of the given [packageName] to the [resourceProvider].

@@ -10,7 +10,7 @@ import 'package:collection/collection.dart';
 
 class InvalidEncodingError {
   final String headers;
-  InvalidEncodingError(this.headers);
+  new(this.headers);
 
   @override
   String toString() =>
@@ -21,7 +21,24 @@ class LspHeaders {
   final String rawHeaders;
   final int contentLength;
   final String? encoding;
-  LspHeaders(this.rawHeaders, this.contentLength, this.encoding);
+  new(this.rawHeaders, this.contentLength, this.encoding);
+}
+
+/// Transforms a stream of JSON payloads into LSP packets with the required
+/// headers.
+class LspPacketEncoder extends StreamTransformerBase<String, List<int>> {
+  @override
+  Stream<List<int>> bind(Stream<String> stream) {
+    return stream.map((json) {
+      var utf8EncodedBody = utf8.encode(json);
+      var header =
+          'Content-Length: ${utf8EncodedBody.length}\r\n'
+          'Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n';
+
+      // Header is always ASCII, body is always UTF-8.
+      return ascii.encode(header).followedBy(utf8EncodedBody).toList();
+    });
+  }
 }
 
 /// Transforms a stream of LSP data in the form:
@@ -129,7 +146,7 @@ class LspPacketTransformer extends StreamTransformerBase<List<int>, String> {
 class _LspPacketTransformerListenData {
   final StreamSubscription<int> input;
 
-  _LspPacketTransformerListenData(this.input);
+  new(this.input);
 }
 
 /// The marker class for [StreamController.onPause].

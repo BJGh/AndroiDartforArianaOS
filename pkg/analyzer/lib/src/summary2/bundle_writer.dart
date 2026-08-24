@@ -19,6 +19,7 @@ import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/type_algebra.dart';
 import 'package:analyzer/src/error/inference_error.dart';
+import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:analyzer/src/summary2/ast_binary_tag.dart';
 import 'package:analyzer/src/summary2/ast_binary_writer.dart';
 import 'package:analyzer/src/summary2/export.dart';
@@ -170,6 +171,7 @@ class BundleWriter {
 
   void _writeClassFragment(ClassFragmentImpl fragment) {
     _writeTemplateFragment(fragment, () {
+      _sink.writeUint30(fragment.withClauseMixinStartIndex);
       _resolutionSink.withTypeParameters(fragment.element.typeParameters, () {
         _sink.writeList(fragment.typeParameters, _writeTypeParameterFragment);
         _resolutionSink._writeMetadata(fragment.metadata);
@@ -191,15 +193,16 @@ class BundleWriter {
     _sink.writeList(elements, (element) {
       _writeReference(element.reference);
       _writeFragments(element.fragments);
+      _writeFormalParameterElementFlags(element);
       _writeOptionalFragmentId(element.previousFragmentOfDifferentKind);
       element.writeFlags(_sink);
       assert(element.typeParameters.isEmpty);
 
       _writeElementResolution(() {
+        _writeFormalParameterElementResolutions(element);
         _resolutionSink.writeType(element.returnType);
         _resolutionSink.writeElement(element.superConstructor);
         _resolutionSink.writeElement(element.redirectedConstructor);
-        // TODO(scheglov): formal parameters
       });
     });
   }
@@ -291,6 +294,7 @@ class BundleWriter {
 
   void _writeEnumFragment(EnumFragmentImpl fragment) {
     _writeTemplateFragment(fragment, () {
+      _sink.writeUint30(fragment.withClauseMixinStartIndex);
       _resolutionSink.withTypeParameters(fragment.element.typeParameters, () {
         _sink.writeList(fragment.typeParameters, _writeTypeParameterFragment);
         _resolutionSink._writeMetadata(fragment.metadata);
@@ -434,7 +438,7 @@ class BundleWriter {
   void _writeFieldFragment(FieldFragmentImpl fragment) {
     _writeTemplateFragment(fragment, () {
       _resolutionSink._writeMetadata(fragment.metadata);
-      _resolutionSink._writeOptionalNode(fragment.constantInitializer);
+      _resolutionSink._writeOptionalNode(fragment.constantInitializer2);
     });
   }
 
@@ -475,6 +479,25 @@ class BundleWriter {
     _sink.writeBytes(bytes);
   }
 
+  void _writeFormalParameterElementFlags(ExecutableElementImpl executable) {
+    var elements = executable.formalParametersIncludingRecovery;
+    for (var element in elements) {
+      element.writeFlags(_sink);
+    }
+  }
+
+  void _writeFormalParameterElementResolutions(
+    ExecutableElementImpl executable,
+  ) {
+    var elements = executable.formalParametersIncludingRecovery;
+    for (var element in elements) {
+      _resolutionSink.writeType(element.type);
+      if (element is FieldFormalParameterElementImpl) {
+        _resolutionSink.writeElement(element.field);
+      }
+    }
+  }
+
   /// Write a formal parameter fragment in the signature of a top-level
   /// function, constructor, method, getter, or setter declaration.
   // TODO(scheglov): Deduplicate parameter writing implementation.
@@ -492,23 +515,7 @@ class BundleWriter {
     fragment.writeFlags(_sink);
 
     _resolutionSink._writeMetadata(fragment.metadata);
-
-    _resolutionSink.withTypeParameters(fragment.element.typeParameters, () {
-      _sink.writeList(fragment.typeParameters, _writeTypeParameterFragment);
-      _writeTypeParameterElementResolutions(fragment.element.typeParameters);
-      _sink.writeList(fragment.formalParameters, _writeFormalParameterFragment);
-      _resolutionSink.writeBool(fragment.element.inheritsCovariant);
-      _resolutionSink.writeType(fragment.element.type);
-      _resolutionSink._writeOptionalNode(fragment.constantInitializer);
-
-      if (fragment is FieldFormalParameterFragmentImpl) {
-        // TODO(scheglov): formal parameter types? Anything else?
-        var element = fragment.element;
-        _resolutionSink.writeElement(
-          element is FieldFormalParameterElementImpl ? element.field : null,
-        );
-      }
-    });
+    _resolutionSink._writeOptionalNode(fragment.constantInitializer2);
   }
 
   void _writeFragmentId(FragmentImpl fragment) {
@@ -528,11 +535,13 @@ class BundleWriter {
     _sink.writeList(elements, (element) {
       _writeReference(element.reference);
       _writeFragments(element.fragments);
+      _writeFormalParameterElementFlags(element);
       _writeOptionalFragmentId(element.previousFragmentOfDifferentKind);
       element.writeFlags(_sink);
       assert(element.typeParameters.isEmpty);
 
       _writeElementResolution(() {
+        _writeFormalParameterElementResolutions(element);
         _resolutionSink.writeType(element.returnType);
       });
     });
@@ -619,6 +628,7 @@ class BundleWriter {
     _sink.writeList(elements, (element) {
       _writeReference(element.reference);
       _writeFragments(element.fragments);
+      _writeFormalParameterElementFlags(element);
       _writeOptionalFragmentId(element.previousFragmentOfDifferentKind);
       element.writeFlags(_sink);
       _sink._writeTopLevelInferenceError(element.typeInferenceError);
@@ -626,8 +636,8 @@ class BundleWriter {
       _writeElementResolution(() {
         _resolutionSink.withTypeParameters(element.typeParameters, () {
           _writeTypeParameterElementResolutions(element.typeParameters);
+          _writeFormalParameterElementResolutions(element);
           _resolutionSink.writeType(element.returnType);
-          // TODO(scheglov): formal parameters
         });
       });
     });
@@ -698,12 +708,12 @@ class BundleWriter {
   void _writeNamespaceCombinator(NamespaceCombinator combinator) {
     switch (combinator) {
       case HideElementCombinator():
-        _sink.writeByte(Tag.HideCombinator);
+        _sink.writeEnum(NamespaceCombinatorTag.hide);
         _sink.writeList<String>(combinator.hiddenNames, (name) {
           _sink.writeStringReference(name);
         });
       case ShowElementCombinator():
-        _sink.writeByte(Tag.ShowCombinator);
+        _sink.writeEnum(NamespaceCombinatorTag.show);
         _sink.writeList<String>(combinator.shownNames, (name) {
           _sink.writeStringReference(name);
         });
@@ -746,13 +756,14 @@ class BundleWriter {
     _sink.writeList(elements, (element) {
       _writeReference(element.reference);
       _writeFragments(element.fragments);
+      _writeFormalParameterElementFlags(element);
       _writeOptionalFragmentId(element.previousFragmentOfDifferentKind);
       element.writeFlags(_sink);
       assert(element.typeParameters.isEmpty);
 
       _writeElementResolution(() {
+        _writeFormalParameterElementResolutions(element);
         _resolutionSink.writeType(element.returnType);
-        // TODO(scheglov): formal parameter types? Anything else?
       });
     });
   }
@@ -782,12 +793,14 @@ class BundleWriter {
     _sink.writeList(elements, (element) {
       _writeReference(element.reference);
       _writeFragments(element.fragments);
+      _writeFormalParameterElementFlags(element);
       _writeOptionalFragmentId(element.previousFragmentOfDifferentKind);
       element.writeFlags(_sink);
 
       _writeElementResolution(() {
         _resolutionSink.withTypeParameters(element.typeParameters, () {
           _writeTypeParameterElementResolutions(element.typeParameters);
+          _writeFormalParameterElementResolutions(element);
           _resolutionSink.writeType(element.returnType);
         });
       });
@@ -825,7 +838,7 @@ class BundleWriter {
   void _writeTopLevelVariableFragment(TopLevelVariableFragmentImpl fragment) {
     _writeTemplateFragment(fragment, () {
       _resolutionSink._writeMetadata(fragment.metadata);
-      _resolutionSink._writeOptionalNode(fragment.constantInitializer);
+      _resolutionSink._writeOptionalNode(fragment.constantInitializer2);
     });
   }
 
@@ -955,9 +968,11 @@ class ResolutionSink extends BinaryWriter {
       case FormalParameterElementImpl():
         writeEnum(ElementTag.formalParameter);
         var enclosingElement = element.enclosingElement;
-        enclosingElement as ExecutableElement;
+        enclosingElement as ExecutableElementImpl;
         writeElement(enclosingElement);
-        var index = enclosingElement.formalParameters.indexOf(element);
+        var index = enclosingElement.formalParametersIncludingRecovery.indexOf(
+          element,
+        );
         assert(index >= 0);
         writeUint30(index);
       case PrefixElementImpl():
@@ -1076,7 +1091,7 @@ class ResolutionSink extends BinaryWriter {
 
   void _writeNode(AstNode node) {
     var astWriter = AstBinaryWriter(sink: this);
-    node.accept(astWriter);
+    node.accept2(astWriter);
   }
 
   void _writeNullabilitySuffix(NullabilitySuffix suffix) {
@@ -1217,31 +1232,23 @@ extension on Map<FragmentImpl, int> {
 
 extension _BinaryWriterExtension on BinaryWriter {
   void _writeFormalParameterElementKind(InternalFormalParameterElement p) {
-    if (p.isRequiredPositional) {
-      writeByte(Tag.ParameterKindRequiredPositional);
-    } else if (p.isOptionalPositional) {
-      writeByte(Tag.ParameterKindOptionalPositional);
-    } else if (p.isRequiredNamed) {
-      writeByte(Tag.ParameterKindRequiredNamed);
-    } else if (p.isOptionalNamed) {
-      writeByte(Tag.ParameterKindOptionalNamed);
-    } else {
-      throw StateError('Unexpected parameter kind: $p');
-    }
+    writeEnum(switch (p.parameterKind) {
+      ParameterKind.REQUIRED => FormalParameterKindTag.requiredPositional,
+      ParameterKind.POSITIONAL => FormalParameterKindTag.optionalPositional,
+      ParameterKind.NAMED_REQUIRED => FormalParameterKindTag.requiredNamed,
+      ParameterKind.NAMED => FormalParameterKindTag.optionalNamed,
+      _ => throw StateError('Unexpected parameter kind: $p'),
+    });
   }
 
   void _writeFormalParameterFragmentKind(FormalParameterFragmentImpl p) {
-    if (p.isRequiredPositional) {
-      writeByte(Tag.ParameterKindRequiredPositional);
-    } else if (p.isOptionalPositional) {
-      writeByte(Tag.ParameterKindOptionalPositional);
-    } else if (p.isRequiredNamed) {
-      writeByte(Tag.ParameterKindRequiredNamed);
-    } else if (p.isOptionalNamed) {
-      writeByte(Tag.ParameterKindOptionalNamed);
-    } else {
-      throw StateError('Unexpected parameter kind: $p');
-    }
+    writeEnum(switch (p.parameterKind) {
+      ParameterKind.REQUIRED => FormalParameterKindTag.requiredPositional,
+      ParameterKind.POSITIONAL => FormalParameterKindTag.optionalPositional,
+      ParameterKind.NAMED_REQUIRED => FormalParameterKindTag.requiredNamed,
+      ParameterKind.NAMED => FormalParameterKindTag.optionalNamed,
+      _ => throw StateError('Unexpected parameter kind: $p'),
+    });
   }
 
   void _writeTopLevelInferenceError(TopLevelInferenceError? error) {

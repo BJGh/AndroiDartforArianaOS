@@ -6,8 +6,8 @@ import 'package:analyzer/src/test_utilities/mock_sdk.dart';
 import 'package:analyzer_testing/utilities/utilities.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import '../dart/resolution/context_collection_resolution.dart';
 import '../dart/resolution/node_text_expectations.dart';
-import 'sdk_constraint_verifier_support.dart';
 
 main() {
   defineReflectiveSuite(() {
@@ -17,7 +17,7 @@ main() {
 }
 
 @reflectiveTest
-class SdkVersionSinceTest extends SdkConstraintVerifierTest {
+class SdkVersionSinceTest extends PubPackageResolutionTest {
   @override
   List<MockSdkLibrary> additionalMockSdkLibraries = [];
 
@@ -565,7 +565,7 @@ class A {
 ''');
 
     writeTestPackagePubspecYamlFile(pubspecYamlContent(sdkVersion: '>=2.14.0'));
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:foo';
 
 void f(A a) {
@@ -575,7 +575,7 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.prefixed('.foo');
+    var node = result.findNode.prefixed('.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -603,7 +603,7 @@ class A {
 ''');
 
     writeTestPackagePubspecYamlFile(pubspecYamlContent(sdkVersion: '>=2.14.0'));
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:foo';
 
 void f(A a) {
@@ -613,9 +613,24 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.propertyAccess('.foo');
+    var node = result.findNode.receiverPropertyExtraction('.foo');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: SimpleIdentifier
+      token: a
+      element: <testLibrary>::@function::f::@formalParameter::a
+      staticType: A
+    rightParenthesis: )
+    staticType: A
+  operator: .
+  propertyName: foo
+  resolution: ExecutableTearOffResolution
+    element: dart:foo::@class::A::@method::foo
+    type: void Function()
+  staticType: void Function()
+V1: PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: SimpleIdentifier
@@ -1112,6 +1127,26 @@ void f() {
   foo();
 //^^^
 // [diag.sdkVersionSince] This API is available since SDK 2.15.0, but constraints '>=2.14.0' don't guarantee it.
+}
+''');
+  }
+
+  test_topLevelGetter_invalidWrite() async {
+    _addDartFooLibrary(r'''
+import 'dart:_internal';
+
+@Since('2.15')
+int get foo => 0;
+''');
+
+    writeTestPackagePubspecYamlFile(pubspecYamlContent(sdkVersion: '>=2.14.0'));
+    await resolveTestCodeWithDiagnostics('''
+import 'dart:foo';
+
+void f() {
+  foo = 0;
+//^^^
+// [diag.assignmentToFinal] 'foo' can't be used as a setter because it's final.
 }
 ''');
   }

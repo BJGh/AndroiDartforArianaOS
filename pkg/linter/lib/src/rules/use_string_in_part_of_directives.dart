@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use string in part of directives.';
 
 class UseStringInPartOfDirectives extends AnalysisRule {
-  UseStringInPartOfDirectives()
+  new()
     : super(
         name: LintNames.use_string_in_part_of_directives,
         description: _desc,
@@ -37,11 +37,7 @@ class UseStringInPartOfDirectives extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitPartOfDirective(PartOfDirective node) {
     if (node.libraryName != null) {

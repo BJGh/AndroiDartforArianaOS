@@ -42,11 +42,11 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           getters
-            #F3 isCompleteDeclaration isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+            #F3 isComplete isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
               element: <testLibrary>::@class::C::@getter::foo
               inducingVariable: #F2
           setters
-            #F4 isCompleteDeclaration isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+            #F4 isComplete isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
               element: <testLibrary>::@class::C::@setter::foo
               inducingVariable: #F2
               formalParameters
@@ -110,7 +110,7 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           getters
-            #F4 isCompleteDeclaration isOriginDeclaration foo (nameOffset:20) (firstTokenOffset:12) (offset:20)
+            #F4 isComplete isOriginDeclaration foo (nameOffset:20) (firstTokenOffset:12) (offset:20)
               element: <testLibrary>::@class::C::@getter::foo
   classes
     isSimplyBounded class C
@@ -159,7 +159,7 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           setters
-            #F4 hasImplicitReturnType isCompleteDeclaration isOriginDeclaration foo (nameOffset:16) (firstTokenOffset:12) (offset:16)
+            #F4 hasImplicitReturnType isComplete isOriginDeclaration foo (nameOffset:16) (firstTokenOffset:12) (offset:16)
               element: <testLibrary>::@class::C::@setter::foo
               formalParameters
                 #F5 requiredPositional isOriginDeclaration value (nameOffset:24) (firstTokenOffset:20) (offset:24)
@@ -179,7 +179,7 @@ library
           reference: <testLibrary>::@class::C::@constructor::new
           firstFragment: #F3
       setters
-        isOriginDeclaration foo
+        hasImplicitReturnType isOriginDeclaration foo
           reference: <testLibrary>::@class::C::@setter::foo
           firstFragment: #F4
           formalParameters
@@ -209,9 +209,9 @@ library
             #F2 hasImplicitType hasInitializer isConst isEnumConstant isOriginDeclaration isStatic a (nameOffset:9) (firstTokenOffset:9) (offset:9)
               element: <testLibrary>::@enum::E::@field::a
               initializer: expression_0
-                InstanceCreationExpression
-                  constructorName: ConstructorName
-                    type: NamedType
+                ConstructorInvocation
+                  constructorReference: ConstructorReference2
+                    typeReference: ConstructorTypeReference
                       name: E @-1
                       element: <testLibrary>::@enum::E
                       type: E
@@ -224,9 +224,9 @@ library
             #F4 hasImplicitType hasInitializer isConst isEnumConstant isOriginDeclaration isStatic b (nameOffset:12) (firstTokenOffset:12) (offset:12)
               element: <testLibrary>::@enum::E::@field::b
               initializer: expression_1
-                InstanceCreationExpression
-                  constructorName: ConstructorName
-                    type: NamedType
+                ConstructorInvocation
+                  constructorReference: ConstructorReference2
+                    typeReference: ConstructorTypeReference
                       name: E @-1
                       element: <testLibrary>::@enum::E
                       type: E
@@ -241,7 +241,7 @@ library
               initializer: expression_2
                 ListLiteral
                   leftBracket: [ @0
-                  elements
+                  elements2
                     SimpleIdentifier
                       token: a @-1
                       element: <testLibrary>::@enum::E::@getter::a
@@ -258,13 +258,13 @@ library
               element: <testLibrary>::@enum::E::@constructor::new
               typeName: E
           getters
-            #F3 isCompleteDeclaration isOriginVariable isStatic a (nameOffset:<null>) (firstTokenOffset:<null>) (offset:9)
+            #F3 isComplete isOriginVariable isStatic a (nameOffset:<null>) (firstTokenOffset:<null>) (offset:9)
               element: <testLibrary>::@enum::E::@getter::a
               inducingVariable: #F2
-            #F5 isCompleteDeclaration isOriginVariable isStatic b (nameOffset:<null>) (firstTokenOffset:<null>) (offset:12)
+            #F5 isComplete isOriginVariable isStatic b (nameOffset:<null>) (firstTokenOffset:<null>) (offset:12)
               element: <testLibrary>::@enum::E::@getter::b
               inducingVariable: #F4
-            #F7 isCompleteDeclaration isOriginVariable isStatic values (nameOffset:<null>) (firstTokenOffset:<null>) (offset:5)
+            #F7 isComplete isOriginVariable isStatic values (nameOffset:<null>) (firstTokenOffset:<null>) (offset:5)
               element: <testLibrary>::@enum::E::@getter::values
               inducingVariable: #F6
   enums
@@ -343,11 +343,11 @@ library
               inducedGetter: #F3
               inducedSetter: #F4
           getters
-            #F3 isCompleteDeclaration isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+            #F3 isComplete isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
               element: <testLibrary>::@mixin::M::@getter::foo
               inducingVariable: #F2
           setters
-            #F4 isCompleteDeclaration isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
+            #F4 isComplete isOriginVariable foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:16)
               element: <testLibrary>::@mixin::M::@setter::foo
               inducingVariable: #F2
               formalParameters
@@ -405,7 +405,7 @@ library
             #F2 isOriginGetterSetter foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:6)
               element: <testLibrary>::@mixin::M::@field::foo
           getters
-            #F3 isCompleteDeclaration isOriginDeclaration foo (nameOffset:20) (firstTokenOffset:12) (offset:20)
+            #F3 isComplete isOriginDeclaration foo (nameOffset:20) (firstTokenOffset:12) (offset:20)
               element: <testLibrary>::@mixin::M::@getter::foo
   mixins
     isSimplyBounded mixin M
@@ -448,7 +448,7 @@ library
             #F2 isOriginGetterSetter foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:6)
               element: <testLibrary>::@mixin::M::@field::foo
           setters
-            #F3 hasImplicitReturnType isCompleteDeclaration isOriginDeclaration foo (nameOffset:16) (firstTokenOffset:12) (offset:16)
+            #F3 hasImplicitReturnType isComplete isOriginDeclaration foo (nameOffset:16) (firstTokenOffset:12) (offset:16)
               element: <testLibrary>::@mixin::M::@setter::foo
               formalParameters
                 #F4 requiredPositional isOriginDeclaration value (nameOffset:24) (firstTokenOffset:20) (offset:24)
@@ -466,7 +466,7 @@ library
           type: int
           setter: <testLibrary>::@mixin::M::@setter::foo
       setters
-        isOriginDeclaration foo
+        hasImplicitReturnType isOriginDeclaration foo
           reference: <testLibrary>::@mixin::M::@setter::foo
           firstFragment: #F3
           formalParameters
@@ -493,7 +493,7 @@ library
         #F1 isOriginGetterSetter isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:8)
           element: <testLibrary>::@topLevelVariable::foo
       getters
-        #F2 isCompleteDeclaration isOriginDeclaration isStatic foo (nameOffset:8) (firstTokenOffset:0) (offset:8)
+        #F2 isComplete isOriginDeclaration isStatic foo (nameOffset:8) (firstTokenOffset:0) (offset:8)
           element: <testLibrary>::@getter::foo
   topLevelVariables
     isOriginGetterSetter isStatic foo
@@ -526,10 +526,10 @@ library
         #F1 isOriginGetterSetter isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:8)
           element: <testLibrary>::@topLevelVariable::foo
       getters
-        #F2 isCompleteDeclaration isOriginDeclaration isStatic foo (nameOffset:8) (firstTokenOffset:0) (offset:8)
+        #F2 isComplete isOriginDeclaration isStatic foo (nameOffset:8) (firstTokenOffset:0) (offset:8)
           element: <testLibrary>::@getter::foo
       setters
-        #F3 hasImplicitReturnType isCompleteDeclaration isOriginDeclaration isStatic foo (nameOffset:22) (firstTokenOffset:18) (offset:22)
+        #F3 hasImplicitReturnType isComplete isOriginDeclaration isStatic foo (nameOffset:22) (firstTokenOffset:18) (offset:22)
           element: <testLibrary>::@setter::foo
           formalParameters
             #F4 requiredPositional isOriginDeclaration value (nameOffset:30) (firstTokenOffset:26) (offset:30)
@@ -548,7 +548,7 @@ library
       returnType: int
       variable: <testLibrary>::@topLevelVariable::foo
   setters
-    isOriginDeclaration isStatic foo
+    hasImplicitReturnType isOriginDeclaration isStatic foo
       reference: <testLibrary>::@setter::foo
       firstFragment: #F3
       formalParameters
@@ -575,7 +575,7 @@ library
         #F1 isOriginGetterSetter isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:4)
           element: <testLibrary>::@topLevelVariable::foo
       setters
-        #F2 hasImplicitReturnType isCompleteDeclaration isOriginDeclaration isStatic foo (nameOffset:4) (firstTokenOffset:0) (offset:4)
+        #F2 hasImplicitReturnType isComplete isOriginDeclaration isStatic foo (nameOffset:4) (firstTokenOffset:0) (offset:4)
           element: <testLibrary>::@setter::foo
           formalParameters
             #F3 requiredPositional isOriginDeclaration value (nameOffset:12) (firstTokenOffset:8) (offset:12)
@@ -587,7 +587,7 @@ library
       type: int
       setter: <testLibrary>::@setter::foo
   setters
-    isOriginDeclaration isStatic foo
+    hasImplicitReturnType isOriginDeclaration isStatic foo
       reference: <testLibrary>::@setter::foo
       firstFragment: #F2
       formalParameters
@@ -616,11 +616,11 @@ library
           inducedGetter: #F2
           inducedSetter: #F3
       getters
-        #F2 isCompleteDeclaration isOriginVariable isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:4)
+        #F2 isComplete isOriginVariable isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:4)
           element: <testLibrary>::@getter::foo
           inducingVariable: #F1
       setters
-        #F3 isCompleteDeclaration isOriginVariable isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:4)
+        #F3 isComplete isOriginVariable isStatic foo (nameOffset:<null>) (firstTokenOffset:<null>) (offset:4)
           element: <testLibrary>::@setter::foo
           inducingVariable: #F1
           formalParameters

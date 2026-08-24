@@ -14,10 +14,25 @@ mac_toolchain_suite("ios_clang_arm64") {
   prefix = rebased_clang_dir
   cc = "${compiler_prefix}${prefix}/clang"
   cxx = "${compiler_prefix}${prefix}/clang++"
-  if (use_rbe) {
-    cc = "${cc} --target=arm64-apple-darwin"
-    cxx = "${cxx} --target=arm64-apple-darwin"
+  asm = "${assembler_prefix}${prefix}/clang"
+  ar = "${prefix}/llvm-ar"
+  ld = "${link_prefix}${prefix}/clang++"
+  dsymutil = "${prefix}/dsymutil"
+  strip = "${prefix}/llvm-strip"
+  nm = "${prefix}/llvm-nm"
+  is_clang = true
+  if (ios_enable_relative_sdk_path) {
+    ios_sdk_path = rebase_path(ios_sdk_path, root_build_dir)
   }
+  sysroot_flags = "-isysroot $ios_sdk_path -miphoneos-version-min=$ios_sdk_min"
+}
+
+mac_toolchain_suite("ios_clang_arm64e") {
+  toolchain_cpu = "arm64e"
+  toolchain_os = "ios"
+  prefix = rebased_clang_dir
+  cc = "${compiler_prefix}${prefix}/clang"
+  cxx = "${compiler_prefix}${prefix}/clang++"
   asm = "${assembler_prefix}${prefix}/clang"
   ar = "${prefix}/llvm-ar"
   ld = "${link_prefix}${prefix}/clang++"
@@ -38,10 +53,6 @@ mac_toolchain_suite("ios_clang_arm64_sim") {
   prefix = rebased_clang_dir
   cc = "${compiler_prefix}${prefix}/clang"
   cxx = "${compiler_prefix}${prefix}/clang++"
-  if (use_rbe) {
-    cc = "${cc} --target=arm64-apple-darwin"
-    cxx = "${cxx} --target=arm64-apple-darwin"
-  }
   asm = "${assembler_prefix}${prefix}/clang"
   ar = "${prefix}/llvm-ar"
   ld = "${link_prefix}${prefix}/clang++"
@@ -63,10 +74,6 @@ mac_toolchain_suite("ios_clang_x64_sim") {
   prefix = rebased_clang_dir
   cc = "${compiler_prefix}${prefix}/clang"
   cxx = "${compiler_prefix}${prefix}/clang++"
-  if (use_rbe) {
-    cc = "${cc} --target=x86_64-apple-darwin"
-    cxx = "${cxx} --target=x86_64-apple-darwin"
-  }
   asm = "${assembler_prefix}${prefix}/clang"
   ar = "${prefix}/llvm-ar"
   ld = "${link_prefix}${prefix}/clang++"
@@ -89,10 +96,6 @@ if (is_watchos) {
     prefix = rebased_clang_dir
     cc = "${compiler_prefix}${prefix}/clang"
     cxx = "${compiler_prefix}${prefix}/clang++"
-    if (use_rbe) {
-      cc = "${cc} --target=arm64-apple-darwin"
-      cxx = "${cxx} --target=arm64-apple-darwin"
-    }
     asm = "${assembler_prefix}${prefix}/clang"
     ar = "${prefix}/llvm-ar"
     ld = "${link_prefix}${prefix}/clang++"
@@ -113,10 +116,6 @@ if (is_watchos) {
     prefix = rebased_clang_dir
     cc = "${compiler_prefix}${prefix}/clang"
     cxx = "${compiler_prefix}${prefix}/clang++"
-    if (use_rbe) {
-      cc = "${cc} --target=arm64-apple-darwin"
-      cxx = "${cxx} --target=arm64-apple-darwin"
-    }
     asm = "${assembler_prefix}${prefix}/clang"
     ar = "${prefix}/llvm-ar"
     ld = "${link_prefix}${prefix}/clang++"
@@ -138,10 +137,6 @@ mac_toolchain_suite("clang_x64") {
   prefix = rebased_clang_dir
   cc = "${compiler_prefix}${prefix}/clang"
   cxx = "${compiler_prefix}${prefix}/clang++"
-  if (use_rbe) {
-    cc = "${cc} --target=x86_64-apple-macos"
-    cxx = "${cxx} --target=x86_64-apple-macos"
-  }
   asm = "${assembler_prefix}${prefix}/clang"
   ar = "${prefix}/llvm-ar"
   ld = "${link_prefix}${prefix}/clang++"
@@ -161,10 +156,25 @@ mac_toolchain_suite("clang_arm64") {
   prefix = rebased_clang_dir
   cc = "${compiler_prefix}${prefix}/clang"
   cxx = "${compiler_prefix}${prefix}/clang++"
-  if (use_rbe) {
-    cc = "${cc} --target=arm64-apple-macos"
-    cxx = "${cxx} --target=arm64-apple-macos"
+  asm = "${assembler_prefix}${prefix}/clang"
+  ar = "${prefix}/llvm-ar"
+  ld = "${link_prefix}${prefix}/clang++"
+  dsymutil = "${prefix}/dsymutil"
+  strip = "${prefix}/llvm-strip"
+  nm = "${prefix}/llvm-nm"
+  is_clang = true
+  if (mac_enable_relative_sdk_path) {
+    mac_sdk_path = rebase_path(mac_sdk_path, root_build_dir)
   }
+  sysroot_flags = "-isysroot $mac_sdk_path -mmacosx-version-min=$mac_sdk_min"
+}
+
+mac_toolchain_suite("clang_arm64e") {
+  toolchain_cpu = "arm64e"
+  toolchain_os = "mac"
+  prefix = rebased_clang_dir
+  cc = "${compiler_prefix}${prefix}/clang"
+  cxx = "${compiler_prefix}${prefix}/clang++"
   asm = "${assembler_prefix}${prefix}/clang"
   ar = "${prefix}/llvm-ar"
   ld = "${link_prefix}${prefix}/clang++"

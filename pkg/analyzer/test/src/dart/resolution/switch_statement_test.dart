@@ -10,7 +10,7 @@ import 'node_text_expectations.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(SwitchStatementResolutionTest);
-    defineReflectiveTests(SwitchStatementResolutionTest_Language219);
+    defineReflectiveTests(SwitchStatementResolutionTest_BeforePatterns);
     defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
@@ -18,7 +18,7 @@ main() {
 @reflectiveTest
 class SwitchStatementResolutionTest extends PubPackageResolutionTest {
   test_default() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0?:
@@ -29,12 +29,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -46,7 +46,7 @@ SwitchStatement
       guardedPattern: GuardedPattern
         pattern: NullCheckPattern
           pattern: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 0
               staticType: int
             matchedValueType: Object
@@ -71,7 +71,7 @@ SwitchStatement
   test_joinedVariables_inLocalFunction() async {
     // Note: this is an important case to test because when variables are inside
     // a local function, their enclosing element is `null`.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   List<int> get values;
 }
@@ -87,7 +87,7 @@ test(Object o) => () {
 };
 ''');
 
-    var node = findNode.simple('value + 1');
+    var node = result.findNode.simple('value + 1');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: value
@@ -97,7 +97,7 @@ SimpleIdentifier
   }
 
   test_mergeCases() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0?:
@@ -109,12 +109,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -126,7 +126,7 @@ SwitchStatement
       guardedPattern: GuardedPattern
         pattern: NullCheckPattern
           pattern: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 0
               staticType: int
             matchedValueType: Object
@@ -138,7 +138,7 @@ SwitchStatement
       guardedPattern: GuardedPattern
         pattern: NullCheckPattern
           pattern: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 1
               staticType: int
             matchedValueType: Object
@@ -154,7 +154,7 @@ SwitchStatement
       guardedPattern: GuardedPattern
         pattern: NullCheckPattern
           pattern: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 2
               staticType: int
             matchedValueType: Object
@@ -170,7 +170,7 @@ SwitchStatement
   }
 
   test_rewrite_pattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case const A():
@@ -183,12 +183,12 @@ class A {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -200,7 +200,18 @@ SwitchStatement
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
           constKeyword: const
-          expression: InstanceCreationExpression
+          expression2: ConstructorInvocation
+            constructorReference: ConstructorReference2
+              typeReference: ConstructorTypeReference
+                name: A
+                element: <testLibrary>::@class::A
+                type: A
+              element: <testLibrary>::@class::A::@constructor::new
+            argumentList: ArgumentList
+              leftParenthesis: (
+              rightParenthesis: )
+            staticType: A
+          expression(v1): InstanceCreationExpression
             constructorName: ConstructorName
               type: NamedType
                 name: A
@@ -222,7 +233,7 @@ SwitchStatement
   }
 
   test_rewrite_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x, bool Function() a) {
   switch (x) {
     case 0 when a():
@@ -231,12 +242,12 @@ void f(Object? x, bool Function() a) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -247,14 +258,14 @@ SwitchStatement
       keyword: case
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: FunctionExpressionInvocation
-            function: SimpleIdentifier
+          expression2: FunctionExpressionInvocation
+            function2: SimpleIdentifier
               token: a
               element: <testLibrary>::@function::f::@formalParameter::a
               staticType: bool Function()
@@ -274,7 +285,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_consistent() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a when a < 0:
@@ -284,12 +295,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -311,7 +322,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@48
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@48
@@ -340,7 +364,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@75
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@75
@@ -356,7 +393,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -366,7 +403,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_consistent_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case final int a when a < 0:
@@ -376,12 +413,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -404,7 +441,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@54
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@54
@@ -434,7 +484,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@87
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@87
@@ -450,7 +513,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -460,7 +523,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_consistent_logicalOr2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a || [int a] when a < 0:
@@ -470,12 +533,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -516,7 +579,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@null
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@null
@@ -564,7 +640,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@null
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@null
@@ -580,7 +669,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -590,7 +679,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_notConsistent_differentFinality() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case final int a when a < 0:
@@ -602,12 +691,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -630,7 +719,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@54
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@54
@@ -659,7 +761,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@81
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@81
@@ -675,7 +790,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -685,7 +800,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_notConsistent_differentFinalityTypes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case final int a when a < 0:
@@ -697,12 +812,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -725,7 +840,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@54
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@54
@@ -754,7 +882,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@81
+              staticType: num
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@81
@@ -770,7 +911,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: InvalidType
@@ -780,7 +921,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareBoth_notConsistent_differentTypes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a when a < 0:
@@ -792,12 +933,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -819,7 +960,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@48
+              staticType: int
+            operator: <
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::<::@formalParameter::other
+              staticType: int
+            binaryOperator: lessThan
+            element: dart:core::@class::num::@method::<
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@48
@@ -848,7 +1002,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@75
+              staticType: num
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@75
@@ -864,7 +1031,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: InvalidType
@@ -874,7 +1041,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareFirst() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0:
@@ -886,12 +1053,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -902,7 +1069,7 @@ SwitchStatement
       keyword: case
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           matchedValueType: Object?
@@ -922,7 +1089,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@60
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@60
@@ -938,7 +1118,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -948,7 +1128,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_declareSecond() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -960,12 +1140,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -987,7 +1167,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@48
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@48
@@ -1005,14 +1198,14 @@ SwitchStatement
       keyword: case
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           matchedValueType: Object?
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -1022,7 +1215,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_hasDefault() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -1034,12 +1227,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1061,7 +1254,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@48
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@48
@@ -1080,7 +1286,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -1090,7 +1296,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_hasDefault2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case var a:
@@ -1108,12 +1314,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1147,7 +1353,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: Object?
@@ -1157,7 +1363,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_hasLabel() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     myLabel:
@@ -1171,12 +1377,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1197,16 +1403,29 @@ SwitchStatement
             element: dart:core::@class::int
             type: int
           name: a
-          declaredFragment: isPublic a@128
+          declaredFragment: isPublic a@61
             element: isPublic
               type: int
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
             leftOperand: SimpleIdentifier
               token: a
-              element: a@128
+              element: a@61
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@61
               staticType: int
             operator: >
             rightOperand: IntegerLiteral
@@ -1219,7 +1438,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -1229,7 +1448,7 @@ SwitchStatement
   }
 
   test_variables_joinedCase_notConsistent3() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a:
@@ -1248,12 +1467,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1304,19 +1523,19 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: b
             element: b@null
             staticType: double
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: c
             element: c@null
             staticType: String
@@ -1326,7 +1545,7 @@ SwitchStatement
   }
 
   test_variables_logicalOr() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case <int>[var a || var a]:
@@ -1337,12 +1556,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1386,7 +1605,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: int
@@ -1396,7 +1615,7 @@ SwitchStatement
   }
 
   test_variables_scope() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 void f(Object? x) {
   switch (x) {
@@ -1411,12 +1630,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1441,7 +1660,7 @@ SwitchStatement
               matchedValueType: Object?
             RelationalPattern
               operator: ==
-              operand: SimpleIdentifier
+              operand2: SimpleIdentifier
                 token: a
                 element: a@62
                 staticType: int
@@ -1452,7 +1671,20 @@ SwitchStatement
           requiredType: List<Object?>
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@62
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@62
@@ -1468,7 +1700,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@62
             staticType: int
@@ -1478,7 +1710,7 @@ SwitchStatement
   }
 
   test_variables_singleCase() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case int a when a > 0:
@@ -1487,12 +1719,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1514,7 +1746,20 @@ SwitchStatement
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@48
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@48
@@ -1530,7 +1775,7 @@ SwitchStatement
       colon: :
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@48
             staticType: int
@@ -1540,7 +1785,7 @@ SwitchStatement
   }
 
   test_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0 when true:
@@ -1549,12 +1794,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1565,13 +1810,13 @@ SwitchStatement
       keyword: case
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BooleanLiteral
+          expression2: BooleanLiteral
             literal: true
             staticType: bool
       colon: :
@@ -1585,10 +1830,11 @@ SwitchStatement
 }
 
 @reflectiveTest
-class SwitchStatementResolutionTest_Language219 extends PubPackageResolutionTest
-    with WithLanguage219Mixin {
+class SwitchStatementResolutionTest_BeforePatterns
+    extends PubPackageResolutionTest
+    with BeforePatternsMixin {
   test_default() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0:
@@ -1599,12 +1845,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1613,7 +1859,7 @@ SwitchStatement
   members
     SwitchCase
       keyword: case
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       colon: :
@@ -1633,7 +1879,7 @@ SwitchStatement
   }
 
   test_mergeCases() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   switch (x) {
     case 0:
@@ -1645,12 +1891,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchStatement('switch');
+    var node = result.findNode.switchStatement('switch');
     assertResolvedNodeText(node, r'''
 SwitchStatement
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1659,13 +1905,13 @@ SwitchStatement
   members
     SwitchCase
       keyword: case
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       colon: :
     SwitchCase
       keyword: case
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 1
         staticType: int
       colon: :
@@ -1675,7 +1921,7 @@ SwitchStatement
           semicolon: ;
     SwitchCase
       keyword: case
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 2
         staticType: int
       colon: :

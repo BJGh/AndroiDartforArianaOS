@@ -83,7 +83,7 @@ abstract class AstCodeGenerator
 
   bool exceptionLocationPrinted = false;
 
-  final Map<VariableDeclaration, w.Local> locals = {};
+  final Map<Variable, w.Local> locals = {};
   w.Local? thisLocal;
   w.Local? preciseThisLocal;
   w.Local? returnValueLocal;
@@ -284,18 +284,18 @@ abstract class AstCodeGenerator
 
     void setupParamLocal(
       DartType variableTypeToCheck,
-      VariableDeclaration variable,
+      FunctionParameter variable,
       int index,
       Constant? defaultValue,
       bool isRequired,
     ) {
       final localIndex = implicitParams + index;
       w.Local local = paramLocals[localIndex];
-      final variableName = variable.name;
-      if (variableName != null && variableName.isNotEmpty) {
+      final variableName = variable.parameterName;
+      if (variableName.isNotEmpty) {
         b.localNames[local.index] = variableName;
       }
-      if (defaultValue == ParameterInfo.defaultValueSentinel) {
+      if (!isRequired && defaultValue == ParameterInfo.defaultValueSentinel) {
         // The default value for this parameter differs between implementations
         // within the same selector. This means that callers will pass the
         // default value sentinel to indicate that the parameter is not given.
@@ -309,14 +309,16 @@ abstract class AstCodeGenerator
         // the argument, but the wasm type may be of object type). So we first
         // have to handle sentinel before we can downcast the value.
         b.local_get(local);
-        translator.constants.instantiateConstant(
-          b,
+        instantiateConstantBackendUse(
           ParameterInfo.defaultValueSentinel,
           local.type,
         );
         b.ref_eq();
         b.if_();
-        translateExpression(variable.initializer!, local.type);
+        instantiateConstant(
+          ParameterInfo.defaultValue(variable, member)!,
+          local.type,
+        );
         b.local_set(local);
         b.end();
       }
@@ -328,6 +330,7 @@ abstract class AstCodeGenerator
         final incomingArgumentType = translator.translateTypeOfParameter(
           variable,
           isRequired,
+          member,
         );
         if (!local.type.isSubtypeOf(incomingArgumentType)) {
           final newLocal = addLocal(incomingArgumentType);
@@ -355,26 +358,17 @@ abstract class AstCodeGenerator
           }
           b.local_get(operand);
           _generateArgumentTypeCheck(
-            variable.name!,
+            variable.parameterName,
             operand.type as w.RefType,
             variableTypeToCheck,
           );
         }
       }
-      if (!isForwarder && !variable.isFinal) {
-        // We now have a precise local that can contain the values passed by
-        // callers, but the body may assign less precise types to this variable,
-        // so we may introduce another local variable that is less precise.
-        // => Binaryen will simplify the above downcast and this upcast.
-        final variableType = translator.translateTypeOfLocalVariable(variable);
-        if (!variableType.isSubtypeOf(local.type)) {
-          w.Local newLocal = addLocal(variableType);
-          b.local_get(local);
-          translator.convertType(b, local.type, newLocal.type);
-          b.local_set(newLocal);
-          local = newLocal;
-        }
-      }
+      local = _upcastParameterLocalIfNeeded(
+        variable,
+        local,
+        isForwarder: isForwarder,
+      );
 
       locals[variable] = local;
     }
@@ -396,8 +390,8 @@ abstract class AstCodeGenerator
       setupParamLocal(
         typeToCheck,
         param,
-        paramInfo.nameIndex[param.name]!,
-        paramInfo.named[param.name],
+        paramInfo.nameIndex[param.parameterName]!,
+        paramInfo.named[param.parameterName],
         param.isRequired,
       );
     }
@@ -412,7 +406,7 @@ abstract class AstCodeGenerator
               parameterType.classNode == translator.wasmExternRefClass)) {
         w.Local newLocal = addLocal(
           translateType(parameterType),
-          name: parameter.name,
+          name: parameter.cosmeticName,
         );
         b.local_get(local);
         translator.convertType(b, local.type, newLocal.type);
@@ -481,15 +475,40 @@ abstract class AstCodeGenerator
     for (TypeParameter typeParam in functionNode.typeParameters) {
       typeLocals[typeParam] = paramLocals[paramIndex++];
     }
-    for (VariableDeclaration param in functionNode.positionalParameters) {
+    for (PositionalParameter param in functionNode.positionalParameters) {
       locals[param] = paramLocals[paramIndex++];
     }
-    for (VariableDeclaration param in functionNode.namedParameters) {
+    for (NamedParameter param in functionNode.namedParameters) {
       locals[param] = paramLocals[paramIndex++];
     }
 
     allocateContext(functionNode);
     captureParameters(functionNode);
+  }
+
+  w.Local _upcastParameterLocalIfNeeded(
+    Variable variable,
+    w.Local local, {
+    required bool isForwarder,
+  }) {
+    if (isForwarder || variable.isFinal) {
+      // The [variable]s [local] will never be written to.
+      return local;
+    }
+
+    // We now have a precise local that can contain the values passed by
+    // callers, but the body may assign less precise types to this variable,
+    // so we may introduce another local variable that is less precise.
+    // => Binaryen will simplify the above downcast and this upcast.
+    final variableType = translator.translateTypeOfLocalVariable(variable);
+    if (!variableType.isSubtypeOf(local.type)) {
+      w.Local newLocal = addLocal(variableType);
+      b.local_get(local);
+      translator.convertType(b, local.type, newLocal.type);
+      b.local_set(newLocal);
+      return newLocal;
+    }
+    return local;
   }
 
   /// Initialize locals containing `this` in constructors and instance members.
@@ -675,7 +694,19 @@ abstract class AstCodeGenerator
   void translateVariableDeclaration(VariableDeclaration node) {
     final oldFileOffset = setSourceMapFileOffset(node.fileOffset);
     try {
-      visitVariableDeclaration(node);
+      visitVariable(node.variable);
+    } catch (_) {
+      _printLocation(node);
+      rethrow;
+    } finally {
+      setSourceMapFileOffset(oldFileOffset);
+    }
+  }
+
+  void translateVariable(Variable node) {
+    final oldFileOffset = setSourceMapFileOffset(node.fileOffset);
+    try {
+      visitVariable(node);
     } catch (_) {
       _printLocation(node);
       rethrow;
@@ -759,14 +790,14 @@ abstract class AstCodeGenerator
   }
 
   @override
-  void visitVariableDeclaration(VariableDeclaration node) {
+  void visitVariable(Variable node) {
     final w.ValueType type = translator.translateTypeOfLocalVariable(node);
     w.Local? local;
     final Capture? capture = closures.captures[node];
     if (capture == null || !capture.written) {
       // Variable is not captured, or never updated after initialization. Keep
       // the value in a local.
-      local = addLocal(type, name: node.name);
+      local = addLocal(type, name: node.cosmeticName);
       locals[node] = local;
     }
 
@@ -810,19 +841,16 @@ abstract class AstCodeGenerator
   /// Initialize a variable [node] to an initial value which must be left on
   /// the stack by [pushInitialValue].
   ///
-  /// This is similar to [visitVariableDeclaration] but it gives more control
+  /// This is similar to [visitVariable] but it gives more control
   /// over how the variable is initialized.
-  void initializeVariable(
-    VariableDeclaration node,
-    void Function() pushInitialValue,
-  ) {
+  void initializeVariable(Variable node, void Function() pushInitialValue) {
     final w.ValueType type = translator.translateTypeOfLocalVariable(node);
     w.Local? local;
     final Capture? capture = closures.captures[node];
     if (capture == null || !capture.written) {
       // Variable is not captured, or never updated after initialization. Keep
       // the value in a local.
-      local = addLocal(type, name: node.name);
+      local = addLocal(type, name: node.cosmeticName);
       locals[node] = local;
     }
 
@@ -858,7 +886,7 @@ abstract class AstCodeGenerator
       final Location? location = node.location;
       final w.RefType stringRefType = translator.stringTypeNullable;
       if (location != null) {
-        instantiateConstant(
+        instantiateConstantBackendUse(
           StringConstant(location.file.toString()),
           stringRefType,
         );
@@ -870,7 +898,10 @@ abstract class AstCodeGenerator
           node.conditionStartOffset,
           node.conditionEndOffset,
         );
-        instantiateConstant(StringConstant(conditionString), stringRefType);
+        instantiateConstantBackendUse(
+          StringConstant(conditionString),
+          stringRefType,
+        );
       } else {
         b.ref_null(stringRefType.heapType);
         b.i64_const(0);
@@ -1048,7 +1079,7 @@ abstract class AstCodeGenerator
       b.local_set(thrownStackTrace);
       b.local_set(thrownException);
 
-      final VariableDeclaration? exceptionDeclaration = catch_.exception;
+      final Variable? exceptionDeclaration = catch_.exception;
       if (exceptionDeclaration != null) {
         initializeVariable(exceptionDeclaration, () {
           b.local_get(thrownException);
@@ -1061,7 +1092,7 @@ abstract class AstCodeGenerator
         });
       }
 
-      final VariableDeclaration? stackTraceDeclaration = catch_.stackTrace;
+      final Variable? stackTraceDeclaration = catch_.stackTrace;
       if (stackTraceDeclaration != null) {
         initializeVariable(
           stackTraceDeclaration,
@@ -1129,9 +1160,11 @@ abstract class AstCodeGenerator
     b.rethrow_(tryBlock);
 
     // Handle JS exceptions.
-    b.catch_legacy(translator.getJsExceptionTag(b.moduleBuilder));
-    translateStatement(node.finalizer);
-    b.rethrow_(tryBlock);
+    if (!translator.options.standalone) {
+      b.catch_legacy(translator.getJsExceptionTag(b.moduleBuilder));
+      translateStatement(node.finalizer);
+      b.rethrow_(tryBlock);
+    }
 
     b.end(); // tryBlock
 
@@ -1278,8 +1311,8 @@ abstract class AstCodeGenerator
   @override
   void visitForStatement(ForStatement node) {
     allocateContext(node);
-    for (VariableStatement variable in node.variables) {
-      translateStatement(variable);
+    for (VariableDeclaration variable in node.variables) {
+      translateVariableDeclaration(variable);
     }
     w.Label block = b.block();
     w.Label loop = b.loop();
@@ -1302,7 +1335,7 @@ abstract class AstCodeGenerator
       w.Local newContext = context.currentLocal;
 
       // Copy the values of captured loop variables to the new context.
-      for (VariableStatement variableDeclaration in node.variables) {
+      for (VariableDeclaration variableDeclaration in node.variables) {
         Capture? capture = closures.captures[variableDeclaration.variable];
         if (capture != null) {
           assert(capture.context == context);
@@ -1476,6 +1509,7 @@ abstract class AstCodeGenerator
             switchInfo.compare(
               switchValueNonNullableLocal,
               () => translateExpression(exp, switchInfo.nonNullableType),
+              exp,
             );
             b.br_if(switchLabels[c]!);
           }
@@ -1571,7 +1605,7 @@ abstract class AstCodeGenerator
 
   @override
   w.ValueType visitLet(Let node, w.ValueType expectedType) {
-    translateVariableDeclaration(node.variable);
+    translateVariable(node.variable);
     return translateExpression(node.body, expectedType);
   }
 
@@ -1613,8 +1647,6 @@ abstract class AstCodeGenerator
     );
     if (intrinsicResult != null) return intrinsicResult;
 
-    ClassInfo info = translator.classInfo[node.target.enclosingClass]!;
-
     final target = node.targetReference;
     _visitArguments(
       node.arguments,
@@ -1622,14 +1654,6 @@ abstract class AstCodeGenerator
       translator.paramInfoForDirectCall(target),
       0,
     );
-
-    if (info.isCyclic) {
-      // Cyclic types cannot be instantiated. Any code that tries to instantiate
-      // them will fail with stack overflow, which is a trap in Wasm. Here we
-      // replace one trap with another.
-      b.unreachable();
-      return expectedType;
-    }
 
     return call(target).single;
   }
@@ -2036,13 +2060,8 @@ abstract class AstCodeGenerator
         " at ${node.location}",
       );
       pushArguments(signature, selector.paramInfo);
-      for (int i = 0; i < signature.inputs.length; ++i) {
-        b.drop();
-      }
-      b.block(const [], signature.outputs);
       b.unreachable();
-      b.end();
-      return translator.outputOrVoid(signature.outputs);
+      return voidMarker;
     }
     if (directCall) {
       final target = translator.getFunctionEntry(
@@ -2843,7 +2862,7 @@ abstract class AstCodeGenerator
     // Push default values for optional positional parameters.
     for (int i = node.positional.length; i < paramInfo.positional.length; i++) {
       final w.ValueType type = signature.inputs[signatureOffset + i];
-      instantiateConstant(paramInfo.positional[i]!, type);
+      instantiateConstantBackendUse(paramInfo.positional[i]!, type);
     }
 
     // Named arguments. Store evaluated arguments in locals to be able to
@@ -2866,7 +2885,7 @@ abstract class AstCodeGenerator
       if (namedLocal != null) {
         b.local_get(namedLocal);
       } else {
-        instantiateConstant(paramInfo.named[name]!, type);
+        instantiateConstantBackendUse(paramInfo.named[name]!, type);
       }
     }
   }
@@ -2909,19 +2928,19 @@ abstract class AstCodeGenerator
         translateExpression(expression, nullableObjectType);
       }
       if (expressions.length == 1) {
-        target = translator.jsStringInterpolate1;
+        target = translator.stringImplInterpolate1;
       } else if (expressions.length == 2) {
-        target = translator.jsStringInterpolate2;
+        target = translator.stringImplInterpolate2;
       } else if (expressions.length == 3) {
-        target = translator.jsStringInterpolate3;
+        target = translator.stringImplInterpolate3;
       } else {
         assert(expressions.length == 4);
-        target = translator.jsStringInterpolate4;
+        target = translator.stringImplInterpolate4;
       }
     } else {
       final nullableObjectType = translator.coreTypes.objectNullableRawType;
       makeArrayFromExpressions(expressions, nullableObjectType);
-      target = translator.jsStringInterpolate;
+      target = translator.stringImplInterpolate;
     }
     return translator.outputOrVoid(call(target.reference));
   }
@@ -3158,7 +3177,6 @@ abstract class AstCodeGenerator
     translateExpression(node.operand, boxedOperandType);
     return types.emitAsCheck(
       this,
-      node.isCovarianceCheck,
       node.type,
       operandType,
       boxedOperandType,
@@ -3289,7 +3307,6 @@ abstract class AstCodeGenerator
       // the optimized `as` checks.
       types.emitAsCheck(
         this,
-        false,
         testedAgainstType,
         translator.coreTypes.objectNullableRawType,
         argumentType,
@@ -3321,8 +3338,8 @@ abstract class AstCodeGenerator
     DartType bound,
   ) {
     b.local_get(typeLocal);
-    final boundLocal = b.addLocal(translator.runtimeTypeType);
-    types.makeType(this, bound);
+    final boundType = types.makeType(this, bound);
+    final boundLocal = b.addLocal(boundType);
     b.local_tee(boundLocal);
     call(translator.isTypeSubtype.reference);
 
@@ -3368,8 +3385,7 @@ abstract class AstCodeGenerator
     final printFunction = translator.functions.getFunction(
       translator.printToConsole.reference,
     );
-    translator.constants.instantiateConstant(
-      b,
+    instantiateConstantBackendUse(
       StringConstant(s),
       printFunction.type.inputs[0],
     );
@@ -3397,8 +3413,7 @@ abstract class AstCodeGenerator
     } else {
       b.ref_null(w.HeapType.none);
     }
-    translator.constants.instantiateConstant(
-      b,
+    instantiateConstantBackendUse(
       translator.symbols.methodSymbolFromName(member.name),
       translator.classInfo[translator.symbolClass]!.nonNullableType,
     );
@@ -3418,6 +3433,25 @@ abstract class AstCodeGenerator
       deferredModuleGuard: translator.moduleForConstant(constant),
     );
   }
+
+  /// Instantiates [constant] in place only known to the backend.
+  ///
+  /// If the backend / code generator uses a constant in a way that's not
+  /// encoded in the AST, then such a use wouldn't be known to the algorithm
+  /// that partitions the app into deferred modules.
+  ///
+  /// It should therefore not use a `deferredModuleGuard`.
+  void instantiateConstantBackendUse(
+    Constant constant,
+    w.ValueType expectedType,
+  ) {
+    translator.constants.instantiateConstant(
+      b,
+      constant,
+      expectedType,
+      deferredModuleGuard: null,
+    );
+  }
 }
 
 CodeGenerator getMemberCodeGenerator(
@@ -3435,12 +3469,12 @@ CodeGenerator getMemberCodeGenerator(
   );
   if (codeGen != null) return codeGen;
 
-  final Class? memberClass = member.enclosingClass;
-  if (memberClass != null && translator.classInfo[memberClass]!.isCyclic) {
-    return UnreachableCodeGenerator(translator, functionBuilder.type, member);
-  }
-
   final procedure = member as Procedure;
+
+  assert(
+    !procedure.isInstanceMember ||
+        translator.isAllocatable(member.enclosingClass!),
+  );
 
   if (asyncMarker == AsyncMarker.SyncStar) {
     return SyncStarProcedureCodeGenerator(
@@ -3463,7 +3497,8 @@ CodeGenerator getLambdaCodeGenerator(Translator translator, Lambda lambda) {
   final enclosingMember = lambda.enclosingMember;
   final enclosingClass = enclosingMember.enclosingClass;
   if (enclosingClass != null &&
-      translator.classInfo[enclosingClass]!.isCyclic) {
+      !translator.isAllocatable(enclosingClass) &&
+      (enclosingMember.isInstanceMember || lambda.isInConstructorBody)) {
     return UnreachableCodeGenerator(
       translator,
       lambda.callTarget.signature,
@@ -3494,7 +3529,9 @@ CodeGenerator? getInlinableMemberCodeGenerator(
   final Member member = reference.asMember;
 
   final Class? memberClass = member.enclosingClass;
-  if (memberClass != null && translator.classInfo[memberClass]!.isCyclic) {
+  if (memberClass != null &&
+      !translator.isAllocatable(memberClass) &&
+      (member.isInstanceMember || reference.isConstructorBodyReference)) {
     return UnreachableCodeGenerator(translator, functionType, member);
   }
 
@@ -3665,18 +3702,13 @@ class SynchronousProcedureCodeGenerator extends AstCodeGenerator {
       final typeParameter = typeParameters[i];
       typeLocals[typeParameter] = paramLocals[param++];
     }
-    void setupParameter(VariableDeclaration parameter) {
-      // The body may assign less precise types to the parameter variable than
-      // what the caller provides.
+    void setupParameter(Variable parameter) {
       w.Local local = paramLocals[param++];
-      if (translator.typeOfCheckedParameterVariable(parameter) !=
-          parameter.type) {
-        final newLocal = addLocal(translator.translateType(parameter.type));
-        b.local_get(local);
-        translator.convertType(b, local.type, newLocal.type);
-        b.local_set(newLocal);
-        local = newLocal;
-      }
+      local = _upcastParameterLocalIfNeeded(
+        parameter,
+        local,
+        isForwarder: false,
+      );
       locals[parameter] = local;
     }
 
@@ -3900,7 +3932,7 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
           final param = targetPositionalParams[i];
           b.local_get(paramValue);
           _generateArgumentTypeCheck(
-            param.name!,
+            param.parameterName,
             translator.topType,
             param.type,
           );
@@ -3909,8 +3941,10 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
       } else {
         // Default to use if the callee has the `i` parameter.
         final defaultFunctionValue = i < targetPositionalParams.length
-            ? (targetPositionalParams[i].initializer as ConstantExpression?)
-                  ?.constant
+            ? ParameterInfo.defaultValue(
+                targetPositionalParams[i],
+                targetProcedure,
+              )
             : null;
         // Default to use if callee doesn't have the `i` parameter.
         final defaultValue = targetParamInfo.positional[i];
@@ -3918,8 +3952,8 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
         // a selector signature (which is based on all implementations of a
         // selector) and therefore may have more parameters than the actual
         // target needs (the others are ignored in the callee).
-        final value = defaultFunctionValue ?? defaultValue!;
-        translator.constants.instantiateConstant(b, value, targetParamType);
+        final value = (defaultFunctionValue ?? defaultValue)!;
+        instantiateConstantBackendUse(value, targetParamType);
       }
     }
 
@@ -3933,7 +3967,7 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
               i];
       final name = targetParamInfo.names[i];
       final namedParam = targetNamedParams.firstWhereOrNull(
-        (n) => n.name == name,
+        (n) => n.parameterName == name,
       );
       final callerIndex = callShape.named.indexOf(name);
       if (0 <= callerIndex) {
@@ -3951,8 +3985,9 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
         translator.convertType(b, paramValue.type, targetParamType);
       } else {
         // Default to use if callee has the `name` parameter.
-        final defaultFunctionValue =
-            (namedParam?.initializer as ConstantExpression?)?.constant;
+        final defaultFunctionValue = namedParam == null
+            ? null
+            : ParameterInfo.defaultValue(namedParam, targetProcedure);
         // Default to use if callee doesn't have `name` parameter.
         final defaultValue = targetParamInfo.named[name];
         // The target wasm function corresponding to an instance method may have
@@ -3960,14 +3995,12 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
         // selector) and therefore may have more parameters than the actual
         // target needs (the others are ignored in the callee).
         final value = (defaultFunctionValue ?? defaultValue)!;
-        translator.constants.instantiateConstant(b, value, targetParamType);
+        instantiateConstantBackendUse(value, targetParamType);
       }
     }
 
     final outputs = translator.callTarget(callTarget, b);
-    if (outputs.isNotEmpty) {
-      translator.convertType(b, outputs.single, returnType);
-    }
+    translator.convertType(b, translator.outputOrVoid(outputs), returnType);
     b.return_();
     b.end();
   }
@@ -3999,7 +4032,11 @@ class DynamicForwarderCodeGenerator extends AstCodeGenerator {
       b.local_get(receiverLocal);
       translator.convertType(b, receiverLocal.type, getterInputs.single);
       call(target);
-      translator.convertType(b, getterOutputs.single, translator.topType);
+      translator.convertType(
+        b,
+        translator.outputOrVoid(getterOutputs),
+        translator.topType,
+      );
     }
 
     b.end(); // end function
@@ -4166,7 +4203,7 @@ abstract class ConstructorCodeGeneratorBase extends AstCodeGenerator {
 
   List<w.Local> _getConstructorArgumentLocals(
     List<TypeParameter> typeParameters,
-    List<VariableDeclaration> parameters,
+    List<Variable> parameters,
   ) {
     List<w.Local> constructorArgs = [];
 
@@ -4174,7 +4211,7 @@ abstract class ConstructorCodeGeneratorBase extends AstCodeGenerator {
       constructorArgs.add(typeLocals[typeParameters[i]]!);
     }
 
-    for (VariableDeclaration param in parameters) {
+    for (Variable param in parameters) {
       constructorArgs.add(locals[param]!);
     }
 
@@ -4183,20 +4220,26 @@ abstract class ConstructorCodeGeneratorBase extends AstCodeGenerator {
 
   int _setupConstructorParameters(
     List<TypeParameter> typeParameters,
-    List<VariableDeclaration> parameters,
-    int parameterOffset,
-  ) {
+    List<Variable> parameters,
+    int parameterOffset, {
+    bool isForwarder = false,
+  }) {
     for (int i = 0; i < typeParameters.length; i++) {
       typeLocals[typeParameters[i]] = paramLocals[parameterOffset++];
     }
 
     for (int i = 0; i < parameters.length; i++) {
       final variable = parameters[i];
-      final local = paramLocals[parameterOffset++];
-      final variableName = variable.name;
+      w.Local local = paramLocals[parameterOffset++];
+      final variableName = variable.cosmeticName;
       if (variableName != null && variableName.isNotEmpty) {
         b.localNames[local.index] = variableName;
       }
+      local = _upcastParameterLocalIfNeeded(
+        variable,
+        local,
+        isForwarder: isForwarder,
+      );
       locals[variable] = local;
     }
     return parameterOffset;
@@ -4452,7 +4495,7 @@ class ConstructorInitializerCodeGenerator extends ConstructorCodeGeneratorBase {
 
   @override
   void visitLocalInitializer(LocalInitializer node) {
-    translateVariableDeclaration(node.variable);
+    translateVariable(node.variable);
   }
 
   @override
@@ -4600,6 +4643,7 @@ class ConstructorAllocatorCodeGenerator extends ConstructorCodeGeneratorBase {
       member.enclosingClass.typeParameters,
       constructorInfo.allParameters,
       parameterOffset,
+      isForwarder: true,
     );
 
     w.FunctionType initializerMethodType = translator.signatureForDirectCall(
@@ -4632,6 +4676,11 @@ class ConstructorAllocatorCodeGenerator extends ConstructorCodeGeneratorBase {
         b.local_get(local);
       }
       call(member.initializerReference);
+      if (!translator.isAllocatable(info.cls!)) {
+        b.unreachable();
+        b.end();
+        return;
+      }
       b.struct_new(info.struct);
     } else {
       b.comment('Calling $member initializer function');
@@ -4639,6 +4688,11 @@ class ConstructorAllocatorCodeGenerator extends ConstructorCodeGeneratorBase {
         b.local_get(local);
       }
       call(member.initializerReference);
+      if (!translator.isAllocatable(info.cls!)) {
+        b.unreachable();
+        b.end();
+        return;
+      }
 
       b.comment('Pop all field values to locals');
       final fieldValuesReversed = <w.Local>[];
@@ -4786,10 +4840,15 @@ class ConstructorBodyCodeGenerator extends ConstructorCodeGeneratorBase {
       if (!locals.containsKey(variable)) {
         final fieldIndex = translator.fieldIndex[field]!;
         final wasmType = translator.translateTypeOfField(field);
-        final local = addLocal(wasmType);
+        w.Local local = addLocal(wasmType);
         b.local_get(preciseThisLocal!);
         b.struct_get(classInfo.struct, fieldIndex);
         b.local_set(local);
+        local = _upcastParameterLocalIfNeeded(
+          variable,
+          local,
+          isForwarder: false,
+        );
         locals[variable] = local;
       }
     });
@@ -5164,6 +5223,7 @@ class SwitchInfo {
   late final void Function(
     w.Local switchExprLocal,
     w.ValueType Function() pushCaseExpr,
+    Expression caseExpr,
   )
   compare;
 
@@ -5200,25 +5260,49 @@ class SwitchInfo {
                       e.constant is NullConstant)),
         );
 
+    bool isEqualityPrimitive(Expression e) =>
+        e is ConstantExpression &&
+            (e.constant is StringConstant || e.constant is SymbolConstant) ||
+        e is StringLiteral ||
+        e is SymbolLiteral;
+
     // Type objects should be compared using `==` rather than identity even
     // though the specification is not very clear about it. In language versions
     // >=3.0 CFE would desugar such switches to a sequence of `if` statements
     // using `==`, but for language versions <3.0 it would simply emit
     // `SwitchStatement` and expect back-end to handle types specially if
     // required. See #60375 for more details.
-    bool canInvokeTypeEquality() =>
+    bool shouldUseEquality(Expression caseExpr) =>
         translator.typeEnvironment.isSubtypeOf(
-          switchExprType,
-          translator.coreTypes.typeNullableRawType,
+          codeGen.dartTypeOf(caseExpr),
+          translator.coreTypes.typeNonNullableRawType,
         ) ||
-        node.cases
-            .expand((c) => c.expressions)
-            .any(
-              (e) => translator.typeEnvironment.isSubtypeOf(
-                codeGen.dartTypeOf(e),
-                translator.coreTypes.typeNonNullableRawType,
-              ),
-            );
+        isEqualityPrimitive(caseExpr);
+
+    void addTopTypeCompare() {
+      compare = (switchExprLocal, pushCaseExpr, caseExpr) {
+        if (shouldUseEquality(caseExpr)) {
+          // Virtual call to `Object.==` for primitive types.
+          codeGen._virtualCall(
+            node,
+            translator.coreTypes.objectEquals,
+            _VirtualCallKind.Call,
+            (functionType) {
+              pushCaseExpr();
+            },
+            (functionType, paramInfo) {
+              codeGen.b.local_get(switchExprLocal);
+            },
+            useUncheckedEntry: false,
+          );
+        } else {
+          // Use `identical` for non-primitive types.
+          codeGen.b.local_get(switchExprLocal);
+          pushCaseExpr();
+          codeGen.call(translator.coreTypes.identicalProcedure.reference);
+        }
+      };
+    }
 
     if (node.cases.every(
       (c) =>
@@ -5232,26 +5316,8 @@ class SwitchInfo {
       // default-only switch
       nonNullableType = w.RefType.eq(nullable: false);
       nullableType = w.RefType.eq(nullable: true);
-      compare = (switchExprLocal, pushCaseExpr) =>
+      compare = (switchExprLocal, pushCaseExpr, _) =>
           throw "Comparison in default-only switch";
-    } else if (canInvokeTypeEquality()) {
-      nonNullableType = translator.runtimeTypeType;
-      nullableType = translator.runtimeTypeTypeNullable;
-      compare = (switchExprLocal, pushCaseExpr) {
-        // Virtual call to `Type.==`.
-        codeGen._virtualCall(
-          node,
-          translator.coreTypes.objectEquals,
-          _VirtualCallKind.Call,
-          (functionType) {
-            codeGen.b.local_get(switchExprLocal);
-          },
-          (functionType, paramInfo) {
-            pushCaseExpr();
-          },
-          useUncheckedEntry: false,
-        );
-      };
     } else if (switchExprType is DynamicType) {
       // Per spec, compare with `<case expr> == <switch expr>`. For performance,
       // if we know that the cases all have the same type, we call the case
@@ -5269,23 +5335,9 @@ class SwitchInfo {
       } else if (check<IntLiteral, IntConstant>()) {
         equalsMember = translator.boxedIntEquals;
       } else if (check<StringLiteral, StringConstant>()) {
-        equalsMember = translator.jsStringEquals;
+        equalsMember = translator.stringImplEquals;
       } else {
-        compare = (switchExprLocal, pushCaseExpr) {
-          // Virtual call to `Object.==`.
-          codeGen._virtualCall(
-            node,
-            codeGen.translator.coreTypes.objectEquals,
-            _VirtualCallKind.Call,
-            (functionType) {
-              codeGen.b.local_get(switchExprLocal);
-            },
-            (functionType, paramInfo) {
-              pushCaseExpr();
-            },
-            useUncheckedEntry: false,
-          );
-        };
+        addTopTypeCompare();
         _initializeSpecialCases(node);
         return;
       }
@@ -5305,14 +5357,13 @@ class SwitchInfo {
           successLabel,
           switchExprLocal.type as w.RefType,
           equalsMemberSignature.inputs[0].withNullability(
-                switchExprLocal.type.nullable,
-              )
-              as w.RefType,
+            switchExprLocal.type.nullable,
+          ) as w.RefType,
         );
         codeGen.b.drop();
       };
 
-      compare = (switchExprLocal, pushCaseExpr) {
+      compare = (switchExprLocal, pushCaseExpr, _) {
         final caseExprType = pushCaseExpr();
         translator.convertType(
           codeGen.b,
@@ -5334,7 +5385,7 @@ class SwitchInfo {
       nonNullableType = w.NumType.i32;
       nullableType =
           translator.classInfo[translator.boxedBoolClass]!.nullableType;
-      compare = (switchExprLocal, pushCaseExpr) {
+      compare = (switchExprLocal, pushCaseExpr, _) {
         codeGen.b.local_get(switchExprLocal);
         pushCaseExpr();
         codeGen.b.i32_eq();
@@ -5378,7 +5429,7 @@ class SwitchInfo {
       }
 
       // Provide a compare as a fallback in case the range is too sparse.
-      compare = (switchExprLocal, pushCaseExpr) {
+      compare = (switchExprLocal, pushCaseExpr, _) {
         codeGen.b.local_get(switchExprLocal);
         pushCaseExpr();
         codeGen.b.i64_eq();
@@ -5387,10 +5438,10 @@ class SwitchInfo {
       // String switch
       nonNullableType = translator.stringType;
       nullableType = translator.stringTypeNullable;
-      compare = (switchExprLocal, pushCaseExpr) {
+      compare = (switchExprLocal, pushCaseExpr, _) {
         codeGen.b.local_get(switchExprLocal);
         pushCaseExpr();
-        codeGen.call(translator.jsStringEquals.reference);
+        codeGen.call(translator.stringImplEquals.reference);
       };
     } else if (switchExprClass.isEnum) {
       // If this is an applicable switch over enums, create a jump table.
@@ -5452,7 +5503,7 @@ class SwitchInfo {
       }
 
       // Set compare anyway for state machine handling
-      compare = (switchExprLocal, pushCaseExpr) {
+      compare = (switchExprLocal, pushCaseExpr, _) {
         codeGen.b.local_get(switchExprLocal);
         pushCaseExpr();
         codeGen.call(translator.coreTypes.identicalProcedure.reference);
@@ -5461,11 +5512,7 @@ class SwitchInfo {
       // Object identity switch
       nonNullableType = translator.topTypeNonNullable;
       nullableType = translator.topType;
-      compare = (switchExprLocal, pushCaseExpr) {
-        codeGen.b.local_get(switchExprLocal);
-        pushCaseExpr();
-        codeGen.call(translator.coreTypes.identicalProcedure.reference);
-      };
+      addTopTypeCompare();
     }
 
     _initializeSpecialCases(node);
@@ -6046,6 +6093,32 @@ extension MacroAssembler on w.InstructionsBuilder {
     );
   }
 
+  /// Load the class ID of the given possibly-nullable object.
+  ///
+  /// If the object is in fact null, then 0 is loaded, not the class ID of the
+  /// Null type. (Any constant will work as long as it's not used for any other
+  /// concrete class).
+  void loadClassIdNullable(Translator translator, w.ValueType receiverType) {
+    assert(receiverType.isSubtypeOf(translator.topType));
+
+    if (!receiverType.nullable) {
+      loadClassId(translator, translator.topTypeNonNullable);
+      return;
+    }
+
+    final done = block([translator.topType], const [w.NumType.i32]);
+    final notNull = block(
+      [translator.topType],
+      [translator.topTypeNonNullable],
+    );
+    br_on_non_null(notNull);
+    i32_const(0);
+    br(done);
+    end(); // notNull
+    loadClassId(translator, translator.topTypeNonNullable);
+    end(); // done
+  }
+
   void fillTableRange(
     w.Table table,
     int start,
@@ -6201,6 +6274,12 @@ class LambdaCallTarget extends CallTarget {
 /// Note that the guard type can be nullable, but the value for the exception
 /// needs to be non-null regardless of the guard type, as per Dart semantics.
 bool guardCanMatchJSException(Translator translator, DartType guard) {
+  if (translator.options.standalone) {
+    // Standalone mode doesn't run in a JavaScript context and doesn't have JS
+    // exceptions.
+    return false;
+  }
+
   return translator.typeEnvironment.isSubtypeOf(
     InterfaceType(translator.jsValueClass, Nullability.nonNullable),
     guard.extensionTypeErasure,

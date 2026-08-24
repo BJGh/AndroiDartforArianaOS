@@ -36,7 +36,6 @@ enum TypeParametersStyle {
 ///  - tear-offs;
 ///  - stack overflow/interrupt checks;
 ///  - assert statements;
-///  - record access and literals;
 ///  - deferred libraries.
 ///
 class AstToIr extends ast.RecursiveVisitor {
@@ -123,14 +122,14 @@ class AstToIr extends ast.RecursiveVisitor {
         throw 'Unimplemented buildFlowGraph for ${function.runtimeType}';
       case RegularFunction() || GetterFunction() || SetterFunction():
         _enterScope(functionNode);
-        _translateNode(functionNode?.body);
+        _buildFunctionBody(functionNode!);
       case GenerativeConstructor():
         _enterScope(functionNode);
         _translateConstructorInitializers(member as ast.Constructor);
-        _translateNode(functionNode!.body);
+        _buildFunctionBody(functionNode!);
       case LocalFunction():
         _enterScope(functionNode);
-        _translateNode(functionNode!.body);
+        _buildFunctionBody(functionNode!);
       case TearOffFunction():
         throw 'Unimplemented buildFlowGraph for ${function.runtimeType}';
     }
@@ -145,14 +144,31 @@ class AstToIr extends ast.RecursiveVisitor {
     for (final param in localVarIndexer.parameters) {
       builder.addParameter(param);
     }
-    if (function.hasFunctionTypeParameters || function.hasClassTypeParameters) {
+    if (function.hasFunctionTypeParameters ||
+        function.hasEnclosingFunctionTypeParameters ||
+        function.hasClassTypeParameters) {
       _hasTypeParametersInScope = true;
       switch (typeParametersStyle) {
         case .separateFunctionAndClassTypeParameters:
-          if (function.hasFunctionTypeParameters) {
-            builder.addLoadLocal(localVarIndexer.functionTypeParameters);
+          if (function.hasFunctionTypeParameters ||
+              function.hasEnclosingFunctionTypeParameters) {
+            var inputCount = 0;
+            if (function.hasFunctionTypeParameters) {
+              ++inputCount;
+              builder.addLoadLocal(localVarIndexer.functionTypeParameters);
+            }
+            if (function.hasEnclosingFunctionTypeParameters) {
+              ++inputCount;
+              builder.addLoadLocal(localVarIndexer.closure);
+              builder.addLoadInstanceField(
+                CField(
+                  ClosureField(_currentClosureLayout.functionTypeArgsIndex),
+                ),
+              );
+            }
             functionTypeParameters = builder.addTypeParameters(
               .functionTypeParameters,
+              inputCount,
             );
           }
           if (function.hasClassTypeParameters) {
@@ -160,6 +176,7 @@ class AstToIr extends ast.RecursiveVisitor {
               builder.addLoadLocal(localVarIndexer.receiver);
               classTypeParameters = builder.addTypeParameters(
                 .classTypeParameters,
+                1,
               );
             } else if (_isCaptured(localVarIndexer.receiverDeclaration!)) {
               // Read captured receiver. Load context from closure
@@ -184,11 +201,46 @@ class AstToIr extends ast.RecursiveVisitor {
               );
               classTypeParameters = builder.addTypeParameters(
                 .classTypeParameters,
+                1,
               );
             }
           }
       }
     }
+    for (final param in localVarIndexer.parameters) {
+      if (param.isCovariant) {
+        if (param.type is TopType) {
+          continue;
+        }
+        builder.addLoadLocal(param);
+        builder.addTypeCast(
+          param.type,
+          typeParameters: _typeParametersForType(param.type.dartType),
+        );
+        builder.addStoreLocal(param);
+      }
+    }
+
+    final functionNode = function.functionNode;
+    if (functionNode != null) {
+      for (final typeParam in functionNode.typeParameters) {
+        if (!typeParam.isCovariantByClass) {
+          continue;
+        }
+        final type = ast.TypeParameterType.withDefaultNullability(typeParam);
+        final dartTypeParamBound = _typeTranslator.translate(typeParam.bound);
+        if (dartTypeParamBound is TopType) {
+          continue;
+        }
+        builder.addSubtypeCheck(
+          _typeTranslator.translate(type),
+          dartTypeParamBound,
+          typeParam.name!,
+          _typeParametersForTypes([type, typeParam.bound]),
+        );
+      }
+    }
+
     if (function.isSuspendable) {
       final emittedValueType = function.functionNode!.emittedValueType!;
       builder.addTypeArguments([
@@ -228,6 +280,35 @@ class AstToIr extends ast.RecursiveVisitor {
         checkNotInitialized: field.isLate && field.isFinal,
       );
     }
+  }
+
+  void _buildFunctionBody(ast.FunctionNode functionNode) {
+    final recognizedBodyBuilder = recognizedMethods.getRecognizedFunctionBody(
+      function,
+    );
+    if (recognizedBodyBuilder != null) {
+      // Forward all arguments on the expression stack.
+      if (function.hasFunctionTypeParameters) {
+        final types = functionNode.typeParameters
+            .map((tp) => ast.TypeParameterType.withDefaultNullability(tp))
+            .toList();
+        builder.addTypeArguments(
+          types,
+          typeParameters: _typeParametersForTypes(types),
+        );
+      }
+      for (final param in localVarIndexer.parameters.skip(
+        function.hasFunctionTypeParameters ? 1 : 0,
+      )) {
+        builder.addLoadLocal(param);
+      }
+      recognizedBodyBuilder(builder);
+      if (builder.hasOpenBlock) {
+        builder.addReturn();
+      }
+      return;
+    }
+    _translateNode(functionNode.body);
   }
 
   void _translateNode(ast.TreeNode? node) {
@@ -596,6 +677,14 @@ class AstToIr extends ast.RecursiveVisitor {
     final target = functionRegistry.getFunction(node.target);
     final inputCount = _translateArguments(null, args);
     if (_handleUnreachableExpression(inputCount)) return;
+    final matcher = recognizedMethods.staticInvocations[node.target];
+    if (matcher != null) {
+      final snippet = matcher.match(_argumentTypes(null, args));
+      if (snippet != null) {
+        snippet(builder);
+        return;
+      }
+    }
     builder.addDirectCall(
       target,
       inputCount,
@@ -819,10 +908,10 @@ class AstToIr extends ast.RecursiveVisitor {
   bool _isCapturedContext(Context context) =>
       context.isCaptured(enableAsserts: enableAsserts);
 
-  bool _isCaptured(ast.VariableDeclaration v) =>
+  bool _isCaptured(ast.Variable v) =>
       _isCapturedContext(scopes.getVariableContext(v));
 
-  void _readVariable(ast.VariableDeclaration v) {
+  void _readVariable(ast.Variable v) {
     if (_isCaptured(v)) {
       builder.push(localVarIndexer.contextDef(scopes.getVariableContext(v)));
       builder.addLoadInstanceField(localVarIndexer.contextField(v));
@@ -831,7 +920,7 @@ class AstToIr extends ast.RecursiveVisitor {
     }
   }
 
-  void _writeVariable(ast.VariableDeclaration v) {
+  void _writeVariable(ast.Variable v) {
     if (_isCaptured(v)) {
       final value = builder.pop();
       builder.push(localVarIndexer.contextDef(scopes.getVariableContext(v)));
@@ -900,12 +989,11 @@ class AstToIr extends ast.RecursiveVisitor {
   }
 
   @override
-  void defaultVariableDeclaration(ast.VariableDeclaration node) {
-    final variable = node.variable;
+  void defaultVariable(ast.Variable node) {
     if (node.isConst) return;
     if (node.isLate) {
       builder.addSentinelConstant();
-      _writeVariable(variable);
+      _writeVariable(node);
     } else {
       final initializer = node.initializer;
       if (initializer != null) {
@@ -914,23 +1002,23 @@ class AstToIr extends ast.RecursiveVisitor {
           builder.pop();
           return;
         }
-        _writeVariable(variable);
+        _writeVariable(node);
       } else if (node.type.nullability == ast.Nullability.nullable &&
-          !_isCaptured(variable)) {
+          !_isCaptured(node)) {
         builder.addNullConstant();
-        _writeVariable(variable);
+        _writeVariable(node);
       }
     }
   }
 
   @override
-  void visitLegacyVariableStatement(ast.LegacyVariableStatement node) {
-    defaultVariableDeclaration(node.variable);
+  void visitVariableDeclaration(ast.VariableDeclaration node) {
+    defaultVariable(node.variable);
   }
 
   @override
-  void visitVariableInitialization(ast.VariableInitialization node) {
-    defaultVariableDeclaration(node.variable);
+  void visitVariableStatement(ast.VariableStatement node) {
+    visitVariableDeclaration(node.declaration);
   }
 
   @override
@@ -1301,7 +1389,13 @@ class AstToIr extends ast.RecursiveVisitor {
   @override
   void visitTryCatch(ast.TryCatch node) {
     final tryBody = builder.newTargetBlock();
-    final catchBlock = builder.newCatchBlock();
+    final guardTypes = [
+      for (final catchClause in node.catches) catchClause.guard,
+    ];
+    final catchBlock = builder.newCatchBlock(
+      guardTypes,
+      isSynthetic: node.isSynthetic,
+    );
     builder.addTryEntry(tryBody, catchBlock);
 
     builder.enterTryBlock(catchBlock);
@@ -1391,7 +1485,9 @@ class AstToIr extends ast.RecursiveVisitor {
     finallyBlocks[node] = <FinallyBlock>[];
 
     final tryBody = builder.newTargetBlock();
-    final catchBlock = builder.newCatchBlock();
+    final catchBlock = builder.newCatchBlock(const [
+      ast.DynamicType(),
+    ], isSynthetic: true);
     builder.addTryEntry(tryBody, catchBlock);
 
     builder.enterTryBlock(catchBlock);
@@ -1801,9 +1897,11 @@ class AstToIr extends ast.RecursiveVisitor {
   }
 
   void _translateClosure(ast.LocalFunction node, CType type) {
-    final closureFunction =
-        functionRegistry.getFunction(function.member, localFunction: node)
-            as ClosureFunction;
+    final closureFunction = functionRegistry.getFunction(
+      function.member,
+      enclosingFunction: function,
+      localFunction: node,
+    ) as ClosureFunction;
     onLocalFunction(closureFunction);
 
     final closureLayout = _computeClosureLayout(closureFunction);
@@ -1861,7 +1959,7 @@ class AstToIr extends ast.RecursiveVisitor {
         hasClassTypeArgs = visitor.containsClassTypeParams;
 
         hasFunctionTypeArgs = switch (closureFunction) {
-          LocalFunction() => closureFunction.hasGenericEnclosingFunction(),
+          LocalFunction() => closureFunction.hasEnclosingFunctionTypeParameters,
           TearOffFunction() => false,
         };
     }
@@ -1893,6 +1991,17 @@ class AstToIr extends ast.RecursiveVisitor {
   void visitFunctionDeclaration(ast.FunctionDeclaration node) {
     _translateClosure(node, _typeTranslator.translate(node.variable.type));
     _writeVariable(node.variable);
+  }
+
+  @override
+  void visitInstantiation(ast.Instantiation node) {
+    builder.addTypeArguments(
+      node.typeArguments,
+      typeParameters: _typeParametersForTypes(node.typeArguments),
+    );
+    _translateNode(node.expression);
+    if (_handleUnreachableExpression(2)) return;
+    builder.addInstantiateClosure(_staticType(node));
   }
 
   @override
@@ -2132,17 +2241,17 @@ class LocalVariableIndexer {
   final CoreTypes coreTypes;
   final AstToIrTypes typeTranslator;
   final Scopes scopes;
-  final Map<ast.VariableDeclaration, LocalVariable> _declaredVariables = {};
+  final Map<ast.Variable, LocalVariable> _declaredVariables = {};
   final Map<ast.TreeNode, LocalVariable> _exceptionVariables = {};
   final Map<ast.TreeNode, LocalVariable> _stackTraceVariables = {};
   final Map<Context, Definition> _contexts = {};
-  final Map<ast.VariableDeclaration, CField> _contextFields = {};
+  final Map<ast.Variable, CField> _contextFields = {};
 
   final List<LocalVariable> parameters = [];
   late final LocalVariable functionTypeParameters;
   late final LocalVariable receiver;
   late final LocalVariable closure;
-  late final ast.VariableDeclaration? receiverDeclaration;
+  late final ast.Variable? receiverDeclaration;
 
   LocalVariableIndexer(
     this.builder,
@@ -2185,9 +2294,14 @@ class LocalVariableIndexer {
       parameters.add(closure);
     }
     if (function is ImplicitFieldSetter) {
-      parameters.add(
-        builder.declareLocalVariable('#value', null, function.valueType),
+      final field = function.member as ast.Field;
+      final localvar = builder.declareLocalVariable(
+        '#value',
+        null,
+        function.valueType,
+        isCovariant: field.isCovariantByClass || field.isCovariantByDeclaration,
       );
+      parameters.add(localvar);
     }
     if (functionNode != null) {
       for (final v in functionNode.positionalParameters) {
@@ -2200,19 +2314,22 @@ class LocalVariableIndexer {
     assert(parameters.length == function.numberOfParameters);
   }
 
-  LocalVariable variableForDeclaration(ast.VariableDeclaration declaration) =>
+  LocalVariable variableForDeclaration(ast.Variable declaration) =>
       _declaredVariables[declaration] ??= builder.declareLocalVariable(
-        declaration.name ?? '#temp',
+        declaration.cosmeticName ?? '#temp',
         declaration,
         declaration.isLate
             ? const LateValueType()
             : typeTranslator.translate(declaration.type),
+        isCovariant:
+            declaration.isCovariantByClass ||
+            declaration.isCovariantByDeclaration,
       );
 
   LocalVariable exceptionVariable(ast.TreeNode tryBlock) {
     assert(tryBlock is ast.TryCatch || tryBlock is ast.TryFinally);
     return _exceptionVariables[tryBlock] ??= builder.declareLocalVariable(
-      '#exception',
+      LocalVariable.exceptionVariableName,
       null,
       const ObjectType(),
     );
@@ -2221,7 +2338,7 @@ class LocalVariableIndexer {
   LocalVariable stackTraceVariable(ast.TreeNode tryBlock) {
     assert(tryBlock is ast.TryCatch || tryBlock is ast.TryFinally);
     return _stackTraceVariables[tryBlock] ??= builder.declareLocalVariable(
-      '#stackTrace',
+      LocalVariable.stackTraceVariableName,
       null,
       StaticType(coreTypes.stackTraceNonNullableRawType),
     );
@@ -2234,7 +2351,7 @@ class LocalVariableIndexer {
   Definition contextDef(Context ctx) => _contexts[ctx]!;
 
   // TODO: share context fields between functions.
-  CField contextField(ast.VariableDeclaration variable) =>
+  CField contextField(ast.Variable variable) =>
       _contextFields[variable] ??= CField(
         ContextField(
           variable,

@@ -18,7 +18,7 @@ main() {
 @reflectiveTest
 class LogicalAndTest extends PubPackageResolutionTest {
   test_downward() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(b) {
   var c = a() && b();
   print(c);
@@ -27,9 +27,35 @@ T a<T>() => throw '';
 T b<T>() => throw '';
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    var node = result.findNode.singleLogicalAnd;
     assertResolvedNodeText(node, r'''
-BinaryExpression
+LogicalAnd
+  leftOperand: MethodInvocation
+    methodName: SimpleIdentifier
+      token: a
+      element: <testLibrary>::@function::a
+      staticType: T Function<T>()
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticInvokeType: bool Function()
+    staticType: bool
+    typeArgumentTypes
+      bool
+  operator: &&
+  rightOperand: FunctionExpressionInvocation
+    function2: SimpleIdentifier
+      token: b
+      element: <testLibrary>::@function::f::@formalParameter::b
+      staticType: dynamic
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    element: <null>
+    staticInvokeType: dynamic
+    staticType: dynamic
+  staticType: bool
+V1: BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: a
@@ -61,16 +87,27 @@ BinaryExpression
   }
 
   test_upward() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(bool a, bool b) {
   var c = a && b;
   print(c);
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    var node = result.findNode.singleLogicalAnd;
     assertResolvedNodeText(node, r'''
-BinaryExpression
+LogicalAnd
+  leftOperand: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: bool
+  operator: &&
+  rightOperand: SimpleIdentifier
+    token: b
+    element: <testLibrary>::@function::f::@formalParameter::b
+    staticType: bool
+  staticType: bool
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
@@ -91,7 +128,7 @@ BinaryExpression
 @reflectiveTest
 class LogicalOrTest extends PubPackageResolutionTest {
   test_downward() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(b) {
   var c = a() || b();
   print(c);
@@ -100,9 +137,35 @@ T a<T>() => throw '';
 T b<T>() => throw '';
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    var node = result.findNode.singleLogicalOr;
     assertResolvedNodeText(node, r'''
-BinaryExpression
+LogicalOr
+  leftOperand: MethodInvocation
+    methodName: SimpleIdentifier
+      token: a
+      element: <testLibrary>::@function::a
+      staticType: T Function<T>()
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticInvokeType: bool Function()
+    staticType: bool
+    typeArgumentTypes
+      bool
+  operator: ||
+  rightOperand: FunctionExpressionInvocation
+    function2: SimpleIdentifier
+      token: b
+      element: <testLibrary>::@function::f::@formalParameter::b
+      staticType: dynamic
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    element: <null>
+    staticInvokeType: dynamic
+    staticType: dynamic
+  staticType: bool
+V1: BinaryExpression
   leftOperand: MethodInvocation
     methodName: SimpleIdentifier
       token: a
@@ -134,16 +197,27 @@ BinaryExpression
   }
 
   test_upward() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(bool a, bool b) {
   var c = a || b;
   print(c);
 }
 ''');
 
-    var node = findNode.singleBinaryExpression;
+    var node = result.findNode.singleLogicalOr;
     assertResolvedNodeText(node, r'''
-BinaryExpression
+LogicalOr
+  leftOperand: SimpleIdentifier
+    token: a
+    element: <testLibrary>::@function::f::@formalParameter::a
+    staticType: bool
+  operator: ||
+  rightOperand: SimpleIdentifier
+    token: b
+    element: <testLibrary>::@function::f::@formalParameter::b
+    staticType: bool
+  staticType: bool
+V1: BinaryExpression
   leftOperand: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a

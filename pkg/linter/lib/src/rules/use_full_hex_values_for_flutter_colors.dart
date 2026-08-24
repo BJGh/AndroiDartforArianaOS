@@ -18,7 +18,7 @@ const _desc =
     'instantiate a Color.';
 
 class UseFullHexValuesForFlutterColors extends AnalysisRule {
-  UseFullHexValuesForFlutterColors()
+  new()
     : super(
         name: LintNames.use_full_hex_values_for_flutter_colors,
         description: _desc,
@@ -37,12 +37,8 @@ class UseFullHexValuesForFlutterColors extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   static final _underscoresPattern = RegExp('_+');
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {

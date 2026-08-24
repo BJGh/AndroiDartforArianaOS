@@ -14,7 +14,7 @@ main() {
       FunctionReferenceResolutionTest_genericFunctionInstantiation,
     );
     defineReflectiveTests(
-      FunctionReferenceResolutionTest_WithoutConstructorTearoffs,
+      FunctionReferenceResolutionTest_BeforeConstructorTearoffs,
     );
     defineReflectiveTests(UpdateNodeTextExpectations);
   });
@@ -23,7 +23,7 @@ main() {
 @reflectiveTest
 class FunctionReferenceResolutionTest extends PubPackageResolutionTest {
   test_constructorFunction_named() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   A.foo() {}
 }
@@ -31,11 +31,24 @@ class A<T> {
 var x = (A.foo)<int>;
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('(A.foo)<int>;'), r'''
+    var node = result.findNode.functionReference('(A.foo)<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: ParenthesizedExpression
+  function2: ParenthesizedExpression
     leftParenthesis: (
-    expression: ConstructorReference
+    expression2: ConstructorTearOff
+      typeReference: ConstructorTypeReference
+        name: A
+        element: <testLibrary>::@class::A
+        type: A<dynamic>
+      selector: ConstructorSelector
+        period: .
+        name2: foo
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::A::@constructor::foo
+        substitution: {T: T}
+      staticType: A<T> Function<T>()
+    expression(v1): ConstructorReference
       constructorName: ConstructorName
         type: NamedType
           name: A
@@ -44,9 +57,13 @@ FunctionReference
         period: .
         name: SimpleIdentifier
           token: foo
-          element: <testLibrary>::@class::A::@constructor::foo
+          element: SubstitutedConstructorElementImpl
+            baseElement: <testLibrary>::@class::A::@constructor::foo
+            substitution: {T: T}
           staticType: null
-        element: <testLibrary>::@class::A::@constructor::foo
+        element: SubstitutedConstructorElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::foo
+          substitution: {T: T}
       staticType: A<T> Function<T>()
     rightParenthesis: )
     staticType: A<T> Function<T>()
@@ -65,7 +82,7 @@ FunctionReference
   }
 
   test_constructorFunction_unnamed() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   A();
 }
@@ -73,11 +90,24 @@ class A<T> {
 var x = (A.new)<int>;
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('(A.new)<int>;'), r'''
+    var node = result.findNode.functionReference('(A.new)<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: ParenthesizedExpression
+  function2: ParenthesizedExpression
     leftParenthesis: (
-    expression: ConstructorReference
+    expression2: ConstructorTearOff
+      typeReference: ConstructorTypeReference
+        name: A
+        element: <testLibrary>::@class::A
+        type: A<dynamic>
+      selector: ConstructorSelector
+        period: .
+        name2: new
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::A::@constructor::new
+        substitution: {T: T}
+      staticType: A<T> Function<T>()
+    expression(v1): ConstructorReference
       constructorName: ConstructorName
         type: NamedType
           name: A
@@ -86,9 +116,13 @@ FunctionReference
         period: .
         name: SimpleIdentifier
           token: new
-          element: <testLibrary>::@class::A::@constructor::new
+          element: SubstitutedConstructorElementImpl
+            baseElement: <testLibrary>::@class::A::@constructor::new
+            substitution: {T: T}
           staticType: null
-        element: <testLibrary>::@class::A::@constructor::new
+        element: SubstitutedConstructorElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::new
+          substitution: {T: T}
       staticType: A<T> Function<T>()
     rightParenthesis: )
     staticType: A<T> Function<T>()
@@ -106,8 +140,8 @@ FunctionReference
 ''');
   }
 
-  test_constructorReference() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_constructorTearOff() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   A.foo() {}
 }
@@ -117,9 +151,22 @@ var x = A.foo<int>;
 // [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'A.foo' doesn't have type parameters.
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('A.foo<int>;'), r'''
+    var node = result.findNode.functionReference('A.foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: ConstructorReference
+  function2: ConstructorTearOff
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A<dynamic>
+    selector: ConstructorSelector
+      period: .
+      name2: foo
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::foo
+      substitution: {T: T}
+    staticType: A<T> Function<T>()
+  function(v1): ConstructorReference
     constructorName: ConstructorName
       type: NamedType
         name: A
@@ -128,9 +175,13 @@ FunctionReference
       period: .
       name: SimpleIdentifier
         token: foo
-        element: <testLibrary>::@class::A::@constructor::foo
+        element: SubstitutedConstructorElementImpl
+          baseElement: <testLibrary>::@class::A::@constructor::foo
+          substitution: {T: T}
         staticType: null
-      element: <testLibrary>::@class::A::@constructor::foo
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::A::@constructor::foo
+        substitution: {T: T}
     staticType: A<T> Function<T>()
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -144,18 +195,33 @@ FunctionReference
 ''');
   }
 
-  test_constructorReference_prefixed() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_constructorTearOff_prefixed() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:async' as a;
 var x = a.Future.delayed<int>;
 //                      ^^^^^
 // [diag.wrongNumberOfTypeArgumentsConstructor] The constructor 'a.Future.delayed' doesn't have type parameters.
 ''');
-    assertResolvedNodeText(
-      findNode.functionReference('a.Future.delayed<int>;'),
-      r'''
+    var node = result.findNode.functionReference('a.Future.delayed<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: ConstructorReference
+  function2: ConstructorTearOff
+    typeReference: ConstructorTypeReference
+      importPrefix: ImportPrefixReference
+        name: a
+        period: .
+        element: <testLibraryFragment>::@prefix::a
+      name: Future
+      element: dart:async::@class::Future
+      type: Future<dynamic>
+    selector: ConstructorSelector
+      period: .
+      name2: delayed
+    element: SubstitutedConstructorElementImpl
+      baseElement: dart:async::@class::Future::@constructor::delayed
+      substitution: {T: T}
+    staticType: Future<T> Function<T>(Duration, [FutureOr<T> Function()?])
+  function(v1): ConstructorReference
     constructorName: ConstructorName
       type: NamedType
         importPrefix: ImportPrefixReference
@@ -168,9 +234,13 @@ FunctionReference
       period: .
       name: SimpleIdentifier
         token: delayed
-        element: dart:async::@class::Future::@constructor::delayed
+        element: SubstitutedConstructorElementImpl
+          baseElement: dart:async::@class::Future::@constructor::delayed
+          substitution: {T: T}
         staticType: null
-      element: dart:async::@class::Future::@constructor::delayed
+      element: SubstitutedConstructorElementImpl
+        baseElement: dart:async::@class::Future::@constructor::delayed
+        substitution: {T: T}
     staticType: Future<T> Function<T>(Duration, [FutureOr<T> Function()?])
   typeArguments: TypeArgumentList
     leftBracket: <
@@ -181,12 +251,11 @@ FunctionReference
         type: int
     rightBracket: >
   staticType: InvalidType
-''',
-    );
+''');
   }
 
   test_dynamicTyped() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 dynamic i = 1;
 
 void bar() {
@@ -196,9 +265,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('i<int>;'), r'''
+    var node = result.findNode.functionReference('i<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: i
     element: <testLibrary>::@getter::i
     staticType: dynamic
@@ -215,7 +285,7 @@ FunctionReference
   }
 
   test_dynamicTyped_targetOfMethodCall() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 dynamic i = 1;
 
 void bar() {
@@ -225,9 +295,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('i<int>.foo();'), r'''
+    var node = result.findNode.functionReference('i<int>.foo();');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: i
     element: <testLibrary>::@getter::i
     staticType: dynamic
@@ -244,7 +315,7 @@ FunctionReference
   }
 
   test_explicitReceiver_dynamicTyped() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 dynamic f() => 1;
 
 foo() {
@@ -254,12 +325,11 @@ foo() {
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.functionReference('f().instanceMethod<int>;'),
-      r'''
+    var node = result.findNode.functionReference('f().instanceMethod<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: MethodInvocation
+  function2: PropertyAccess
+    target2: MethodInvocation
       methodName: SimpleIdentifier
         token: f
         element: <testLibrary>::@function::f
@@ -284,12 +354,11 @@ FunctionReference
         type: int
     rightBracket: >
   staticType: InvalidType
-''',
-    );
+''');
   }
 
   test_explicitReceiver_unknown() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar() {
   a.foo<int>;
 //^
@@ -297,9 +366,10 @@ bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <null>
@@ -324,7 +394,7 @@ FunctionReference
   }
 
   test_explicitReceiver_unknown_multipleProperties() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar() {
   a.b.foo<int>;
 //^
@@ -332,11 +402,11 @@ bar() {
 }
 ''');
 
-    var node = findNode.functionReference('foo<int>;');
+    var node = result.findNode.functionReference('foo<int>;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: a
         element: <null>
@@ -367,7 +437,7 @@ FunctionReference
   }
 
   test_extension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on String {}
 
 void foo() {
@@ -377,10 +447,10 @@ void foo() {
 }
 ''');
 
-    var reference = findNode.functionReference('E<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('E<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: E
     element: <testLibrary>::@extension::E
     staticType: InvalidType
@@ -400,7 +470,7 @@ FunctionReference
     newFile('$testPackageLibPath/a.dart', '''
 extension E<T> on String {}
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as a;
 
 void foo() {
@@ -410,10 +480,10 @@ void foo() {
 }
 ''');
 
-    var reference = findNode.functionReference('E<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('E<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibraryFragment>::@prefix::a
@@ -438,7 +508,7 @@ FunctionReference
   }
 
   test_extensionGetter_extensionOverride() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -452,14 +522,15 @@ bar(A a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: ExtensionOverride
+  function2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -488,7 +559,7 @@ FunctionReference
   }
 
   test_extensionMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -500,10 +571,10 @@ extension E on A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extension::E::@method::foo
     staticType: void Function<T>(T)
@@ -521,8 +592,70 @@ FunctionReference
 ''');
   }
 
+  test_extensionMethod_explicitReceiver_neverQ() async {
+    var result = await resolveTestCodeWithDiagnostics('''
+extension E<T> on T {
+  T foo<U>() => throw 0;
+}
+
+void f(Never? x) {
+  (x).foo<int>;
+}
+''');
+
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
+FunctionReference
+  function2: ReceiverPropertyExtraction
+    receiver: ParenthesizedExpression
+      leftParenthesis: (
+      expression2: SimpleIdentifier
+        token: x
+        element: <testLibrary>::@function::f::@formalParameter::x
+        staticType: Never?
+      rightParenthesis: )
+      staticType: Never?
+    operator: .
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: SubstitutedMethodElementImpl
+        baseElement: <testLibrary>::@extension::E::@method::foo
+        substitution: {T: Never?, U: U}
+      type: Never? Function<U>()
+    staticType: Never? Function<U>()
+  function(v1): PropertyAccess
+    target: ParenthesizedExpression
+      leftParenthesis: (
+      expression: SimpleIdentifier
+        token: x
+        element: <testLibrary>::@function::f::@formalParameter::x
+        staticType: Never?
+      rightParenthesis: )
+      staticType: Never?
+    operator: .
+    propertyName: SimpleIdentifier
+      token: foo
+      element: SubstitutedMethodElementImpl
+        baseElement: <testLibrary>::@extension::E::@method::foo
+        substitution: {T: Never?, U: U}
+      staticType: Never? Function<U>()
+    staticType: Never? Function<U>()
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+    rightBracket: >
+  staticType: Never? Function()
+  typeArgumentTypes
+    int
+''');
+  }
+
   test_extensionMethod_explicitReceiver_this() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -534,10 +667,20 @@ extension E on A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ThisExpression
+      thisKeyword: this
+      staticType: A
+    operator: .
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: <testLibrary>::@extension::E::@method::foo
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     target: ThisExpression
       thisKeyword: this
       staticType: A
@@ -562,7 +705,7 @@ FunctionReference
   }
 
   test_extensionMethod_extensionOverride() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -576,15 +719,15 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: ExtensionOverride
+  function2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -615,7 +758,7 @@ FunctionReference
   }
 
   test_extensionMethod_extensionOverride_cascade() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   int foo = 0;
 }
@@ -631,10 +774,16 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: CascadePropertyExtraction
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: <testLibrary>::@extension::E::@method::foo
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: foo
@@ -656,7 +805,7 @@ FunctionReference
   }
 
   test_extensionMethod_extensionOverride_static() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {
@@ -670,15 +819,15 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: ExtensionOverride
+  function2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -709,7 +858,7 @@ FunctionReference
   }
 
   test_extensionMethod_extensionOverride_unknown() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 extension E on A {}
@@ -721,14 +870,15 @@ bar(A a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: ExtensionOverride
+  function2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -757,7 +907,7 @@ FunctionReference
   }
 
   test_extensionMethod_fromClassDeclaration() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   bar() {
     foo<int>;
@@ -769,10 +919,10 @@ extension E on A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extension::E::@method::foo
     staticType: void Function<T>(T)
@@ -791,7 +941,7 @@ FunctionReference
   }
 
   test_extensionMethod_unknown() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on double {
   bar() {
 //^^^
@@ -803,9 +953,10 @@ extension on double {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <null>
     staticType: InvalidType
@@ -822,7 +973,7 @@ FunctionReference
   }
 
   test_function_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -830,9 +981,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.call<int>;'), r'''
+    var node = result.findNode.functionReference('foo.call<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -859,7 +1011,7 @@ FunctionReference
   }
 
   test_function_call_tooFewTypeArgs() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T, U>(T a, U b) {}
 
 void bar() {
@@ -869,9 +1021,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.call<int>;'), r'''
+    var node = result.findNode.functionReference('foo.call<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -899,7 +1052,7 @@ FunctionReference
   }
 
   test_function_call_tooManyTypeArgs() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo(String a) {}
 
 void bar() {
@@ -909,9 +1062,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.call<int>;'), r'''
+    var node = result.findNode.functionReference('foo.call<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -936,7 +1090,7 @@ FunctionReference
   }
 
   test_function_call_typeArgNotMatchingBound() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T extends num>(T a) {}
 
 void bar() {
@@ -946,9 +1100,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.call<String>;'), r'''
+    var node = result.findNode.functionReference('foo.call<String>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -977,7 +1132,7 @@ FunctionReference
   test_function_extensionOnFunction() async {
     // TODO(srawlins): Test extension on function type, like
     // `extension on void Function<T>(T)`.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -989,9 +1144,10 @@ extension on Function {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.m<int>;'), r'''
+    var node = result.findNode.functionReference('foo.m<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -1018,7 +1174,7 @@ FunctionReference
   }
 
   test_function_extensionOnFunction_static() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -1032,9 +1188,10 @@ extension E on Function {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo.m<int>;'), r'''
+    var node = result.findNode.functionReference('foo.m<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
@@ -1059,7 +1216,7 @@ FunctionReference
   }
 
   test_implicitCallTearoff() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   T call<T>(T t) => t;
 }
@@ -1069,10 +1226,21 @@ foo() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('C()<int>');
+    var node = result.findNode.implicitCallReference('C()<int>');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: InstanceCreationExpression
+  expression2: ConstructorInvocation
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: C
+        element: <testLibrary>::@class::C
+        type: C
+      element: <testLibrary>::@class::C::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: C
+  expression(v1): InstanceCreationExpression
     constructorName: ConstructorName
       type: NamedType
         name: C
@@ -1099,7 +1267,7 @@ ImplicitCallReference
   }
 
   test_implicitCallTearoff_class_staticGetter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   static const v = C();
   const C();
@@ -1111,10 +1279,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('C.v<int>');
+    var node = result.findNode.implicitCallReference('C.v<int>');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: C
       element: <testLibrary>::@class::C
@@ -1142,7 +1310,7 @@ ImplicitCallReference
   }
 
   test_implicitCallTearoff_extensionOnNullable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 Object? v = null;
 extension E on Object? {
   void call<R, S>(R r, S s) {}
@@ -1153,10 +1321,10 @@ void foo() {
 
 ''');
 
-    var node = findNode.implicitCallReference('v<int, String>;');
+    var node = result.findNode.implicitCallReference('v<int, String>;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: v
     element: <testLibrary>::@getter::v
     staticType: Object?
@@ -1181,7 +1349,7 @@ ImplicitCallReference
   }
 
   test_implicitCallTearoff_extensionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(int it) {
   void call() {}
 }
@@ -1193,10 +1361,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('a);');
+    var node = result.findNode.implicitCallReference('a);');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -1215,7 +1383,7 @@ class C {
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 void f() {
@@ -1223,11 +1391,11 @@ void f() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('C.v<int>');
+    var node = result.findNode.implicitCallReference('C.v<int>');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: PropertyAccess
-    target: PrefixedIdentifier
+  expression2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -1267,7 +1435,7 @@ class C {
 }
 C c = C();
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -1275,10 +1443,10 @@ bar() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c<int>');
+    var node = result.findNode.implicitCallReference('c<int>');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -1306,7 +1474,7 @@ ImplicitCallReference
   }
 
   test_implicitCallTearoff_tooFewTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void call<T, U>(T t, U u) {}
 }
@@ -1318,10 +1486,21 @@ foo() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('C()<int>;');
+    var node = result.findNode.implicitCallReference('C()<int>;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: InstanceCreationExpression
+  expression2: ConstructorInvocation
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: C
+        element: <testLibrary>::@class::C
+        type: C
+      element: <testLibrary>::@class::C::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: C
+  expression(v1): InstanceCreationExpression
     constructorName: ConstructorName
       type: NamedType
         name: C
@@ -1349,7 +1528,7 @@ ImplicitCallReference
   }
 
   test_implicitCallTearoff_tooManyTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int call(int t) => t;
 }
@@ -1361,10 +1540,21 @@ foo() {
 }
 ''');
 
-    var node = findNode.implicitCallReference('C()<int>;');
+    var node = result.findNode.implicitCallReference('C()<int>;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: InstanceCreationExpression
+  expression2: ConstructorInvocation
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: C
+        element: <testLibrary>::@class::C
+        type: C
+      element: <testLibrary>::@class::C::@constructor::new
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: C
+  expression(v1): InstanceCreationExpression
     constructorName: ConstructorName
       type: NamedType
         name: C
@@ -1389,7 +1579,7 @@ ImplicitCallReference
   }
 
   test_instanceGetter_explicitReceiver() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   late void Function<T>(T) foo;
 }
@@ -1399,9 +1589,10 @@ bar(A a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::bar::@formalParameter::a
@@ -1427,21 +1618,59 @@ FunctionReference
 ''');
   }
 
-  test_instanceGetter_functionTyped_class_self() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_instanceGetter_functionTyped_implicitReceiver_promotedThis() async {
+    var result = await resolveTestCode('''
 abstract class A {
-  late void Function<T>(T) foo;
-
-  bar() {
-    foo<int>;
+  void f() {
+    if (this is B) {
+      foo<int>;
+    }
   }
 }
 
+abstract class B extends A {
+  late void Function<T>(T) foo;
+}
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@class::B::@getter::foo
+    staticType: void Function<T>(T)
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+    rightBracket: >
+  staticType: void Function(int)
+  typeArgumentTypes
+    int
+''');
+  }
+
+  test_instanceGetter_functionTyped_implicitReceiver_superClass() async {
+    var result = await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  late void Function<T>(T) foo;
+}
+
+abstract class B extends A {
+  void f() {
+    foo<int>;
+  }
+}
+''');
+
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
+FunctionReference
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: void Function<T>(T)
@@ -1459,23 +1688,22 @@ FunctionReference
 ''');
   }
 
-  test_instanceGetter_functionTyped_class_superClass() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_instanceGetter_functionTyped_implicitReceiver_thisClass() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   late void Function<T>(T) foo;
-}
 
-abstract class B extends A {
-  void f() {
+  bar() {
     foo<int>;
   }
 }
+
 ''');
 
-    var node = findNode.functionReference('foo<int>;');
+    var node = result.findNode.functionReference('foo<int>;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: void Function<T>(T)
@@ -1494,7 +1722,7 @@ FunctionReference
   }
 
   test_instanceGetter_nonFunctionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   List<int> get f;
 }
@@ -1506,9 +1734,10 @@ void foo(A a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f<String>'), r'''
+    var node = result.findNode.functionReference('f<String>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::foo::@formalParameter::a
@@ -1533,7 +1762,7 @@ FunctionReference
   }
 
   test_instanceGetter_nonFunctionType_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   List<int> get f;
 }
@@ -1545,9 +1774,26 @@ void foo(A a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f<String>'), r'''
+    var node = result.findNode.functionReference('f<String>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ParenthesizedExpression
+      leftParenthesis: (
+      expression2: SimpleIdentifier
+        token: a
+        element: <testLibrary>::@function::foo::@formalParameter::a
+        staticType: A
+      rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: f
+    resolution: GetterInvocationResolution
+      element: <testLibrary>::@class::A::@getter::f
+      invokeType: List<int> Function()
+      type: List<int>
+    staticType: List<int>
+  function(v1): PropertyAccess
     target: ParenthesizedExpression
       leftParenthesis: (
       expression: SimpleIdentifier
@@ -1575,7 +1821,7 @@ FunctionReference
   }
 
   test_instanceMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 
@@ -1585,10 +1831,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -1607,7 +1853,7 @@ FunctionReference
   }
 
   test_instanceMethod_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void foo<T>(T a) {}
 
@@ -1617,13 +1863,13 @@ class C {
 }
 ''');
 
-    var reference = findNode.functionReference('foo.call<int>;');
+    var node = result.findNode.functionReference('foo.call<int>;');
     // TODO(srawlins): PropertyElementResolver does not return an element for
     // `.call`. If we want `findElement.method('foo')` here, we must change the
     // policy over there.
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@class::C::@method::foo
@@ -1650,7 +1896,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void foo<T>(T a) {}
 }
@@ -1660,14 +1906,14 @@ void bar(C c) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo.call<int>;');
+    var node = result.findNode.functionReference('foo.call<int>;');
     // TODO(srawlins): PropertyElementResolver does not return an element for
     // `.call`. If we want `findElement.method('foo')` here, we must change the
     // policy over there.
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: c
         element: <testLibrary>::@function::bar::@formalParameter::c
@@ -1700,7 +1946,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_field() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -1714,10 +1960,10 @@ class B {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@class::B::@getter::a
@@ -1744,7 +1990,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_getter_wrongNumberOfTypeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo => 0;
 }
@@ -1757,10 +2003,26 @@ void f(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<double>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<double>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ParenthesizedExpression
+      leftParenthesis: (
+      expression2: SimpleIdentifier
+        token: a
+        element: <testLibrary>::@function::f::@formalParameter::a
+        staticType: A
+      rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: foo
+    resolution: GetterInvocationResolution
+      element: <testLibrary>::@class::A::@getter::foo
+      invokeType: int Function()
+      type: int
+    staticType: int
+  function(v1): PropertyAccess
     target: ParenthesizedExpression
       leftParenthesis: (
       expression: SimpleIdentifier
@@ -1788,7 +2050,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_otherExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -1798,11 +2060,46 @@ void f(A? a, A b) {
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.functionReference('(a ?? b).foo<int>;'),
-      r'''
+    var node = result.findNode.functionReference('(a ?? b).foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ParenthesizedExpression
+      leftParenthesis: (
+      expression2: IfNull
+        leftOperand: SimpleIdentifier
+          token: a
+          element: <testLibrary>::@function::f::@formalParameter::a
+          staticType: A?
+        operator: ??
+        rightOperand: SimpleIdentifier
+          token: b
+          element: <testLibrary>::@function::f::@formalParameter::b
+          staticType: A
+        staticType: A
+      expression(v1): BinaryExpression
+        leftOperand: SimpleIdentifier
+          token: a
+          element: <testLibrary>::@function::f::@formalParameter::a
+          staticType: A?
+        operator: ??
+        rightOperand: SimpleIdentifier
+          token: b
+          correspondingParameter: <null>
+          element: <testLibrary>::@function::f::@formalParameter::b
+          staticType: A
+        element: <null>
+        staticInvokeType: null
+        staticType: A
+      rightParenthesis: )
+      staticType: A
+    operator: .
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: <testLibrary>::@class::A::@method::foo
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     target: ParenthesizedExpression
       leftParenthesis: (
       expression: BinaryExpression
@@ -1838,13 +2135,29 @@ FunctionReference
   staticType: void Function(int)
   typeArgumentTypes
     int
-''',
-    );
+''');
+  }
+
+  test_instanceMethod_explicitReceiver_otherExpression_tooManyTypeArguments() async {
+    var result = await resolveTestCodeWithDiagnostics('''
+class A {
+  void foo<T>(T a) {}
+}
+
+void f(A a) {
+  (a).foo<int, String>;
+//       ^^^^^^^^^^^^^
+// [diag.wrongNumberOfTypeArgumentsElement] The method 'foo' is declared with 1 type parameters, but 2 type arguments are given.
+}
+''');
+
+    var node = result.findNode.functionReference('foo<int, String>');
+    assertType(node, 'void Function(dynamic)');
   }
 
   test_instanceMethod_explicitReceiver_parameter_promoted() async {
     // Based on https://github.com/dart-lang/sdk/issues/51853.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(num x) {
   if (x is int) {
     x.expectStaticType<Exactly<int>>;
@@ -1858,12 +2171,12 @@ extension StaticType<T> on T {
 typedef Exactly<T> = T Function(T);
 ''');
 
-    var reference = findNode.functionReference(
+    var node = result.findNode.functionReference(
       'expectStaticType<Exactly<int>>;',
     );
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
@@ -1871,11 +2184,11 @@ FunctionReference
     period: .
     identifier: SimpleIdentifier
       token: expectStaticType
-      element: MethodMember
+      element: SubstitutedMethodElementImpl
         baseElement: <testLibrary>::@extension::StaticType::@method::expectStaticType
         substitution: {T: int, X: X}
       staticType: void Function<X extends int Function(int)>()
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::StaticType::@method::expectStaticType
       substitution: {T: int, X: X}
     staticType: void Function<X extends int Function(int)>()
@@ -1908,7 +2221,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_receiverIsNotIdentifier_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on List<Object?> {
   void foo<T>(T a) {}
 }
@@ -1916,13 +2229,28 @@ extension on List<Object?> {
 var a = [].foo.call<int>;
 ''');
 
-    var reference = findNode.functionReference('foo.call<int>;');
-    // TODO(srawlins): PropertyElementResolver does not return an element for
-    // `.call`. If we want `findElement.method('foo')` here, we must change the
-    // policy over there.
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo.call<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ReceiverPropertyExtraction
+      receiver: ListLiteral
+        leftBracket: [
+        rightBracket: ]
+        staticType: List<dynamic>
+      operator: .
+      propertyName: foo
+      resolution: ExecutableTearOffResolution
+        element: <testLibrary>::@extension::#0::@method::foo
+        type: void Function<T>(T)
+      staticType: void Function<T>(T)
+    operator: .
+    propertyName: call
+    resolution: FunctionCallTearOffResolution
+      type: void Function<T>(T)
+      associatedFunctionType: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     target: PropertyAccess
       target: ListLiteral
         leftBracket: [
@@ -1955,7 +2283,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_super() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -1966,11 +2294,11 @@ class B extends A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: B
     operator: .
@@ -1994,7 +2322,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_super_noMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   bar() {
     super.foo<int>;
@@ -2004,10 +2332,11 @@ class A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: A
     operator: .
@@ -2029,7 +2358,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_super_noSuper() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar() {
   super.foo<int>;
 //^^^^^
@@ -2037,10 +2366,11 @@ bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: InvalidType
     operator: .
@@ -2062,7 +2392,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_targetOfFunctionCall() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2075,10 +2405,10 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::bar::@formalParameter::a
@@ -2105,7 +2435,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_this() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 
@@ -2115,10 +2445,20 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ThisExpression
+      thisKeyword: this
+      staticType: A
+    operator: .
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: <testLibrary>::@class::A::@method::foo
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     target: ThisExpression
       thisKeyword: this
       staticType: A
@@ -2143,7 +2483,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_topLevelVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -2154,10 +2494,10 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@getter::a
@@ -2190,7 +2530,7 @@ class A {
 }
 var a = A();
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -2198,11 +2538,11 @@ bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -2239,7 +2579,7 @@ FunctionReference
 class A {}
 var a = A();
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -2249,11 +2589,11 @@ bar() {
 }
 ''');
 
-    var node = findNode.functionReference('foo<int>;');
+    var node = result.findNode.functionReference('foo<int>;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -2284,7 +2624,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_typeParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar<T>() {
   T.foo<int>;
 //  ^^^
@@ -2292,9 +2632,10 @@ bar<T>() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: T
       element: #E0 T
@@ -2319,7 +2660,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_variable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -2329,10 +2670,10 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::bar::@formalParameter::a
@@ -2359,7 +2700,7 @@ FunctionReference
   }
 
   test_instanceMethod_explicitReceiver_variable_cascade() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -2369,10 +2710,16 @@ bar(A a) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: CascadePropertyExtraction
+    propertyName: foo
+    resolution: ExecutableTearOffResolution
+      element: <testLibrary>::@class::A::@method::foo
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: foo
@@ -2395,7 +2742,7 @@ FunctionReference
 
   test_instanceMethod_explicitReceiver_variable_promoted() async {
     // Based on https://github.com/dart-lang/sdk/issues/51853.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(num n) {
   num x = n;
   if (x is int) {
@@ -2410,12 +2757,12 @@ extension StaticType<T> on T {
 typedef Exactly<T> = T Function(T);
 ''');
 
-    var reference = findNode.functionReference(
+    var node = result.findNode.functionReference(
       'expectStaticType<Exactly<int>>;',
     );
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: x
       element: x@22
@@ -2423,11 +2770,11 @@ FunctionReference
     period: .
     identifier: SimpleIdentifier
       token: expectStaticType
-      element: MethodMember
+      element: SubstitutedMethodElementImpl
         baseElement: <testLibrary>::@extension::StaticType::@method::expectStaticType
         substitution: {T: int, X: X}
       staticType: void Function<X extends int Function(int)>()
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::StaticType::@method::expectStaticType
       substitution: {T: int, X: X}
     staticType: void Function<X extends int Function(int)>()
@@ -2460,7 +2807,7 @@ FunctionReference
   }
 
   test_instanceMethod_inherited() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 }
@@ -2472,10 +2819,10 @@ class B extends A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -2494,7 +2841,7 @@ FunctionReference
   }
 
   test_instanceMethod_prefixedIdentifier_fromExtension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void bar<T>() {}
 }
@@ -2510,10 +2857,10 @@ abstract class B {
 }
 ''');
 
-    var node = findNode.singleFunctionReference;
+    var node = result.findNode.singleFunctionReference;
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@extension::#0::@getter::foo
@@ -2540,7 +2887,7 @@ FunctionReference
   }
 
   test_instanceMethod_prefixedIdentifier_fromSuper() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void bar<T>() {}
 }
@@ -2556,10 +2903,10 @@ abstract class C extends B {
 }
 ''');
 
-    var node = findNode.singleFunctionReference;
+    var node = result.findNode.singleFunctionReference;
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@class::B::@getter::foo
@@ -2586,7 +2933,7 @@ FunctionReference
   }
 
   test_instanceMethod_prefixedIdentifier_fromThis() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void bar<T>() {}
 }
@@ -2599,10 +2946,10 @@ abstract class B {
 }
 ''');
 
-    var node = findNode.singleFunctionReference;
+    var node = result.findNode.singleFunctionReference;
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: foo
       element: <testLibrary>::@class::B::@getter::foo
@@ -2629,7 +2976,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_class_self() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2642,10 +2989,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -2664,7 +3011,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_class_superClass() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2678,11 +3025,11 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: FunctionReference
-    function: SimpleIdentifier
+  target2: FunctionReference
+    function2: SimpleIdentifier
       token: foo
       element: <testLibrary>::@class::A::@method::foo
       staticType: void Function<T>(T)
@@ -2711,7 +3058,7 @@ MethodInvocation
   }
 
   test_instanceMethod_targetOfFunctionCall_enum_mixin() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void bar() {}
 }
@@ -2726,10 +3073,10 @@ enum B with A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@mixin::A::@method::foo
     staticType: void Function<T>(T)
@@ -2748,7 +3095,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_enum_self() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void bar() {}
 }
@@ -2761,10 +3108,10 @@ enum A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@enum::A::@method::foo
     staticType: void Function<T>(T)
@@ -2783,7 +3130,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_extension() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2795,10 +3142,10 @@ extension E on int {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extension::E::@method::foo
     staticType: void Function<T>(T)
@@ -2817,7 +3164,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_extensionType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void bar() {}
 }
@@ -2829,10 +3176,10 @@ extension type A(int it) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@extensionType::A::@method::foo
     staticType: void Function<T>(T)
@@ -2851,7 +3198,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_mixin_constraint() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2865,10 +3212,10 @@ mixin M on A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -2887,7 +3234,7 @@ FunctionReference
   }
 
   test_instanceMethod_targetOfFunctionCall_mixin_self() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on Function {
   void m() {}
 }
@@ -2899,10 +3246,10 @@ mixin M {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@mixin::M::@method::foo
     staticType: void Function<T>(T)
@@ -2921,7 +3268,7 @@ FunctionReference
   }
 
   test_instanceMethod_unknown() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   bar() {
     foo<int>;
@@ -2931,9 +3278,10 @@ class A {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <null>
     staticType: InvalidType
@@ -2952,7 +3300,7 @@ FunctionReference
   test_loadLibrary() async {
     newFile('$testPackageLibPath/a.dart', '');
 
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' deferred as prefix;
 //     ^^^^^^^^
 // [diag.unusedImport] Unused import: 'a.dart'.
@@ -2962,10 +3310,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.expressionStatement('prefix.loadLibrary');
+    var node = result.findNode.expressionStatement('prefix.loadLibrary');
     assertResolvedNodeText(node, r'''
 ExpressionStatement
-  expression: PrefixedIdentifier
+  expression2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -2982,7 +3330,7 @@ ExpressionStatement
   }
 
   test_localFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar() {
   void foo<T>(T a) {}
 
@@ -2990,10 +3338,10 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: foo@20
     staticType: void Function<T>(T)
@@ -3012,16 +3360,16 @@ FunctionReference
   }
 
   test_localVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar(void Function<T>(T a) foo) {
   foo<int>;
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::bar::@formalParameter::foo
     staticType: void Function<T>(T)
@@ -3040,7 +3388,7 @@ FunctionReference
   }
 
   test_localVariable_call() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -3049,13 +3397,13 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('fn.call<int>;');
+    var node = result.findNode.functionReference('fn.call<int>;');
     // TODO(srawlins): PropertyElementResolver does not return an element for
     // `.call`. If we want `findElement.method('foo')` here, we must change the
     // policy over there.
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: fn
       element: fn@40
@@ -3082,7 +3430,7 @@ FunctionReference
   }
 
   test_localVariable_call_tooManyTypeArgs() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -3093,13 +3441,13 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('fn.call<int>;');
+    var node = result.findNode.functionReference('fn.call<int>;');
     // TODO(srawlins): PropertyElementResolver does not return an element for
     // `.call`. If we want `findElement.method('fn')` here, we must change the
     // policy over there.
-    assertResolvedNodeText(reference, r'''
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: fn
       element: fn@55
@@ -3124,7 +3472,7 @@ FunctionReference
   }
 
   test_localVariable_typeVariable_boundToFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar<T extends Function>(T foo) {
   foo<int>;
 //^^^
@@ -3132,10 +3480,10 @@ void bar<T extends Function>(T foo) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::bar::@formalParameter::foo
     staticType: T
@@ -3152,16 +3500,16 @@ FunctionReference
   }
 
   test_localVariable_typeVariable_functionTyped() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar<T extends void Function<U>(U)>(T foo) {
   foo<int>;
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::bar::@formalParameter::foo
     staticType: T
@@ -3180,7 +3528,7 @@ FunctionReference
   }
 
   test_localVariable_typeVariable_nonFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar<T>(T foo) {
   foo<int>;
 //^^^
@@ -3188,10 +3536,10 @@ void bar<T>(T foo) {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::bar::@formalParameter::foo
     staticType: T
@@ -3208,7 +3556,7 @@ FunctionReference
   }
 
   test_neverTyped() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 external Never get i;
 
 void bar() {
@@ -3218,9 +3566,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('i<int>;'), r'''
+    var node = result.findNode.functionReference('i<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: i
     element: <testLibrary>::@getter::i
     staticType: Never
@@ -3237,7 +3586,7 @@ FunctionReference
   }
 
   test_nonGenericFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo() {}
 
@@ -3249,10 +3598,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function()
@@ -3269,19 +3618,21 @@ FunctionReference
   }
 
   test_otherExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(void Function<T>(T a) foo, void Function<T>(T a) bar) {
   (1 == 2 ? foo : bar)<int>;
 }
 ''');
 
-    var reference = findNode.functionReference('(1 == 2 ? foo : bar)<int>;');
+    var reference = result.findNode.functionReference(
+      '(1 == 2 ? foo : bar)<int>;',
+    );
     assertType(reference, 'void Function(int)');
     // A ParenthesizedExpression has no element to assert on.
   }
 
   test_otherExpression_wrongNumberOfTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(void Function<T>(T a) foo, void Function<T>(T a) bar) {
   (1 == 2 ? foo : bar)<int, String>;
 //                    ^^^^^^^^^^^^^
@@ -3289,7 +3640,7 @@ void f(void Function<T>(T a) foo, void Function<T>(T a) bar) {
 }
 ''');
 
-    var reference = findNode.functionReference(
+    var reference = result.findNode.functionReference(
       '(1 == 2 ? foo : bar)<int, String>;',
     );
     assertType(reference, 'void Function(dynamic)');
@@ -3297,7 +3648,7 @@ void f(void Function<T>(T a) foo, void Function<T>(T a) bar) {
   }
 
   test_receiverIsDynamic() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar(dynamic a) {
   a.foo<int>;
 //^^^^^
@@ -3305,9 +3656,10 @@ bar(dynamic a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('a.foo<int>;'), r'''
+    var node = result.findNode.functionReference('a.foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::bar::@formalParameter::a
@@ -3332,7 +3684,7 @@ FunctionReference
   }
 
   test_recordField_explicitReceiver_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(({T Function<T>(T) f1, String f2}) r) {
   int Function(int) v = r.f1;
 //                  ^
@@ -3340,11 +3692,11 @@ void f(({T Function<T>(T) f1, String f2}) r) {
 }
 ''');
 
-    var node = findNode.functionReference(r'.f1;');
+    var node = result.findNode.functionReference(r'.f1;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: r
       element: <testLibrary>::@function::f::@formalParameter::r
       staticType: ({T Function<T>(T) f1, String f2})
@@ -3361,7 +3713,7 @@ FunctionReference
   }
 
   test_recordField_explicitReceiver_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((T Function<T>(T), String) r) {
   int Function(int) v = r.$1;
 //                  ^
@@ -3369,11 +3721,11 @@ void f((T Function<T>(T), String) r) {
 }
 ''');
 
-    var node = findNode.functionReference(r'.$1;');
+    var node = result.findNode.functionReference(r'.$1;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: r
       element: <testLibrary>::@function::f::@formalParameter::r
       staticType: (T Function<T>(T), String)
@@ -3390,7 +3742,7 @@ FunctionReference
   }
 
   test_staticMethod() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static void foo<T>(T a) {}
 
@@ -3400,10 +3752,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -3422,7 +3774,7 @@ FunctionReference
   }
 
   test_staticMethod_explicitReceiver() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static void foo<T>(T a) {}
 }
@@ -3432,9 +3784,10 @@ bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: <testLibrary>::@class::A
@@ -3466,7 +3819,7 @@ class A {
   static void foo<T>(T a) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as a;
 
 bar() {
@@ -3474,11 +3827,11 @@ bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: a
         element: <testLibraryFragment>::@prefix::a
@@ -3516,7 +3869,7 @@ class A {
   static void foo<T>(T a) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -3524,11 +3877,11 @@ bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -3567,7 +3920,7 @@ class A {
 }
 typedef TA = A;
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -3575,11 +3928,11 @@ bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -3612,7 +3965,7 @@ FunctionReference
   }
 
   test_staticMethod_explicitReceiver_typeAlias() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   static void foo<T>(T a) {}
 }
@@ -3623,10 +3976,10 @@ bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: TA
       element: <testLibrary>::@typeAlias::TA
@@ -3653,7 +4006,7 @@ FunctionReference
   }
 
   test_superExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void call<T>() {}
 }
@@ -3667,10 +4020,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleImplicitCallReference;
+    var node = result.findNode.singleImplicitCallReference;
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: B
   typeArguments: TypeArgumentList
@@ -3689,7 +4042,7 @@ ImplicitCallReference
   }
 
   test_tooFewTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T, U>(T a, U b) {}
 
@@ -3701,10 +4054,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T, U>(T, U)
@@ -3724,7 +4077,7 @@ FunctionReference
   }
 
   test_tooManyTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   void foo<T>(T a) {}
 
@@ -3736,10 +4089,10 @@ class A {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int, int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int, int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@method::foo
     staticType: void Function<T>(T)
@@ -3762,7 +4115,7 @@ FunctionReference
   }
 
   test_topLevelFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -3770,10 +4123,10 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::foo
     staticType: void Function<T>(T)
@@ -3795,7 +4148,7 @@ FunctionReference
     newFile('$testPackageLibPath/a.dart', '''
 void foo<T>(T arg) {}
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as a;
 
 void bar() {
@@ -3803,10 +4156,10 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibraryFragment>::@prefix::a
@@ -3836,7 +4189,7 @@ FunctionReference
     newFile('$testPackageLibPath/a.dart', '''
 void foo<T>(T arg) {}
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as a;
 
 extension on Function {
@@ -3847,10 +4200,10 @@ void bar() {
 }
 ''');
 
-    var reference = findNode.functionReference('foo<int>');
-    assertResolvedNodeText(reference, r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibraryFragment>::@prefix::a
@@ -3877,7 +4230,7 @@ FunctionReference
   }
 
   test_topLevelFunction_prefix_unknownPrefix() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 bar() {
   prefix.foo<int>;
 //^^^^^^
@@ -3885,9 +4238,10 @@ bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <null>
@@ -3912,7 +4266,7 @@ FunctionReference
   }
 
   test_topLevelFunction_targetOfCall() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T a) {}
 
 void bar() {
@@ -3920,11 +4274,11 @@ void bar() {
 }
 ''');
 
-    var node = findNode.propertyAccess('.call');
+    var node = result.findNode.propertyAccess('.call');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: FunctionReference
-    function: SimpleIdentifier
+  target2: FunctionReference
+    function2: SimpleIdentifier
       token: foo
       element: <testLibrary>::@function::foo
       staticType: void Function<T>(T)
@@ -3949,7 +4303,7 @@ PropertyAccess
   }
 
   test_topLevelFunction_targetOfFunctionCall() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void foo<T>(T arg) {}
 
 extension on Function {
@@ -3960,9 +4314,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>'), r'''
+    var node = result.findNode.functionReference('foo<int>');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@function::foo
     staticType: void Function<T>(T)
@@ -3984,7 +4339,7 @@ FunctionReference
     newFile('$testPackageLibPath/a.dart', '''
 void Function<T>(T) foo = <T>(T arg) {}
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -3992,10 +4347,10 @@ bar() {
 }
 ''');
 
-    var node = findNode.functionReference('foo<int>;');
+    var node = result.findNode.functionReference('foo<int>;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: prefix
       element: <testLibraryFragment>::@prefix::prefix
@@ -4023,7 +4378,7 @@ FunctionReference
 
   test_topLevelVariable_prefix_unknownIdentifier() async {
     newFile('$testPackageLibPath/a.dart', '');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as prefix;
 
 bar() {
@@ -4033,11 +4388,11 @@ bar() {
 }
 ''');
 
-    var node = findNode.functionReference('foo<int>;');
+    var node = result.findNode.functionReference('foo<int>;');
     assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
-    target: PrefixedIdentifier
+  function2: PropertyAccess
+    target2: PrefixedIdentifier
       prefix: SimpleIdentifier
         token: prefix
         element: <testLibraryFragment>::@prefix::prefix
@@ -4068,7 +4423,7 @@ FunctionReference
   }
 
   test_typeAlias_function_unknownProperty() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 typedef Cb = void Function();
 
 var a = Cb.foo<int>;
@@ -4076,9 +4431,10 @@ var a = Cb.foo<int>;
 // [diag.undefinedGetter] The getter 'foo' isn't defined for the type 'Type'.
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: Cb
       element: <testLibrary>::@typeAlias::Cb
@@ -4103,7 +4459,7 @@ FunctionReference
   }
 
   test_typeAlias_typeVariable_unknownProperty() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 typedef T<E> = E;
 
 var a = T.foo<int>;
@@ -4111,9 +4467,10 @@ var a = T.foo<int>;
 // [diag.undefinedGetter] The getter 'foo' isn't defined for the type 'Type'.
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: T
       element: <testLibrary>::@typeAlias::T
@@ -4138,7 +4495,7 @@ FunctionReference
   }
 
   test_unknownIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void bar() {
   foo<int>;
 //^^^
@@ -4146,9 +4503,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <null>
     staticType: InvalidType
@@ -4165,7 +4523,7 @@ FunctionReference
   }
 
   test_unknownIdentifier_explicitReceiver() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {}
 
 class B {
@@ -4177,9 +4535,10 @@ class B {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@class::B::@method::bar::@formalParameter::a
@@ -4205,7 +4564,7 @@ FunctionReference
 
   test_unknownIdentifier_importPrefix() async {
     newFile('$testPackageLibPath/a.dart', '');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'a.dart' as a;
 
 void bar() {
@@ -4215,9 +4574,10 @@ void bar() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('foo<int>;'), r'''
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibraryFragment>::@prefix::a
@@ -4243,24 +4603,61 @@ FunctionReference
 }
 
 @reflectiveTest
+class FunctionReferenceResolutionTest_BeforeConstructorTearoffs
+    extends PubPackageResolutionTest
+    with BeforeConstructorTearoffsMixin {
+  test_localVariable() async {
+    // This code includes a disallowed type instantiation (local variable),
+    // but in the case that the experiment is not enabled, we suppress the
+    // associated error.
+    var result = await resolveTestCodeWithDiagnostics('''
+void bar(void Function<T>(T a) foo) {
+  foo<int>;
+//   ^^^^^
+// [diag.experimentNotEnabled] This requires the 'constructor-tearoffs' language feature to be enabled.
+}
+''');
+
+    var node = result.findNode.functionReference('foo<int>;');
+    assertResolvedNodeText(node, r'''
+FunctionReference
+  function2: SimpleIdentifier
+    token: foo
+    element: <testLibrary>::@function::bar::@formalParameter::foo
+    staticType: void Function<T>(T)
+  typeArguments: TypeArgumentList
+    leftBracket: <
+    arguments
+      NamedType
+        name: int
+        element: dart:core::@class::int
+        type: int
+    rightBracket: >
+  staticType: void Function(int)
+  typeArgumentTypes
+    int
+''');
+  }
+}
+
+@reflectiveTest
 class FunctionReferenceResolutionTest_genericFunctionInstantiation
     extends PubPackageResolutionTest {
   test_asExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void Function(int) foo(void Function<T>(T) f) {
   return (f as dynamic) as void Function<T>(T);
 }
 ''');
 
-    assertResolvedNodeText(
-      findNode.functionReference('as void Function<T>(T);'),
-      r'''
+    var node = result.findNode.functionReference('as void Function<T>(T);');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: AsExpression
-    expression: ParenthesizedExpression
+  function2: AsExpression
+    expression2: ParenthesizedExpression
       leftParenthesis: (
-      expression: AsExpression
-        expression: SimpleIdentifier
+      expression2: AsExpression
+        expression2: SimpleIdentifier
           token: f
           element: <testLibrary>::@function::foo::@formalParameter::f
           staticType: void Function<T>(T)
@@ -4289,6 +4686,18 @@ FunctionReference
         rightBracket: >
       parameters: FormalParameterList
         leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            type: NamedType
+              name: T
+              element: #E0 T
+              type: T
+            declaredFragment: <testLibraryFragment> null@null
+              element: isPrivate
+                type: T
+        rightParenthesis: )
+      parameters(v1): FormalParameterList
+        leftParenthesis: (
         parameter: RegularFormalParameter
           type: NamedType
             name: T
@@ -4311,21 +4720,35 @@ FunctionReference
   staticType: void Function(int)
   typeArgumentTypes
     int
-''',
-    );
+''');
   }
 
   test_assignmentExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 late void Function<T>(T) g;
 void Function(int) foo(void Function<T>(T) f) {
   return g = f;
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('g = f;'), r'''
+    var node = result.findNode.functionReference('g = f;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: AssignmentExpression
+  function2: DirectAssignment
+    target: UnqualifiedNameAssignmentTarget
+      name: g
+      read: <null>
+      write: SetterInvocationResolution
+        element: <testLibrary>::@setter::g
+        acceptedType: void Function<T>(T)
+    operator: =
+    value: SimpleIdentifier
+      token: f
+      correspondingParameter: <testLibrary>::@setter::g::@formalParameter::value
+      element: <testLibrary>::@function::foo::@formalParameter::f
+      staticType: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): AssignmentExpression
     leftHandSide: SimpleIdentifier
       token: g
       element: <null>
@@ -4349,7 +4772,7 @@ FunctionReference
   }
 
   test_assignmentExpression_compound() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on void Function<T>(T) {
   void Function<T>(T) operator +(int i) {
     return this;
@@ -4361,9 +4784,28 @@ void Function(int) foo(void Function<T>(T) f) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f += 1'), r'''
+    var node = result.findNode.functionReference('f += 1');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: AssignmentExpression
+  function2: CompoundAssignment
+    target: UnqualifiedNameAssignmentTarget
+      name: f
+      read: VariableReadResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        type: void Function<T>(T)
+      write: VariableWriteResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        acceptedType: void Function<T>(T)
+    operator: +=
+    value: IntegerLiteral
+      literal: 1
+      correspondingParameter: <testLibrary>::@extension::#0::@method::+::@formalParameter::i
+      staticType: int
+    binaryOperator: add
+    element: <testLibrary>::@extension::#0::@method::+
+    operatorResultType: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): AssignmentExpression
     leftHandSide: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::foo::@formalParameter::f
@@ -4386,17 +4828,18 @@ FunctionReference
   }
 
   test_awaitExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 Future<void Function(int)> foo(Future<void Function<T>(T)> f) async {
   return await f;
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('await f'), r'''
+    var node = result.findNode.functionReference('await f');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: AwaitExpression
+  function2: AwaitExpression
     awaitKeyword: await
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::foo::@formalParameter::f
       staticType: Future<void Function<T>(T)>
@@ -4408,7 +4851,7 @@ FunctionReference
   }
 
   test_binaryExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void Function<T>(T) operator +(int i) {
     return <T>(T a) {};
@@ -4420,9 +4863,23 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('c + 1'), r'''
+    var node = result.findNode.functionReference('c + 1');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: BinaryExpression
+  function2: BinaryOperatorInvocation
+    leftOperand: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::foo::@formalParameter::c
+      staticType: C
+    operator: +
+    rightOperand: IntegerLiteral
+      literal: 1
+      correspondingParameter: <testLibrary>::@class::C::@method::+::@formalParameter::i
+      staticType: int
+    binaryOperator: add
+    element: <testLibrary>::@class::C::@method::+
+    staticType: void Function<T>(T)
+  function(v1): BinaryExpression
     leftOperand: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::foo::@formalParameter::c
@@ -4442,15 +4899,16 @@ FunctionReference
   }
 
   test_cascadeExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void Function(int) foo(void Function<T>(T) f) {
   return f..toString();
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f..toString()'), r'''
+    var node = result.findNode.functionReference('f..toString()');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::foo::@formalParameter::f
     staticType: void Function<T>(T)
@@ -4460,8 +4918,8 @@ FunctionReference
 ''');
   }
 
-  test_constructorReference() async {
-    await resolveTestCodeWithDiagnostics('''
+  test_constructorTearOff() async {
+    var result = await resolveTestCodeWithDiagnostics('''
 class C<T> {
   C(T a);
 }
@@ -4470,10 +4928,23 @@ C<int> Function(int) foo() {
 }
 ''');
 
-    // TODO(srawlins): Leave the constructor reference uninstantiated, then
+    // TODO(srawlins): Leave the constructor tear-off uninstantiated, then
     // perform generic function instantiation as a wrapping node.
-    assertResolvedNodeText(findNode.constructorReference('C.new'), r'''
-ConstructorReference
+    var node = result.findNode.constructorTearOff('C.new');
+    assertResolvedNodeText(node, r'''
+ConstructorTearOff
+  typeReference: ConstructorTypeReference
+    name: C
+    element: <testLibrary>::@class::C
+    type: C<dynamic>
+  selector: ConstructorSelector
+    period: .
+    name2: new
+  element: SubstitutedConstructorElementImpl
+    baseElement: <testLibrary>::@class::C::@constructor::new
+    substitution: {T: int}
+  staticType: C<int> Function(int)
+V1: ConstructorReference
   constructorName: ConstructorName
     type: NamedType
       name: C
@@ -4482,25 +4953,30 @@ ConstructorReference
     period: .
     name: SimpleIdentifier
       token: new
-      element: <testLibrary>::@class::C::@constructor::new
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::C::@constructor::new
+        substitution: {T: int}
       staticType: null
       tearOffTypeArgumentTypes
         int
-    element: <testLibrary>::@class::C::@constructor::new
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::C::@constructor::new
+      substitution: {T: int}
   staticType: C<int> Function(int)
 ''');
   }
 
   test_functionExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 Null Function(int) foo() {
   return <T>(T a) {};
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('<T>(T a) {};'), r'''
+    var node = result.findNode.functionReference('<T>(T a) {};');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: FunctionExpression
+  function2: FunctionExpression
     typeParameters: TypeParameterList
       leftBracket: <
       typeParameters
@@ -4510,6 +4986,19 @@ FunctionReference
             defaultType: dynamic
       rightBracket: >
     parameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E0 T
+            type: T
+          name: a
+          declaredFragment: <testLibraryFragment> a@42
+            element: isPublic
+              type: T
+      rightParenthesis: )
+    parameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -4536,18 +5025,19 @@ FunctionReference
   }
 
   test_functionExpressionInvocation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void Function(int) foo(void Function<T>(T) Function() f) {
   return (f)();
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('(f)()'), r'''
+    var node = result.findNode.functionReference('(f)()');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: FunctionExpressionInvocation
-    function: ParenthesizedExpression
+  function2: FunctionExpressionInvocation
+    function2: ParenthesizedExpression
       leftParenthesis: (
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: f
         element: <testLibrary>::@function::foo::@formalParameter::f
         staticType: void Function<T>(T) Function()
@@ -4566,7 +5056,7 @@ FunctionReference
   }
 
   test_functionReference() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 typedef Fn = void Function<U>(U);
 
 void Function(int) foo(Fn f) {
@@ -4574,9 +5064,10 @@ void Function(int) foo(Fn f) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f;'), r'''
+    var node = result.findNode.functionReference('f;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::foo::@formalParameter::f
     staticType: void Function<U>(U)
@@ -4588,7 +5079,7 @@ FunctionReference
   }
 
   test_implicitCallReference() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   void call<T>(T a) {}
 }
@@ -4598,10 +5089,10 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    var node = findNode.implicitCallReference('c;');
+    var node = result.findNode.implicitCallReference('c;');
     assertResolvedNodeText(node, r'''
 ImplicitCallReference
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::foo::@formalParameter::c
     staticType: C
@@ -4613,15 +5104,36 @@ ImplicitCallReference
   }
 
   test_indexExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void Function(int) foo(List<void Function<T>(T)> f) {
   return f[0];
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f[0];'), r'''
+    var node = result.findNode.functionReference('f[0];');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: IndexExpression
+  function2: IndexExpression2
+    receiver: SimpleIdentifier
+      token: f
+      element: <testLibrary>::@function::foo::@formalParameter::f
+      staticType: List<void Function<T>(T)>
+    leftBracket: [
+    index: IntegerLiteral
+      literal: 0
+      correspondingParameter: SubstitutedFormalParameterElementImpl
+        baseElement: dart:core::@class::List::@method::[]::@formalParameter::index
+        substitution: {E: void Function<T>(T)}
+      staticType: int
+    rightBracket: ]
+    resolution: MethodIndexReadResolution
+      element: SubstitutedMethodElementImpl
+        baseElement: dart:core::@class::List::@method::[]
+        substitution: {E: void Function<T>(T)}
+      invokeType: void Function<T>(T) Function(int)
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): IndexExpression
     target: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::foo::@formalParameter::f
@@ -4629,12 +5141,12 @@ FunctionReference
     leftBracket: [
     index: IntegerLiteral
       literal: 0
-      correspondingParameter: ParameterMember
+      correspondingParameter: SubstitutedFormalParameterElementImpl
         baseElement: dart:core::@class::List::@method::[]::@formalParameter::index
         substitution: {E: void Function<T>(T)}
       staticType: int
     rightBracket: ]
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: dart:core::@class::List::@method::[]
       substitution: {E: void Function<T>(T)}
     staticType: void Function<T>(T)
@@ -4645,7 +5157,7 @@ FunctionReference
   }
 
   test_methodInvocation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   late void Function<T>(T) f;
   void Function<T>(T) m() => f;
@@ -4656,10 +5168,11 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('c.m();'), r'''
+    var node = result.findNode.functionReference('c.m();');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: MethodInvocation
-    target: SimpleIdentifier
+  function2: MethodInvocation
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::foo::@formalParameter::c
       staticType: C
@@ -4680,7 +5193,7 @@ FunctionReference
   }
 
   test_postfixExpression_compound() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on void Function<T>(T) {
   void Function<T>(T) operator +(int i) {
     return this;
@@ -4692,9 +5205,23 @@ void Function(int) foo(void Function<T>(T) f) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f++'), r'''
+    var node = result.findNode.functionReference('f++');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PostfixExpression
+  function2: PostfixIncrement
+    target: UnqualifiedNameAssignmentTarget
+      name: f
+      read: VariableReadResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        type: void Function<T>(T)
+      write: VariableWriteResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        acceptedType: void Function<T>(T)
+    operator: ++
+    element: <testLibrary>::@extension::#0::@method::+
+    operatorResultType: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PostfixExpression
     operand: SimpleIdentifier
       token: f
       element: <testLibrary>::@function::foo::@formalParameter::f
@@ -4713,7 +5240,7 @@ FunctionReference
   }
 
   test_prefixedIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   late void Function<T>(T) f;
 }
@@ -4723,9 +5250,10 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('c.f;'), r'''
+    var node = result.findNode.functionReference('c.f;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixedIdentifier
+  function2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::foo::@formalParameter::c
@@ -4744,7 +5272,7 @@ FunctionReference
   }
 
   test_prefixExpression_compound() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension on void Function<T>(T) {
   void Function<T>(T) operator +(int i) {
     return this;
@@ -4756,9 +5284,23 @@ void Function(int) foo(void Function<T>(T) f) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('++f'), r'''
+    var node = result.findNode.functionReference('++f');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PrefixExpression
+  function2: PrefixIncrement
+    operator: ++
+    target: UnqualifiedNameAssignmentTarget
+      name: f
+      read: VariableReadResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        type: void Function<T>(T)
+      write: VariableWriteResolution
+        element: <testLibrary>::@function::foo::@formalParameter::f
+        acceptedType: void Function<T>(T)
+    element: <testLibrary>::@extension::#0::@method::+
+    operatorResultType: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PrefixExpression
     operator: ++
     operand: SimpleIdentifier
       token: f
@@ -4777,7 +5319,7 @@ FunctionReference
   }
 
   test_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   late void Function<T>(T) f;
 }
@@ -4787,9 +5329,26 @@ void Function(int) foo(C c) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('(c).f;'), r'''
+    var node = result.findNode.functionReference('(c).f;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: PropertyAccess
+  function2: ReceiverPropertyExtraction
+    receiver: ParenthesizedExpression
+      leftParenthesis: (
+      expression2: SimpleIdentifier
+        token: c
+        element: <testLibrary>::@function::foo::@formalParameter::c
+        staticType: C
+      rightParenthesis: )
+      staticType: C
+    operator: .
+    propertyName: f
+    resolution: GetterInvocationResolution
+      element: <testLibrary>::@class::C::@getter::f
+      invokeType: void Function<T>(T) Function()
+      type: void Function<T>(T)
+    staticType: void Function<T>(T)
+  function(v1): PropertyAccess
     target: ParenthesizedExpression
       leftParenthesis: (
       expression: SimpleIdentifier
@@ -4811,56 +5370,19 @@ FunctionReference
   }
 
   test_simpleIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void Function(int) foo(void Function<T>(T) f) {
   return f;
 }
 ''');
 
-    assertResolvedNodeText(findNode.functionReference('f;'), r'''
+    var node = result.findNode.functionReference('f;');
+    assertResolvedNodeText(node, r'''
 FunctionReference
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: f
     element: <testLibrary>::@function::foo::@formalParameter::f
     staticType: void Function<T>(T)
-  staticType: void Function(int)
-  typeArgumentTypes
-    int
-''');
-  }
-}
-
-@reflectiveTest
-class FunctionReferenceResolutionTest_WithoutConstructorTearoffs
-    extends PubPackageResolutionTest
-    with WithoutConstructorTearoffsMixin {
-  test_localVariable() async {
-    // This code includes a disallowed type instantiation (local variable),
-    // but in the case that the experiment is not enabled, we suppress the
-    // associated error.
-    await resolveTestCodeWithDiagnostics('''
-void bar(void Function<T>(T a) foo) {
-  foo<int>;
-//   ^^^^^
-// [diag.experimentNotEnabled] This requires the 'constructor-tearoffs' language feature to be enabled.
-}
-''');
-
-    var reference = findNode.functionReference('foo<int>;');
-    assertResolvedNodeText(reference, r'''
-FunctionReference
-  function: SimpleIdentifier
-    token: foo
-    element: <testLibrary>::@function::bar::@formalParameter::foo
-    staticType: void Function<T>(T)
-  typeArguments: TypeArgumentList
-    leftBracket: <
-    arguments
-      NamedType
-        name: int
-        element: dart:core::@class::int
-        type: int
-    rightBracket: >
   staticType: void Function(int)
   typeArgumentTypes
     int

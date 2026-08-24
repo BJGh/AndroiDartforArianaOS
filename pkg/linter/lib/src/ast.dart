@@ -85,7 +85,7 @@ SyntacticEntity getNodeToAnnotate(AstNode node) {
   } else if (node is VariableDeclaration) {
     return node.name;
   } else if (node is ExtensionTypeDeclaration) {
-    return node.primaryConstructor.typeName;
+    return node.namePart.typeName;
   }
   assert(false, "Unaccounted for node type: '${node.runtimeType}'");
   return node;
@@ -211,7 +211,7 @@ File? locatePubspecFile(CompilationUnit compilationUnit) {
 
   // Look for a pubspec.yaml file.
   for (var folder in file.parent.withAncestors) {
-    var pubspecFile = folder.getChildAssumingFile('pubspec.yaml');
+    var pubspecFile = folder.getFile('pubspec.yaml');
     if (pubspecFile.exists) {
       return pubspecFile;
     }

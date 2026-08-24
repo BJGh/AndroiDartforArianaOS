@@ -18,8 +18,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid calling `toString()` on `runtimeType`.';
 
 class NoRuntimeTypeToString extends AnalysisRule {
-  NoRuntimeTypeToString()
-    : super(name: LintNames.no_runtimetype_tostring, description: _desc);
+  new() : super(name: LintNames.no_runtimetype_tostring, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.noRuntimetypeTostring;
@@ -35,11 +34,7 @@ class NoRuntimeTypeToString extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitInterpolationExpression(InterpolationExpression node) {
     if (!_isRuntimeTypeAccess(node.expression)) return;

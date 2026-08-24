@@ -100,10 +100,8 @@ class LoadedMachODylib {
   /// sections corresponding to non-null output parameters in the BSS segment.
   ///
   /// On failure, the error may be retrieved by 'error()'.
-  bool ResolveSymbols(const uint8_t** vm_data,
-                      const uint8_t** vm_instrs,
-                      const uint8_t** isolate_data,
-                      const uint8_t** isolate_instrs);
+  bool ResolveSymbols(const uint8_t** snapshot_data,
+                      const uint8_t** snapshot_text);
 
   const char* error() { return error_; }
 
@@ -234,6 +232,11 @@ bool LoadedMachODylib::ReadHeader() {
               "Architecture mismatch.");
   CHECK_ERROR(header_.cpusubtype == dart::mach_o::CPU_SUBTYPE_ARM_ALL,
               "Unexpected subtype of ARM specified");
+#elif defined(TARGET_ARCH_ARM64E)
+  CHECK_ERROR(header_.cputype == dart::mach_o::CPU_TYPE_ARM64,
+              "Architecture mismatch.");
+  CHECK_ERROR(header_.cpusubtype == dart::mach_o::CPU_SUBTYPE_ARM64E_V0,
+              "Unexpected subtype of ARM64 specified");
 #elif defined(TARGET_ARCH_ARM64)
   CHECK_ERROR(header_.cputype == dart::mach_o::CPU_TYPE_ARM64,
               "Architecture mismatch.");
@@ -473,10 +476,8 @@ bool LoadedMachODylib::ReadDynamicSymbolTable() {
   return true;
 }
 
-bool LoadedMachODylib::ResolveSymbols(const uint8_t** vm_data,
-                                      const uint8_t** vm_instrs,
-                                      const uint8_t** isolate_data,
-                                      const uint8_t** isolate_instrs) {
+bool LoadedMachODylib::ResolveSymbols(const uint8_t** data,
+                                      const uint8_t** text) {
   if (error_ != nullptr) {
     return false;
   }
@@ -485,26 +486,36 @@ bool LoadedMachODylib::ResolveSymbols(const uint8_t** vm_data,
     const auto& sym = external_symbols_[i];
     const char* name = string_table_ + sym.n_idx;
     const uint8_t** output = nullptr;
+    bool is_text = false;
 
-    if (strcmp(name, kVmSnapshotDataAsmSymbol) == 0) {
-      output = vm_data;
-    } else if (strcmp(name, kVmSnapshotInstructionsAsmSymbol) == 0) {
-      output = vm_instrs;
-    } else if (strcmp(name, kIsolateSnapshotDataAsmSymbol) == 0) {
-      output = isolate_data;
-    } else if (strcmp(name, kIsolateSnapshotInstructionsAsmSymbol) == 0) {
-      output = isolate_instrs;
+    if (strcmp(name, kSnapshotDataAsmSymbol) == 0) {
+      output = data;
+    } else if (strcmp(name, kSnapshotTextAsmSymbol) == 0) {
+      output = text;
+      // dyld decides based on the section the symbol comes from, but our loader
+      // doesn't keep track of the sections.
+      is_text = true;
     }
 
     if (output != nullptr) {
-      *output = reinterpret_cast<const uint8_t*>(base_->start() + sym.n_value);
+      auto* addr =
+          reinterpret_cast<const uint8_t*>(base_->start() + sym.n_value);
+#if defined(HOST_ARCH_ARM64E)
+      if (is_text) {
+        addr =
+            ptrauth_sign_unauthenticated(addr, ptrauth_key_function_pointer, 0);
+      }
+#else
+      USE(is_text);
+#endif
+      *output = addr;
     }
   }
 
-  CHECK_ERROR(isolate_data == nullptr || *isolate_data != nullptr,
-              "Could not find isolate snapshot data.");
-  CHECK_ERROR(isolate_instrs == nullptr || *isolate_instrs != nullptr,
-              "Could not find isolate instructions.");
+  CHECK_ERROR(data == nullptr || *data != nullptr,
+              "Could not find snapshot data.");
+  CHECK_ERROR(text == nullptr || *text != nullptr,
+              "Could not find snapshot text.");
   return true;
 }
 
@@ -540,17 +551,13 @@ DART_EXPORT Dart_LoadedMachODylib* Dart_LoadMachODylib_Fd(
     int fd,
     uint64_t file_offset,
     const char** error,
-    const uint8_t** vm_snapshot_data,
-    const uint8_t** vm_snapshot_instrs,
-    const uint8_t** vm_isolate_data,
-    const uint8_t** vm_isolate_instrs) {
+    const uint8_t** snapshot_data,
+    const uint8_t** snapshot_text) {
   std::unique_ptr<Mappable> mappable(Mappable::FromFD(fd));
   std::unique_ptr<LoadedMachODylib> macho(
       new LoadedMachODylib(std::move(mappable), file_offset));
 
-  if (!macho->Load() ||
-      !macho->ResolveSymbols(vm_snapshot_data, vm_snapshot_instrs,
-                             vm_isolate_data, vm_isolate_instrs)) {
+  if (!macho->Load() || !macho->ResolveSymbols(snapshot_data, snapshot_text)) {
     *error = macho->error();
     return nullptr;
   }
@@ -563,10 +570,8 @@ DART_EXPORT Dart_LoadedMachODylib* Dart_LoadMachODylib(
     const char* filename,
     uint64_t file_offset,
     const char** error,
-    const uint8_t** vm_snapshot_data,
-    const uint8_t** vm_snapshot_instrs,
-    const uint8_t** vm_isolate_data,
-    const uint8_t** vm_isolate_instrs) {
+    const uint8_t** snapshot_data,
+    const uint8_t** snapshot_text) {
   std::unique_ptr<Mappable> mappable(Mappable::FromPath(filename));
   if (mappable == nullptr) {
     *error = "Couldn't open file.";
@@ -575,9 +580,7 @@ DART_EXPORT Dart_LoadedMachODylib* Dart_LoadMachODylib(
   std::unique_ptr<LoadedMachODylib> macho(
       new LoadedMachODylib(std::move(mappable), file_offset));
 
-  if (!macho->Load() ||
-      !macho->ResolveSymbols(vm_snapshot_data, vm_snapshot_instrs,
-                             vm_isolate_data, vm_isolate_instrs)) {
+  if (!macho->Load() || !macho->ResolveSymbols(snapshot_data, snapshot_text)) {
     *error = macho->error();
     return nullptr;
   }
@@ -589,10 +592,8 @@ DART_EXPORT Dart_LoadedMachODylib* Dart_LoadMachODylib_Memory(
     const uint8_t* snapshot,
     uint64_t snapshot_size,
     const char** error,
-    const uint8_t** vm_snapshot_data,
-    const uint8_t** vm_snapshot_instrs,
-    const uint8_t** vm_isolate_data,
-    const uint8_t** vm_isolate_instrs) {
+    const uint8_t** snapshot_data,
+    const uint8_t** snapshot_text) {
   std::unique_ptr<Mappable> mappable(
       Mappable::FromMemory(snapshot, snapshot_size));
   if (mappable == nullptr) {
@@ -602,9 +603,7 @@ DART_EXPORT Dart_LoadedMachODylib* Dart_LoadMachODylib_Memory(
   std::unique_ptr<LoadedMachODylib> macho(
       new LoadedMachODylib(std::move(mappable), /*macho_data_offset=*/0));
 
-  if (!macho->Load() ||
-      !macho->ResolveSymbols(vm_snapshot_data, vm_snapshot_instrs,
-                             vm_isolate_data, vm_isolate_instrs)) {
+  if (!macho->Load() || !macho->ResolveSymbols(snapshot_data, snapshot_text)) {
     *error = macho->error();
     return nullptr;
   }

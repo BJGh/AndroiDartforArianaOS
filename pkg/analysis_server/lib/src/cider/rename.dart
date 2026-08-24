@@ -15,7 +15,6 @@ import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/src/dart/micro/resolve_file.dart';
 import 'package:analyzer/src/dart/micro/utils.dart';
 import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/utilities/extensions/collection.dart';
 import 'package:analyzer/src/utilities/extensions/element.dart';
 import 'package:analyzer/src/utilities/extensions/flutter.dart';
 
@@ -27,7 +26,7 @@ class CanRenameResponse {
 
   FlutterWidgetState? _flutterWidgetState;
 
-  CanRenameResponse(
+  new(
     this.lineInfo,
     this.refactoringElement,
     this._fileResolver,
@@ -117,29 +116,16 @@ class CheckNameResponse {
   final CanRenameResponse canRename;
   final String newName;
 
-  CheckNameResponse(this.status, this.canRename, this.newName);
+  new(this.status, this.canRename, this.newName);
 
   LineInfo get lineInfo => canRename.lineInfo;
 
   String get oldName => canRename.refactoringElement.element.displayName;
 
   Future<RenameResponse?> computeRenameRanges2() async {
-    var elements = <Element>[];
     var element = canRename.refactoringElement.element;
-    if (element is PropertyInducingElement && element.isOriginGetterSetter) {
-      var property = element;
-      var getter = property.getter;
-      var setter = property.setter;
-      elements.addIfNotNull(getter);
-      elements.addIfNotNull(setter);
-    } else {
-      elements.add(element);
-    }
     var fileResolver = canRename._fileResolver;
-    var matches = <CiderSearchMatch>[];
-    for (var element in elements) {
-      matches.addAll(await fileResolver.findReferences(element));
-    }
+    var matches = await fileResolver.findReferences(element);
     FlutterWidgetRename? flutterRename;
     if (canRename._flutterWidgetState != null) {
       flutterRename = await _computeFlutterStateName();
@@ -284,9 +270,9 @@ class CheckNameResponse {
         }
       }
     } else {
-      var location = (await canRename._fileResolver.resolve(
-        path: sourcePath,
-      )).lineInfo.getLocation(element.firstFragment.nameOffset!);
+      var location = (await canRename._fileResolver.resolve(path: sourcePath))
+          .lineInfo
+          .getLocation(element.firstFragment.nameOffset!);
       infos.add(ReplaceInfo(newName, location, element.name!.length));
     }
     return infos;
@@ -403,6 +389,7 @@ class CheckNameResponse {
     }
     var edit = await buildEditForInsertedConstructor(
       node,
+      isNamed: newName.isNotEmpty,
       resolvedUnit: resolvedUnit,
       session: fileResolver.contextObjects!.analysisSession,
       (builder) => builder.writeConstructorDeclaration(
@@ -428,7 +415,7 @@ class CheckNameResponse {
 class CiderRenameComputer {
   final FileResolver _fileResolver;
 
-  CiderRenameComputer(this._fileResolver);
+  new(this._fileResolver);
 
   /// Check if the identifier at the [line], [column] for the file at the
   /// [filePath] can be renamed.
@@ -442,7 +429,7 @@ class CiderRenameComputer {
     var offset = lineInfo.getOffsetOfLine(line) + column;
 
     var node = resolvedUnit.unit.nodeCovering(offset: offset);
-    var element = getElementOfNode2(node);
+    var element = getElementOfNodeV1(node);
 
     if (node == null || element == null) {
       return null;
@@ -490,7 +477,7 @@ class CiderReplaceMatch {
   final String path;
   List<ReplaceInfo> matches;
 
-  CiderReplaceMatch(this.path, this.matches);
+  new(this.path, this.matches);
 }
 
 class FlutterWidgetRename {
@@ -501,7 +488,7 @@ class FlutterWidgetRename {
   final List<CiderSearchMatch> matches;
   final List<CiderReplaceMatch> replacements;
 
-  FlutterWidgetRename(this.name, this.matches, this.replacements);
+  new(this.name, this.matches, this.replacements);
 }
 
 /// The corresponding `State` declaration of a  Flutter `StatefulWidget`.
@@ -509,7 +496,7 @@ class FlutterWidgetState {
   ClassElement state;
   String newName;
 
-  FlutterWidgetState(this.state, this.newName);
+  new(this.state, this.newName);
 }
 
 class RenameResponse {
@@ -521,7 +508,7 @@ class RenameResponse {
   final List<CiderReplaceMatch> replaceMatches;
   FlutterWidgetRename? flutterWidgetRename;
 
-  RenameResponse(
+  new(
     this.matches,
     this.checkName,
     this.replaceMatches, {
@@ -534,7 +521,7 @@ class ReplaceInfo {
   final CharacterLocation startPosition;
   final int length;
 
-  ReplaceInfo(this.replacementText, this.startPosition, this.length);
+  new(this.replacementText, this.startPosition, this.length);
 
   @override
   int get hashCode => Object.hash(replacementText, startPosition, length);

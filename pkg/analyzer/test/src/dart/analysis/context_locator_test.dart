@@ -964,27 +964,6 @@ ${getFolder(outPath).path}
     expect(outerRoot.packagesFile, outerPackagesFile);
   }
 
-  void test_locateRoots_nested_excluded_explicit() {
-    Folder outerRootFolder = newFolder('/test/outer');
-    File outerOptionsFile = newAnalysisOptionsYamlFile('/test/outer', '');
-    File outerPackagesFile = newPackageConfigJsonFile('/test/outer', '');
-    Folder excludedFolder = newFolder('/test/outer/examples');
-    newAnalysisOptionsYamlFile('/test/outer/examples/inner', '');
-
-    List<ContextRoot> roots = locateContextRoots(
-      includedPaths: [outerRootFolder.path],
-      excludedPaths: [excludedFolder.path],
-      resourceProvider: resourceProvider,
-    );
-    expect(roots, hasLength(1));
-
-    ContextRoot outerRoot = findRoot(roots, outerRootFolder);
-    expect(outerRoot.includedPaths, unorderedEquals([outerRootFolder.path]));
-    expect(outerRoot.excludedPaths, unorderedEquals([excludedFolder.path]));
-    expect(outerRoot.optionsFile, outerOptionsFile);
-    expect(outerRoot.packagesFile, outerPackagesFile);
-  }
-
   /// Verify that overlapped roots do not result in nested files being analyzed
   /// in multiple contexts (when the nested folder is passed first).
   ///
@@ -1458,6 +1437,7 @@ analyzer:
     expect(root.packagesFile, packagesFile);
 
     _assertNotAnalyzed(root, [
+      '/test/root/data/foo/f.dart',
       '/test/root/data/aaa/foo/f.dart',
       '/test/root/data/aaa/foo/bar/f.dart',
     ]);
@@ -1465,7 +1445,6 @@ analyzer:
     _assertAnalyzed(root, [
       '/test/root/f.dart',
       '/test/root/data/f.dart',
-      '/test/root/data/foo/f.dart',
       '/test/root/data/aaa/bar/f.dart',
     ]);
   }

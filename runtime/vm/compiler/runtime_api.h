@@ -212,6 +212,7 @@ uword SymbolsPredefinedAddress();
 #endif
 
 const Code& StubCodeAllocateArray();
+const Code& StubCodeSubtype1TestCache();
 const Code& StubCodeSubtype2TestCache();
 const Code& StubCodeSubtype3TestCache();
 const Code& StubCodeSubtype4TestCache();
@@ -439,6 +440,16 @@ class UntaggedClosure : public AllStatic {
   static const word kLengthBitsSize;
 };
 
+class UntaggedPcDescriptors : public AllStatic {
+ public:
+  static const word kKindBitsPos;
+  static const word kKindBitsSize;
+  static const word kTryIndexBitsPos;
+  static const word kTryIndexBitsSize;
+  static const word kYieldIndexBitsPos;
+  static const word kYieldIndexBitsSize;
+};
+
 class UntaggedAbstractType : public AllStatic {
  public:
   static const word kTypeStateFinalizedInstantiated;
@@ -459,6 +470,7 @@ class UntaggedTypeParameter : public AllStatic {
 
 class Object : public AllStatic {
  public:
+  static const word kHashBits;
   // Offset of the tags word.
   static word tags_offset();
   static word InstanceSize();
@@ -534,6 +546,26 @@ class Function : public AllStatic {
   static word signature_offset();
   static word usage_counter_offset();
   static word InstanceSize();
+
+  static const word kKindBitsPos;
+  static const word kKindBitsSize;
+  static const word kRecognizedBitsPos;
+  static const word kRecognizedBitsSize;
+  static const word kModifierBitsPos;
+  static const word kModifierBitsSize;
+  static const word kStaticBitPos;
+  static const word kConstBitPos;
+  static const word kAbstractBitPos;
+  static const word kReflectableBitPos;
+  static const word kVisibleBitPos;
+  static const word kDebuggableBitPos;
+  static const word kNativeBitPos;
+  static const word kExternalBitPos;
+  static const word kHasPragmaBitPos;
+  static const word kIsSyntheticBitPos;
+  static const word kIsExtensionMemberBitPos;
+  static const word kIsExtensionTypeMemberBitPos;
+
   FINAL_CLASS();
 };
 
@@ -1524,6 +1556,10 @@ class Heap : public AllStatic {
 
 class NativeArguments {
  public:
+  static const word kArgcBitsPos;
+  static const word kArgcBitsSize;
+  static const word kGenericFunctionBitPos;
+
   static word thread_offset();
   static word argc_tag_offset();
   static word argv_offset();
@@ -1554,7 +1590,6 @@ class UserTag : public AllStatic {
 class Symbols : public AllStatic {
  public:
   static const word kNumberOfOneCharCodeSymbols;
-  static const word kNullCharCodeSymbolOffset;
 };
 
 class Field : public AllStatic {

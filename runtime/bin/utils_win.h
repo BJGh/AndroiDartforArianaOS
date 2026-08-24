@@ -20,8 +20,11 @@ namespace bin {
 
 void FormatMessageIntoBuffer(DWORD code, wchar_t* buffer, int buffer_length);
 
-// Convert from milliseconds since the Unix epoch to a FILETIME.
-FILETIME GetFiletimeFromMillis(int64_t millis);
+// Convert from microseconds since the Unix epoch to a FILETIME.
+FILETIME GetFiletimeFromMicros(int64_t micros);
+
+// Convert from a FILETIME to microseconds since the Unix epoch.
+int64_t FileTimeToMicroseconds(const FILETIME& ft);
 
 // These string utility functions return strings that have been allocated with
 // Dart_ScopeAllocate(). They should be used only when we are inside an API
@@ -79,6 +82,11 @@ class WideToUtf8Scope {
   DISALLOW_ALLOCATION();
   DISALLOW_IMPLICIT_CONSTRUCTORS(WideToUtf8Scope);
 };
+
+// On Windows, loaded DLLs are locked by the OS until the process exits (see
+// https://github.com/dart-lang/sdk/issues/55521).
+// Spawn a detached background process that waits for exit and deletes the dir.
+void DeleteTempDirDetached(const wchar_t* temp_dir_w);
 
 std::unique_ptr<wchar_t[]> Utf8ToWideChar(const char* path);
 

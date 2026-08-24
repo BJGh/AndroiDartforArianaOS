@@ -20,13 +20,13 @@ main() {
 @reflectiveTest
 class MetadataResolutionTest extends PubPackageResolutionTest {
   test_at_genericFunctionType_formalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 42;
 List<void Function(@a int b)> f() => [];
 ''');
 
-    var annotation = findNode.annotation('@a');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@a');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -35,25 +35,25 @@ Annotation
     staticType: null
   element: <testLibrary>::@getter::a
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 int 42
   variable: <testLibrary>::@topLevelVariable::a
 ''');
   }
 
   test_location_class_classDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 @foo
 class A {}
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_class_constructor_formalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 class A {
@@ -61,11 +61,11 @@ class A {
 }
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_class_constructorDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 class A {
@@ -74,11 +74,11 @@ class A {
 }
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_class_fieldDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 class A {
@@ -87,19 +87,19 @@ class A {
 }
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_enumConstant() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   @v
   v;
 }
 ''');
 
-    var annotation = findNode.annotation('@v');
-    assertResolvedNodeText(annotation, '''
+    var node = result.findNode.annotation('@v');
+    assertResolvedNodeText(node, '''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -109,7 +109,7 @@ Annotation
   element: <testLibrary>::@enum::E::@getter::v
 ''');
 
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 E
   _name: String v
   index: int 0
@@ -120,17 +120,17 @@ E
   }
 
   test_location_extensionType_representation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 extension type A(@foo int it) {}
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_fieldFormal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final Object f;
   const A(this.f);
@@ -141,8 +141,8 @@ class B {
   B({@A( A(0) ) required this.f});
 }
 ''');
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -151,7 +151,25 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      ConstructorInvocation
+        constructorReference: ConstructorReference2
+          typeReference: ConstructorTypeReference
+            name: A
+            element: <testLibrary>::@class::A
+            type: A
+          element: <testLibrary>::@class::A::@constructor::new
+        argumentList: ArgumentList
+          leftParenthesis: (
+          arguments2
+            IntegerLiteral
+              literal: 0
+              correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
+              staticType: int
+          rightParenthesis: )
+        correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
+        staticType: A
+    arguments(v1)
       InstanceCreationExpression
         constructorName: ConstructorName
           type: NamedType
@@ -172,7 +190,7 @@ Annotation
     rightParenthesis: )
   element: <testLibrary>::@class::A::@constructor::new
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A
   f: A
     f: int 0
@@ -193,7 +211,7 @@ A
   }
 
   test_location_forEach_declaredIdentifier() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 void f(List<int> list) {
   for (@foo var x in list) {
@@ -202,55 +220,59 @@ void f(List<int> list) {
 }
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_forEachPartsWithDeclaration() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
+const foo = 42;
 void f() {
-  for (var @foo x = 0;;) {}
+  for (@foo var x = 0;;) {
+    x;
+    break;
+  }
 }
 ''');
-    // This is invalid code.
-    // No checks, as long as it does not crash.
+
+    _assertAtFoo42(result);
   }
 
   test_location_libraryDirective() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 @foo
 library my;
 const foo = 42;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_libraryExportDirective() async {
     newFile('$testPackageLibPath/a.dart', '');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 @foo
 export 'a.dart';
 const foo = 42;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_libraryImportDirective() async {
     newFile('$testPackageLibPath/a.dart', '');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 @foo
 import 'a.dart'; // ignore:unused_import
 const foo = 42;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_localVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int a;
   const A(this.a);
@@ -263,8 +285,8 @@ void f() {
 }
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, '''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, '''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -273,7 +295,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 3
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
@@ -282,7 +304,7 @@ Annotation
   element: <testLibrary>::@class::A::@constructor::new
 ''');
 
-    var localVariable = findElement2.localVar('x');
+    var localVariable = result.findElement.localVar('x');
     var annotationOnElement = localVariable.metadata.annotations.first;
     _assertElementAnnotationValueText(annotationOnElement, '''
 A
@@ -295,17 +317,20 @@ A
   }
 
   test_location_localVariableDeclaration() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
+const foo = 42;
 void f() {
-  var @foo x;
+  @foo
+  var x;
+  x;
 }
 ''');
-    // This is invalid code.
-    // No checks, as long as it does not crash.
+
+    _assertAtFoo42(result);
   }
 
   test_location_methodDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 class A {
@@ -314,7 +339,7 @@ class A {
 }
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_partDirective() async {
@@ -322,17 +347,17 @@ class A {
 part of 'test.dart';
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 @foo
 part 'a.dart';
 const foo = 42;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_partDirective_fileDoesNotExist() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 @foo
 part 'a.dart';
 //   ^^^^^^^^
@@ -340,28 +365,28 @@ part 'a.dart';
 const foo = 42;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_partOfDirective() async {
-    newFile('$testPackageLibPath/test.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var results = await resolveFilesWithDiagnostics({
+      testFile: r'''
 part 'a.dart';
 const foo = 42;
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+''',
+      a: r'''
 @foo
 part of 'test.dart';
-''');
+''',
+    });
+    var result = results[a]!;
 
-    await resolveFile2(a);
-    assertNoErrorsInResult();
-
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_recordTypeAnnotation_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A(this.f);
@@ -369,7 +394,7 @@ class A {
 
 ({@A(0) int f1, String f2}) f() => throw 0;
 ''');
-    var node = findNode.annotation('@A');
+    var node = result.findNode.annotation('@A');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -379,7 +404,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
@@ -398,7 +423,7 @@ A
   }
 
   test_location_recordTypeAnnotation_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A(this.f);
@@ -406,7 +431,7 @@ class A {
 
 (int, @A(0) String) f() => throw 0;
 ''');
-    var node = findNode.annotation('@A');
+    var node = result.findNode.annotation('@A');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -416,7 +441,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
@@ -435,29 +460,29 @@ A
   }
 
   test_location_topLevelFunctionDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 @foo
 void bar() {}
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_location_topLevelVariableDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 @foo
 final bar = 0;
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_value_class_inference_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A.named(this.f);
@@ -467,54 +492,7 @@ class A {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
-Annotation
-  atSign: @
-  name: PrefixedIdentifier
-    prefix: SimpleIdentifier
-      token: A
-      element: <testLibrary>::@class::A
-      staticType: null
-    period: .
-    identifier: SimpleIdentifier
-      token: named
-      element: <testLibrary>::@class::A::@constructor::named
-      staticType: null
-    element: <testLibrary>::@class::A::@constructor::named
-    staticType: null
-  arguments: ArgumentList
-    leftParenthesis: (
-    arguments
-      IntegerLiteral
-        literal: 42
-        correspondingParameter: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
-        staticType: int
-    rightParenthesis: )
-  element: <testLibrary>::@class::A::@constructor::named
-''');
-    _assertAnnotationValueText(annotation, '''
-A
-  f: int 42
-  constructorInvocation
-    constructor: <testLibrary>::@class::A::@constructor::named
-    positionalArguments
-      0: int 42
-''');
-  }
-
-  test_value_class_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
- class A {
-  final int f;
-  const A.named(this.f);
-}
-
-@A.named(42)
-void f() {}
-''');
-
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.annotation('@A');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -532,7 +510,54 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      IntegerLiteral
+        literal: 42
+        correspondingParameter: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
+        staticType: int
+    rightParenthesis: )
+  element: <testLibrary>::@class::A::@constructor::named
+''');
+    _assertAnnotationValueText(node, '''
+A
+  f: int 42
+  constructorInvocation
+    constructor: <testLibrary>::@class::A::@constructor::named
+    positionalArguments
+      0: int 42
+''');
+  }
+
+  test_value_class_namedConstructor() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+ class A {
+  final int f;
+  const A.named(this.f);
+}
+
+@A.named(42)
+void f() {}
+''');
+
+    var node = result.findNode.singleAnnotation;
+    assertResolvedNodeText(node, r'''
+Annotation
+  atSign: @
+  name: PrefixedIdentifier
+    prefix: SimpleIdentifier
+      token: A
+      element: <testLibrary>::@class::A
+      staticType: null
+    period: .
+    identifier: SimpleIdentifier
+      token: named
+      element: <testLibrary>::@class::A::@constructor::named
+      staticType: null
+    element: <testLibrary>::@class::A::@constructor::named
+    staticType: null
+  arguments: ArgumentList
+    leftParenthesis: (
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
@@ -552,18 +577,22 @@ A
   }
 
   test_value_class_namedConstructor_unresolved_hasFormalParameter() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   const A();
 }
 
 void f(int named) {
   @A.named(42)
+//^^^^^^^^^^^^
+// [diag.invalidAnnotation] Annotation must be either a const variable reference or const constructor invocation.
   int x = 0;
+//    ^
+// [diag.unusedLocalVariable] The value of the local variable 'x' isn't used.
 }
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -581,7 +610,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <null>
@@ -592,7 +621,7 @@ Annotation
   }
 
   test_value_class_staticConstField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static const int foo = 42;
 }
@@ -601,8 +630,8 @@ class A {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -619,14 +648,14 @@ Annotation
     staticType: null
   element: <testLibrary>::@class::A::@getter::foo
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 int 42
   variable: <testLibrary>::@class::A::@field::foo
 ''');
   }
 
   test_value_class_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A(this.f);
@@ -636,7 +665,7 @@ class A {
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -646,7 +675,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
@@ -666,7 +695,7 @@ A
   }
 
   test_value_class_unnamedConstructor_withNestedConstructorInvocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   const C();
 }
@@ -680,7 +709,7 @@ class D {
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -690,7 +719,21 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      ConstructorInvocation
+        keyword: const
+        constructorReference: ConstructorReference2
+          typeReference: ConstructorTypeReference
+            name: C
+            element: <testLibrary>::@class::C
+            type: C
+          element: <testLibrary>::@class::C::@constructor::new
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        correspondingParameter: <testLibrary>::@class::D::@constructor::new::@formalParameter::c
+        staticType: C
+    arguments(v1)
       InstanceCreationExpression
         keyword: const
         constructorName: ConstructorName
@@ -723,14 +766,14 @@ D
   }
 
   test_value_extensionType_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type const A.named(int it) {}
 
 @A.named(42)
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -748,7 +791,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@extensionType::A::@constructor::named::@formalParameter::it
@@ -764,14 +807,14 @@ int 42
   }
 
   test_value_extensionType_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type const A(int it) {}
 
 @A(42)
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -781,7 +824,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@extensionType::A::@constructor::new::@formalParameter::it
@@ -797,7 +840,7 @@ int 42
   }
 
   test_value_genericClass_downwards_inference_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final List<List<T>> f;
   const A.named(this.f);
@@ -807,8 +850,8 @@ class A<T> {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -819,45 +862,43 @@ Annotation
     period: .
     identifier: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: Object?}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: Object?}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       ListLiteral
         leftBracket: [
         rightBracket: ]
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: Object?}
         staticType: List<List<Object?>>
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: Object?}
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 A<Object?>
-  f: List
-    elementType: List<Object?>
+  f: List<List<Object?>>
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: Object?}
     positionalArguments
-      0: List
-        elementType: List<Object?>
+      0: List<List<Object?>>
 ''');
   }
 
   test_value_genericClass_downwards_inference_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final List<List<T>> f;
   const A(this.f);
@@ -867,8 +908,8 @@ A<Object?>
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -877,35 +918,33 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       ListLiteral
         leftBracket: [
         rightBracket: ]
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: Object?}
         staticType: List<List<Object?>>
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: Object?}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<Object?>
-  f: List
-    elementType: List<Object?>
+  f: List<List<Object?>>
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: Object?}
     positionalArguments
-      0: List
-        elementType: List<Object?>
+      0: List<List<Object?>>
 ''');
   }
 
   test_value_genericClass_inference_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A.named(this.f);
@@ -915,8 +954,8 @@ class A<T> {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -927,33 +966,33 @@ Annotation
     period: .
     identifier: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -962,7 +1001,7 @@ A<int>
   }
 
   test_value_genericClass_inference_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -972,8 +1011,8 @@ A<int>
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -982,23 +1021,23 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1007,16 +1046,20 @@ A<int>
   }
 
   test_value_genericClass_instanceGetter() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   T get foo {}
+//      ^^^
+// [diag.bodyMightCompleteNormally] The body might complete normally, causing 'null' to be returned, but the return type, 'T', is a potentially non-nullable type.
 }
 
 @A.foo
+// [diag.invalidAnnotation][column 1][length 6] Annotation must be either a const variable reference or const constructor invocation.
 void f() {}
 ''');
 
-    assertResolvedNodeText(findNode.annotation('@A'), r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -1036,7 +1079,7 @@ Annotation
   }
 
   test_value_genericClass_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final int f;
   const A.named(this.f);
@@ -1046,8 +1089,8 @@ class A<T> {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -1058,33 +1101,33 @@ Annotation
     period: .
     identifier: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: dynamic}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: dynamic}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: dynamic}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: dynamic}
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 A<dynamic>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: dynamic}
     positionalArguments
@@ -1093,17 +1136,20 @@ A<dynamic>
   }
 
   test_value_genericClass_staticGetter() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   static T get foo {}
+//       ^
+// [diag.typeParameterReferencedByStatic] Static members can't reference type parameters of the class.
 }
 
 @A.foo
+// [diag.invalidAnnotation][column 1][length 6] Annotation must be either a const variable reference or const constructor invocation.
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -1120,13 +1166,13 @@ Annotation
     staticType: null
   element: <testLibrary>::@class::A::@getter::foo
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 <null>
 ''');
   }
 
   test_value_genericClass_typeArguments_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A.named(this.f);
@@ -1136,8 +1182,8 @@ class A<T> {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1155,29 +1201,29 @@ Annotation
   period: .
   constructorName: SimpleIdentifier
     token: named
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -1186,7 +1232,7 @@ A<int>
   }
 
   test_value_genericClass_typeArguments_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1196,8 +1242,8 @@ A<int>
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1214,23 +1260,23 @@ Annotation
     rightBracket: >
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1240,7 +1286,7 @@ A<int>
 
   test_value_genericClass_unnamedConstructor_noGenericMetadata() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.12');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A(this.f);
@@ -1250,8 +1296,8 @@ class A<T> {
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@A');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@A');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1260,23 +1306,23 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: dynamic}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: dynamic}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<dynamic>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: dynamic}
     positionalArguments
@@ -1285,7 +1331,7 @@ A<dynamic>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1299,8 +1345,8 @@ class B<T> = A<T> with M;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1309,30 +1355,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1341,7 +1387,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor_classTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1358,8 +1404,8 @@ class D {}
 mixin E {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1368,30 +1414,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1400,7 +1446,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor_functionTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1414,8 +1460,8 @@ class B<T> = A<T> with M;
 typedef T F<T>();
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1424,30 +1470,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1456,7 +1502,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor_functionTypedFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1469,8 +1515,8 @@ class B<T> = A<T> with M;
 f(@B(42) g()) {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1479,30 +1525,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1511,7 +1557,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor_genericTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1525,8 +1571,8 @@ class B<T> = A<T> with M;
 typedef F = void Function();
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1535,30 +1581,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1567,7 +1613,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_inference_unnamedConstructor_methodDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1583,8 +1629,8 @@ class C {
 }
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1593,30 +1639,30 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1625,7 +1671,7 @@ B<int>
   }
 
   test_value_genericMixinApplication_typeArguments_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
  class A<T> {
   final T f;
   const A(this.f);
@@ -1639,8 +1685,8 @@ class B<T> = A<T> with M;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -1657,30 +1703,30 @@ Annotation
     rightBracket: >
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::B::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 B<int>
   (super): A<int>
     f: int 42
     constructorInvocation
-      constructor: ConstructorMember
+      constructor: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
       positionalArguments
         0: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -1704,13 +1750,13 @@ class B {
 class C {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 
 void f(C c) {}
 ''');
 
-    var classC = findNode.namedType('C c').element as ClassElement;
+    var classC = result.findNode.namedType('C c').element as ClassElement;
     var annotation = classC.metadata.annotations.first;
     _assertElementAnnotationValueText(annotation, r'''
 B
@@ -1747,13 +1793,13 @@ import 'a.dart';
 class B {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'b.dart';
 
 void f(B b) {}
 ''');
 
-    var classB = findNode.namedType('B b').element! as ClassElement;
+    var classB = result.findNode.namedType('B b').element! as ClassElement;
     var annotation = classB.metadata.annotations.first;
     _assertElementAnnotationValueText(annotation, r'''
 A
@@ -1780,13 +1826,13 @@ import 'a.dart';
 class B {}
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'b.dart';
 
 void f(B b) {}
 ''');
 
-    var classB = findNode.namedType('B b').element as ClassElement;
+    var classB = result.findNode.namedType('B b').element as ClassElement;
     var annotation = classB.metadata.annotations.first;
     _assertElementAnnotationValueText(annotation, r'''
 A
@@ -1806,14 +1852,14 @@ A
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.A.named(42)
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -1836,7 +1882,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: package:test/a.dart::@class::A::@constructor::named::@formalParameter::f
@@ -1861,14 +1907,14 @@ class A {
   static const int foo = 42;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.A.foo
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -1906,14 +1952,14 @@ int 42
 }
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.A(42)
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -1931,7 +1977,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: package:test/a.dart::@class::A::@constructor::new::@formalParameter::f
@@ -1955,14 +2001,14 @@ A
 const foo = 42;
 ''');
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.foo
 void f() {}
 ''');
 
-    var node = findNode.singleAnnotation;
+    var node = result.findNode.singleAnnotation;
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
@@ -1995,15 +2041,15 @@ class A {
 
 typedef B = A;
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.B.foo
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@prefix.B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@prefix.B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2025,7 +2071,7 @@ Annotation
     staticType: null
   element: package:test/a.dart::@class::A::@getter::foo
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 int 42
   variable: package:test/a.dart::@class::A::@field::foo
 ''');
@@ -2040,15 +2086,15 @@ class A<T> {
 
 typedef B<U> = A<U>;
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.B.named(42)
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@prefix.B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@prefix.B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2066,29 +2112,29 @@ Annotation
   period: .
   constructorName: SimpleIdentifier
     token: named
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: package:test/a.dart::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -2105,15 +2151,15 @@ class A<T> {
 
 typedef B<U> = A<U>;
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.B(42)
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@prefix.B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@prefix.B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2130,23 +2176,23 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: package:test/a.dart::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -2163,15 +2209,15 @@ class A<T> {
 
 typedef B<U> = A<U>;
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.B<int>.named(42)
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@prefix.B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@prefix.B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2197,29 +2243,29 @@ Annotation
   period: .
   constructorName: SimpleIdentifier
     token: named
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: package:test/a.dart::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -2236,15 +2282,15 @@ class A<T> {
 
 typedef B<U> = A<U>;
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart' as prefix;
 
 @prefix.B<int>(42)
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@prefix.B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@prefix.B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2269,23 +2315,23 @@ Annotation
     rightBracket: >
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: package:test/a.dart::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: package:test/a.dart::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: package:test/a.dart::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -2294,18 +2340,18 @@ A<int>
   }
 
   test_value_topLevelVariableDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 42;
 
 @foo
 void f() {}
 ''');
 
-    _assertAtFoo42();
+    _assertAtFoo42(result);
   }
 
   test_value_typeAlias_class_staticConstField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   static const int foo = 42;
 }
@@ -2316,8 +2362,8 @@ typedef B = A;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2334,14 +2380,14 @@ Annotation
     staticType: null
   element: <testLibrary>::@class::A::@getter::foo
 ''');
-    _assertAnnotationValueText(annotation, '''
+    _assertAnnotationValueText(node, '''
 int 42
   variable: <testLibrary>::@class::A::@field::foo
 ''');
   }
 
   test_value_typeAlias_generic_class_generic_1of2_typeArguments_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   final T t;
   final U u;
@@ -2354,8 +2400,8 @@ typedef B<T> = A<T, double>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2373,36 +2419,36 @@ Annotation
   period: .
   constructorName: SimpleIdentifier
     token: named
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int, U: double}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::t
           substitution: {T: int, U: double}
         staticType: int
       DoubleLiteral
         literal: 1.2
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::u
           substitution: {T: int, U: double}
         staticType: double
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int, U: double}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int, double>
   t: int 42
   u: double 1.2
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int, U: double}
     positionalArguments
@@ -2412,7 +2458,7 @@ A<int, double>
   }
 
   test_value_typeAlias_generic_class_generic_1of2_typeArguments_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {
   final T t;
   final U u;
@@ -2425,8 +2471,8 @@ typedef B<T> = A<T, double>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2443,30 +2489,30 @@ Annotation
     rightBracket: >
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::t
           substitution: {T: int, U: double}
         staticType: int
       DoubleLiteral
         literal: 1.2
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::u
           substitution: {T: int, U: double}
         staticType: double
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int, U: double}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int, double>
   t: int 42
   u: double 1.2
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int, U: double}
     positionalArguments
@@ -2476,7 +2522,7 @@ A<int, double>
   }
 
   test_value_typeAlias_generic_class_generic_all_inference_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A.named(this.f);
@@ -2488,8 +2534,8 @@ typedef B<U> = A<U>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2500,33 +2546,33 @@ Annotation
     period: .
     identifier: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -2535,7 +2581,7 @@ A<int>
   }
 
   test_value_typeAlias_generic_class_generic_all_inference_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A(this.f);
@@ -2547,8 +2593,8 @@ typedef B<U> = A<U>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2557,23 +2603,23 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -2582,7 +2628,7 @@ A<int>
   }
 
   test_value_typeAlias_generic_class_generic_all_typeArguments_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A.named(this.f);
@@ -2594,8 +2640,8 @@ typedef B<U> = A<U>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2613,29 +2659,29 @@ Annotation
   period: .
   constructorName: SimpleIdentifier
     token: named
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -2644,7 +2690,7 @@ A<int>
   }
 
   test_value_typeAlias_generic_class_generic_all_typeArguments_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A(this.f);
@@ -2656,8 +2702,8 @@ typedef B<U> = A<U>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2674,23 +2720,23 @@ Annotation
     rightBracket: >
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -2699,7 +2745,7 @@ A<int>
   }
 
   test_value_typeAlias_notGeneric_class_generic_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A.named(this.f);
@@ -2711,8 +2757,8 @@ typedef B = A<int>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2723,33 +2769,33 @@ Annotation
     period: .
     identifier: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: int}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::named
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: int}
     positionalArguments
@@ -2758,7 +2804,7 @@ A<int>
   }
 
   test_value_typeAlias_notGeneric_class_generic_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   final T f;
   const A(this.f);
@@ -2770,8 +2816,8 @@ typedef B = A<int>;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2780,23 +2826,23 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
-        correspondingParameter: FieldFormalParameterMember
+        correspondingParameter: SubstitutedFieldFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
           substitution: {T: int}
         staticType: int
     rightParenthesis: )
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::A::@constructor::new
     substitution: {T: int}
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A<int>
   f: int 42
   constructorInvocation
-    constructor: ConstructorMember
+    constructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
     positionalArguments
@@ -2805,7 +2851,7 @@ A<int>
   }
 
   test_value_typeAlias_notGeneric_class_notGeneric_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A.named(this.f);
@@ -2817,8 +2863,8 @@ typedef B = A;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: PrefixedIdentifier
@@ -2835,7 +2881,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@class::A::@constructor::named::@formalParameter::f
@@ -2843,7 +2889,7 @@ Annotation
     rightParenthesis: )
   element: <testLibrary>::@class::A::@constructor::named
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A
   f: int 42
   constructorInvocation
@@ -2854,7 +2900,7 @@ A
   }
 
   test_value_typeAlias_notGeneric_class_notGeneric_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int f;
   const A(this.f);
@@ -2866,8 +2912,8 @@ typedef B = A;
 void f() {}
 ''');
 
-    var annotation = findNode.annotation('@B');
-    assertResolvedNodeText(annotation, r'''
+    var node = result.findNode.annotation('@B');
+    assertResolvedNodeText(node, r'''
 Annotation
   atSign: @
   name: SimpleIdentifier
@@ -2876,7 +2922,7 @@ Annotation
     staticType: null
   arguments: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 42
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::f
@@ -2884,7 +2930,7 @@ Annotation
     rightParenthesis: )
   element: <testLibrary>::@class::A::@constructor::new
 ''');
-    _assertAnnotationValueText(annotation, r'''
+    _assertAnnotationValueText(node, r'''
 A
   f: int 42
   constructorInvocation
@@ -2899,8 +2945,8 @@ A
     _assertElementAnnotationValueText(elementAnnotation, expected);
   }
 
-  void _assertAtFoo42() {
-    var node = findNode.annotation('@foo');
+  void _assertAtFoo42(TestResolvedUnitResult result) {
+    var node = result.findNode.annotation('@foo');
     assertResolvedNodeText(node, r'''
 Annotation
   atSign: @

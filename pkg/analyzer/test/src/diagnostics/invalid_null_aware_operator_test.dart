@@ -177,7 +177,7 @@ void f(int? a, int b) {
   }
 
   test_extensionOverride_indexExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   bool operator[](int index) => true;
 }
@@ -189,12 +189,12 @@ void f(int? a, int b) {
 // [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?[' is unnecessary.
 }
 ''');
-    assertType(findNode.index('E(a)'), 'bool?');
-    assertType(findNode.index('E(b)'), 'bool?');
+    assertType(result.findNode.indexExpression2('E(a)'), 'bool?');
+    assertType(result.findNode.indexExpression2('E(b)'), 'bool?');
   }
 
   test_extensionOverride_methodInvocation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   bool foo() => true;
 }
@@ -206,12 +206,12 @@ void f(int? a, int b) {
 // [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
 }
 ''');
-    assertType(findNode.methodInvocation('E(a)'), 'bool?');
-    assertType(findNode.methodInvocation('E(b)'), 'bool?');
+    assertType(result.findNode.methodInvocation('E(a)'), 'bool?');
+    assertType(result.findNode.methodInvocation('E(b)'), 'bool?');
   }
 
   test_extensionOverride_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   bool get foo => true;
 }
@@ -223,8 +223,8 @@ void f(int? a, int b) {
 // [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
 }
 ''');
-    assertType(findNode.propertyAccess('E(a)'), 'bool?');
-    assertType(findNode.propertyAccess('E(b)'), 'bool?');
+    assertType(result.findNode.propertyAccess('E(a)'), 'bool?');
+    assertType(result.findNode.propertyAccess('E(b)'), 'bool?');
   }
 
   test_getter_class() async {
@@ -305,6 +305,44 @@ f() {
   p?.x;
 //^
 // [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
+}
+''');
+  }
+
+  test_getter_propertyExtraction_explicitInstanceCreation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class C {
+  int x = 0;
+}
+
+void f() {
+  new C()?.x;
+//       ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+}
+''');
+  }
+
+  test_getter_propertyExtraction_stringLiteral() async {
+    await resolveTestCodeWithDiagnostics(r'''
+void f() {
+  'a'?.length;
+//   ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+}
+''');
+  }
+
+  test_getter_propertyExtraction_this() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class C {
+  int x = 0;
+
+  void f() {
+    this?.x;
+//      ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+  }
 }
 ''');
   }
@@ -568,6 +606,48 @@ f() {
   p?.x = 0;
 //^
 // [diag.prefixIdentifierNotFollowedByDot] The name 'p' refers to an import prefix, so it must be followed by '.'.
+}
+''');
+  }
+
+  test_setter_propertyAssignmentTarget_explicitInstanceCreation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class C {
+  int x = 0;
+}
+
+void f() {
+  new C()?.x = 0;
+//       ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+}
+''');
+  }
+
+  test_setter_propertyAssignmentTarget_stringLiteral() async {
+    await resolveTestCodeWithDiagnostics(r'''
+extension E on String {
+  set x(int value) {}
+}
+
+void f() {
+  'a'?.x = 0;
+//   ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+}
+''');
+  }
+
+  test_setter_propertyAssignmentTarget_this() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class C {
+  int x = 0;
+
+  void f() {
+    this?.x = 0;
+//      ^^
+// [diag.invalidNullAwareOperator] The receiver can't be null, so the null-aware operator '?.' is unnecessary.
+  }
 }
 ''');
   }

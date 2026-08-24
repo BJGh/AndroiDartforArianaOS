@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use throwsA matcher instead of fail().';
 
 class UseTestThrowsMatchers extends AnalysisRule {
-  UseTestThrowsMatchers()
-    : super(name: LintNames.use_test_throws_matchers, description: _desc);
+  new() : super(name: LintNames.use_test_throws_matchers, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.useTestThrowsMatchers;
@@ -32,11 +31,7 @@ class UseTestThrowsMatchers extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   bool isTestInvocation(Statement statement, String functionName) {
     if (statement is! ExpressionStatement) return false;
     var expression = statement.expression;

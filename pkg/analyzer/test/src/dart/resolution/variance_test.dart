@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -18,7 +17,7 @@ main() {
 @reflectiveTest
 class VarianceResolutionTest extends PubPackageResolutionTest {
   test_inference_in_parameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class Contravariant<in T> {}
 
 class Exactly<inout T> {}
@@ -34,7 +33,7 @@ main() {
 }
     ''');
 
-    var node = findNode.methodInvocation('inferContraContra(');
+    var node = result.findNode.methodInvocation('inferContraContra(');
     nodeTextConfiguration.skipArgumentList = true;
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -50,7 +49,7 @@ MethodInvocation
   }
 
   test_inference_in_parameter_downwards() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B<in T> {
   B(List<T> x);
   void set x(T val) {}
@@ -63,16 +62,26 @@ main() {
 }
 ''');
 
-    var node = findNode.instanceCreation('B(<num>');
+    var node = result.findNode.constructorInvocation('B(<num>');
     nodeTextConfiguration.skipArgumentList = true;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: B
+      element: <testLibrary>::@class::B
+      type: B<num>
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::B::@constructor::new
+      substitution: {T: num}
+  staticType: B<num>
+V1: InstanceCreationExpression
   constructorName: ConstructorName
     type: NamedType
       name: B
       element: <testLibrary>::@class::B
       type: B<num>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::B::@constructor::new
       substitution: {T: num}
   staticType: B<num>
@@ -80,8 +89,7 @@ InstanceCreationExpression
   }
 
   test_inference_inout_parameter() async {
-    await assertErrorsInCode(
-      '''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class Invariant<inout T> {}
 
 class Exactly<inout T> {}
@@ -90,16 +98,16 @@ Exactly<T> inferInvInv<T>(Invariant<T> x, Invariant<T> y) => new Exactly<T>();
 
 main() {
   inferInvInv(Invariant<String>(), Invariant<int>());
+//^^^^^^^^^^^
+// [diag.couldNotInfer] Couldn't infer type parameter 'T'.\n\nTried to infer 'Object' for 'T' which doesn't work:\n  Parameter 'x' declared as     'Invariant<T>'\n                but argument is 'Invariant<String>'.\n  Parameter 'y' declared as     'Invariant<T>'\n                but argument is 'Invariant<int>'.\n\nConsider passing explicit type argument(s) to the generic.
+//            ^^^^^^^^^^^^^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'Invariant<String>' can't be assigned to the parameter type 'Invariant<Object>'.
+//                                 ^^^^^^^^^^^^^^^^
+// [diag.argumentTypeNotAssignable] The argument type 'Invariant<int>' can't be assigned to the parameter type 'Invariant<Object>'.
 }
-''',
-      [
-        error(diag.couldNotInfer, 147, 11),
-        error(diag.argumentTypeNotAssignable, 159, 19),
-        error(diag.argumentTypeNotAssignable, 180, 16),
-      ],
-    );
+''');
 
-    var node = findNode.methodInvocation('inferInvInv(');
+    var node = result.findNode.methodInvocation('inferInvInv(');
     nodeTextConfiguration.skipArgumentList = true;
     assertResolvedNodeText(node, r'''
 MethodInvocation
@@ -115,7 +123,7 @@ MethodInvocation
   }
 
   test_inference_out_parameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class Covariant<out T> {}
 
 class Exactly<inout T> {}
@@ -130,7 +138,7 @@ main() {
 }
 ''');
 
-    var node = findNode.methodInvocation('inferCovCov(');
+    var node = result.findNode.methodInvocation('inferCovCov(');
     nodeTextConfiguration.skipArgumentList = true;
     assertResolvedNodeText(node, r'''
 MethodInvocation

@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class FunctionExpressionInvocationTest extends PubPackageResolutionTest {
   test_call_infer_fromArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void call<T>(T t) {}
 }
@@ -27,19 +27,19 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a(0)');
+    var node = result.findNode.functionExpressionInvocation('a(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@method::call::@formalParameter::t
           substitution: {T: int}
         staticType: int
@@ -53,7 +53,7 @@ FunctionExpressionInvocation
   }
 
   test_call_infer_fromArguments_listLiteral() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   List<T> call<T>(List<T> _)  {
     throw 42;
@@ -61,28 +61,30 @@ class A {
 }
 
 main(A a) {
+//   ^
+// [diag.mainFirstPositionalParameterType] The type of the first positional parameter of the 'main' function must be a supertype of 'List<String>'.
   a([0]);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a([');
+    var node = result.findNode.functionExpressionInvocation('a([');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::main::@formalParameter::a
     staticType: A
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       ListLiteral
         leftBracket: [
-        elements
+        elements2
           IntegerLiteral
             literal: 0
             staticType: int
         rightBracket: ]
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: <testLibrary>::@class::A::@method::call::@formalParameter::_
           substitution: {T: int}
         staticType: List<int>
@@ -96,7 +98,7 @@ FunctionExpressionInvocation
   }
 
   test_call_infer_fromContext() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   T call<T>() {
     throw 42;
@@ -108,10 +110,10 @@ void f(A a, int context) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a()');
+    var node = result.findNode.functionExpressionInvocation('a()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -127,7 +129,7 @@ FunctionExpressionInvocation
   }
 
   test_call_typeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   T call<T>() {
     throw 42;
@@ -139,10 +141,10 @@ void f(A a) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a<int>()');
+    var node = result.findNode.functionExpressionInvocation('a<int>()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A
@@ -166,19 +168,19 @@ FunctionExpressionInvocation
   }
 
   test_dynamic_withoutTypeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   (main as dynamic)(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    var node = result.findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: ParenthesizedExpression
+  function2: ParenthesizedExpression
     leftParenthesis: (
-    expression: AsExpression
-      expression: SimpleIdentifier
+    expression2: AsExpression
+      expression2: SimpleIdentifier
         token: main
         element: <testLibrary>::@function::main
         staticType: dynamic Function()
@@ -192,7 +194,7 @@ FunctionExpressionInvocation
     staticType: dynamic
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -205,19 +207,19 @@ FunctionExpressionInvocation
   }
 
   test_dynamic_withTypeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 main() {
   (main as dynamic)<bool, int>(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    var node = result.findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: ParenthesizedExpression
+  function2: ParenthesizedExpression
     leftParenthesis: (
-    expression: AsExpression
-      expression: SimpleIdentifier
+    expression2: AsExpression
+      expression2: SimpleIdentifier
         token: main
         element: <testLibrary>::@function::main
         staticType: dynamic Function()
@@ -243,7 +245,7 @@ FunctionExpressionInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
@@ -259,7 +261,7 @@ FunctionExpressionInvocation
   }
 
   test_expression_interfaceType_nullable_hasCall() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int? a) {
   a();
 }
@@ -268,10 +270,10 @@ extension on int? {
   int call() => 0;
 }
 ''');
-    var node = findNode.functionExpressionInvocation('();');
+    var node = result.findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int?
@@ -285,7 +287,7 @@ FunctionExpressionInvocation
   }
 
   test_expression_recordType_hasCall_extensionMethod() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((String,) a) {
   a();
 }
@@ -294,10 +296,10 @@ extension on (String,) {
   int call() => 0;
 }
 ''');
-    var node = findNode.functionExpressionInvocation('();');
+    var node = result.findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: (String,)
@@ -311,7 +313,7 @@ FunctionExpressionInvocation
   }
 
   test_expression_recordType_hasCall_namedField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var r = (call: () => 0);
   r();
@@ -319,10 +321,10 @@ void f() {
 // [diag.invocationOfNonFunctionExpression] The expression doesn't evaluate to a function, so it can't be invoked.
 }
 ''');
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: r
     element: r@17
     staticType: ({int Function() call})
@@ -336,17 +338,17 @@ FunctionExpressionInvocation
   }
 
   test_expression_recordType_noCall() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((String,) a) {
   a();
 //^
 // [diag.invocationOfNonFunctionExpression] The expression doesn't evaluate to a function, so it can't be invoked.
 }
 ''');
-    var node = findNode.functionExpressionInvocation('();');
+    var node = result.findNode.functionExpressionInvocation('();');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: (String,)
@@ -360,25 +362,25 @@ FunctionExpressionInvocation
   }
 
   test_formalParameter_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(T Function<T>(T a) g) {
   g(0);
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: g
     element: <testLibrary>::@function::f::@formalParameter::g
     staticType: T Function<T>(T)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: a@23
           substitution: {T: int}
         staticType: int
@@ -392,7 +394,7 @@ FunctionExpressionInvocation
   }
 
   test_formalParameter_generic_withTypeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef F<S> = S Function<T>(T x);
 
 void f(F<int> a) {
@@ -400,10 +402,10 @@ void f(F<int> a) {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: int Function<T>(T)
@@ -420,7 +422,7 @@ FunctionExpressionInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleStringLiteral
         literal: 'hello'
     rightParenthesis: )
@@ -433,7 +435,7 @@ FunctionExpressionInvocation
   }
 
   test_formalParameter_tooManyArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int Function() g, int a) {
   g(a);
 //  ^
@@ -441,16 +443,16 @@ void f(int Function() g, int a) {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: g
     element: <testLibrary>::@function::f::@formalParameter::g
     staticType: int Function()
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: <null>
@@ -464,7 +466,7 @@ FunctionExpressionInvocation
   }
 
   test_getter_functionTyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef F = String Function(int a, {int b});
 
 class A {
@@ -476,17 +478,17 @@ class A {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: String Function(int, {int b})
       alias: <testLibrary>::@typeAlias::F
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 1
         correspondingParameter: a@null
@@ -494,7 +496,7 @@ FunctionExpressionInvocation
       NamedArgument
         name: b
         colon: :
-        argumentExpression: IntegerLiteral
+        argumentExpression2: IntegerLiteral
           literal: 2
           staticType: int
         correspondingParameter: b@null
@@ -507,7 +509,7 @@ FunctionExpressionInvocation
   }
 
   test_getter_functionTyped_withSetterDeclaredLocally() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   Function get foo => () {};
 }
@@ -520,10 +522,10 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: foo
     element: <testLibrary>::@class::A::@getter::foo
     staticType: Function
@@ -537,7 +539,7 @@ FunctionExpressionInvocation
   }
 
   test_invalidConst_topLevelVariable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const id = identical;
 const a = 0;
 const b = 0;
@@ -546,16 +548,16 @@ const c = id(a, b);
 // [diag.constInitializedWithNonConstantValue] Const variables must be initialized with a constant value.
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: id
     element: <testLibrary>::@getter::id
     staticType: bool Function(Object?, Object?)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       SimpleIdentifier
         token: a
         correspondingParameter: dart:core::@function::identical::@formalParameter::a
@@ -574,7 +576,7 @@ FunctionExpressionInvocation
   }
 
   test_never() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never x) {
   x<int>(1 + 2);
 //^
@@ -584,10 +586,10 @@ void f(Never x) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
+    var node = result.findNode.functionExpressionInvocation('x<int>(1 + 2)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Never
@@ -601,7 +603,21 @@ FunctionExpressionInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -625,7 +641,7 @@ FunctionExpressionInvocation
   }
 
   test_neverQ() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Never? x) {
   x<int>(1 + 2);
 //^
@@ -633,10 +649,10 @@ void f(Never? x) {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('x<int>(1 + 2)');
+    var node = result.findNode.functionExpressionInvocation('x<int>(1 + 2)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Never?
@@ -650,7 +666,21 @@ FunctionExpressionInvocation
     rightBracket: >
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
+      BinaryOperatorInvocation
+        leftOperand: IntegerLiteral
+          literal: 1
+          staticType: int
+        operator: +
+        rightOperand: IntegerLiteral
+          literal: 2
+          correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+          staticType: int
+        correspondingParameter: <null>
+        binaryOperator: add
+        element: dart:core::@class::num::@method::+
+        staticType: int
+    arguments(v1)
       BinaryExpression
         leftOperand: IntegerLiteral
           literal: 1
@@ -674,7 +704,7 @@ FunctionExpressionInvocation
   }
 
   test_nullShorting() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int Function() get foo;
 }
@@ -686,11 +716,11 @@ class B {
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('a?.foo()');
+    var node = result.findNode.functionExpressionInvocation('a?.foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: a
       element: <testLibrary>::@class::B::@method::bar::@formalParameter::a
       staticType: A?
@@ -710,18 +740,18 @@ FunctionExpressionInvocation
   }
 
   test_nullShorting_extended() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class A {
   int Function() f();
 }
 test(A? a) => a?.f()();
 ''');
 
-    var node = findNode.functionExpressionInvocation('a?.f()()');
+    var node = result.findNode.functionExpressionInvocation('a?.f()()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: MethodInvocation
-    target: SimpleIdentifier
+  function2: MethodInvocation
+    target2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::test::@formalParameter::a
       staticType: A?
@@ -745,7 +775,7 @@ FunctionExpressionInvocation
   }
 
   test_nullShorting_extends() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int Function() get foo;
 }
@@ -757,12 +787,12 @@ class B {
 }
 ''');
 
-    var node = findNode.propertyAccess('isEven');
+    var node = result.findNode.propertyAccess('isEven');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: FunctionExpressionInvocation
-    function: PropertyAccess
-      target: SimpleIdentifier
+  target2: FunctionExpressionInvocation
+    function2: PropertyAccess
+      target2: SimpleIdentifier
         token: a
         element: <testLibrary>::@class::B::@method::bar::@formalParameter::a
         staticType: A?
@@ -788,7 +818,7 @@ PropertyAccess
   }
 
   test_on_switchExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     _ => foo,
@@ -798,13 +828,13 @@ void f(Object? x) {
 void foo() {}
 ''');
 
-    var node = findNode.functionExpressionInvocation('}()');
+    var node = result.findNode.functionExpressionInvocation('}()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SwitchExpression
+  function2: SwitchExpression
     switchKeyword: switch
     leftParenthesis: (
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object?
@@ -817,7 +847,7 @@ FunctionExpressionInvocation
             name: _
             matchedValueType: Object?
         arrow: =>
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: foo
           element: <testLibrary>::@function::foo
           staticType: void Function()
@@ -833,17 +863,17 @@ FunctionExpressionInvocation
   }
 
   test_record_field_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(({void Function(int) foo}) r) {
   r.foo(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    var node = result.findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: r
       element: <testLibrary>::@function::f::@formalParameter::r
       staticType: ({void Function(int) foo})
@@ -855,7 +885,7 @@ FunctionExpressionInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -868,17 +898,17 @@ FunctionExpressionInvocation
   }
 
   test_record_field_positional_rewrite() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((void Function(int),) r) {
   r.$1(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    var node = result.findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: r
       element: <testLibrary>::@function::f::@formalParameter::r
       staticType: (void Function(int),)
@@ -890,7 +920,7 @@ FunctionExpressionInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null
@@ -903,19 +933,19 @@ FunctionExpressionInvocation
   }
 
   test_record_field_positional_withParenthesis() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((void Function(int),) r) {
   (r.$1)(0);
 }
 ''');
 
-    var node = findNode.functionExpressionInvocation('(0)');
+    var node = result.findNode.functionExpressionInvocation('(0)');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: ParenthesizedExpression
+  function2: ParenthesizedExpression
     leftParenthesis: (
-    expression: PropertyAccess
-      target: SimpleIdentifier
+    expression2: PropertyAccess
+      target2: SimpleIdentifier
         token: r
         element: <testLibrary>::@function::f::@formalParameter::r
         staticType: (void Function(int),)
@@ -929,7 +959,7 @@ FunctionExpressionInvocation
     staticType: void Function(int)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null-name>@null

@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class FunctionDeclarationResolutionTest extends PubPackageResolutionTest {
   test_asyncGenerator_blockBody_return() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:async';
 
 Stream<int> f() async* {
@@ -27,7 +27,7 @@ Stream<int> f() async* {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -55,7 +55,7 @@ FunctionDeclaration
         statements
           ReturnStatement
             returnKeyword: return
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 0
               staticType: int
             semicolon: ;
@@ -71,7 +71,7 @@ FunctionDeclaration
   }
 
   test_asyncGenerator_expressionBody() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:async';
 
 Stream<int> f() async* => 0;
@@ -79,7 +79,7 @@ Stream<int> f() async* => 0;
 // [diag.returnInGenerator] Can't return a value from a generator function that uses the 'async*' or 'sync*' modifier.
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -103,7 +103,7 @@ FunctionDeclaration
       keyword: async
       star: *
       functionDefinition: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       semicolon: ;
@@ -118,14 +118,14 @@ FunctionDeclaration
   }
 
   test_formalParameterScope_defaultValue() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 const foo = 0;
 
 void bar([int foo = foo + 1]) {
 }
 ''');
 
-    var node = findNode.simple('foo + 1');
+    var node = result.findNode.simple('foo + 1');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: foo
@@ -135,7 +135,7 @@ SimpleIdentifier
   }
 
   test_formalParameterScope_type() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class a {}
 
 void bar(a a) {
@@ -143,16 +143,16 @@ void bar(a a) {
 }
 ''');
 
-    var node_1 = findNode.namedType('a a');
-    assertResolvedNodeText(node_1, r'''
+    var node1 = result.findNode.namedType('a a');
+    assertResolvedNodeText(node1, r'''
 NamedType
   name: a
   element: <testLibrary>::@class::a
   type: a
 ''');
 
-    var node_2 = findNode.simple('a;');
-    assertResolvedNodeText(node_2, r'''
+    var node2 = result.findNode.simple('a;');
+    assertResolvedNodeText(node2, r'''
 SimpleIdentifier
   token: a
   element: <testLibrary>::@function::bar::@formalParameter::a
@@ -161,11 +161,11 @@ SimpleIdentifier
   }
 
   test_genericFunction_fBoundedDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void m<T extends List<T>>() {}
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -213,11 +213,11 @@ FunctionDeclaration
   }
 
   test_genericFunction_simpleDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void m<T extends num>() {}
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -257,7 +257,7 @@ FunctionDeclaration
   }
 
   test_genericLocalFunction_fBoundedDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f() {
   void m<T extends List<T>>() {}
 //     ^
@@ -265,7 +265,8 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement.functionDeclaration;
+    var node =
+        result.findNode.singleFunctionDeclarationStatement.functionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -313,7 +314,7 @@ FunctionDeclaration
   }
 
   test_genericLocalFunction_simpleDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f() {
   void m<T extends num>() {}
 //     ^
@@ -321,7 +322,8 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclarationStatement.functionDeclaration;
+    var node =
+        result.findNode.singleFunctionDeclarationStatement.functionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -361,14 +363,43 @@ FunctionDeclaration
   }
 
   test_getter_formalParameters() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 int get foo(double a) => 0;
 //         ^
 // [diag.getterWithParameters] Getters must be declared without a parameter list.
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleTopLevelGetterDeclaration;
     assertResolvedNodeText(node, r'''
+TopLevelGetterDeclaration
+  returnType: NamedType
+    name: int
+    element: dart:core::@class::int
+    type: int
+  getKeyword: get
+  name: foo
+  recoveryFormalParameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: double
+          element: dart:core::@class::double
+          type: double
+        name: a
+        declaredFragment: <testLibraryFragment> a@19
+          element: isPublic
+            type: double
+    rightParenthesis: )
+  body: ExpressionFunctionBody
+    functionDefinition: =>
+    expression2: IntegerLiteral
+      literal: 0
+      staticType: int
+    semicolon: ;
+  declaredFragment: <testLibraryFragment> foo@8
+    element: <testLibrary>::@getter::foo
+      type: int Function(double)
 FunctionDeclaration
   returnType: NamedType
     name: int
@@ -406,7 +437,7 @@ FunctionDeclaration
   }
 
   test_syncGenerator_blockBody_return() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 Iterable<int> f() sync* {
   return 0;
 //^^^^^^
@@ -414,7 +445,7 @@ Iterable<int> f() sync* {
 }
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -442,7 +473,7 @@ FunctionDeclaration
         statements
           ReturnStatement
             returnKeyword: return
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 0
               staticType: int
             semicolon: ;
@@ -458,13 +489,13 @@ FunctionDeclaration
   }
 
   test_syncGenerator_expressionBody() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 Iterable<int> f() sync* => 0;
 //                      ^^
 // [diag.returnInGenerator] Can't return a value from a generator function that uses the 'async*' or 'sync*' modifier.
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   returnType: NamedType
@@ -488,7 +519,7 @@ FunctionDeclaration
       keyword: sync
       star: *
       functionDefinition: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       semicolon: ;
@@ -503,12 +534,12 @@ FunctionDeclaration
   }
 
   test_wildCardFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 _() {}
 // [diag.unusedElement][column 1][length 1] The declaration '_' isn't referenced.
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   name: _
@@ -530,16 +561,15 @@ FunctionDeclaration
 ''');
   }
 
-  test_wildCardFunction_preWildCards() async {
-    await resolveTestCodeWithDiagnostics('''
-// @dart = 3.4
-// (pre wildcard-variables)
+  test_wildCardFunction_beforeWildcardVariables() async {
+    var result = await resolveTestCodeWithDiagnostics('''
+// %before-language-feature: wildcard-variables
 
 _() {}
 // [diag.unusedElement][column 1][length 1] The declaration '_' isn't referenced.
 ''');
 
-    var node = findNode.singleFunctionDeclaration;
+    var node = result.findNode.singleFunctionDeclaration;
     assertResolvedNodeText(node, r'''
 FunctionDeclaration
   name: _
@@ -551,11 +581,11 @@ FunctionDeclaration
       block: Block
         leftBracket: {
         rightBracket: }
-    declaredFragment: <testLibraryFragment> _@44
+    declaredFragment: <testLibraryFragment> _@16
       element: <testLibrary>::@function::_
         type: dynamic Function()
     staticType: dynamic Function()
-  declaredFragment: <testLibraryFragment> _@44
+  declaredFragment: <testLibraryFragment> _@16
     element: <testLibrary>::@function::_
       type: dynamic Function()
 ''');
@@ -565,7 +595,7 @@ FunctionDeclaration
     // Corresponding language test:
     // language/wildcard_variables/multiple/local_declaration_type_parameter_error_test
 
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f<_ extends void Function<_>(_, _), _>() {}
 //                                ^
 // [diag.undefinedClass] Undefined class '_'.
@@ -573,7 +603,7 @@ void f<_ extends void Function<_>(_, _), _>() {}
 // [diag.undefinedClass] Undefined class '_'.
 ''');
 
-    var node = findNode.typeParameter('<_>');
+    var node = result.findNode.typeParameter('<_>');
     assertResolvedNodeText(node, r'''
 TypeParameter
   name: _
@@ -593,6 +623,26 @@ TypeParameter
             defaultType: null
       rightBracket: >
     parameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: _
+            element: <null>
+            type: InvalidType
+          declaredFragment: <testLibraryFragment> null@null
+            element: isPrivate
+              type: InvalidType
+        RegularFormalParameter
+          type: NamedType
+            name: _
+            element: <null>
+            type: InvalidType
+          declaredFragment: <testLibraryFragment> null@null
+            element: isPrivate
+              type: InvalidType
+      rightParenthesis: )
+    parameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType

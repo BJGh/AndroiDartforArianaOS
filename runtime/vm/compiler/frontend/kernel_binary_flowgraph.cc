@@ -92,7 +92,7 @@ void StreamingFlowGraphBuilder::SetupDefaultParameterValues() {
       // List of positional.
       intptr_t list_length = ReadListLength();  // read list length.
       for (intptr_t i = 0; i < list_length; ++i) {
-        SkipVariableDeclaration();  // read ith variable declaration.
+        SkipVariable();  // read ith variable.
       }
 
       // List of named.
@@ -102,9 +102,9 @@ void StreamingFlowGraphBuilder::SetupDefaultParameterValues() {
       for (intptr_t i = 0; i < list_length; ++i) {
         Instance* default_value;
 
-        // Read ith variable declaration
-        VariableDeclarationHelper helper(this);
-        helper.ReadUntilExcluding(VariableDeclarationHelper::kInitializer);
+        // Read ith variable
+        VariableHelper helper(this);
+        helper.ReadUntilExcluding(VariableHelper::kInitializer);
         Tag tag = ReadTag();  // read (first part of) initializer.
         if (tag == kSomething) {
           // This will read the initializer.
@@ -123,14 +123,14 @@ void StreamingFlowGraphBuilder::SetupDefaultParameterValues() {
       ASSERT(parsed_function()->function().HasOptionalPositionalParameters());
       for (intptr_t i = 0; i < function_node_helper.required_parameter_count_;
            ++i) {
-        SkipVariableDeclaration();  // read ith variable declaration.
+        SkipVariable();  // read ith variable.
       }
       for (intptr_t i = 0; i < optional_parameter_count; ++i) {
         Instance* default_value;
 
-        // Read ith variable declaration
-        VariableDeclarationHelper helper(this);
-        helper.ReadUntilExcluding(VariableDeclarationHelper::kInitializer);
+        // Read ith variable
+        VariableHelper helper(this);
+        helper.ReadUntilExcluding(VariableHelper::kInitializer);
         Tag tag = ReadTag();  // read (first part of) initializer.
         if (tag == kSomething) {
           // This will read the initializer.
@@ -445,9 +445,9 @@ Fragment StreamingFlowGraphBuilder::BuildInitializers(
           LocalVariable* variable =
               LookupVariable(ReaderOffset() + data_program_offset_);
 
-          // Variable declaration
-          VariableDeclarationHelper helper(this);
-          helper.ReadUntilExcluding(VariableDeclarationHelper::kInitializer);
+          // Variable
+          VariableHelper helper(this);
+          helper.ReadUntilExcluding(VariableHelper::kInitializer);
           ASSERT(!helper.IsConst());
           Tag tag = ReadTag();  // read (first part of) initializer.
           if (tag != kSomething) {
@@ -686,9 +686,9 @@ Fragment StreamingFlowGraphBuilder::BuildFunctionBody(
     bool constructor) {
   Fragment body;
 
-  // TODO(27590): Currently the [VariableDeclaration]s from the
-  // initializers will be visible inside the entire body of the constructor.
-  // We should make a separate scope for them.
+  // TODO(27590): Currently the [Variable]s from the initializers will be
+  // visible inside the entire body of the constructor. We should make a
+  // separate scope for them.
   if (constructor) {
     body += BuildInitializers(Class::Handle(Z, dart_function.Owner()));
   }
@@ -1006,21 +1006,6 @@ void StreamingFlowGraphBuilder::ParseKernelASTFunction() {
     SetOffset(kernel_offset);
   }
 
-  // Mark forwarding stubs.
-  switch (function.kind()) {
-    case UntaggedFunction::kRegularFunction:
-    case UntaggedFunction::kImplicitClosureFunction:
-    case UntaggedFunction::kGetterFunction:
-    case UntaggedFunction::kSetterFunction:
-    case UntaggedFunction::kClosureFunction:
-    case UntaggedFunction::kConstructor:
-    case UntaggedFunction::kDynamicInvocationForwarder:
-      ReadForwardingStubTarget(function);
-      break;
-    default:
-      break;
-  }
-
   set_scopes(parsed_function()->EnsureKernelScopes());
 
   switch (function.kind()) {
@@ -1052,27 +1037,6 @@ void StreamingFlowGraphBuilder::ParseKernelASTFunction() {
     case UntaggedFunction::kIrregexpFunction:
       UNREACHABLE();
       break;
-  }
-}
-
-void StreamingFlowGraphBuilder::ReadForwardingStubTarget(
-    const Function& function) {
-  if (PeekTag() == kProcedure) {
-    AlternativeReadingScope alt(&reader_);
-    ProcedureHelper procedure_helper(this);
-    procedure_helper.ReadUntilExcluding(ProcedureHelper::kFunction);
-    if (procedure_helper.IsForwardingStub() && !procedure_helper.IsAbstract()) {
-      const NameIndex target_name =
-          procedure_helper.concrete_forwarding_stub_target_;
-      ASSERT(target_name != NameIndex::kInvalidName);
-      const String& name = function.IsSetterFunction()
-                               ? H.DartSetterName(target_name)
-                               : H.DartProcedureName(target_name);
-      const Function* forwarding_target =
-          &Function::ZoneHandle(Z, H.LookupMethodByMember(target_name, name));
-      ASSERT(!forwarding_target->IsNull());
-      parsed_function()->MarkForwardingStub(forwarding_target);
-    }
   }
 }
 
@@ -1293,8 +1257,8 @@ Fragment StreamingFlowGraphBuilder::BuildStatement(TokenPosition* position) {
       return BuildTryFinally(position);
     case kYieldStatement:
       return BuildYieldStatement(position);
-    case kVariableDeclaration:
-      return BuildVariableDeclaration(position);
+    case kVariableStatement:
+      return BuildVariableStatement(position);
     case kFunctionDeclaration:
       return BuildFunctionDeclaration(position);
     case kForInStatement:
@@ -2969,6 +2933,7 @@ Fragment StreamingFlowGraphBuilder::BuildMethodInvocation(TokenPosition* p,
 
   if (!is_dynamic) {
     SkipDartType();  // read function_type.
+    SkipDartType();  // read result_type.
   }
 
   const Function* interface_target = &Function::null_function();
@@ -3059,7 +3024,7 @@ Fragment StreamingFlowGraphBuilder::BuildLocalFunctionInvocation(
   {
     AlternativeReadingScope alt(
         &reader_, variable_kernel_position - data_program_offset_);
-    SkipVariableDeclaration();
+    SkipVariable();
     const intptr_t local_function_id = ReadUInt();  // read id.
     ASSERT(local_function_id > 0);
 
@@ -3843,7 +3808,7 @@ Fragment StreamingFlowGraphBuilder::BuildIsTest(TokenPosition position,
   Fragment instructions;
   // The VM does not like an instanceOf call with a dynamic type. We need to
   // special case this situation by detecting a top type.
-  if (type.IsTopTypeForInstanceOf()) {
+  if (type.IsTopType()) {
     // Evaluate the expression on the left but ignore its result.
     instructions += Drop();
 
@@ -3998,8 +3963,7 @@ Fragment StreamingFlowGraphBuilder::BuildAsExpression(TokenPosition* p) {
   Fragment instructions = BuildExpression();  // read operand.
 
   const AbstractType& type = T.BuildType();  // read type.
-  if (is_unchecked_cast ||
-      (type.IsInstantiated() && type.IsTopTypeForSubtyping())) {
+  if (is_unchecked_cast || (type.IsInstantiated() && type.IsTopType())) {
     // We already evaluated the operand on the left and just leave it there as
     // the result of unchecked cast or `obj as dynamic` expression.
   } else {
@@ -4314,8 +4278,8 @@ Fragment StreamingFlowGraphBuilder::BuildLet(TokenPosition* p) {
   if (p != nullptr) *p = position;
   Fragment instructions;
   instructions += EnterScope(offset);
-  instructions += BuildVariableDeclaration(nullptr);  // read variable.
-  instructions += BuildExpression();                  // read body.
+  instructions += BuildVariable(nullptr);  // read variable.
+  instructions += BuildExpression();       // read body.
   instructions += ExitScope(offset);
   return instructions;
 }
@@ -4329,12 +4293,15 @@ Fragment StreamingFlowGraphBuilder::BuildBlockExpression() {
   instructions += EnterScope(offset);
 
   ReadPosition();                                 // ignore file offset.
+  ReadUInt();                                     // read scope size.
   const intptr_t list_length = ReadListLength();  // read number of statements.
   for (intptr_t i = 0; i < list_length; ++i) {
     instructions += BuildStatement();  // read ith statement.
   }
   instructions += BuildExpression();  // read expression (inside scope).
   instructions += ExitScope(offset);
+
+  SkipScope();
 
   block_expression_depth_dec();
   return instructions;
@@ -4496,7 +4463,7 @@ Fragment StreamingFlowGraphBuilder::BuildAwaitExpression(
         TypeArguments::ZoneHandle(Z, Type::Cast(type).arguments());
     if (!type_args.IsNull()) {
       const auto& type_arg = AbstractType::Handle(Z, type_args.TypeAt(0));
-      if (!type_arg.IsTopTypeForSubtyping()) {
+      if (!type_arg.IsTopType()) {
         instructions += TranslateInstantiatedTypeArguments(type_args);
         stub_id = SuspendInstr::StubId::kAwaitWithTypeCheck;
       }
@@ -4538,6 +4505,8 @@ Fragment StreamingFlowGraphBuilder::BuildBlock(TokenPosition* position) {
 
   ReadPosition();  // read file end offset.
 
+  ReadUInt();  // read scope size.
+
   intptr_t list_length = ReadListLength();  // read number of statements.
   for (intptr_t i = 0; i < list_length; ++i) {
     if (instructions.is_open()) {
@@ -4547,6 +4516,8 @@ Fragment StreamingFlowGraphBuilder::BuildBlock(TokenPosition* position) {
     }
   }
   instructions += ExitScope(offset);
+
+  SkipScope();
 
   return instructions;
 }
@@ -4729,6 +4700,7 @@ Fragment StreamingFlowGraphBuilder::BuildWhileStatement(
   loop_depth_inc();
   const TokenPosition pos = ReadPosition();  // read position.
   if (position != nullptr) *position = pos;
+  ReadUInt();  // read scope size.
 
   TestFragment condition = TranslateConditionForControl();   // read condition.
   const Fragment body = BuildStatementWithBranchCoverage();  // read body
@@ -4749,6 +4721,8 @@ Fragment StreamingFlowGraphBuilder::BuildWhileStatement(
   } else {
     entry = condition.entry;
   }
+
+  SkipScope();
 
   loop_depth_dec();
   return Fragment(entry, condition.CreateFalseSuccessor(flow_graph_builder_));
@@ -4788,6 +4762,7 @@ Fragment StreamingFlowGraphBuilder::BuildForStatement(TokenPosition* position) {
 
   const TokenPosition pos = ReadPosition();  // read position.
   if (position != nullptr) *position = pos;
+  ReadUInt();  // read scope size.
 
   Fragment declarations;
 
@@ -4855,6 +4830,8 @@ Fragment StreamingFlowGraphBuilder::BuildForStatement(TokenPosition* position) {
   }
 
   Fragment loop(declarations.entry, loop_exit);
+
+  SkipScope();
 
   loop += ExitScope(offset);
 
@@ -5540,6 +5517,7 @@ Fragment StreamingFlowGraphBuilder::BuildTryCatch(TokenPosition* position) {
   for (intptr_t i = 0; i < catch_count; ++i) {
     intptr_t catch_offset = ReaderOffset();          // Catch has no tag.
     TokenPosition pos = ReadPosition();              // read position.
+    ReadUInt();                                      // read scope size.
     const AbstractType& type_guard = T.BuildType();  // read guard.
     handler_types.SetAt(i, type_guard);
 
@@ -5552,7 +5530,7 @@ Fragment StreamingFlowGraphBuilder::BuildTryCatch(TokenPosition* position) {
           StoreLocal(TokenPosition::kNoSource,
                      LookupVariable(ReaderOffset() + data_program_offset_));
       catch_handler_body += Drop();
-      SkipVariableDeclaration();  // read exception.
+      SkipVariable();  // read exception.
     }
 
     tag = ReadTag();  // read first part of stack trace.
@@ -5562,7 +5540,7 @@ Fragment StreamingFlowGraphBuilder::BuildTryCatch(TokenPosition* position) {
           StoreLocal(TokenPosition::kNoSource,
                      LookupVariable(ReaderOffset() + data_program_offset_));
       catch_handler_body += Drop();
-      SkipVariableDeclaration();  // read stack trace.
+      SkipVariable();  // read stack trace.
     }
 
     {
@@ -5570,6 +5548,8 @@ Fragment StreamingFlowGraphBuilder::BuildTryCatch(TokenPosition* position) {
                        CurrentStackTrace(), try_handler_index);
 
       catch_handler_body += BuildStatementWithBranchCoverage();  // read body.
+
+      SkipScope();
 
       // Note: ExitScope adjusts context_depth_ so even if catch_handler_body
       // is closed we still need to execute ExitScope for its side effect.
@@ -5834,13 +5814,29 @@ Fragment StreamingFlowGraphBuilder::BuildYieldStatement(
   return instructions;
 }
 
+Fragment StreamingFlowGraphBuilder::BuildVariableStatement(
+    TokenPosition* position) {
+  const TokenPosition pos = ReadPosition();  // read position.
+  if (position != nullptr) *position = pos;
+  return BuildVariableDeclaration(position);
+}
+
 Fragment StreamingFlowGraphBuilder::BuildVariableDeclaration(
     TokenPosition* position) {
+  const Tag tag = ReadTag();  // read tag.
+  ASSERT(tag == kVariableDeclaration);
+  const TokenPosition pos = ReadPosition();  // read position.
+  if (position != nullptr) *position = pos;
+  SkipCapturedContexts();
+  return BuildVariable(position);
+}
+
+Fragment StreamingFlowGraphBuilder::BuildVariable(TokenPosition* position) {
   intptr_t kernel_position_no_tag = ReaderOffset() + data_program_offset_;
   LocalVariable* variable = LookupVariable(kernel_position_no_tag);
 
-  VariableDeclarationHelper helper(this);
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kType);
+  VariableHelper helper(this);
+  helper.ReadUntilExcluding(VariableHelper::kType);
   T.BuildType();  // read type.
   bool has_initializer = (ReadTag() != kNothing);
 
@@ -5883,7 +5879,7 @@ Fragment StreamingFlowGraphBuilder::BuildFunctionDeclaration(
   if (position != nullptr) *position = pos;
 
   const intptr_t variable_offset = ReaderOffset() + data_program_offset_;
-  SkipVariableDeclaration();
+  SkipVariable();
   const intptr_t local_function_id = ReadUInt();  // read id.
   ASSERT(local_function_id > 0);
 

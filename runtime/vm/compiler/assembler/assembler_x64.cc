@@ -587,6 +587,18 @@ void Assembler::roundsd(XmmRegister dst, XmmRegister src, RoundingMode mode) {
   EmitUint8(static_cast<uint8_t>(mode) | 0x8);
 }
 
+void Assembler::ptest(XmmRegister dst, XmmRegister src) {
+  ASSERT(src <= XMM15);
+  ASSERT(dst <= XMM15);
+  AssemblerBuffer::EnsureCapacity ensured(&buffer_);
+  EmitUint8(0x66);
+  EmitRegRegRex(dst, src);
+  EmitUint8(0x0F);
+  EmitUint8(0x38);
+  EmitUint8(0x17);
+  EmitRegisterOperand(dst & 7, src);
+}
+
 void Assembler::fldl(const Address& src) {
   AssemblerBuffer::EnsureCapacity ensured(&buffer_);
   EmitUint8(0xDD);
@@ -1154,6 +1166,14 @@ void Assembler::nop(int size) {
     default:
       UNIMPLEMENTED();
   }
+}
+
+void Assembler::endbr64() {
+  AssemblerBuffer::EnsureCapacity ensured(&buffer_);
+  EmitUint8(0xF3);
+  EmitUint8(0x0F);
+  EmitUint8(0x1E);
+  EmitUint8(0xFA);
 }
 
 void Assembler::j(Condition condition, Label* label, JumpDistance distance) {
@@ -2169,6 +2189,7 @@ void Assembler::TsanLoadAcquire(Register dst, Address addr, OperandSize size) {
       movq(RAX, compiler::Address(
                     THR, kTsanAtomic64LoadRuntimeEntry.OffsetFromThread()));
       break;
+    case kFourBytes:
     case kUnsignedFourBytes:
       movq(RAX, compiler::Address(
                     THR, kTsanAtomic32LoadRuntimeEntry.OffsetFromThread()));
@@ -2182,7 +2203,7 @@ void Assembler::TsanLoadAcquire(Register dst, Address addr, OperandSize size) {
   movq(compiler::Assembler::VMTagAddress(),
        compiler::Immediate(VMTag::kDartTagId));
 
-  MoveRegister(dst, RAX);
+  ExtendValue(dst, RAX, size);
 
   // RSP might have been modified to reserve space for arguments
   // and ensure proper alignment of the stack frame.
@@ -2536,7 +2557,7 @@ void Assembler::TryAllocateObject(intptr_t cid,
   ASSERT(instance_size != 0);
   ASSERT(Utils::IsAligned(instance_size,
                           target::ObjectAlignment::kObjectAlignment));
-  if (FLAG_inline_alloc &&
+  if (UseInlineAllocation() &&
       target::Heap::IsAllocatableInNewSpace(instance_size)) {
     // If this allocation is traced, program will jump to failure path
     // (i.e. the allocation stub) which will allocate the object and trace the
@@ -2568,7 +2589,7 @@ void Assembler::TryAllocateArray(intptr_t cid,
                                  Register end_address,
                                  Register temp) {
   ASSERT(failure != nullptr);
-  if (FLAG_inline_alloc &&
+  if (UseInlineAllocation() &&
       target::Heap::IsAllocatableInNewSpace(instance_size)) {
     // If this allocation is traced, program will jump to failure path
     // (i.e. the allocation stub) which will allocate the object and trace the

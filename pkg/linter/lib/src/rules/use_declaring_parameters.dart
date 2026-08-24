@@ -17,8 +17,12 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use a declaring parameter.';
 
 class UseDeclaringParameters extends AnalysisRule {
-  UseDeclaringParameters()
-    : super(name: LintNames.use_declaring_parameters, description: _desc);
+  new()
+    : super(
+        name: LintNames.use_declaring_parameters,
+        description: _desc,
+        state: .stable(since: .new(3, 13, 0)),
+      );
 
   @override
   DiagnosticCode get diagnosticCode => diag.useDeclaringParameters;
@@ -34,11 +38,7 @@ class UseDeclaringParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitPrimaryConstructorDeclaration(PrimaryConstructorDeclaration node) {
     var body = node.body;

@@ -52,6 +52,7 @@ class ElementTextConfiguration {
   bool withCodeRanges = false;
   bool withConstantInitializers = true;
   bool withConstructors = true;
+  bool withDefaultType = false;
   bool withDisplayName = false;
   bool withExportScope = false;
   bool withFunctionTypeParameters = false;
@@ -207,7 +208,7 @@ abstract class _AbstractElementWriter {
 
   void _writeNode(AstNode node) {
     _sink.writeIndent();
-    node.accept(_createAstPrinter());
+    _createAstPrinter().writeNode(node);
   }
 
   void _writeReference(ElementImpl e) {
@@ -352,6 +353,7 @@ class _Element2Writer extends _AbstractElementWriter {
       _sink.writeHeaderFlags(e.flagsForTesting);
       _assertHasExactlyOneTrue([
         e.isOriginDeclaration,
+        e.isOriginExtensionTypeRecovery,
         e.isOriginImplicitDefault,
         e.isOriginMixinApplication,
       ]);
@@ -413,6 +415,7 @@ class _Element2Writer extends _AbstractElementWriter {
       _sink.writeHeaderFlags(f.flagsForTesting);
       _assertHasExactlyOneTrue([
         f.isOriginDeclaration,
+        f.isOriginExtensionTypeRecovery,
         f.isOriginImplicitDefault,
         f.isOriginMixinApplication,
       ]);
@@ -673,18 +676,6 @@ class _Element2Writer extends _AbstractElementWriter {
       _writeDocumentation(e.documentationComment);
       _writeMetadata(e.metadata);
       _writeSinceSdkVersion(e);
-      _writeElementList(
-        'typeParameters',
-        e,
-        e.typeParameters,
-        _writeTypeParameterElement,
-      );
-      _writeElementList(
-        'formalParameters',
-        e,
-        e.formalParameters,
-        _writeFormalParameterElement,
-      );
       _writeVariableElementConstantInitializer(e);
 
       switch (e) {
@@ -733,18 +724,6 @@ class _Element2Writer extends _AbstractElementWriter {
       _writeDocumentation(f.documentationComment);
       _writeMetadata(f.metadata);
       // _writeCodeRange(f);
-      _writeFragmentList(
-        'typeParameters',
-        f,
-        f.typeParameters,
-        _writeTypeParameterFragment,
-      );
-      _writeFragmentList(
-        'parameters',
-        f,
-        f.formalParameters,
-        _writeFormalParameterFragment,
-      );
       _writeVariableFragmentInitializer(f);
       _writeFragmentReference('previousFragment', f.previousFragment);
       _writeFragmentReference('nextFragment', f.nextFragment);
@@ -1061,6 +1040,13 @@ class _Element2Writer extends _AbstractElementWriter {
       _writeElementReference('element', f.element);
       _writeFragmentReference('previousFragment', f.previousFragment);
       _writeFragmentReference('nextFragment', f.nextFragment);
+      if (f is InterfaceFragmentImpl && f.withClauseMixinStartIndex != 0) {
+        _sink.writeIndentedLine(() {
+          _sink.write(
+            'withClauseMixinStartIndex: ${f.withClauseMixinStartIndex}',
+          );
+        });
+      }
 
       _writeFragmentList(
         'typeParameters',
@@ -1717,6 +1703,17 @@ class _Element2Writer extends _AbstractElementWriter {
         _sink.withIndent(() {
           _sink.writelnWithIndent('arguments: $cycle');
         });
+      case TopLevelInferenceErrorDifferentGetterAndSetterTypes(
+        :var getterType,
+        :var setterType,
+      ):
+        _sink.writelnWithIndent(
+          'typeInferenceError: differentGetterAndSetterTypes',
+        );
+        _sink.withIndent(() {
+          _sink.writelnWithIndent('getterType: $getterType');
+          _sink.writelnWithIndent('setterType: $setterType');
+        });
       case TopLevelInferenceErrorNoCombinedSuperSignature():
         _sink.writelnWithIndent(
           'typeInferenceError: overrideNoCombinedSuperSignature',
@@ -1738,10 +1735,12 @@ class _Element2Writer extends _AbstractElementWriter {
         _writeType('bound', bound);
       }
 
-      // var defaultType = e.defaultType;
-      // if (defaultType != null) {
-      //   _writeType('defaultType', defaultType);
-      // }
+      if (configuration.withDefaultType) {
+        var defaultType = (e as TypeParameterElementImpl).defaultType;
+        if (defaultType != null) {
+          _writeType('defaultType', defaultType);
+        }
+      }
 
       _writeMetadata(e.metadata);
     });
@@ -1777,7 +1776,7 @@ class _Element2Writer extends _AbstractElementWriter {
   }
 
   void _writeVariableElementConstantInitializer(VariableElementImpl e) {
-    if (e.constantInitializer2 case var initializer?) {
+    if (e.constantInitializerData case var initializer?) {
       _sink.writelnWithIndent('constantInitializer');
       _sink.withIndent(() {
         _writeFragmentReference('fragment', initializer.fragment);

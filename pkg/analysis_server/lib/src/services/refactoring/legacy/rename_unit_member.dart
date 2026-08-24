@@ -57,12 +57,8 @@ class RenameUnitMemberRefactoringImpl extends RenameRefactoringImpl {
   /// If [_flutterWidgetState] is set, this is the new name of it.
   String? _flutterWidgetStateNewName;
 
-  RenameUnitMemberRefactoringImpl(
-    super.workspace,
-    super.sessionHelper,
-    this.resolvedUnit,
-    super.element,
-  ) : utils = CorrectionUtils(resolvedUnit),
+  new(super.workspace, super.sessionHelper, this.resolvedUnit, super.element)
+    : utils = CorrectionUtils(resolvedUnit),
       super();
 
   @override
@@ -86,22 +82,20 @@ class RenameUnitMemberRefactoringImpl extends RenameRefactoringImpl {
   }
 
   Future<void> buildChange({required ChangeBuilder builder}) async {
-    var elements = switch (element) {
-      PropertyInducingElement element when element.isOriginGetterSetter => [
-        ?element.getter,
-        ?element.setter,
-      ],
-      _ => [element],
-    };
-
-    // Rename each element and references to it.
     var processor = RenameProcessor2(
       workspace,
       sessionHelper,
       builder,
       newName,
     );
-    for (var element in elements) {
+
+    var element = this.element;
+    if (element is PropertyInducingElement && element.isOriginGetterSetter) {
+      await processor.addDeclarationEdit(element.getter);
+      await processor.addDeclarationEdit(element.setter);
+      var references = await workspace.searchEngine.searchReferences(element);
+      await processor.addReferenceEdits(references);
+    } else {
       await processor.renameElement(element);
     }
 
@@ -213,12 +207,7 @@ class _BaseUnitMemberValidator {
 
   final RefactoringStatus result = RefactoringStatus();
 
-  _BaseUnitMemberValidator(
-    this.searchEngine,
-    this.library,
-    this.elementKind,
-    this.name,
-  );
+  new(this.searchEngine, this.library, this.elementKind, this.name);
 
   /// Returns `true` if [element] is visible at the given [SearchMatch].
   bool _isVisibleAt(Element element, SearchMatch at) {
@@ -299,12 +288,7 @@ class _BaseUnitMemberValidator {
 
 /// Helper to check if the created element will cause any conflicts.
 class _CreateUnitMemberValidator extends _BaseUnitMemberValidator {
-  _CreateUnitMemberValidator(
-    super.searchEngine,
-    super.library,
-    super.elementKind,
-    super.name,
-  );
+  new(super.searchEngine, super.library, super.elementKind, super.name);
 
   Future<RefactoringStatus> validate() async {
     _validateWillConflict();
@@ -318,11 +302,8 @@ class _RenameUnitMemberValidator extends _BaseUnitMemberValidator {
   final Element element;
   List<SearchMatch> references = <SearchMatch>[];
 
-  _RenameUnitMemberValidator(
-    SearchEngine searchEngine,
-    this.element,
-    String name,
-  ) : super(searchEngine, element.library!, element.kind, name);
+  new(SearchEngine searchEngine, this.element, String name)
+    : super(searchEngine, element.library!, element.kind, name);
 
   Future<RefactoringStatus> validate() async {
     _validateWillConflict();

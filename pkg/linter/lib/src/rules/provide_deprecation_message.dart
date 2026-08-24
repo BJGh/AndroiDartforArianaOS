@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Provide a deprecation message, via `@Deprecated("message")`.';
 
 class ProvideDeprecationMessage extends AnalysisRule {
-  ProvideDeprecationMessage()
+  new()
     : super(name: LintNames.provide_deprecation_message, description: _desc);
 
   @override
@@ -31,11 +31,7 @@ class ProvideDeprecationMessage extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitAnnotation(Annotation node) {
     var elementAnnotation = node.elementAnnotation;

@@ -25,6 +25,9 @@ void main() {
 class CreateConstructorForFinalFieldsRequiredNamedTest
     extends FixProcessorTest {
   @override
+  bool get addFlutterPackageDep => true;
+
+  @override
   FixKind get kind => DartFixKind.createConstructorForFinalFieldsRequiredNamed;
 
   Future<void> test_class_excludesLate() async {
@@ -39,13 +42,12 @@ class Test {
   final int a;
   late final int b;
 
-  Test({required this.a});
+  new({required this.a});
 }
 ''');
   }
 
   Future<void> test_class_flutter() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -60,7 +62,7 @@ import 'package:flutter/widgets.dart';
 class Test extends StatelessWidget {
   final int _a;
 
-  const Test({super.key, required this._a});
+  const new({super.key, required this._a});
 }
 ''',
       filter: (error) {
@@ -70,7 +72,6 @@ class Test extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_lint() async {
-    writeTestPackageConfig(flutter: true);
     createAnalysisOptionsFile(
       lints: [LintNames.always_put_required_named_parameters_first],
     );
@@ -88,7 +89,7 @@ import 'package:flutter/widgets.dart';
 class Test extends StatelessWidget {
   final int _a;
 
-  const Test({required this._a, super.key});
+  const new({required this._a, super.key});
 }
 ''',
       filter: (error) {
@@ -98,7 +99,6 @@ class Test extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_lint_notRequired() async {
-    writeTestPackageConfig(flutter: true);
     createAnalysisOptionsFile(
       lints: [LintNames.always_put_required_named_parameters_first],
     );
@@ -127,7 +127,7 @@ class Base extends StatelessWidget {
 class Test extends Base {
   final int other;
 
-  Test({required this.other, super.key, super.a});
+  new({required this.other, super.key, super.a});
 }
 ''');
   }
@@ -159,7 +159,7 @@ class B extends A {
   final int f21;
   final int f22;
 
-  B({super.f11, super.f12, required this.f21, required this.f22});
+  new({super.f11, super.f12, required this.f21, required this.f22});
 }
 ''',
       filter: (error) {
@@ -195,7 +195,7 @@ class B extends A {
   final int f21;
   final int f22;
 
-  B({required super.f11, required super.f12, required this.f21, required this.f22});
+  new({required super.f11, required super.f12, required this.f21, required this.f22});
 }
 ''',
       filter: (error) {
@@ -234,7 +234,7 @@ class B extends A {
   final int? f21;
   int? f22;
 
-  B({required super.f12, required this.f21, super.f11});
+  new({required super.f12, required this.f21, super.f11});
 }
 ''',
       filter: (error) {
@@ -255,7 +255,7 @@ class Test {
     await assertHasFix(
       '''
 class Test {
-  Test({required this.a, required this.c});
+  new({required this.a, required this.c});
 
   final int a;
   final int b = 2;
@@ -283,7 +283,7 @@ class Test {
   final int b = 2;
   final int c;
 
-  Test({required this.a, required this.c});
+  new({required this.a, required this.c});
 }
 ''',
       filter: (error) {
@@ -307,7 +307,7 @@ class Test {
   final int _b;
   final int c;
 
-  Test({required this._a, required this._b, required this.c});
+  new({required this._a, required this._b, required this.c});
 }
 ''',
       filter: (error) {
@@ -360,6 +360,32 @@ class Test {
     );
   }
 
+  Future<void> test_class_noSuperClass_withoutPrimaryConstructors() async {
+    await resolveTestCode('''
+// @dart=3.10
+class Test {
+  final int a;
+  final int b = 2;
+  final int c;
+}
+''');
+    await assertHasFix(
+      '''
+// @dart=3.10
+class Test {
+  final int a;
+  final int b = 2;
+  final int c;
+
+  Test({required this.a, required this.c});
+}
+''',
+      filter: (error) {
+        return error.message.contains("'a'");
+      },
+    );
+  }
+
   Future<void> test_enum() async {
     await resolveTestCode('''
 enum E {
@@ -377,7 +403,7 @@ enum E {
   final int b = 1;
   final int c;
 
-  const E({required this.a, required this.c});
+  const new({required this.a, required this.c});
 }
 ''',
       filter: (error) {
@@ -390,6 +416,9 @@ enum E {
 @reflectiveTest
 class CreateConstructorForFinalFieldsRequiredPositionalTest
     extends FixProcessorTest {
+  @override
+  bool get addFlutterPackageDep => true;
+
   @override
   FixKind get kind => DartFixKind.createConstructorForFinalFields;
 
@@ -405,13 +434,12 @@ class Test {
   final int a;
   late final int b;
 
-  Test(this.a);
+  new(this.a);
 }
 ''');
   }
 
   Future<void> test_class_flutter() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -430,7 +458,7 @@ class MyWidget extends StatelessWidget {
   final int b = 2;
   final int? c;
 
-  const MyWidget({super.key, required this.a, this.c});
+  const new({super.key, required this.a, this.c});
 }
 ''',
       filter: (error) {
@@ -440,7 +468,6 @@ class MyWidget extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_childLast() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -459,7 +486,7 @@ class MyWidget extends StatelessWidget {
   final Widget child;
   final int? b;
 
-  const MyWidget({super.key, required this.a, this.b, required this.child});
+  const new({super.key, required this.a, this.b, required this.child});
 }
 ''',
       filter: (error) {
@@ -469,7 +496,6 @@ class MyWidget extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_childrenLast() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -488,7 +514,7 @@ class MyWidget extends StatelessWidget {
   final List<Widget> children;
   final int? b;
 
-  const MyWidget({super.key, required this.a, this.b, required this.children});
+  const new({super.key, required this.a, this.b, required this.children});
 }
 ''',
       filter: (error) {
@@ -512,7 +538,7 @@ class Test {
   final int _b;
   final int c;
 
-  Test(this.a, this._b, this.c);
+  new(this.a, this._b, this.c);
 }
 ''',
       filter: (error) {
@@ -543,7 +569,7 @@ class Test {
     await assertHasFix(
       '''
 class Test {
-  Test(this.a, this.c);
+  new(this.a, this.c);
 
   final int a;
   final int b = 2;
@@ -566,6 +592,32 @@ class Test {
 ''');
     await assertHasFix(
       '''
+class Test {
+  final int a;
+  final int b = 2;
+  final int c;
+
+  new(this.a, this.c);
+}
+''',
+      filter: (error) {
+        return error.message.contains("'a'");
+      },
+    );
+  }
+
+  Future<void> test_class_simple_withoutPrimaryConstructors() async {
+    await resolveTestCode('''
+// @dart=3.10
+class Test {
+  final int a;
+  final int b = 2;
+  final int c;
+}
+''');
+    await assertHasFix(
+      '''
+// @dart=3.10
 class Test {
   final int a;
   final int b = 2;
@@ -597,7 +649,7 @@ enum E {
   final int b = 1;
   final int c;
 
-  const E(this.a, this.c);
+  const new(this.a, this.c);
 }
 ''',
       filter: (error) {
@@ -618,13 +670,15 @@ final int v;
 class CreateConstructorForFinalFieldsWithoutSuperParametersTest
     extends FixProcessorTest {
   @override
+  bool get addFlutterPackageDep => true;
+
+  @override
   FixKind get kind => DartFixKind.createConstructorForFinalFields;
 
   @override
   String get testPackageLanguageVersion => '2.16';
 
   Future<void> test_class_flutter() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -653,7 +707,6 @@ class MyWidget extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_childLast() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -682,7 +735,6 @@ class MyWidget extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_childrenLast() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 
@@ -711,7 +763,6 @@ class MyWidget extends StatelessWidget {
   }
 
   Future<void> test_class_flutter_private_field() async {
-    writeTestPackageConfig(flutter: true);
     await resolveTestCode('''
 import 'package:flutter/widgets.dart';
 

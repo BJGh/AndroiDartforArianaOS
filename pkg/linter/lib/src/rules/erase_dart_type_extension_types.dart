@@ -18,7 +18,7 @@ import '../extensions.dart';
 const _desc = r"Don't do 'is' checks on DartTypes.";
 
 class EraseDartTypeExtensionTypes extends AnalysisRule {
-  EraseDartTypeExtensionTypes()
+  new()
     : super(
         name: LintNames.erase_dart_type_extension_types,
         description: _desc,
@@ -38,12 +38,8 @@ class EraseDartTypeExtensionTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   visitIsExpression(IsExpression node) {
     var type = node.type.type;

@@ -14,7 +14,7 @@ class LspNotificationManager extends AbstractNotificationManager {
   // Set externally immediately after construction.
   late final LspAnalysisServer server;
 
-  LspNotificationManager(super.pathContext);
+  new(super.pathContext);
 
   /// Sends errors for a file to the client.
   @override
@@ -34,6 +34,8 @@ class LspNotificationManager extends AbstractNotificationManager {
             supportedTags: clientCapabilities?.diagnosticTags,
             clientSupportsCodeDescription:
                 clientCapabilities?.diagnosticCodeDescription ?? false,
+            clientSupportsDiagnosticData:
+                clientCapabilities?.includeAdditionalDiagnosticData ?? false,
           ),
         )
         .toList();

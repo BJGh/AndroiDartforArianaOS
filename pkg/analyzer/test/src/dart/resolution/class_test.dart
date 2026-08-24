@@ -21,7 +21,7 @@ main() {
 @reflectiveTest
 class ClassDeclarationResolutionTest extends PubPackageResolutionTest {
   test_element_allSupertypes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 mixin B {}
 mixin C {}
@@ -35,26 +35,26 @@ class X4 extends A with B implements C {}
 class X5 extends A with B, C implements D, E {}
 ''');
 
-    assertElementTypes(findElement2.class_('X1').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X1').allSupertypes, [
       'Object',
       'A',
     ]);
-    assertElementTypes(findElement2.class_('X2').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X2').allSupertypes, [
       'Object',
       'B',
     ]);
-    assertElementTypes(findElement2.class_('X3').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X3').allSupertypes, [
       'Object',
       'A',
       'B',
     ]);
-    assertElementTypes(findElement2.class_('X4').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X4').allSupertypes, [
       'Object',
       'A',
       'B',
       'C',
     ]);
-    assertElementTypes(findElement2.class_('X5').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X5').allSupertypes, [
       'Object',
       'A',
       'B',
@@ -65,7 +65,7 @@ class X5 extends A with B, C implements D, E {}
   }
 
   test_element_allSupertypes_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {}
 class B<T, U> {}
 class C<T> extends B<int, T> {}
@@ -75,15 +75,15 @@ class X2 extends B<String, List<int>> {}
 class X3 extends C<double> {}
 ''');
 
-    assertElementTypes(findElement2.class_('X1').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X1').allSupertypes, [
       'Object',
       'A<String>',
     ]);
-    assertElementTypes(findElement2.class_('X2').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X2').allSupertypes, [
       'Object',
       'B<String, List<int>>',
     ]);
-    assertElementTypes(findElement2.class_('X3').allSupertypes, [
+    assertElementTypes(result.findElement.class_('X3').allSupertypes, [
       'Object',
       'B<int, double>',
       'C<double>',
@@ -91,7 +91,7 @@ class X3 extends C<double> {}
   }
 
   test_element_allSupertypes_recursive() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A extends B {}
 //    ^
 // [diag.recursiveInterfaceInheritance] 'A' can't be a superinterface of itself: C, B, A.
@@ -105,32 +105,35 @@ class C extends A {}
 class X extends A {}
 ''');
 
-    assertElementTypes(findElement2.class_('X').allSupertypes, ['A', 'Object']);
+    assertElementTypes(result.findElement.class_('X').allSupertypes, [
+      'A',
+      'Object',
+    ]);
   }
 
   test_element_typeFunction_extends() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A extends Function {}
 //              ^^^^^^^^
 // [diag.finalClassExtendedOutsideOfLibrary] The class 'Function' can't be extended outside of its library because it's a final class.
 ''');
-    var a = findElement2.class_('A');
+    var a = result.findElement.class_('A');
     assertType(a.supertype, 'Object');
   }
 
-  test_element_typeFunction_extends_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_element_typeFunction_extends_beforeClassModifiers() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: class-modifiers
 class A extends Function {}
 //              ^^^^^^^^
 // [diag.deprecatedExtendsFunction] Extending 'Function' is deprecated.
 ''');
-    var a = findElement2.class_('A');
+    var a = result.findElement.class_('A');
     assertType(a.supertype, 'Object');
   }
 
   test_element_typeFunction_with() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin A {}
 mixin B {}
 class C extends Object with A, Function, B {}
@@ -138,12 +141,12 @@ class C extends Object with A, Function, B {}
 // [diag.classUsedAsMixin] The class 'Function' can't be used as a mixin because it's neither a mixin class nor a mixin.
 ''');
 
-    assertElementTypes(findElement2.class_('C').mixins, ['A', 'B']);
+    assertElementTypes(result.findElement.class_('C').mixins, ['A', 'B']);
   }
 
-  test_element_typeFunction_with_language219() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.19
+  test_element_typeFunction_with_beforeClassModifiers() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: class-modifiers
 mixin A {}
 mixin B {}
 class C extends Object with A, Function, B {}
@@ -151,11 +154,11 @@ class C extends Object with A, Function, B {}
 // [diag.deprecatedMixinFunction] Mixing in 'Function' is deprecated.
 ''');
 
-    assertElementTypes(findElement2.class_('C').mixins, ['A', 'B']);
+    assertElementTypes(result.findElement.class_('C').mixins, ['A', 'B']);
   }
 
   test_field_static_typeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   static T? foo;
 //       ^
@@ -163,7 +166,7 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   staticKeyword: static
@@ -203,7 +206,7 @@ main() {
   }
 
   test_method_static_typeParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   static T? foo() {}
 //       ^
@@ -211,7 +214,7 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    var node = result.findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   modifierKeyword: static
@@ -235,11 +238,11 @@ MethodDeclaration
   }
 
   test_nameWithTypeParameters_hasTypeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T extends int> {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -266,11 +269,11 @@ ClassDeclaration
   }
 
   test_nameWithTypeParameters_noTypeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -284,17 +287,40 @@ ClassDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_default_namedOptional_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A({final int a = 0});
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      delimitedFormalParameters: DelimitedFormalParameters
+        leftDelimiter: {
+        formalParameters
+          RegularFormalParameter
+            constFinalOrVarKeyword: final
+            type: NamedType
+              name: int
+              element: dart:core::@class::int
+              type: int
+            name: a
+            defaultClause: FormalParameterDefaultClause
+              separator: =
+              value2: IntegerLiteral
+                literal: 0
+                staticType: int
+            declaredFragment: <testLibraryFragment> a@19
+              element: isFinal isPublic
+                type: int
+                field: <testLibrary>::@class::A::@field::a
+        rightDelimiter: }
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
       parameter: RegularFormalParameter
@@ -325,17 +351,36 @@ ClassDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_default_namedRequired_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A({required final int a});
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      delimitedFormalParameters: DelimitedFormalParameters
+        leftDelimiter: {
+        formalParameters
+          RegularFormalParameter
+            requiredKeyword: required
+            constFinalOrVarKeyword: final
+            type: NamedType
+              name: int
+              element: dart:core::@class::int
+              type: int
+            name: a
+            declaredFragment: <testLibraryFragment> a@28
+              element: isFinal isPublic
+                type: int
+                field: <testLibrary>::@class::A::@field::a
+        rightDelimiter: }
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
       parameter: RegularFormalParameter
@@ -362,17 +407,58 @@ ClassDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_functionTyped_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int a(String x));
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          functionTypedSuffix: FunctionTypedFormalParameterSuffix
+            formalParameters: FormalParameterList
+              leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  type: NamedType
+                    name: String
+                    element: dart:core::@class::String
+                    type: String
+                  name: x
+                  declaredFragment: <testLibraryFragment> x@27
+                    element: isPublic
+                      type: String
+              rightParenthesis: )
+            formalParameters(v1): FormalParameterList
+              leftParenthesis: (
+              parameter: RegularFormalParameter
+                type: NamedType
+                  name: String
+                  element: dart:core::@class::String
+                  type: String
+                name: x
+                declaredFragment: <testLibraryFragment> x@27
+                  element: isPublic
+                    type: String
+              rightParenthesis: )
+          declaredFragment: <testLibraryFragment> a@18
+            element: isFinal isPublic
+              type: int Function(String)
+              field: <testLibrary>::@class::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: final
@@ -409,17 +495,32 @@ ClassDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_simple_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int a) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@18
+            element: isFinal isPublic
+              type: int
+              field: <testLibrary>::@class::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: final
@@ -444,17 +545,32 @@ ClassDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_simple_var() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(var int a) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: var
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@16
+            element: isFinal isPublic
+              type: int
+              field: <testLibrary>::@class::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: var
@@ -479,20 +595,46 @@ ClassDeclaration
   }
 
   test_primaryConstructor_field_staticConst() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final String a, final bool b) {
   static const int foo = 0;
   static const int bar = 1;
 }
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: String
+            element: dart:core::@class::String
+            type: String
+          name: a
+          declaredFragment: <testLibraryFragment> a@21
+            element: isFinal isPublic
+              type: String
+              field: <testLibrary>::@class::A::@field::a
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: bool
+            element: dart:core::@class::bool
+            type: bool
+          name: b
+          declaredFragment: <testLibraryFragment> b@35
+            element: isFinal isPublic
+              type: bool
+              field: <testLibrary>::@class::A::@field::b
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: final
@@ -535,7 +677,7 @@ ClassDeclaration
             VariableDeclaration
               name: foo
               equals: =
-              initializer: IntegerLiteral
+              initializer2: IntegerLiteral
                 literal: 0
                 staticType: int
               declaredFragment: <testLibraryFragment> foo@59
@@ -553,7 +695,7 @@ ClassDeclaration
             VariableDeclaration
               name: bar
               equals: =
-              initializer: IntegerLiteral
+              initializer2: IntegerLiteral
                 literal: 1
                 staticType: int
               declaredFragment: <testLibraryFragment> bar@87
@@ -565,19 +707,35 @@ ClassDeclaration
   }
 
   test_primaryConstructor_fieldFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int this.a) {
   final int a;
 }
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        FieldFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          thisKeyword: this
+          period: .
+          name: a
+          declaredFragment: <testLibraryFragment> a@17
+            element: isFinal isPublic
+              type: int
+              field: <testLibrary>::@class::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: FieldFormalParameter
         type: NamedType
@@ -617,18 +775,39 @@ ClassDeclaration
   }
 
   test_primaryConstructor_formalParameters_bodyScope_metadata() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 0;
 class A(@foo int x) {
   static const foo = 1;
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        metadata
+          Annotation
+            atSign: @
+            name: SimpleIdentifier
+              token: foo
+              element: <testLibrary>::@class::A::@getter::foo
+              staticType: null
+            element: <testLibrary>::@class::A::@getter::foo
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: x
+        declaredFragment: <testLibraryFragment> x@32
+          element: isPublic
+            type: int
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       metadata
@@ -655,7 +834,7 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_formalParameters_bodyScope_type() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int x) {
 //      ^^^
 // [diag.notAType] int isn't a type.
@@ -663,11 +842,24 @@ class A(int x) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: int
+          element: <testLibrary>::@class::A::@getter::int
+          type: InvalidType
+        name: x
+        declaredFragment: <testLibraryFragment> x@12
+          element: isPublic
+            type: InvalidType
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -686,11 +878,11 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_hasTypeParameters_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T>.named(T t) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -708,6 +900,19 @@ ClassDeclaration
       period: .
       name: named
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E0 T
+            type: T
+          name: t
+          declaredFragment: <testLibraryFragment> t@19
+            element: isPublic
+              type: T
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -730,11 +935,11 @@ ClassDeclaration
   }
 
   test_primaryConstructor_hasTypeParameters_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T>(T t) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -749,6 +954,19 @@ ClassDeclaration
             defaultType: dynamic
       rightBracket: >
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E0 T
+            type: T
+          name: t
+          declaredFragment: <testLibraryFragment> t@13
+            element: isPublic
+              type: T
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -771,11 +989,11 @@ ClassDeclaration
   }
 
   test_primaryConstructor_noTypeParameters_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A.named(int a) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -785,6 +1003,19 @@ ClassDeclaration
       period: .
       name: named
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@18
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -807,17 +1038,30 @@ ClassDeclaration
   }
 
   test_primaryConstructor_noTypeParameters_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int a) {}
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@12
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -840,14 +1084,14 @@ ClassDeclaration
   }
 
   test_primaryConstructor_scopes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 0;
 class A<@foo T>([@foo int x = foo]) {
   static const foo = 1;
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
@@ -868,6 +1112,36 @@ PrimaryConstructorDeclaration
           defaultType: dynamic
     rightBracket: >
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: [
+      formalParameters
+        RegularFormalParameter
+          metadata
+            Annotation
+              atSign: @
+              name: SimpleIdentifier
+                token: foo
+                element: <testLibrary>::@class::A::@getter::foo
+                staticType: null
+              element: <testLibrary>::@class::A::@getter::foo
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: x
+          defaultClause: FormalParameterDefaultClause
+            separator: =
+            value2: SimpleIdentifier
+              token: foo
+              element: <testLibrary>::@class::A::@getter::foo
+              staticType: int
+          declaredFragment: <testLibraryFragment> x@41
+            element: isPublic
+              type: int
+      rightDelimiter: ]
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
     parameter: RegularFormalParameter
@@ -902,18 +1176,29 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_superFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int a);
 class B(super.a) extends A;
 ''');
 
-    var node = findNode.classDeclaration('class B');
+    var node = result.findNode.classDeclaration('class B');
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: B
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        SuperFormalParameter
+          superKeyword: super
+          period: .
+          name: a
+          declaredFragment: <testLibraryFragment> a@36
+            element: hasImplicitType isFinal isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: SuperFormalParameter
         superKeyword: super
@@ -939,11 +1224,11 @@ ClassDeclaration
   }
 
   test_primaryConstructor_typeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class D<T extends U, U extends num>(T t, U u);
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
@@ -972,6 +1257,28 @@ ClassDeclaration
             defaultType: num
       rightBracket: >
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E1 T
+            type: T
+          name: t
+          declaredFragment: <testLibraryFragment> t@38
+            element: isPublic
+              type: T
+        RegularFormalParameter
+          type: NamedType
+            name: U
+            element: #E0 U
+            type: U
+          name: u
+          declaredFragment: <testLibraryFragment> u@43
+            element: isPublic
+              type: U
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1002,7 +1309,7 @@ ClassDeclaration
   }
 
   test_primaryConstructorBody_duplicate() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(bool x, bool y) {
   this : assert(x) {
     y;
@@ -1015,13 +1322,35 @@ class A(bool x, bool y) {
 }
 ''');
 
-    var node = findNode.singleClassDeclaration;
+    var node = result.findNode.singleClassDeclaration;
     assertResolvedNodeText(node, r'''
 ClassDeclaration
   classKeyword: class
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: bool
+            element: dart:core::@class::bool
+            type: bool
+          name: x
+          declaredFragment: <testLibraryFragment> x@13
+            element: isPublic
+              type: bool
+        RegularFormalParameter
+          type: NamedType
+            name: bool
+            element: dart:core::@class::bool
+            type: bool
+          name: y
+          declaredFragment: <testLibraryFragment> y@21
+            element: isPublic
+              type: bool
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1055,7 +1384,7 @@ ClassDeclaration
           AssertInitializer
             assertKeyword: assert
             leftParenthesis: (
-            condition: SimpleIdentifier
+            condition2: SimpleIdentifier
               token: x
               element: <testLibrary>::@class::A::@constructor::new::@formalParameter::x
               staticType: bool
@@ -1065,7 +1394,7 @@ ClassDeclaration
             leftBracket: {
             statements
               ExpressionStatement
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: y
                   element: <testLibrary>::@class::A::@constructor::new::@formalParameter::y
                   staticType: bool
@@ -1078,7 +1407,14 @@ ClassDeclaration
           AssertInitializer
             assertKeyword: assert
             leftParenthesis: (
-            condition: PrefixExpression
+            condition2: LogicalNot
+              operator: !
+              operand: SimpleIdentifier
+                token: x
+                element: <testLibrary>::@class::A::@constructor::new::@formalParameter::x
+                staticType: bool
+              staticType: bool
+            condition(v1): PrefixExpression
               operator: !
               operand: SimpleIdentifier
                 token: x
@@ -1092,7 +1428,14 @@ ClassDeclaration
             leftBracket: {
             statements
               ExpressionStatement
-                expression: PrefixExpression
+                expression2: LogicalNot
+                  operator: !
+                  operand: SimpleIdentifier
+                    token: y
+                    element: <testLibrary>::@class::A::@constructor::new::@formalParameter::y
+                    staticType: bool
+                  staticType: bool
+                expression(v1): PrefixExpression
                   operator: !
                   operand: SimpleIdentifier
                     token: y
@@ -1108,14 +1451,14 @@ ClassDeclaration
   }
 
   test_primaryConstructorBody_metadata() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A() {
   @deprecated
   this;
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   metadata
@@ -1133,7 +1476,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_metadata_noDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   @deprecated
   this;
@@ -1142,7 +1485,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   metadata
@@ -1160,7 +1503,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_noDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   this : assert(x) {
 //^^^^
@@ -1174,7 +1517,7 @@ class A {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1183,7 +1526,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: x
         element: <null>
         staticType: InvalidType
@@ -1193,7 +1536,7 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: y
             element: <null>
             staticType: InvalidType
@@ -1203,13 +1546,13 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_declaringFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final bool a) {
   this : assert(a);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1218,7 +1561,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: a
         element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
         staticType: bool
@@ -1229,16 +1572,16 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_declaringFormalParameter_shadowedClassName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int A()) {
   this : assert(A() > 0);
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::A::@constructor::new::@formalParameter::A
     staticType: int Function()
@@ -1252,14 +1595,14 @@ FunctionExpressionInvocation
   }
 
   test_primaryConstructorBody_primaryInitializerScope_fieldFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(this.a) {
   final bool a;
   this : assert(a);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1268,7 +1611,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: a
         element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
         staticType: bool
@@ -1279,7 +1622,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_fieldFormalParameter_shadowedClassName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int _);
 }
@@ -1290,10 +1633,10 @@ class B(this.A) {
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::B::@constructor::new::@formalParameter::A
     staticType: int Function()
@@ -1307,13 +1650,13 @@ FunctionExpressionInvocation
   }
 
   test_primaryConstructorBody_primaryInitializerScope_simpleFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(bool a) {
   this : assert(a);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1322,7 +1665,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: a
         element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
         staticType: bool
@@ -1333,14 +1676,14 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_superFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final bool a);
 class B(super.a) extends A {
   this : assert(a);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1349,7 +1692,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: a
         element: <testLibrary>::@class::B::@constructor::new::@formalParameter::a
         staticType: bool
@@ -1360,17 +1703,17 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_superFormalParameter_shadowedClassName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int Function() A);
 class B(super.A) extends A {
   this : assert(A() > 0);
 }
 ''');
 
-    var node = findNode.singleFunctionExpressionInvocation;
+    var node = result.findNode.singleFunctionExpressionInvocation;
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: A
     element: <testLibrary>::@class::B::@constructor::new::@formalParameter::A
     staticType: int Function()
@@ -1384,7 +1727,7 @@ FunctionExpressionInvocation
   }
 
   test_primaryConstructorBody_primaryParameterScope_declaringFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int a) {
   this {
     a;
@@ -1394,7 +1737,7 @@ class A(final int a) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1403,13 +1746,13 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: <testLibrary>::@class::A::@getter::a
             staticType: int
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: foo
             element: <testLibrary>::@class::A::@method::foo
             staticType: void Function()
@@ -1419,7 +1762,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryParameterScope_fieldFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(this.a) {
   final int a;
   this {
@@ -1430,7 +1773,7 @@ class A(this.a) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1439,13 +1782,13 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: <testLibrary>::@class::A::@getter::a
             staticType: int
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: foo
             element: <testLibrary>::@class::A::@method::foo
             staticType: void Function()
@@ -1455,7 +1798,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryParameterScope_simpleFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int a) {
   this {
     a;
@@ -1466,7 +1809,7 @@ class A(int a) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1475,19 +1818,19 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
             staticType: int
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: foo
             element: <testLibrary>::@class::A::@method::foo
             staticType: void Function()
           semicolon: ;
         ExpressionStatement
-          expression: PatternAssignment
+          expression2: PatternAssignment
             pattern: RecordPattern
               leftParenthesis: (
               fields
@@ -1500,9 +1843,9 @@ PrimaryConstructorBody
               rightParenthesis: )
               matchedValueType: (int,)
             equals: =
-            expression: RecordLiteral
+            expression2: RecordLiteral
               leftParenthesis: (
-              fields
+              fields2
                 IntegerLiteral
                   literal: 0
                   staticType: int
@@ -1516,7 +1859,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryParameterScope_superFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int a);
 class B(super.a) extends A {
   this {
@@ -1527,7 +1870,7 @@ class B(super.a) extends A {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1536,13 +1879,13 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: <testLibrary>::@class::A::@getter::a
             staticType: int
           semicolon: ;
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: foo
             element: <testLibrary>::@class::B::@method::foo
             staticType: void Function()
@@ -1552,13 +1895,13 @@ PrimaryConstructorBody
   }
 
   test_primaryInitializerScope_fieldInitializer_instance() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int foo) {
   var bar = foo;
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1567,7 +1910,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <testLibrary>::@class::A::@constructor::new::@formalParameter::foo
           staticType: int
@@ -1578,13 +1921,13 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldInitializer_instance_declaringFormal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(final int foo) {
   var bar = foo;
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1593,7 +1936,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <testLibrary>::@class::A::@constructor::new::@formalParameter::foo
           staticType: int
@@ -1604,7 +1947,7 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldInitializer_instance_late() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int foo) {
   late var bar = foo;
 //               ^^^
@@ -1612,7 +1955,7 @@ class A(int foo) {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1622,7 +1965,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <null>
           staticType: InvalidType
@@ -1633,7 +1976,7 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldInitializer_static() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int foo) {
   static var bar = foo;
 //                 ^^^
@@ -1641,7 +1984,7 @@ class A(int foo) {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   staticKeyword: static
@@ -1651,7 +1994,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <null>
           staticType: InvalidType
@@ -1662,13 +2005,13 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldTypeAnnotation_shadowedClassName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A(int A) {
   A? field;
 }
 ''');
 
-    var node = findNode.namedType('A? field');
+    var node = result.findNode.namedType('A? field');
     assertResolvedNodeText(node, r'''
 NamedType
   name: A

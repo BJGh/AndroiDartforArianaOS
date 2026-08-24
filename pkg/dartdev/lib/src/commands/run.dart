@@ -348,7 +348,7 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
         'print-dtd',
         hide: !verbose,
         help:
-            'Prints connection details for the Dart Tooling Daemon (DTD).'
+            'Prints connection details for the Dart Tooling Daemon (DTD). '
             'Useful for Dart DevTools extension authors working with DTD in the '
             'extension development environment.',
       )
@@ -483,8 +483,16 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
     }
 
     String? nativeAssets;
+    DartNativeAssetsBuilder? builder;
+    Uri baseUri = Directory.current.uri;
+    if (mainCommand.isNotEmpty) {
+      final file = File(mainCommand);
+      if (file.existsSync()) {
+        baseUri = file.absolute.uri.resolve('.');
+      }
+    }
     final packageConfigUri = await DartNativeAssetsBuilder.ensurePackageConfig(
-      Directory.current.uri,
+      baseUri,
     );
     if (packageConfigUri != null) {
       final packageConfig = await DartNativeAssetsBuilder.loadPackageConfig(
@@ -495,14 +503,13 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
       }
       final runPackageName =
           getPackageForCommand(mainCommand) ??
-          await DartNativeAssetsBuilder.findRootPackageName(
-            Directory.current.uri,
-          );
+          // TODO(https://dartbug.com/63713): Don't use cwd for test.
+          packageConfig.packageOf(baseUri)?.name;
       if (runPackageName != null) {
         final pubspecUri = await DartNativeAssetsBuilder.findWorkspacePubspec(
           packageConfigUri,
         );
-        final builder = DartNativeAssetsBuilder(
+        builder = DartNativeAssetsBuilder(
           pubspecUri: pubspecUri,
           packageConfigUri: packageConfigUri,
           packageConfig: packageConfig,
@@ -550,6 +557,7 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
       log.stderr(e.message);
       return errorExitCode;
     }
+    DartExecutableWithPackageConfig executableOriginal = executable;
 
     if (useResidentCompiler) {
       final File? residentCompilerInfoFile =
@@ -616,6 +624,10 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
       packageConfigOverride:
           args.option('packages') ?? executable.packageConfig,
       useExecProcess: true,
+      scriptUriOverride: identical(executable, executableOriginal)
+          ? null
+          : executableOriginal.executable,
+      deleteTempDirOnShutdown: builder?.tempDirUri?.toFilePath(),
     );
     return 0;
   }
@@ -738,18 +750,17 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
           );
         }
 
-        final executableUri = appBundleDirectory.directory.uri.resolve(
-          'bundle/bin/$executable',
-        );
+        final executableFile = appBundleDirectory.executable(executable).file;
         final arguments = args.rest.skip(1).toList();
 
         // The app-bundle contains executables (not AOT snapshots) to make it
         // self-contained. So, spawn a process instead of loading a snapshot in
         // the VM.
         final process = await Process.start(
-          executableUri.toFilePath(),
+          executableFile.path,
           arguments,
           mode: ProcessStartMode.inheritStdio, // Enable using stdin etc.
+          environment: VmInteropHandler.environmentOverrides,
         );
         return await process.exitCode;
       } on InstallException catch (e) {
@@ -762,7 +773,7 @@ See https://dart.dev/to/package-descriptors for more details.''', verbose) {
 
 /// Keep in sync with [getExecutableForCommand].
 ///
-/// Returns `null` if root package should be used.
+/// Returns `null` if the root package should be used.
 // TODO(https://github.com/dart-lang/pub/issues/4067): Don't duplicate logic.
 String? getPackageForCommand(String descriptor) {
   final root = current;
@@ -770,34 +781,28 @@ String? getPackageForCommand(String descriptor) {
   try {
     asPath = Uri.parse(descriptor).toFilePath();
   } catch (_) {
-    /// Here to get the same logic as[getExecutableForCommand].
+    // Follow the same fallback logic as [getExecutableForCommand].
   }
   final asDirectFile = join(root, asPath);
   if (File(asDirectFile).existsSync()) {
-    return null; // root package.
+    return null; // Root package.
   }
   if (!File(join(root, 'pubspec.yaml')).existsSync()) {
     return null;
   }
-  String package;
+  final String package;
   if (descriptor.contains(':')) {
     final parts = descriptor.split(':');
     if (parts.length > 2) {
       return null;
     }
     package = parts[0];
-    if (package.isEmpty) {
-      return null; // root package.
-    }
   } else {
     package = descriptor;
-    if (package.isEmpty) {
-      return null; // root package.
-    }
   }
-  if (package == 'test') {
-    // `dart run test` is expected to behave as `dart test`.
-    return null; // root package.
+  if (package.isEmpty || package == 'test') {
+    // Empty package or `dart run test` is expected to behave as `dart test`.
+    return null; // Root package.
   }
   return package;
 }

@@ -18,7 +18,7 @@ main() {
 class SuperConstructorInvocationResolutionTest
     extends PubPackageResolutionTest {
   test_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A.named(int a);
 }
@@ -28,29 +28,32 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <testLibrary>::@class::A::@constructor::named
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@constructor::named::@formalParameter::a
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <testLibrary>::@class::A::@constructor::named
+    staticType: null
   element: <testLibrary>::@class::A::@constructor::named
 ''');
   }
 
   test_named_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -62,61 +65,69 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <null>
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <null>
+    staticType: null
   element: <null>
 ''');
   }
 
   test_named_unresolved_hasFormalParameter() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
 
 class B extends A {
   B(int named) : super.named(0);
+//               ^^^^^^^^^^^^^^
+// [diag.undefinedConstructorInInitializer] The class 'A' doesn't have a constructor named 'named'.
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <null>
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <null>
+    staticType: null
   element: <null>
 ''');
   }
 
   test_nonConst_fromConst() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   final a;
   A(this.a);
@@ -125,17 +136,17 @@ class A {
 class B extends A {
   const B() : super(5);
 //            ^^^^^^^^
-// [diag.constConstructorWithNonConstSuper] A constant constructor can't call a non-constant super constructor of 'B'.
+// [diag.constConstructorWithNonConstSuper] A constant constructor can't call a non-constant super constructor of 'A'.
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 5
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
@@ -146,7 +157,7 @@ SuperConstructorInvocation
   }
 
   test_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -156,13 +167,13 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
@@ -173,7 +184,7 @@ SuperConstructorInvocation
   }
 
   test_unnamed_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A.named(int a);
 }
@@ -185,13 +196,13 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.singleSuperConstructorInvocation;
+    var node = result.findNode.singleSuperConstructorInvocation;
     assertResolvedNodeText(node, r'''
 SuperConstructorInvocation
   superKeyword: super
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>

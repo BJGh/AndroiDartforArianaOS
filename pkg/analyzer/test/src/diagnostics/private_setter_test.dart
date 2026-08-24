@@ -22,7 +22,7 @@ class A {
   static int _foo = 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 
 main() {
@@ -32,10 +32,10 @@ main() {
 }
 ''');
 
-    var assignment = findNode.assignment('_foo =');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('_foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/a.dart::@class::A
@@ -48,7 +48,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: package:test/a.dart::@class::A::@setter::_foo::@formalParameter::value
     staticType: int
@@ -82,7 +82,7 @@ class A {
   static int get _foo => 0;
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 
 main() {
@@ -92,10 +92,10 @@ main() {
 }
 ''');
 
-    var assignment = findNode.assignment('_foo =');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('_foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/a.dart::@class::A
@@ -108,7 +108,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: package:test/a.dart::@class::A::@setter::_foo::@formalParameter::_
     staticType: int
@@ -127,7 +127,7 @@ class A {
   static set _foo(int _) {}
 }
 ''');
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 import 'a.dart';
 
 main() {
@@ -137,10 +137,10 @@ main() {
 }
 ''');
 
-    var assignment = findNode.assignment('_foo =');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('_foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: A
       element: package:test/a.dart::@class::A
@@ -153,7 +153,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
     correspondingParameter: package:test/a.dart::@class::A::@setter::_foo::@formalParameter::_
     staticType: int

@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class NewWithNonTypeTest extends PubPackageResolutionTest {
   test_functionTypeAlias() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 typedef F = void Function();
 
 void foo() {
@@ -27,9 +27,12 @@ void foo() {
 }
 ''');
 
-    var node = findNode.namedType('F()');
+    var node = result.findNode
+        .constructorInvocation('F()')
+        .constructorReference
+        .typeReference;
     assertResolvedNodeText(node, r'''
-NamedType
+ConstructorTypeReference
   name: F
   element: <testLibrary>::@typeAlias::F
   type: InvalidType
@@ -52,7 +55,7 @@ lib.B b = lib.B();
   }
 
   test_local() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 var A = 0;
 void f() {
   new A();
@@ -61,9 +64,12 @@ void f() {
 }
 ''');
 
-    var node = findNode.namedType('A()');
+    var node = result.findNode
+        .constructorInvocation('A()')
+        .constructorReference
+        .typeReference;
     assertResolvedNodeText(node, r'''
-NamedType
+ConstructorTypeReference
   name: A
   element: <testLibrary>::@getter::A
   type: InvalidType
@@ -71,7 +77,7 @@ NamedType
   }
 
   test_local_withTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 var A = 0;
 void f() {
   new A<int>();
@@ -80,9 +86,12 @@ void f() {
 }
 ''');
 
-    var node = findNode.namedType('A<int>()');
+    var node = result.findNode
+        .constructorInvocation('A<int>()')
+        .constructorReference
+        .typeReference;
     assertResolvedNodeText(node, r'''
-NamedType
+ConstructorTypeReference
   name: A
   typeArguments: TypeArgumentList
     leftBracket: <

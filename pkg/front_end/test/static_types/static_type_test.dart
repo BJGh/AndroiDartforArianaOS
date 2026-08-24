@@ -23,7 +23,7 @@ Future<void> main(List<String> args) async {
 }
 
 class StaticTypeDataComputer extends CfeDataComputer<String> {
-  const StaticTypeDataComputer();
+  const new();
 
   /// Function that computes a data mapping for [library].
   ///
@@ -61,7 +61,7 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
   final TypeEnvironment _environment;
   StaticTypeContext? _staticTypeContext;
 
-  StaticTypeDataExtractor(
+  new(
     InternalCompilerResult compilerResult,
     Map<Id, ActualData<String>> actualMap,
   ) : _environment = new TypeEnvironment(
@@ -149,7 +149,7 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
 
   bool isReachabilityErrorLet(object) {
     return object is Let &&
-        (isThrowReachabilityError(object.variable.initializer) ||
+        (isThrowReachabilityError(object.value) ||
             isThrowReachabilityError(object.body));
   }
 
@@ -161,7 +161,7 @@ class StaticTypeDataExtractor extends CfeDataExtractor<String> {
       object is BlockExpression ||
       (object is NullLiteral &&
           // Skip implicit initializers/default values.
-          (object.parent is VariableDeclaration || object.parent is Field) &&
+          (object.parent is Variable || object.parent is Field) &&
           object.fileOffset == object.parent?.fileOffset);
 
   @override

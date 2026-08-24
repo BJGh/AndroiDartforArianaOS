@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,18 +17,41 @@ main() {
 @reflectiveTest
 class ParameterTest extends ParserDiagnosticsTest {
   void test_required_functionType_noIdentifier_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f(Function(void)) {}
+//             ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 15, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: Function
+              functionTypedSuffix: FunctionTypedFormalParameterSuffix
+                formalParameters: FormalParameterList
+                  leftParenthesis: (
+                  requiredPositionalFormalParameters
+                    RegularFormalParameter
+                      type: NamedType
+                        name: void
+                      name: <empty> <synthetic>
+                  rightParenthesis: )
+                formalParameters(v1): FormalParameterList
+                  leftParenthesis: (
+                  parameter: RegularFormalParameter
+                    type: NamedType
+                      name: void
+                    name: <empty> <synthetic>
+                  rightParenthesis: )
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: Function
@@ -50,16 +72,17 @@ CompilationUnit
   }
 
   void test_required_typeArgument_noGt_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
           class C<E> {}
           f(C<int Function(int, int) c) {}
+//           ^
+// [diag.expectedToken] Expected to find ')'.
           
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 37, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -77,6 +100,12 @@ CompilationUnit
       name: f
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: C
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: C

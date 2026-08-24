@@ -199,8 +199,7 @@ void newMethod() {
       throwsA(
         isResponseError(
           ErrorCodes.RequestCancelled,
-          message:
-              'Another workspace/executeCommand request for a refactor was started',
+          message: 'Another workspace/executeCommand request for a refactor was started',
         ),
       ),
     );
@@ -672,17 +671,13 @@ mixin SharedExtractWidgetRefactorCodeActionsTests
         ClientCapabilitiesHelperMixin {
   final extractWidgetTitle = 'Extract Widget';
 
+  bool get addFlutterPackageDep => true;
+
   String get expectedNewWidgetConstructorDeclaration => '''
-const NewWidget({
+const new({
     super.key,
   });
 ''';
-
-  @override
-  Future<void> setUp() async {
-    await super.setUp();
-    writeTestPackageConfig(flutter: true);
-  }
 
   Future<void> test_appliesCorrectEdits() async {
     const content = '''

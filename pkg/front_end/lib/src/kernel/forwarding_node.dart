@@ -6,7 +6,6 @@ import "package:kernel/ast.dart";
 import 'package:kernel/core_types.dart';
 import 'package:kernel/names.dart';
 import 'package:kernel/reference_from_index.dart';
-import 'package:kernel/transformations/flags.dart' show TransformerFlag;
 import 'package:kernel/type_algebra.dart';
 
 import "../base/problems.dart" show unhandled;
@@ -53,7 +52,7 @@ class ForwardingNode {
 
   final bool _declarationIsMixinApplication;
 
-  ForwardingNode(
+  new(
     this.libraryBuilder,
     this.declarationBuilder,
     this.typeDeclaration,
@@ -250,9 +249,8 @@ class ForwardingNode {
         if (needsNoSuchMethodForwarder) {
           _createNoSuchMethodForwarder(
             _noSuchMethodTarget.getMember(
-                  _combinedMemberSignature.membersBuilder,
-                )
-                as Procedure,
+              _combinedMemberSignature.membersBuilder,
+            ) as Procedure,
             stub,
           );
         } else if (needsSuperImpl ||
@@ -335,9 +333,9 @@ class ForwardingNode {
     switch (kind) {
       case ProcedureKind.Method:
       case ProcedureKind.Operator:
-        FunctionType type =
-            _combinedMemberSignature.getMemberTypeForTarget(superTarget)
-                as FunctionType;
+        FunctionType type = _combinedMemberSignature.getMemberTypeForTarget(
+          superTarget,
+        ) as FunctionType;
         if (type.typeParameters.isNotEmpty) {
           type = FunctionTypeInstantiator.instantiate(
             type,
@@ -352,7 +350,7 @@ class ForwardingNode {
         List<Expression> positionalArguments = new List.generate(
           function.positionalParameters.length,
           (int index) {
-            VariableDeclaration parameter =
+            PositionalParameter parameter =
                 function.positionalParameters[index];
             int fileOffset = parameter.fileOffset;
             Expression expression = extern.createVariableGet(parameter);
@@ -381,12 +379,13 @@ class ForwardingNode {
         List<NamedExpression> namedArguments = new List.generate(
           function.namedParameters.length,
           (int index) {
-            VariableDeclaration parameter = function.namedParameters[index];
+            NamedParameter parameter = function.namedParameters[index];
             int fileOffset = parameter.fileOffset;
             Expression expression = extern.createVariableGet(parameter);
             DartType superParameterType = type.namedParameters
                 .singleWhere(
-                  (NamedType namedType) => namedType.name == parameter.name,
+                  (NamedType namedType) =>
+                      namedType.name == parameter.parameterName,
                 )
                 .type;
             if (isForwardingSemiStub) {
@@ -406,7 +405,10 @@ class ForwardingNode {
                 );
               }
             }
-            return extern.createNamedExpression(parameter.name!, expression);
+            return extern.createNamedExpression(
+              parameter.parameterName,
+              expression,
+            );
           },
           growable: true,
         );
@@ -441,7 +443,7 @@ class ForwardingNode {
       case ProcedureKind.Setter:
         DartType superParameterType = _combinedMemberSignature
             .getMemberTypeForTarget(superTarget);
-        VariableDeclaration parameter = function.positionalParameters[0];
+        Variable parameter = function.positionalParameters[0];
         int fileOffset = parameter.fileOffset;
         Expression expression = extern.createVariableGet(parameter);
         if (isForwardingSemiStub) {
@@ -476,7 +478,10 @@ class ForwardingNode {
     function.registerFunctionBody(
       extern.createReturnStatement(superCall, fileOffset: procedure.fileOffset),
     );
-    procedure.transformerFlags |= TransformerFlag.superCalls;
+    // TODO(cstefantsova): Verify that null should be passed for
+    //  scopeProviderInfo in the call below.
+    function.registerScopeProviderInfo(null);
+    procedure.containsSuperCalls = true;
     procedure.stubKind = isForwardingStub
         ? ProcedureStubKind.ConcreteForwardingStub
         : ProcedureStubKind.ConcreteMixinStub;
@@ -564,14 +569,13 @@ class ForwardingNode {
     FunctionType signatureType = procedure.function.computeFunctionType(
       procedure.enclosingLibrary.nonNullable,
     );
-    List<VariableDeclaration> positionalParameters =
+    List<PositionalParameter> positionalParameters =
         procedure.function.positionalParameters;
-    List<VariableDeclaration> namedParameters =
-        procedure.function.namedParameters;
+    List<NamedParameter> namedParameters = procedure.function.namedParameters;
     int requiredParameterCount = procedure.function.requiredParameterCount;
     bool hasUpdate = false;
     bool updateNullability(
-      VariableDeclaration parameter, {
+      FunctionParameter parameter, {
       required bool isRequired,
     }) {
       // Parameters in nnbd libraries that backends might not be able to pass
@@ -579,14 +583,14 @@ class ForwardingNode {
       // appropriate parameter checks in the forwarder stub for null placeholder
       // arguments. Covariance indicates the type must stay the same.
       return !(isRequired ||
-              parameter.hasDeclaredInitializer ||
+              parameter.hasDeclaredDefaultValue ||
               parameter.isCovariantByDeclaration ||
               parameter.isCovariantByClass) &&
           parameter.type.nullability != Nullability.nullable;
     }
 
     for (int i = 0; i < positionalParameters.length; i++) {
-      VariableDeclaration parameter = positionalParameters[i];
+      PositionalParameter parameter = positionalParameters[i];
       bool isRequired = i < requiredParameterCount;
       if (updateNullability(parameter, isRequired: isRequired)) {
         parameter.type = parameter.type.withDeclaredNullability(
@@ -596,7 +600,7 @@ class ForwardingNode {
       }
     }
 
-    for (VariableDeclaration parameter in namedParameters) {
+    for (NamedParameter parameter in namedParameters) {
       if (updateNullability(parameter, isRequired: parameter.isRequired)) {
         parameter.type = parameter.type.withDeclaredNullability(
           Nullability.nullable,
@@ -610,6 +614,9 @@ class ForwardingNode {
     procedure.function.registerFunctionBody(
       extern.createReturnStatement(result, fileOffset: procedure.fileOffset),
     );
+    // TODO(cstefantsova): Verify that null should be passed for
+    //  scopeProviderInfo in the call below.
+    procedure.function.registerScopeProviderInfo(null);
 
     procedure.isAbstract = false;
     procedure.stubKind = ProcedureStubKind.NoSuchMethodForwarder;

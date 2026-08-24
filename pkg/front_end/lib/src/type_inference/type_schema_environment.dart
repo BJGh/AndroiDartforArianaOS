@@ -14,6 +14,7 @@ import 'package:kernel/src/hierarchy_based_type_environment.dart'
 import 'package:kernel/type_algebra.dart';
 import 'package:kernel/type_environment.dart';
 
+import '../kernel/internal_ast.dart';
 import 'standard_bounds.dart' show TypeSchemaStandardBounds;
 import 'type_constraint_gatherer.dart' show TypeConstraintGatherer;
 import 'type_inference_engine.dart';
@@ -21,22 +22,22 @@ import 'type_demotion.dart';
 import 'type_schema.dart' show UnknownType;
 
 typedef GeneratedTypeConstraint =
-    shared.GeneratedTypeConstraint<VariableDeclaration>;
+    shared.GeneratedTypeConstraint<InternalVariable>;
 
 typedef MergedTypeConstraint =
     shared.MergedTypeConstraint<
-      VariableDeclaration,
+      InternalVariable,
       TypeDeclarationType,
       TypeDeclaration,
-      TreeNode
+      InternalNode
     >;
 
 typedef UnknownTypeConstraintOrigin =
     shared.UnknownTypeConstraintOrigin<
-      VariableDeclaration,
+      InternalVariable,
       TypeDeclarationType,
       TypeDeclaration,
-      TreeNode
+      InternalNode
     >;
 
 /// Given a [FunctionType], gets the type of the named parameter with the given
@@ -60,8 +61,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
   @override
   final ClassHierarchy hierarchy;
 
-  TypeSchemaEnvironment(CoreTypes coreTypes, this.hierarchy)
-    : super(coreTypes, hierarchy);
+  new(CoreTypes coreTypes, this.hierarchy) : super(coreTypes, hierarchy);
 
   // Coverage-ignore(suite): Not run.
   InterfaceType functionRawType(Nullability nullability) {
@@ -76,7 +76,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
     List<DartType>? previouslyInferredTypes, {
     required bool inferenceUsingBoundsIsEnabled,
     required InferenceDataForTesting? dataForTesting,
-    required TreeNode? treeNodeForTesting,
+    required InternalNode? internalNodeForTesting,
     required OperationsCfe typeOperations,
   }) {
     List<DartType> inferredTypes = typeOperations
@@ -87,7 +87,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
           preliminary: true,
           inferenceUsingBoundsIsEnabled: inferenceUsingBoundsIsEnabled,
           dataForTesting: dataForTesting,
-          treeNodeForTesting: treeNodeForTesting,
+          astNodeForTesting: internalNodeForTesting,
         )
         .cast();
     for (int i = 0; i < inferredTypes.length; i++) {
@@ -203,7 +203,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
     required OperationsCfe typeOperations,
     required bool inferenceUsingBoundsIsEnabled,
     required TypeInferenceResultForTesting? inferenceResultForTesting,
-    required TreeNode? treeNodeForTesting,
+    required InternalNode? internalNodeForTesting,
   }) {
     assert(typeParametersToInfer.isNotEmpty);
 
@@ -228,7 +228,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
       gatherer.tryConstrainUpper(
         declaredReturnType!,
         returnContextType!,
-        treeNodeForTesting: treeNodeForTesting,
+        internalNodeForTesting: internalNodeForTesting,
       );
     }
     return gatherer;
@@ -249,7 +249,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
     List<DartType>? previouslyInferredTypes, {
     required bool inferenceUsingBoundsIsEnabled,
     required InferenceDataForTesting? dataForTesting,
-    required TreeNode? treeNodeForTesting,
+    required InternalNode? internalNodeForTesting,
     required OperationsCfe typeOperations,
   }) {
     List<DartType> inferredTypes = typeOperations
@@ -260,7 +260,7 @@ class TypeSchemaEnvironment extends HierarchyBasedTypeEnvironment
           preliminary: false,
           inferenceUsingBoundsIsEnabled: inferenceUsingBoundsIsEnabled,
           dataForTesting: dataForTesting,
-          treeNodeForTesting: treeNodeForTesting,
+          astNodeForTesting: internalNodeForTesting,
         )
         .cast();
 
@@ -318,7 +318,7 @@ class AllTypeParameterEliminator extends Substitution {
   final DartType bottomType;
   final DartType topType;
 
-  AllTypeParameterEliminator(this.bottomType, this.topType);
+  new(this.bottomType, this.topType);
 
   @override
   DartType getSubstitute(TypeParameter parameter, bool upperBound) {

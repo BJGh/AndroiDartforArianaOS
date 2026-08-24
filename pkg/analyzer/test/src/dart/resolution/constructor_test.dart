@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class ConstructorDeclarationResolutionTest extends PubPackageResolutionTest {
   test_factory_redirect_generic_instantiated() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> implements B<T> {
   A(T a);
 }
@@ -30,17 +30,19 @@ B<int> b = B(0);
 
     nodeTextConfiguration.withRedirectedConstructors = true;
 
-    var node = findNode.constructorName('B(0)');
+    var node = result.findNode
+        .constructorInvocation('B(0)')
+        .constructorReference;
     assertResolvedNodeText(node, r'''
-ConstructorName
-  type: NamedType
+ConstructorReference2
+  typeReference: ConstructorTypeReference
     name: B
     element: <testLibrary>::@class::B
     type: B<int>
-  element: ConstructorMember
+  element: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@class::B::@constructor::new
     substitution: {U: int}
-    redirectedConstructor: ConstructorMember
+    redirectedConstructor: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: int}
       redirectedConstructor: <null>
@@ -48,7 +50,7 @@ ConstructorName
   }
 
   test_fieldShadowingWildcardParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   var v;
   var _;
@@ -58,23 +60,25 @@ class A {
 }
 ''');
 
-    var node = findNode.constructorFieldInitializer('v = _');
+    var node = result.findNode.constructorFieldInitializer('v = _');
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: v
+  fieldName(v1): SimpleIdentifier
     token: v
     element: <testLibrary>::@class::A::@field::v
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: _
     element: <testLibrary>::@class::A::@getter::_
     staticType: dynamic
+  fieldElement: <testLibrary>::@class::A::@field::v
 ''');
   }
 
   test_formalParameterScope() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class a {}
 
 class B {
@@ -84,14 +88,28 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('B(');
+    var node = result.findNode.constructorDeclaration('B(');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: a
+          element: <testLibrary>::@class::a
+          type: a
+        name: a
+        declaredFragment: <testLibraryFragment> a@28
+          element: isPublic
+            type: a
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -108,7 +126,7 @@ ConstructorDeclaration
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: <testLibrary>::@class::B::@constructor::new::@formalParameter::a
             staticType: a
@@ -121,7 +139,7 @@ ConstructorDeclaration
   }
 
   test_privateNamedParameter_accessInInitializer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   int? _x;
 //     ^^
@@ -133,23 +151,25 @@ class C {
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: _y
+  fieldName(v1): SimpleIdentifier
     token: _y
     element: <testLibrary>::@class::C::@field::_y
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: _x
     element: <testLibrary>::@class::C::@constructor::new::@formalParameter::x
     staticType: int?
+  fieldElement: <testLibrary>::@class::C::@field::_y
 ''');
   }
 
   test_privateNamedParameter_fieldFormal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   int? _x;
 //     ^^
@@ -158,21 +178,37 @@ class C {
 }
 ''');
 
-    var node = findNode.singleConstructorDeclaration;
+    var node = result.findNode.singleConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: C
+  typeName(v1): SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        FieldFormalParameter
+          thisKeyword: this
+          period: .
+          name: _x
+          declaredFragment: <testLibraryFragment> x@31
+            element: hasImplicitType isFinal isPublic
+              type: int?
+              field: <testLibrary>::@class::C::@field::_x
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: FieldFormalParameter
       thisKeyword: this
       period: .
       name: _x
-      declaredFragment: <testLibraryFragment> x@103
+      declaredFragment: <testLibraryFragment> x@31
         element: hasImplicitType isFinal isPublic
           type: int?
           field: <testLibrary>::@class::C::@field::_x
@@ -189,7 +225,7 @@ ConstructorDeclaration
   test_privateNamedParameter_nonFieldFormal() async {
     // The user is incorrectly using a private named parameter for a non-field
     // parameter. This is erroneous, but resolve using the private name.
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C({int? _x});
 //        ^^
@@ -197,14 +233,32 @@ class C {
 }
 ''');
 
-    var node = findNode.singleConstructorDeclaration;
+    var node = result.findNode.singleConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
-  typeName: SimpleIdentifier
+  typeName2: C
+  typeName(v1): SimpleIdentifier
     token: C
     element: <testLibrary>::@class::C
     staticType: null
   parameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: {
+      formalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            question: ?
+            element: dart:core::@class::int
+            type: int?
+          name: _x
+          declaredFragment: <testLibraryFragment> _x@20
+            element: isPrivate
+              type: int?
+      rightDelimiter: }
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: {
     parameter: RegularFormalParameter
@@ -228,7 +282,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A implements B {
   A.named();
 }
@@ -238,11 +292,12 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -250,6 +305,17 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: <testLibrary>::@class::A::@constructor::named
+  body: EmptyFunctionBody
+    semicolon: ;
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
@@ -261,8 +327,6 @@ ConstructorDeclaration
       element: <testLibrary>::@class::A::@constructor::named
       staticType: null
     element: <testLibrary>::@class::A::@constructor::named
-  body: EmptyFunctionBody
-    semicolon: ;
   declaredFragment: <testLibraryFragment> new@null
     element: <testLibrary>::@class::B::@constructor::new
       type: B Function()
@@ -270,7 +334,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_named_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> implements B<T> {
   A.named();
 }
@@ -280,11 +344,12 @@ class B<U> {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -292,6 +357,27 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: U
+            element: #E0 U
+            type: U
+        rightBracket: >
+      element: <testLibrary>::@class::A
+      type: A<U>
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::named
+      substitution: {T: U}
+  body: EmptyFunctionBody
+    semicolon: ;
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
@@ -308,15 +394,13 @@ ConstructorDeclaration
     period: .
     name: SimpleIdentifier
       token: named
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::named
         substitution: {T: U}
       staticType: null
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::named
       substitution: {T: U}
-  body: EmptyFunctionBody
-    semicolon: ;
   declaredFragment: <testLibraryFragment> new@null
     element: <testLibrary>::@class::B::@constructor::new
       type: B<U> Function()
@@ -324,7 +408,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_named_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A implements B {
   A();
 }
@@ -336,11 +420,12 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -348,6 +433,17 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: <null>
+  body: EmptyFunctionBody
+    semicolon: ;
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
@@ -359,8 +455,6 @@ ConstructorDeclaration
       element: <null>
       staticType: null
     element: <null>
-  body: EmptyFunctionBody
-    semicolon: ;
   declaredFragment: <testLibraryFragment> new@null
     element: <testLibrary>::@class::B::@constructor::new
       type: B Function()
@@ -368,7 +462,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A implements B {
   A();
 }
@@ -378,11 +472,12 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -392,14 +487,20 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
-  redirectedConstructor: ConstructorName
-    type: NamedType
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
       name: A
       element: <testLibrary>::@class::A
       type: A
     element: <testLibrary>::@class::A::@constructor::new
   body: EmptyFunctionBody
     semicolon: ;
+  redirectedConstructor: ConstructorName
+    type: NamedType
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    element: <testLibrary>::@class::A::@constructor::new
   declaredFragment: <testLibraryFragment> named@55
     element: <testLibrary>::@class::B::@constructor::named
       type: B Function()
@@ -407,7 +508,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_unnamed_generic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> implements B<T> {
   A();
 }
@@ -417,11 +518,12 @@ class B<U> {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -431,6 +533,24 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: A
+      typeArguments: TypeArgumentList
+        leftBracket: <
+        arguments
+          NamedType
+            name: U
+            element: #E0 U
+            type: U
+        rightBracket: >
+      element: <testLibrary>::@class::A
+      type: A<U>
+    element: SubstitutedConstructorElementImpl
+      baseElement: <testLibrary>::@class::A::@constructor::new
+      substitution: {T: U}
+  body: EmptyFunctionBody
+    semicolon: ;
   redirectedConstructor: ConstructorName
     type: NamedType
       name: A
@@ -444,11 +564,9 @@ ConstructorDeclaration
         rightBracket: >
       element: <testLibrary>::@class::A
       type: A<U>
-    element: ConstructorMember
+    element: SubstitutedConstructorElementImpl
       baseElement: <testLibrary>::@class::A::@constructor::new
       substitution: {T: U}
-  body: EmptyFunctionBody
-    semicolon: ;
   declaredFragment: <testLibraryFragment> named@64
     element: <testLibrary>::@class::B::@constructor::named
       type: B<U> Function()
@@ -456,7 +574,7 @@ ConstructorDeclaration
   }
 
   test_redirectedConstructor_unnamed_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A implements B {
   A.named();
 }
@@ -468,11 +586,12 @@ class B {
 }
 ''');
 
-    var node = findNode.constructorDeclaration('factory B');
+    var node = result.findNode.constructorDeclaration('factory B');
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   factoryKeyword: factory
-  typeName: SimpleIdentifier
+  typeName2: B
+  typeName(v1): SimpleIdentifier
     token: B
     element: <testLibrary>::@class::B
     staticType: null
@@ -482,14 +601,20 @@ ConstructorDeclaration
     leftParenthesis: (
     rightParenthesis: )
   separator: =
-  redirectedConstructor: ConstructorName
-    type: NamedType
+  factoryRedirectionTarget: ConstructorReference2
+    typeReference: ConstructorTypeReference
       name: A
       element: <testLibrary>::@class::A
       type: A
     element: <null>
   body: EmptyFunctionBody
     semicolon: ;
+  redirectedConstructor: ConstructorName
+    type: NamedType
+      name: A
+      element: <testLibrary>::@class::A
+      type: A
+    element: <null>
   declaredFragment: <testLibraryFragment> named@61
     element: <testLibrary>::@class::B::@constructor::named
       type: B Function()

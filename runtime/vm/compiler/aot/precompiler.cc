@@ -518,17 +518,6 @@ void Precompiler::DoCompileAll() {
 
         global_object_pool_builder()->Reset();
         stub_pool.CopyInto(global_object_pool_builder());
-
-        // We have various stubs we would like to generate inside the isolate,
-        // to ensure the rest of the AOT compilation will use the
-        // isolate-specific stubs (callable via pc-relative calls).
-        auto& stub_code = Code::Handle();
-#define DO(member, name)                                                       \
-  stub_code = StubCode::BuildIsolateSpecific##name##Stub(                      \
-      global_object_pool_builder());                                           \
-  IG->object_store()->set_##member(stub_code);
-        OBJECT_STORE_STUB_CODE_LIST(DO)
-#undef DO
       }
 
       CollectDynamicFunctionNames();
@@ -2434,9 +2423,6 @@ void Precompiler::AttachOptimizedTypeTestingStub() {
 
     // Find all type objects in this isolate.
     IG->heap()->VisitObjects(&visitor);
-
-    // Find all type objects in the vm-isolate.
-    Dart::vm_isolate_group()->heap()->VisitObjects(&visitor);
   }
 
   TypeUsageInfo* type_usage_info = Thread::Current()->type_usage_info();
@@ -2450,12 +2436,9 @@ void Precompiler::AttachOptimizedTypeTestingStub() {
   for (intptr_t i = 0; i < types.length(); i++) {
     const AbstractType& type = types.At(i);
 
-    if (type.InVMIsolateHeap()) {
-      // The only important types in the vm isolate are
-      // "dynamic"/"void"/"Never", which will get their optimized
-      // testing stub installed at creation.
-      continue;
-    }
+    if (type.type_class_id() == kDynamicCid) continue;
+    if (type.type_class_id() == kVoidCid) continue;
+    if (type.type_class_id() == kNeverCid) continue;
 
     if (type_usage_info->IsUsedInTypeTest(type)) {
       code = type_testing_stubs.OptimizedCodeForType(type);
@@ -3295,7 +3278,10 @@ void Precompiler::PruneDictionaries() {
 
 // Traits for the HashTable template.
 struct CodeKeyTraits {
-  static uint32_t Hash(const Object& key) { return Code::Cast(key).Size(); }
+  static uint32_t Hash(const Object& key) {
+    // Instructions never move.
+    return FinalizeHash(Code::Cast(key).PayloadStart());
+  }
   static const char* Name() { return "CodeKeyTraits"; }
   static bool IsMatch(const Object& x, const Object& y) {
     return x.ptr() == y.ptr();

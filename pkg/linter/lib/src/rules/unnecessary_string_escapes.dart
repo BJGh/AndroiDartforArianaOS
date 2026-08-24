@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Remove unnecessary backslashes in strings.';
 
 class UnnecessaryStringEscapes extends AnalysisRule {
-  UnnecessaryStringEscapes()
-    : super(name: LintNames.unnecessary_string_escapes, description: _desc);
+  new() : super(name: LintNames.unnecessary_string_escapes, description: _desc);
 
   @override
   bool get canUseParsedResult => true;
@@ -36,7 +35,7 @@ class UnnecessaryStringEscapes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   /// The special escaped chars listed in language specification
   static const allowedEscapedChars = [
     '"',
@@ -52,10 +51,6 @@ class _Visitor extends SimpleAstVisitor<void> {
     'x',
     'u',
   ];
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
 
   void visitLexeme(
     Token token, {

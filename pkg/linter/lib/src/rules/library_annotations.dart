@@ -10,7 +10,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
 // ignore: implementation_imports
-import 'package:analyzer/src/dart/element/extensions.dart';
+import 'package:analyzer/src/dart/element/annotation_target.dart';
 import 'package:meta/meta_meta.dart';
 
 import '../analyzer.dart';
@@ -19,8 +19,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Attach library annotations to library directives.';
 
 class LibraryAnnotations extends AnalysisRule {
-  LibraryAnnotations()
-    : super(name: LintNames.library_annotations, description: _desc);
+  new() : super(name: LintNames.library_annotations, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.libraryAnnotations;
@@ -35,18 +34,12 @@ class LibraryAnnotations extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final LibraryAnnotations rule;
-
+class _Visitor(final LibraryAnnotations rule) extends SimpleAstVisitor<void> {
   Directive? firstDirective;
-
-  _Visitor(this.rule);
 
   @override
   void visitCompilationUnit(CompilationUnit node) {
-    if (node.directives.isNotEmpty) {
-      firstDirective = node.directives.first;
-    }
+    firstDirective = node.directives.firstOrNull;
     for (var directive in node.directives) {
       if (directive is PartOfDirective) return;
 
@@ -65,8 +58,10 @@ class _Visitor extends SimpleAstVisitor<void> {
         return;
       }
 
-      if (elementAnnotation.targetKinds.length == 1 &&
-          elementAnnotation.targetKinds.contains(TargetKind.library) &&
+      var targetKinds = elementAnnotation.targetKinds;
+      if (targetKinds != null &&
+          targetKinds.length == 1 &&
+          targetKinds.contains(TargetKind.library) &&
           firstDirective == node) {
         rule.reportAtNode(annotation);
       } else if (elementAnnotation.isPragmaLateTrust) {

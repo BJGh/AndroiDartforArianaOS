@@ -20,7 +20,7 @@ import '../util/scope.dart';
 const _desc = r'Avoid types as parameter names.';
 
 class AvoidTypesAsParameterNames extends MultiAnalysisRule {
-  AvoidTypesAsParameterNames()
+  new()
     : super(name: LintNames.avoid_types_as_parameter_names, description: _desc);
 
   @override
@@ -41,12 +41,8 @@ class AvoidTypesAsParameterNames extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final MultiAnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final MultiAnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitCatchClause(CatchClause node) {
     var parameter = node.exceptionParameter;

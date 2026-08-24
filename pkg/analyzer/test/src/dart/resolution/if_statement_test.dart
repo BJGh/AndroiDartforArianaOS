@@ -19,18 +19,18 @@ main() {
 @reflectiveTest
 class IfStatementResolutionTest extends PubPackageResolutionTest {
   test_caseClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x) {
   if (x case 0) {}
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: dynamic
@@ -38,7 +38,7 @@ IfStatement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -50,7 +50,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr2_consistent() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || [int a] when a > 0) {
     a;
@@ -58,12 +58,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -101,7 +101,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -119,7 +132,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -129,7 +142,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr2_nested() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case <int>[var a || var a] when a > 0) {
 //                       ^^^^^^^^
@@ -139,12 +152,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -184,7 +197,20 @@ IfStatement
         requiredType: List<int>
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -202,7 +228,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -212,7 +238,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr2_notConsistent_differentFinality() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || [final int a] when a > 0) {
 //                               ^
@@ -222,12 +248,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -266,7 +292,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -284,7 +323,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -294,7 +333,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr2_notConsistent_differentType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || [double a] when a > 0) {
 //                            ^
@@ -304,12 +343,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -347,7 +386,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: InvalidType
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: <null>
+            staticType: int
+          binaryOperator: greaterThan
+          element: <null>
+          staticType: InvalidType
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -365,7 +417,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: InvalidType
@@ -375,7 +427,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_1() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || 2 || 3 when a > 0) {
 //                    ^
@@ -387,12 +439,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -413,21 +465,34 @@ IfStatement
             matchedValueType: Object?
           operator: ||
           rightOperand: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 2
               staticType: int
             matchedValueType: Object?
           matchedValueType: Object?
         operator: ||
         rightOperand: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 3
             staticType: int
           matchedValueType: Object?
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -445,7 +510,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -455,7 +520,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_12() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || int a || 3 when a > 0) {
 //                             ^
@@ -465,12 +530,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -503,14 +568,27 @@ IfStatement
           matchedValueType: Object?
         operator: ||
         rightOperand: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 3
             staticType: int
           matchedValueType: Object?
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -528,7 +606,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -538,7 +616,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_123() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || int a || int a when a > 0) {
     a;
@@ -546,12 +624,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -596,7 +674,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -614,7 +705,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -624,7 +715,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_13() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a || 2 || int a when a > 0) {
 //                    ^
@@ -634,12 +725,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -660,7 +751,7 @@ IfStatement
             matchedValueType: Object?
           operator: ||
           rightOperand: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 2
               staticType: int
             matchedValueType: Object?
@@ -679,7 +770,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -697,7 +801,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -707,7 +811,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case 1 || int a || 3 when a > 0) {
 //           ^
@@ -719,12 +823,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -734,7 +838,7 @@ IfStatement
       pattern: LogicalOrPattern
         leftOperand: LogicalOrPattern
           leftOperand: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 1
               staticType: int
             matchedValueType: Object?
@@ -752,14 +856,27 @@ IfStatement
           matchedValueType: Object?
         operator: ||
         rightOperand: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 3
             staticType: int
           matchedValueType: Object?
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -777,7 +894,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -787,7 +904,7 @@ IfStatement
   }
 
   test_caseClause_variables_logicalOr3_23() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case 1 || int a || int a when a > 0) {
 //           ^
@@ -797,12 +914,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -812,7 +929,7 @@ IfStatement
       pattern: LogicalOrPattern
         leftOperand: LogicalOrPattern
           leftOperand: ConstantPattern
-            expression: IntegerLiteral
+            expression2: IntegerLiteral
               literal: 1
               staticType: int
             matchedValueType: Object?
@@ -842,7 +959,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@null
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@null
@@ -860,7 +990,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: int
@@ -876,7 +1006,7 @@ IfStatement
     // but they are considered initialized after the entire case pattern,
     // before the guard expression if there is one. However, all pattern
     // variables are in scope in the entire pattern.
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 void f(Object? x) {
   if (x case [int a, == a] when a > 0) {
@@ -892,12 +1022,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -919,7 +1049,7 @@ IfStatement
             matchedValueType: Object?
           RelationalPattern
             operator: ==
-            operand: SimpleIdentifier
+            operand2: SimpleIdentifier
               token: a
               element: a@51
               staticType: int
@@ -930,7 +1060,20 @@ IfStatement
         requiredType: List<Object?>
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@51
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@51
@@ -948,7 +1091,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@51
           staticType: int
@@ -959,7 +1102,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: <testLibrary>::@getter::a
           staticType: int
@@ -969,7 +1112,7 @@ IfStatement
   }
 
   test_caseClause_variables_scope_logicalOr() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 void f(Object? x) {
   if (x case bool a || a when a) {
@@ -983,12 +1126,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.singleIfStatement;
+    var node = result.findNode.singleIfStatement;
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1008,7 +1151,7 @@ IfStatement
           matchedValueType: Object?
         operator: ||
         rightOperand: ConstantPattern
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: a
             element: a@null
             staticType: InvalidType
@@ -1016,7 +1159,7 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: bool
@@ -1025,7 +1168,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@null
           staticType: bool
@@ -1036,7 +1179,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: <testLibrary>::@getter::a
           staticType: int
@@ -1046,7 +1189,7 @@ IfStatement
   }
 
   test_caseClause_variables_single() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case int a when a > 0) {
     a;
@@ -1058,12 +1201,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -1082,7 +1225,20 @@ IfStatement
         matchedValueType: Object?
       whenClause: WhenClause
         whenKeyword: when
-        expression: BinaryExpression
+        expression2: BinaryOperatorInvocation
+          leftOperand: SimpleIdentifier
+            token: a
+            element: a@37
+            staticType: int
+          operator: >
+          rightOperand: IntegerLiteral
+            literal: 0
+            correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+            staticType: int
+          binaryOperator: greaterThan
+          element: dart:core::@class::num::@method::>
+          staticType: bool
+        expression(v1): BinaryExpression
           leftOperand: SimpleIdentifier
             token: a
             element: a@37
@@ -1100,7 +1256,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: a@37
           staticType: int
@@ -1111,7 +1267,7 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: SimpleIdentifier
+        expression2: SimpleIdentifier
           token: a
           element: <null>
           staticType: InvalidType
@@ -1121,7 +1277,7 @@ IfStatement
   }
 
   test_expression_super() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   void f() {
     if (super) {}
@@ -1132,12 +1288,12 @@ class A {
 }
 ''');
 
-    var node = findNode.singleIfStatement;
+    var node = result.findNode.singleIfStatement;
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: A
   rightParenthesis: )
@@ -1148,7 +1304,7 @@ IfStatement
   }
 
   test_rewrite_caseClause_pattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x) {
   if (x case const A()) {}
 }
@@ -1158,12 +1314,12 @@ class A {
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: dynamic
@@ -1172,7 +1328,18 @@ IfStatement
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
         constKeyword: const
-        expression: InstanceCreationExpression
+        expression2: ConstructorInvocation
+          constructorReference: ConstructorReference2
+            typeReference: ConstructorTypeReference
+              name: A
+              element: <testLibrary>::@class::A
+              type: A
+            element: <testLibrary>::@class::A::@constructor::new
+          argumentList: ArgumentList
+            leftParenthesis: (
+            rightParenthesis: )
+          staticType: A
+        expression(v1): InstanceCreationExpression
           constructorName: ConstructorName
             type: NamedType
               name: A
@@ -1192,19 +1359,19 @@ IfStatement
   }
 
   test_rewrite_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(bool Function() a) {
   if (a()) {}
 }
 ''');
 
-    var node = findNode.ifStatement('if (a');
+    var node = result.findNode.ifStatement('if (a');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: bool Function()
@@ -1222,19 +1389,19 @@ IfStatement
   }
 
   test_rewrite_expression_caseClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int Function() a) {
   if (a() case 42) {}
 }
 ''');
 
-    var node = findNode.ifStatement('if (a');
+    var node = result.findNode.ifStatement('if (a');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -1248,7 +1415,7 @@ IfStatement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 42
           staticType: int
         matchedValueType: int
@@ -1260,18 +1427,18 @@ IfStatement
   }
 
   test_rewrite_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x, bool Function() a) {
   if (x case 0 when a()) {}
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: dynamic
@@ -1279,14 +1446,14 @@ IfStatement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
       whenClause: WhenClause
         whenKeyword: when
-        expression: FunctionExpressionInvocation
-          function: SimpleIdentifier
+        expression2: FunctionExpressionInvocation
+          function2: SimpleIdentifier
             token: a
             element: <testLibrary>::@function::f::@formalParameter::a
             staticType: bool Function()
@@ -1304,18 +1471,18 @@ IfStatement
   }
 
   test_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x) {
   if (x case 0 when true) {}
 }
 ''');
 
-    var node = findNode.ifStatement('if (x');
+    var node = result.findNode.ifStatement('if (x');
     assertResolvedNodeText(node, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: dynamic
@@ -1323,13 +1490,13 @@ IfStatement
     caseKeyword: case
     guardedPattern: GuardedPattern
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
       whenClause: WhenClause
         whenKeyword: when
-        expression: BooleanLiteral
+        expression2: BooleanLiteral
           literal: true
           staticType: bool
   rightParenthesis: )
@@ -1343,12 +1510,12 @@ IfStatement
 @reflectiveTest
 class InferenceUpdate4Test extends PubPackageResolutionTest {
   @override
-  List<String> get experiments {
-    return [...super.experiments, Feature.inference_update_4.enableString];
+  List<Feature> get experimentalFeatures {
+    return [...super.experimentalFeatures, Feature.inference_update_4];
   }
 
   test_finalPromotionKept_isExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(bool b) {
   final num x;
   if (b) {
@@ -1362,12 +1529,13 @@ f(bool b) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.ifStatement('if (x is int) {'), r'''
+    var node1 = result.findNode.ifStatement('if (x is int) {');
+    assertResolvedNodeText(node1, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: IsExpression
-    expression: SimpleIdentifier
+  expression2: IsExpression
+    expression2: SimpleIdentifier
       token: x
       element: x@24
       staticType: num
@@ -1382,13 +1550,13 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: FunctionExpression
+        expression2: FunctionExpression
           parameters: FormalParameterList
             leftParenthesis: (
             rightParenthesis: )
           body: ExpressionFunctionBody
             functionDefinition: =>
-            expression: PrefixedIdentifier
+            expression2: PrefixedIdentifier
               prefix: SimpleIdentifier
                 token: x
                 element: x@24
@@ -1410,7 +1578,7 @@ IfStatement
   }
 
   test_finalPromotionKept_isExpression_late() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(bool b) {
   late final num x;
   if (b) {
@@ -1424,12 +1592,13 @@ f(bool b) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.ifStatement('if (x is int) {'), r'''
+    var node2 = result.findNode.ifStatement('if (x is int) {');
+    assertResolvedNodeText(node2, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: IsExpression
-    expression: SimpleIdentifier
+  expression2: IsExpression
+    expression2: SimpleIdentifier
       token: x
       element: x@29
       staticType: num
@@ -1444,13 +1613,13 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: FunctionExpression
+        expression2: FunctionExpression
           parameters: FormalParameterList
             leftParenthesis: (
             rightParenthesis: )
           body: ExpressionFunctionBody
             functionDefinition: =>
-            expression: PrefixedIdentifier
+            expression2: PrefixedIdentifier
               prefix: SimpleIdentifier
                 token: x
                 element: x@29
@@ -1472,7 +1641,7 @@ IfStatement
   }
 
   test_finalPromotionKept_notEqNull() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(bool b) {
   final int? x;
   if (b) {
@@ -1486,11 +1655,25 @@ f(bool b) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.ifStatement('if (x != null) {'), r'''
+    var node3 = result.findNode.ifStatement('if (x != null) {');
+    assertResolvedNodeText(node3, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: BinaryExpression
+  expression2: BinaryOperatorInvocation
+    leftOperand: SimpleIdentifier
+      token: x
+      element: x@25
+      staticType: int?
+    operator: !=
+    rightOperand: NullLiteral
+      literal: null
+      correspondingParameter: dart:core::@class::num::@method::==::@formalParameter::other
+      staticType: Null
+    binaryOperator: notEqual
+    element: dart:core::@class::num::@method::==
+    staticType: bool
+  expression(v1): BinaryExpression
     leftOperand: SimpleIdentifier
       token: x
       element: x@25
@@ -1508,13 +1691,13 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: FunctionExpression
+        expression2: FunctionExpression
           parameters: FormalParameterList
             leftParenthesis: (
             rightParenthesis: )
           body: ExpressionFunctionBody
             functionDefinition: =>
-            expression: PrefixedIdentifier
+            expression2: PrefixedIdentifier
               prefix: SimpleIdentifier
                 token: x
                 element: x@25
@@ -1536,7 +1719,7 @@ IfStatement
   }
 
   test_finalPromotionKept_notEqNull_late() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 f(bool b) {
   late final int? x;
   if (b) {
@@ -1550,11 +1733,25 @@ f(bool b) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.ifStatement('if (x != null) {'), r'''
+    var node4 = result.findNode.ifStatement('if (x != null) {');
+    assertResolvedNodeText(node4, r'''
 IfStatement
   ifKeyword: if
   leftParenthesis: (
-  expression: BinaryExpression
+  expression2: BinaryOperatorInvocation
+    leftOperand: SimpleIdentifier
+      token: x
+      element: x@30
+      staticType: int?
+    operator: !=
+    rightOperand: NullLiteral
+      literal: null
+      correspondingParameter: dart:core::@class::num::@method::==::@formalParameter::other
+      staticType: Null
+    binaryOperator: notEqual
+    element: dart:core::@class::num::@method::==
+    staticType: bool
+  expression(v1): BinaryExpression
     leftOperand: SimpleIdentifier
       token: x
       element: x@30
@@ -1572,13 +1769,13 @@ IfStatement
     leftBracket: {
     statements
       ExpressionStatement
-        expression: FunctionExpression
+        expression2: FunctionExpression
           parameters: FormalParameterList
             leftParenthesis: (
             rightParenthesis: )
           body: ExpressionFunctionBody
             functionDefinition: =>
-            expression: PrefixedIdentifier
+            expression2: PrefixedIdentifier
               prefix: SimpleIdentifier
                 token: x
                 element: x@30

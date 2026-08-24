@@ -662,6 +662,8 @@ abstract class A {
 }
 
 enum E implements A {
+  ;
+
   @override
   void foo() {
     // TODO: implement foo
@@ -861,10 +863,7 @@ class B extends A {
     expect(expectedCode.substring(selection.offset), startsWith('throw'));
   }
 
-  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/43667')
   Future<void> test_method_withTypedef() async {
-    // This fails because the element representing `Base.closure` has a return
-    // type that has forgotten that it was declared using the typedef `Closure`.
     await resolveTestCode('''
 typedef Closure = T Function<T>(T input);
 
@@ -885,6 +884,7 @@ class Concrete extends Base {
   @override
   Closure closure() {
     // TODO: implement closure
+    throw UnimplementedError();
   }
 }
 ''');
@@ -1044,13 +1044,10 @@ class B extends A {
 @reflectiveTest
 class CreateMissingOverridesMustBeOverriddenClassTest extends FixProcessorTest {
   @override
-  FixKind get kind => DartFixKind.createMissingOverrides;
+  bool get addMetaPackageDep => true;
 
   @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfig(meta: true);
-  }
+  FixKind get kind => DartFixKind.createMissingOverrides;
 
   Future<void> test_field() async {
     await resolveTestCode('''

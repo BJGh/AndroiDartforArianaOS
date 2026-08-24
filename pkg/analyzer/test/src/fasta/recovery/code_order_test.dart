@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../dart/resolution/node_text_expectations.dart';
@@ -25,15 +24,16 @@ main() {
 @reflectiveTest
 class ClassDeclarationTest extends ParserDiagnosticsTest {
   void test_implementsBeforeExtends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A implements B extends C {}
+//                   ^^^^^^^
+// [diag.implementsBeforeExtends] The extends clause must be before the implements clause.
 
 ''');
-    parseResult.assertErrors([error(diag.implementsBeforeExtends, 21, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -54,15 +54,16 @@ CompilationUnit
   }
 
   void test_implementsBeforeWith() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B implements C with D {}
+//                             ^^^^
+// [diag.implementsBeforeWith] The with clause must be before the implements clause.
 
 ''');
-    parseResult.assertErrors([error(diag.implementsBeforeWith, 31, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -88,18 +89,18 @@ CompilationUnit
   }
 
   void test_implementsBeforeWithBeforeExtends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A implements B with C extends D {}
+//                   ^^^^
+// [diag.implementsBeforeWith] The with clause must be before the implements clause.
+//                          ^^^^^^^
+// [diag.withBeforeExtends] The extends clause must be before the with clause.
 
 ''');
-    parseResult.assertErrors([
-      error(diag.implementsBeforeWith, 21, 4),
-      error(diag.withBeforeExtends, 28, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -125,15 +126,16 @@ CompilationUnit
   }
 
   void test_multipleExtends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B extends C {}
+//                ^^^^^^^
+// [diag.multipleExtendsClauses] Each class definition can have at most one extends clause.
 
 ''');
-    parseResult.assertErrors([error(diag.multipleExtendsClauses, 18, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -149,15 +151,16 @@ CompilationUnit
   }
 
   void test_multipleImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A implements B implements C, D {}
+//                   ^^^^^^^^^^
+// [diag.multipleImplementsClauses] Each class or mixin definition can have at most one implements clause.
 
 ''');
-    parseResult.assertErrors([error(diag.multipleImplementsClauses, 21, 10)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -178,15 +181,16 @@ CompilationUnit
   }
 
   void test_multipleWith() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A extends B with C, D with E {}
+//                          ^^^^
+// [diag.multipleWithClauses] Each class definition can have at most one with clause.
 
 ''');
-    parseResult.assertErrors([error(diag.multipleWithClauses, 28, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -211,20 +215,20 @@ CompilationUnit
   }
 
   void test_typing_extends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class Foo exte
+//    ^^^
+// [diag.expectedClassBody] A class declaration must have a body, even if it is empty.
+//        ^^^^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken] Expected to find ';'.
 class UnrelatedClass extends Bar {}
 
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedClassBody, 6, 3),
-      error(diag.missingConstFinalVarOrType, 10, 4),
-      error(diag.expectedToken, 10, 4),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -253,16 +257,17 @@ CompilationUnit
   }
 
   void test_typing_extends_identifier() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class Foo extends CurrentlyTypingHere
+//                ^^^^^^^^^^^^^^^^^^^
+// [diag.expectedClassBody] A class declaration must have a body, even if it is empty.
 class UnrelatedClass extends Bar {}
 
 ''');
-    parseResult.assertErrors([error(diag.expectedClassBody, 18, 19)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -289,15 +294,16 @@ CompilationUnit
   }
 
   void test_withBeforeExtends() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A with B extends C {}
+//             ^^^^^^^
+// [diag.withBeforeExtends] The extends clause must be before the with clause.
 
 ''');
-    parseResult.assertErrors([error(diag.withBeforeExtends, 15, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -323,12 +329,12 @@ CompilationUnit
 @reflectiveTest
 class CompilationUnitMemberTest extends ParserDiagnosticsTest {
   void test_declarationBeforeDirective_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { }
 export 'bar.dart';
+// [diag.directiveAfterDeclaration][column 1][length 6] Directives must appear before any declarations.
 
 ''');
-    parseResult.assertErrors([error(diag.directiveAfterDeclaration, 12, 6)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -338,7 +344,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -350,12 +356,12 @@ CompilationUnit
   }
 
   void test_declarationBeforeDirective_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { }
 import 'bar.dart';
+// [diag.directiveAfterDeclaration][column 1][length 6] Directives must appear before any declarations.
 
 ''');
-    parseResult.assertErrors([error(diag.directiveAfterDeclaration, 12, 6)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -365,7 +371,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -377,12 +383,12 @@ CompilationUnit
   }
 
   void test_declarationBeforeDirective_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { }
 part 'bar.dart';
+// [diag.directiveAfterDeclaration][column 1][length 4] Directives must appear before any declarations.
 
 ''');
-    parseResult.assertErrors([error(diag.directiveAfterDeclaration, 12, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -392,7 +398,7 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -404,15 +410,14 @@ CompilationUnit
   }
 
   void test_declarationBeforeDirective_part_of() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { }
 part of foo;
+// [diag.directiveAfterDeclaration][column 1][length 4] Directives must appear before any declarations.
+//      ^^^
+// [diag.partOfName] The 'part of' directive can't use a name with the enhanced-parts feature.
 
 ''');
-    parseResult.assertErrors([
-      error(diag.directiveAfterDeclaration, 12, 4),
-      error(diag.partOfName, 20, 3),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -424,7 +429,7 @@ CompilationUnit
         tokens
           foo
       semicolon: ;
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -436,11 +441,11 @@ CompilationUnit
   }
 
   void test_exportBeforeLibrary() {
-    var parseResult = parseStringWithErrors('''
+    var parseResult = parseTestCodeWithDiagnostics('''
 export 'bar.dart';
 library l;
+// [diag.libraryDirectiveNotFirst][column 1][length 7] The library directive must appear before all other directives.
 ''');
-    parseResult.assertErrors([error(diag.libraryDirectiveNotFirst, 19, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, '''
 CompilationUnit
@@ -460,11 +465,11 @@ CompilationUnit
   }
 
   void test_importBeforeLibrary() {
-    var parseResult = parseStringWithErrors('''
+    var parseResult = parseTestCodeWithDiagnostics('''
 import 'bar.dart';
 library l;
+// [diag.libraryDirectiveNotFirst][column 1][length 7] The library directive must appear before all other directives.
 ''');
-    parseResult.assertErrors([error(diag.libraryDirectiveNotFirst, 19, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, '''
 CompilationUnit
@@ -484,11 +489,11 @@ CompilationUnit
   }
 
   void test_partBeforeLibrary() {
-    var parseResult = parseStringWithErrors('''
+    var parseResult = parseTestCodeWithDiagnostics('''
 part 'foo.dart';
 library l;
+// [diag.libraryDirectiveNotFirst][column 1][length 7] The library directive must appear before all other directives.
 ''');
-    parseResult.assertErrors([error(diag.libraryDirectiveNotFirst, 17, 7)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, '''
 CompilationUnit
@@ -513,11 +518,12 @@ CompilationUnit
 @reflectiveTest
 class ImportDirectiveTest extends ParserDiagnosticsTest {
   void test_combinatorsBeforeAndAfterPrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' show A as p show B;
+//                       ^^
+// [diag.prefixAfterCombinator] The prefix ('as' clause) should come before any show/hide combinators.
 
 ''');
-    parseResult.assertErrors([error(diag.prefixAfterCombinator, 25, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -527,29 +533,37 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: p
+      prefixName: p
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
           shownNames
             SimpleIdentifier
               token: A
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: B
           shownNames
             SimpleIdentifier
               token: B
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: p
 ''');
   }
 
   void test_combinatorsBeforePrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' show A as p;
+//                       ^^
+// [diag.prefixAfterCombinator] The prefix ('as' clause) should come before any show/hide combinators.
 
 ''');
-    parseResult.assertErrors([error(diag.prefixAfterCombinator, 25, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -559,24 +573,29 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: p
+      prefixName: p
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
           shownNames
             SimpleIdentifier
               token: A
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: p
 ''');
   }
 
   void test_combinatorsBeforePrefixAfterDeferred() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' deferred show A as p;
+//                                ^^
+// [diag.prefixAfterCombinator] The prefix ('as' clause) should come before any show/hide combinators.
 
 ''');
-    parseResult.assertErrors([error(diag.prefixAfterCombinator, 34, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -587,24 +606,29 @@ CompilationUnit
         literal: 'bar.dart'
       deferredKeyword: deferred
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: p
+      prefixName: p
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
           shownNames
             SimpleIdentifier
               token: A
       semicolon: ;
+      prefix: SimpleIdentifier
+        token: p
 ''');
   }
 
   void test_deferredAfterPrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' as p deferred;
+//                     ^^^^^^^^
+// [diag.deferredAfterPrefix] The deferred keyword should come immediately before the prefix ('as' clause).
 
 ''');
-    parseResult.assertErrors([error(diag.deferredAfterPrefix, 23, 8)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -615,18 +639,20 @@ CompilationUnit
         literal: 'bar.dart'
       deferredKeyword: deferred
       asKeyword: as
+      prefixName: p
+      semicolon: ;
       prefix: SimpleIdentifier
         token: p
-      semicolon: ;
 ''');
   }
 
   void test_duplicatePrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' as p as q;
+//                     ^^
+// [diag.duplicatePrefix] An import directive can only have one prefix ('as' clause).
 
 ''');
-    parseResult.assertErrors([error(diag.duplicatePrefix, 23, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -636,18 +662,20 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
+      prefixName: p
+      semicolon: ;
       prefix: SimpleIdentifier
         token: p
-      semicolon: ;
 ''');
   }
 
   void test_unknownTokenAtEnd() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' as p sh;
+//                     ^^
+// [diag.unexpectedToken] Unexpected text 'sh'.
 
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 23, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -657,18 +685,20 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
+      prefixName: p
+      semicolon: ;
       prefix: SimpleIdentifier
         token: p
-      semicolon: ;
 ''');
   }
 
   void test_unknownTokenBeforePrefix() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' d as p;
+//                ^
+// [diag.unexpectedToken] Unexpected text 'd'.
 
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 18, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -678,23 +708,25 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
+      prefixName: p
+      semicolon: ;
       prefix: SimpleIdentifier
         token: p
-      semicolon: ;
 ''');
   }
 
   void test_unknownTokenBeforePrefixAfterCombinatorMissingSemicolon() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' d show A as p
+//                ^
+// [diag.unexpectedToken] Unexpected text 'd'.
+//                         ^^
+// [diag.prefixAfterCombinator] The prefix ('as' clause) should come before any show/hide combinators.
+//                            ^
+// [diag.expectedToken] Expected to find ';'.
 import 'b.dart';
 
 ''');
-    parseResult.assertErrors([
-      error(diag.unexpectedToken, 18, 1),
-      error(diag.prefixAfterCombinator, 27, 2),
-      error(diag.expectedToken, 30, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -704,15 +736,19 @@ CompilationUnit
       uri: SimpleStringLiteral
         literal: 'bar.dart'
       asKeyword: as
-      prefix: SimpleIdentifier
-        token: p
+      prefixName: p
       combinators
         ShowCombinator
           keyword: show
+          names
+            CombinatorName
+              name: A
           shownNames
             SimpleIdentifier
               token: A
       semicolon: ; <synthetic>
+      prefix: SimpleIdentifier
+        token: p
     ImportDirective
       importKeyword: import
       uri: SimpleStringLiteral
@@ -722,11 +758,12 @@ CompilationUnit
   }
 
   void test_unknownTokenBeforePrefixAfterDeferred() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 import 'bar.dart' deferred s as p;
+//                         ^
+// [diag.unexpectedToken] Unexpected text 's'.
 
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 27, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -737,9 +774,10 @@ CompilationUnit
         literal: 'bar.dart'
       deferredKeyword: deferred
       asKeyword: as
+      prefixName: p
+      semicolon: ;
       prefix: SimpleIdentifier
         token: p
-      semicolon: ;
 ''');
   }
 }
@@ -751,24 +789,24 @@ class MisplacedMetadataTest extends ParserDiagnosticsTest {
     // This test fails because `findMemberName` doesn't recognize that the `@`
     // isn't a valid token in the stream leading up to a member name. That
     // causes `parseMethod` to attempt to parse from the `x` as a function body.
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   const A([x]);
 }
 class B {
   dynamic @A(const A()) x;
+//^^^^^^^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken] Expected to find ';'.
+//                      ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
 }
 
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 40, 7),
-      error(diag.expectedToken, 40, 7),
-      error(diag.missingConstFinalVarOrType, 62, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -778,9 +816,19 @@ CompilationUnit
         members
           ConstructorDeclaration
             constKeyword: const
-            typeName: SimpleIdentifier
+            typeName2: A
+            typeName(v1): SimpleIdentifier
               token: A
             parameters: FormalParameterList
+              leftParenthesis: (
+              delimitedFormalParameters: DelimitedFormalParameters
+                leftDelimiter: [
+                formalParameters
+                  RegularFormalParameter
+                    name: x
+                rightDelimiter: ]
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
               leftParenthesis: (
               leftDelimiter: [
               parameter: RegularFormalParameter
@@ -811,7 +859,16 @@ CompilationUnit
                   token: A
                 arguments: ArgumentList
                   leftParenthesis: (
-                  arguments
+                  arguments2
+                    ConstructorInvocation
+                      keyword: const
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
+                          name: A
+                      argumentList: ArgumentList
+                        leftParenthesis: (
+                        rightParenthesis: )
+                  arguments(v1)
                     InstanceCreationExpression
                       keyword: const
                       constructorName: ConstructorName
@@ -836,15 +893,16 @@ CompilationUnit
 @reflectiveTest
 class MixinDeclarationTest extends ParserDiagnosticsTest {
   void test_implementsBeforeOn() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A implements B on C {}
+//                   ^^
+// [diag.implementsBeforeOn] The on clause must be before the implements clause.
 
 ''');
-    parseResult.assertErrors([error(diag.implementsBeforeOn, 21, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -865,15 +923,16 @@ CompilationUnit
   }
 
   void test_multipleImplements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A implements B implements C, D {}
+//                   ^^^^^^^^^^
+// [diag.multipleImplementsClauses] Each class or mixin definition can have at most one implements clause.
 
 ''');
-    parseResult.assertErrors([error(diag.multipleImplementsClauses, 21, 10)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -893,15 +952,16 @@ CompilationUnit
   }
 
   void test_multipleOn() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin A on B on C {}
+//           ^^
+// [diag.multipleOnClauses] Each mixin definition can have at most one on clause.
 
 ''');
-    parseResult.assertErrors([error(diag.multipleOnClauses, 13, 2)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: A
@@ -919,20 +979,20 @@ CompilationUnit
   }
 
   void test_typing_implements() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin Foo imple
+//    ^^^
+// [diag.expectedMixinBody] A mixin declaration must have a body, even if it is empty.
+//        ^^^^^
+// [diag.expectedToken] Expected to find ';'.
 mixin UnrelatedMixin on Bar {}
+// [diag.missingIdentifier][column 1][length 5] Expected an identifier.
 
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedMixinBody, 6, 3),
-      error(diag.missingIdentifier, 16, 5),
-      error(diag.expectedToken, 10, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: Foo
@@ -962,16 +1022,17 @@ CompilationUnit
   }
 
   void test_typing_implements_identifier() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin Foo implements CurrentlyTypingHere
+//                   ^^^^^^^^^^^^^^^^^^^
+// [diag.expectedMixinBody] A mixin declaration must have a body, even if it is empty.
 mixin UnrelatedMixin on Bar {}
 
 ''');
-    parseResult.assertErrors([error(diag.expectedMixinBody, 21, 19)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: Foo
@@ -1003,23 +1064,23 @@ CompilationUnit
 @reflectiveTest
 class TryStatementTest extends ParserDiagnosticsTest {
   void test_finallyBeforeCatch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   try {
   } finally {
   } catch (e) {
+//  ^^^^^
+// [diag.expectedIdentifierButGotKeyword] 'catch' can't be used as an identifier because it's a keyword.
+//          ^
+// [diag.expectedToken] Expected to find ';'.
   }
 }
 
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedIdentifierButGotKeyword, 32, 5),
-      error(diag.expectedToken, 40, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1040,12 +1101,12 @@ CompilationUnit
                   leftBracket: {
                   rightBracket: }
               ExpressionStatement
-                expression: MethodInvocation
+                expression2: MethodInvocation
                   methodName: SimpleIdentifier
                     token: catch
                   argumentList: ArgumentList
                     leftParenthesis: (
-                    arguments
+                    arguments2
                       SimpleIdentifier
                         token: e
                     rightParenthesis: )
@@ -1058,20 +1119,21 @@ CompilationUnit
   }
 
   void test_finallyBeforeOn() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() {
   try {
   } finally {
   } on String {
+//     ^^^^^^
+// [diag.expectedToken] Expected to find ';'.
   }
 }
 
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 35, 6)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression

@@ -67,6 +67,7 @@ class JSONObject;
 class NoActiveIsolateScope;
 class PcDescriptors;
 class RuntimeEntry;
+class Simulator;
 class Smi;
 class StackResource;
 class StackTrace;
@@ -406,7 +407,8 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
   static void ExitIsolateGroupAsNonMutator();
 
   static void EnterIsolateGroupAsMutator(IsolateGroup* isolate_group,
-                                         bool bypass_safepoint);
+                                         bool bypass_safepoint,
+                                         Thread* suspended_thread = nullptr);
   static void ExitIsolateGroupAsMutator(bool bypass_safepoint);
 
   // Empties the store buffer block into the isolate.
@@ -952,7 +954,10 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
   void ClearReusableHandles();
 
 #define REUSABLE_HANDLE(object)                                                \
-  object& object##Handle() const { return *object##_handle_; }
+  object& object##Handle() const {                                             \
+    ASSERT(object##_handle_ != nullptr);                                       \
+    return *object##_handle_;                                                  \
+  }
   REUSABLE_HANDLE_LIST(REUSABLE_HANDLE)
 #undef REUSABLE_HANDLE
 
@@ -1280,6 +1285,7 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
   void UnwindScopes(uword stack_marker);
 
   void InitVMConstants();
+  void FixInitiallyNullFields();
 
   int64_t GetNextTaskId() { return next_task_id_++; }
   static intptr_t next_task_id_offset() {
@@ -1319,6 +1325,11 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
     return SafepointLevel::kGCAndDeoptAndReload;
 #endif
   }
+
+#if defined(DART_INCLUDE_SIMULATOR)
+  Simulator* simulator() const { return simulator_; }
+  void set_simulator(Simulator* value) { simulator_ = value; }
+#endif
 
 #if defined(DART_DYNAMIC_MODULES)
   Interpreter* interpreter() const { return interpreter_; }
@@ -1641,6 +1652,10 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
   HeapProfileSampler heap_sampler_;
 #endif
 
+#if defined(DART_INCLUDE_SIMULATOR)
+  Simulator* simulator_ = nullptr;
+#endif
+
 #if defined(DART_DYNAMIC_MODULES)
   Interpreter* interpreter_ = nullptr;
   bytecode::BytecodeLoader* bytecode_loader_ = nullptr;
@@ -1654,7 +1669,7 @@ class Thread : public ThreadState, public IntrusiveDListEntry<Thread> {
 
   MallocGrowableArray<ObjectPtr> pointers_to_verify_at_exit_;
 
-  explicit Thread(bool is_vm_isolate);
+  explicit Thread(bool is_bootstrapping);
 
   void StoreBufferRelease(
       StoreBuffer::ThresholdPolicy policy = StoreBuffer::kCheckThreshold);

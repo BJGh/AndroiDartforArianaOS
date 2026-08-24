@@ -24,7 +24,7 @@ abstract class TypeChecker {
   Library? currentLibrary;
   InterfaceType? currentThisType;
 
-  TypeChecker(this.coreTypes, this.hierarchy, {this.ignoreSdk = true})
+  new(this.coreTypes, this.hierarchy, {this.ignoreSdk = true})
     : environment = new TypeEnvironment(coreTypes, hierarchy);
 
   void checkComponent(Component component) {
@@ -149,7 +149,7 @@ class TypeCheckingVisitor
   DartType? currentYieldType;
   AsyncMarker currentAsyncMarker = AsyncMarker.Sync;
 
-  TypeCheckingVisitor(this.checker, this.environment, this.hierarchy);
+  new(this.checker, this.environment, this.hierarchy);
 
   void checkAssignable(TreeNode where, DartType from, DartType to) {
     checker.checkAssignable(where, from, to);
@@ -274,7 +274,7 @@ class TypeCheckingVisitor
         );
       }
     }
-    for (VariableDeclaration namedParameter in node.namedParameters) {
+    for (NamedParameter namedParameter in node.namedParameters) {
       if (!namedParameter.isRequired) {
         handleOptionalParameter(
           namedParameter,
@@ -304,12 +304,12 @@ class TypeCheckingVisitor
   }
 
   void handleOptionalParameter(
-    VariableDeclaration parameter, {
+    FunctionParameter parameter, {
     required bool isPartOfAbstractExternalOrNoSuchMethodForwarderMethod,
   }) {
-    Expression? initializer = parameter.initializer;
+    Expression? initializer = parameter.defaultValue;
     if (initializer != null &&
-        !parameter.isErroneouslyInitialized &&
+        !parameter.hasErroneousDefaultValue &&
         !isPartOfAbstractExternalOrNoSuchMethodForwarderMethod) {
       // Default parameter values cannot be downcast.
       checkExpressionNoDowncast(initializer, parameter.type);
@@ -644,7 +644,7 @@ class TypeCheckingVisitor
 
   @override
   DartType visitLet(Let node) {
-    DartType value = visitExpression(node.variable.initializer!);
+    DartType value = visitExpression(node.value);
     checkAssignable(node, value, node.variable.type);
     return visitExpression(node.body);
   }
@@ -700,11 +700,9 @@ class TypeCheckingVisitor
     }
     FreshStructuralParameters freshTypeParameters =
         getFreshStructuralParameters(node.structuralParameters);
-    FunctionType result =
-        freshTypeParameters.substitute(
-              _instantiateAndCheck(functionType, node.typeArguments, node),
-            )
-            as FunctionType;
+    FunctionType result = freshTypeParameters.substitute(
+      _instantiateAndCheck(functionType, node.typeArguments, node),
+    ) as FunctionType;
     return new FunctionType(
       result.positionalParameters,
       result.returnType,
@@ -1183,7 +1181,7 @@ class TypeCheckingVisitor
 
   @override
   void visitForStatement(ForStatement node) {
-    node.variables.forEach(_handleVariableStatement);
+    node.variables.forEach(_handleVariableDeclaration);
     if (node.condition != null) {
       node.condition = checkExpressionAndAssignability(
         node.condition!,
@@ -1256,7 +1254,7 @@ class TypeCheckingVisitor
   }
 
   @override
-  void visitVariableDeclaration(VariableDeclaration node) {
+  void visitVariable(Variable node) {
     if (node.initializer != null) {
       node.initializer = checkExpressionAndAssignability(
         node.initializer!,
@@ -1266,19 +1264,14 @@ class TypeCheckingVisitor
   }
 
   @override
-  void visitLegacyVariableStatement(LegacyVariableStatement node) {
-    _handleVariableStatement(node);
+  void visitVariableStatement(VariableStatement node) {
+    _handleVariableDeclaration(node.declaration);
   }
 
-  @override
-  void visitVariableInitialization(VariableInitialization node) {
-    _handleVariableStatement(node);
-  }
-
-  void _handleVariableStatement(VariableStatement node) {
-    if (node.initializer != null) {
-      node.initializer = checkExpressionAndAssignability(
-        node.initializer!,
+  void _handleVariableDeclaration(VariableDeclaration node) {
+    if (node.variable.initializer != null) {
+      node.variable.initializer = checkExpressionAndAssignability(
+        node.variable.initializer!,
         node.variable.type,
       );
     }
@@ -1342,7 +1335,7 @@ class TypeCheckingVisitor
 
   @override
   void visitLocalInitializer(LocalInitializer node) {
-    visitVariableDeclaration(node.variable);
+    visitVariable(node.variable);
   }
 
   @override
@@ -1454,10 +1447,8 @@ class TypeCheckingVisitor
           node.interfaceTarget.enclosingClass == coreTypes.mapClass &&
           node.interfaceTarget.kind == ProcedureKind.Operator &&
           node.interfaceTarget.name == indexSetName;
-      if (node.arguments.positional case [
-        InvalidExpression(),
-        NullLiteral(),
-      ] when isMapIndexSet) {
+      if (node.arguments.positional case [InvalidExpression(), NullLiteral()]
+          when isMapIndexSet) {
         return const InvalidType();
       } else {
         visitExpression(node.receiver);

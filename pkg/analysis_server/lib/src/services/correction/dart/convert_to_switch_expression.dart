@@ -27,7 +27,7 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
   /// Function reference used in argument switch expression generation.
   TopLevelFunctionElement? functionElement;
 
-  ConvertToSwitchExpression({required super.context});
+  new({required super.context});
 
   @override
   CorrectionApplicability get applicability =>
@@ -453,8 +453,8 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
         canBeReturn = false;
       }
 
-      var statement = statements.first;
-      if (statement is ExpressionStatementImpl) {
+      Statement statement = statements.first;
+      if (statement is ExpressionStatement) {
         var expression = statement.expression;
         // Any type of switch can have a throw expression as a statement.
         if (expression is ThrowExpression) {
@@ -470,7 +470,7 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
         // A return switch case's statement can't be a non-throw expression.
         canBeReturn = false;
 
-        if (canBeArgument && expression is MethodInvocationImpl) {
+        if (canBeArgument && expression is MethodInvocation) {
           // An assignment switch case's statement can't be a method invocation.
           canBeAssignment = false;
 
@@ -482,12 +482,12 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
             // The function invoked in each case must be the same.
             return null;
           }
-        } else if (canBeAssignment && expression is AssignmentExpressionImpl) {
+        } else if (canBeAssignment && expression is AssignmentExpression) {
           // An argument switch case's statement can't be an assignment.
           canBeArgument = false;
 
           var leftHandSide = expression.leftHandSide;
-          if (leftHandSide is! SimpleIdentifierImpl) return null;
+          if (leftHandSide is! SimpleIdentifier) return null;
           if (writeElement == null) {
             var element = leftHandSide.element;
             if (element is! LocalVariableElement) return null;
@@ -508,7 +508,7 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
         // it must be a return statement with a
         // non-null expression as part of a return switch.
         if (!canBeReturn ||
-            statement is! ReturnStatementImpl ||
+            statement is! ReturnStatement ||
             statement.expression == null) {
           return null;
         }
@@ -605,13 +605,13 @@ class ConvertToSwitchExpression extends ResolvedCorrectionProducer {
 class _DefaultGroup extends _Group {
   final SwitchDefault node;
 
-  _DefaultGroup({required super.statements, required this.node});
+  new({required super.statements, required this.node});
 }
 
 sealed class _Group {
   final List<Statement> statements;
 
-  _Group({required this.statements});
+  new({required this.statements});
 }
 
 /// Superclass for all indentation strategies.
@@ -623,35 +623,35 @@ sealed class _Indentation {}
 final class _IndentationFullFirstRightAll extends _Indentation {
   final int level;
 
-  _IndentationFullFirstRightAll({required this.level});
+  new({required this.level});
 }
 
 /// Joined [Pattern]s, without `when`, before statements.
 class _JoinedCaseGroup extends _Group {
   final List<SwitchPatternCase> patternCases;
 
-  _JoinedCaseGroup({required this.patternCases, required super.statements});
+  new({required this.patternCases, required super.statements});
 }
 
 sealed class _SwitchType {
   final List<_Group> groups;
 
-  _SwitchType({required this.groups});
+  new({required this.groups});
 }
 
 /// Each case statement passes a value to the same function.
 final class _SwitchTypeArgument extends _SwitchType {
-  _SwitchTypeArgument({required super.groups});
+  new({required super.groups});
 }
 
 /// Each case statement assigns to a local variable.
 final class _SwitchTypeAssignment extends _SwitchType {
-  _SwitchTypeAssignment({required super.groups});
+  new({required super.groups});
 }
 
 /// Each case statement returns a value.
 final class _SwitchTypeReturn extends _SwitchType {
-  _SwitchTypeReturn({required super.groups});
+  new({required super.groups});
 }
 
 extension on Statement {

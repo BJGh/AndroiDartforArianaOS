@@ -39,15 +39,7 @@ void main() {
 @reflectiveTest
 class AnalyticsManagerTest with ResourceProviderMixin {
   final analytics = _MockAnalytics();
-  late final manager = AnalyticsManager(
-    analytics,
-    environment: {
-      'DASH__IDE_NAME': 'ideName',
-      'DASH__IDE_VERSION': 'ideVersion',
-      'DASH__PLUGIN_NAME': 'pluginName',
-      'DASH__PLUGIN_VERSION': 'pluginVersion',
-    },
-  );
+  late final manager = AnalyticsManager(analytics);
 
   Folder get testPackageRoot => getFolder('/home/package');
 
@@ -77,7 +69,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.createdAnalysisContexts(collection.contexts);
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.lintUsageCount(
         eventData: {'count': 2, 'name': 'avoid_dynamic_calls'},
       ),
@@ -102,7 +93,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.createdAnalysisContexts(collection.contexts);
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.severityAdjustment(
         eventData: {
           'diagnostic': 'avoid_dynamic_calls',
@@ -125,7 +115,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     };
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.pluginRequest(
         eventData: {
           'pluginId': 'a',
@@ -135,6 +124,74 @@ class AnalyticsManagerTest with ResourceProviderMixin {
       ),
     ]);
     PluginManager.pluginResponseTimes.clear();
+  }
+
+  Future<void> test_sendPeriodicData_sendsSessionAndAnalysisDataOnce() async {
+    _defaultStartup();
+
+    analytics.assertNoEvents();
+
+    // The first time periodic data is sent (no analysis complete yet), session data is not sent.
+    await manager.sendPeriodicData();
+    analytics.assertNoEvents();
+
+    // Now analysis completes.
+    manager.analysisComplete(
+      immediateFileCount: 1,
+      immediateFileLineCount: 1,
+      transitiveFileCount: 3,
+      transitiveFileLineCount: 20,
+      transitiveFileUniqueCount: 2,
+      transitiveFileUniqueLineCount: 15,
+      libraryCycleLibraryCounts: [],
+      libraryCycleLineCounts: [],
+      numberOfContexts: 3,
+      contextWorkspaceType: [0, 1, 2],
+      numberOfPackagesInWorkspace: [1, 3, 4],
+    );
+
+    // Sending periodic data again sends both session and analysis data.
+    await manager.sendPeriodicData();
+    analytics.assertEvents([
+      _ExpectedEvent.session(),
+      _ExpectedEvent.contextStructure(
+        eventData: {
+          'immediateFileCount': 1,
+          'immediateFileLineCount': 1,
+          'transitiveFileCount': 3,
+          'transitiveFileLineCount': 20,
+          'transitiveFileUniqueCount': 2,
+          'transitiveFileUniqueLineCount': 15,
+          'libraryCycleLibraryCounts': _IsPercentiles(),
+          'libraryCycleLineCounts': _IsPercentiles(),
+          'numberOfContexts': 3,
+          'contextWorkspaceType': '[0, 1, 2]',
+          'numberOfPackagesInWorkspace': _IsPercentiles(),
+        },
+      ),
+    ]);
+
+    // Subsequent periodic data sends or shutdown do not send them again.
+    await manager.sendPeriodicData();
+    await manager.shutdown();
+    analytics.assertEvents([
+      _ExpectedEvent.session(),
+      _ExpectedEvent.contextStructure(
+        eventData: {
+          'immediateFileCount': 1,
+          'immediateFileLineCount': 1,
+          'transitiveFileCount': 3,
+          'transitiveFileLineCount': 20,
+          'transitiveFileUniqueCount': 2,
+          'transitiveFileUniqueLineCount': 15,
+          'libraryCycleLibraryCounts': _IsPercentiles(),
+          'libraryCycleLineCounts': _IsPercentiles(),
+          'numberOfContexts': 3,
+          'contextWorkspaceType': '[0, 1, 2]',
+          'numberOfPackagesInWorkspace': _IsPercentiles(),
+        },
+      ),
+    ]);
   }
 
   Future<void> test_server_contextStructure() async {
@@ -189,7 +246,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     );
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.notification(
         eventData: {
           'latency': _IsPercentiles(),
@@ -218,7 +274,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
 
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.analysisStatistics(
         eventData: {'workingDuration': _IsPercentiles()},
       ),
@@ -246,7 +301,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     );
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -272,7 +326,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.sentResponse(response: Response('1'));
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -300,7 +353,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.sentResponse(response: Response('1'));
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -333,7 +385,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.sentResponse(response: Response('1'));
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -356,14 +407,15 @@ class AnalyticsManagerTest with ResourceProviderMixin {
       },
     );
     manager.initialize(params);
+    _completeAnalysis();
     await manager.shutdown();
     analytics.assertEvents([
       _ExpectedEvent.session(
         eventData: {
-          'parameters':
-              'closingLabels,onlyAnalyzeProjectsWithOpenFiles,suggestFromUnimportedLibraries',
+          'parameters': 'closingLabels,onlyAnalyzeProjectsWithOpenFiles,suggestFromUnimportedLibraries',
         },
       ),
+      _ExpectedEvent.contextStructure(),
     ]);
   }
 
@@ -383,7 +435,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     );
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -404,7 +455,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     manager.sentResponse(response: Response('1'));
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -432,7 +482,6 @@ class AnalyticsManagerTest with ResourceProviderMixin {
     );
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(),
       _ExpectedEvent.request(
         eventData: {
           'latency': _IsPercentiles(),
@@ -458,6 +507,7 @@ class AnalyticsManagerTest with ResourceProviderMixin {
       clientId: clientId,
       clientVersion: null,
     );
+    _completeAnalysis();
     await manager.shutdown();
     analytics.assertEvents([
       _ExpectedEvent.session(
@@ -465,21 +515,21 @@ class AnalyticsManagerTest with ResourceProviderMixin {
           'flags': arguments.join(','),
           'clientId': clientId,
           'clientVersion': '',
-          'duration': _IsPositiveInt(),
+          'duration': 0,
         },
       ),
+      _ExpectedEvent.contextStructure(),
     ]);
   }
 
   Future<void> test_startup_withPlugins() async {
     _defaultStartup();
     await manager.changedPlugins(
-      TestPluginManager()
+      TestPluginManager(resourceProvider)
         ..pluginIsolates.addAll([_pluginIsolate('a'), _pluginIsolate('b')]),
     );
     await manager.shutdown();
     analytics.assertEvents([
-      _ExpectedEvent.session(eventData: {}),
       _ExpectedEvent.pluginUse(
         eventData: {'count': 1, 'pluginId': 'a', 'enabled': _IsPercentiles()},
       ),
@@ -499,6 +549,7 @@ class AnalyticsManagerTest with ResourceProviderMixin {
       clientId: clientId,
       clientVersion: clientVersion,
     );
+    _completeAnalysis();
     await manager.shutdown();
     analytics.assertEvents([
       _ExpectedEvent.session(
@@ -506,14 +557,27 @@ class AnalyticsManagerTest with ResourceProviderMixin {
           'flags': arguments.join(','),
           'clientId': clientId,
           'clientVersion': clientVersion,
-          'duration': _IsPositiveInt(),
-          'ideName': 'ideName',
-          'ideVersion': 'ideVersion',
-          'pluginName': 'pluginName',
-          'pluginVersion': 'pluginVersion',
+          'duration': 0,
         },
       ),
+      _ExpectedEvent.contextStructure(),
     ]);
+  }
+
+  void _completeAnalysis() {
+    manager.analysisComplete(
+      immediateFileCount: 1,
+      immediateFileLineCount: 1,
+      transitiveFileCount: 1,
+      transitiveFileLineCount: 1,
+      transitiveFileUniqueCount: 1,
+      transitiveFileUniqueLineCount: 1,
+      libraryCycleLibraryCounts: [],
+      libraryCycleLineCounts: [],
+      numberOfContexts: 1,
+      contextWorkspaceType: [0],
+      numberOfPackagesInWorkspace: [1],
+    );
   }
 
   /// Create an analysis options file based on the given arguments.
@@ -593,36 +657,36 @@ class _ExpectedEvent {
   final DashEvent eventName;
   final Map<String, Object?>? eventData;
 
-  _ExpectedEvent(this.eventName, this.eventData);
+  new(this.eventName, this.eventData);
 
-  _ExpectedEvent.analysisStatistics({Map<String, Object?>? eventData})
+  new analysisStatistics({Map<String, Object?>? eventData})
     : this(DashEvent.analysisStatistics, eventData);
 
-  _ExpectedEvent.commandExecuted({Map<String, Object?>? eventData})
+  new commandExecuted({Map<String, Object?>? eventData})
     : this(DashEvent.commandExecuted, eventData);
 
-  _ExpectedEvent.contextStructure({Map<String, Object?>? eventData})
+  new contextStructure({Map<String, Object?>? eventData})
     : this(DashEvent.contextStructure, eventData);
 
-  _ExpectedEvent.lintUsageCount({Map<String, Object?>? eventData})
+  new lintUsageCount({Map<String, Object?>? eventData})
     : this(DashEvent.lintUsageCount, eventData);
 
-  _ExpectedEvent.notification({Map<String, Object?>? eventData})
+  new notification({Map<String, Object?>? eventData})
     : this(DashEvent.clientNotification, eventData);
 
-  _ExpectedEvent.pluginRequest({Map<String, Object?>? eventData})
+  new pluginRequest({Map<String, Object?>? eventData})
     : this(DashEvent.pluginRequest, eventData);
 
-  _ExpectedEvent.pluginUse({Map<String, Object?>? eventData})
+  new pluginUse({Map<String, Object?>? eventData})
     : this(DashEvent.pluginUse, eventData);
 
-  _ExpectedEvent.request({Map<String, Object?>? eventData})
+  new request({Map<String, Object?>? eventData})
     : this(DashEvent.clientRequest, eventData);
 
-  _ExpectedEvent.session({Map<String, Object?>? eventData})
+  new session({Map<String, Object?>? eventData})
     : this(DashEvent.serverSession, eventData);
 
-  _ExpectedEvent.severityAdjustment({Map<String, Object?>? eventData})
+  new severityAdjustment({Map<String, Object?>? eventData})
     : this(DashEvent.severityAdjustment, eventData);
 
   /// Compare the expected event with the [actual] event, failing if the actual
@@ -678,7 +742,7 @@ class _ExpectedEvent {
 
 /// A matcher for strings containing positive integer values.
 class _IsPercentiles extends Matcher {
-  const _IsPercentiles();
+  const new();
 
   @override
   Description describe(Description description) =>
@@ -704,25 +768,11 @@ class _IsPercentiles extends Matcher {
   }
 }
 
-/// A matcher for strings containing positive integer values.
-class _IsPositiveInt extends Matcher {
-  const _IsPositiveInt();
-
-  @override
-  Description describe(Description description) =>
-      description.add('a positive integer');
-
-  @override
-  bool matches(Object? item, Map<Object?, Object?> matchState) {
-    return item is int && item >= 0;
-  }
-}
-
 /// An implementation of [Analytics] specialized for testing.
 class _MockAnalytics implements NoOpAnalytics {
   List<Event> events = [];
 
-  _MockAnalytics();
+  new();
 
   @override
   Map<String, ToolInfo> get parsedTools => throw UnimplementedError();

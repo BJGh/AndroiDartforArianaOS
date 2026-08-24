@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,14 +17,15 @@ main() {
 @reflectiveTest
 class AnnotationTest extends ParserDiagnosticsTest {
   void test_annotation_classMember_ampersand_annotation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ @annotation var f; }
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -54,17 +54,16 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ }
+//          ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedClassMember] Expected a class member.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 12, 1),
-      error(diag.expectedClassMember, 12, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -76,14 +75,15 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_field() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ var f; }
+//          ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 12, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -108,14 +108,15 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_fieldConst() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ const f = 0; }
+//          ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 12, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -135,7 +136,7 @@ CompilationUnit
                 VariableDeclaration
                   name: f
                   equals: =
-                  initializer: IntegerLiteral
+                  initializer2: IntegerLiteral
                     literal: 0
             semicolon: ;
         rightBracket: }
@@ -143,14 +144,15 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_fieldFinal() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ final f = 0; }
+//          ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 12, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -170,7 +172,7 @@ CompilationUnit
                 VariableDeclaration
                   name: f
                   equals: =
-                  initializer: IntegerLiteral
+                  initializer2: IntegerLiteral
                     literal: 0
             semicolon: ;
         rightBracket: }
@@ -178,14 +180,13 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ int get a => 0; }
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -203,7 +204,7 @@ CompilationUnit
             name: a
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: IntegerLiteral
+              expression2: IntegerLiteral
                 literal: 0
               semicolon: ;
         rightBracket: }
@@ -211,14 +212,13 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_methodNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ int a(b) => 0; }
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -235,12 +235,18 @@ CompilationUnit
             name: a
             parameters: FormalParameterList
               leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  name: b
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
+              leftParenthesis: (
               parameter: RegularFormalParameter
                 name: b
               rightParenthesis: )
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: IntegerLiteral
+              expression2: IntegerLiteral
                 literal: 0
               semicolon: ;
         rightBracket: }
@@ -248,14 +254,15 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_methodVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ void a(b) {} }
+//          ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 12, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -274,6 +281,12 @@ CompilationUnit
             name: a
             parameters: FormalParameterList
               leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  name: b
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
+              leftParenthesis: (
               parameter: RegularFormalParameter
                 name: b
               rightParenthesis: )
@@ -286,14 +299,13 @@ CompilationUnit
   }
 
   void test_annotation_classMember_ampersand_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @ set a(b) {} }
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -310,6 +322,12 @@ CompilationUnit
             name: a
             parameters: FormalParameterList
               leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  name: b
+              rightParenthesis: )
+            parameters(v1): FormalParameterList
+              leftParenthesis: (
               parameter: RegularFormalParameter
                 name: b
               rightParenthesis: )
@@ -322,17 +340,16 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_annotation() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( @annotation var f; }
+//            ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 14, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -348,7 +365,7 @@ CompilationUnit
                   token: a
                 arguments: ArgumentList
                   leftParenthesis: (
-                  arguments
+                  arguments2
                     SimpleIdentifier
                       token: <empty> <synthetic>
                   rightParenthesis: ) <synthetic>
@@ -367,17 +384,16 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( }
+//            ^
+// [diag.expectedClassMember] Expected a class member.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedClassMember, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -389,17 +405,17 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_field() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( var f; }
+//            ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 14, 3),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -415,7 +431,7 @@ CompilationUnit
                   token: a
                 arguments: ArgumentList
                   leftParenthesis: (
-                  arguments
+                  arguments2
                     SimpleIdentifier
                       token: <empty> <synthetic>
                   rightParenthesis: ) <synthetic>
@@ -430,19 +446,20 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_fieldConst() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( const f = 0; }
+//            ^^^^^^^^
+// [diag.missingAssignableSelector] Missing selector such as '.identifier' or '[0]'.
+//                  ^
+// [diag.expectedToken] Expected to find '('.
+//                       ^
+// [diag.expectedClassMember] Expected a class member.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingAssignableSelector, 14, 8),
-      error(diag.expectedToken, 20, 1),
-      error(diag.expectedClassMember, 25, 1),
-      error(diag.expectedToken, 25, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -454,17 +471,17 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_fieldFinal() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( final f = 0; }
+//            ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//            ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 14, 5),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -480,7 +497,7 @@ CompilationUnit
                   token: a
                 arguments: ArgumentList
                   leftParenthesis: (
-                  arguments
+                  arguments2
                     SimpleIdentifier
                       token: <empty> <synthetic>
                   rightParenthesis: ) <synthetic>
@@ -490,7 +507,7 @@ CompilationUnit
                 VariableDeclaration
                   name: f
                   equals: =
-                  initializer: IntegerLiteral
+                  initializer2: IntegerLiteral
                     literal: 0
             semicolon: ;
         rightBracket: }
@@ -498,20 +515,22 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( int get a => 0; }
+//                ^^^
+// [diag.expectedToken] Expected to find ','.
+//                    ^
+// [diag.expectedToken] Expected to find ','.
+//                      ^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.missingMethodParameters] Methods must have an explicit list of parameters.
+//                      ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 18, 3),
-      error(diag.expectedToken, 22, 1),
-      error(diag.missingIdentifier, 24, 2),
-      error(diag.missingMethodParameters, 24, 2),
-      error(diag.expectedToken, 24, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -527,7 +546,7 @@ CompilationUnit
                   token: a
                 arguments: ArgumentList
                   leftParenthesis: (
-                  arguments
+                  arguments2
                     SimpleIdentifier
                       token: int
                     SimpleIdentifier
@@ -541,7 +560,7 @@ CompilationUnit
               rightParenthesis: ) <synthetic>
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: IntegerLiteral
+              expression2: IntegerLiteral
                 literal: 0
               semicolon: ;
         rightBracket: }
@@ -549,18 +568,18 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_methodNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( int a(b) => 0; }
+//                ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                         ^
+// [diag.expectedClassMember] Expected a class member.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.namedFunctionExpression, 18, 1),
-      error(diag.expectedClassMember, 27, 1),
-      error(diag.expectedToken, 27, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -572,18 +591,18 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_methodVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( void a(b) {} }
+//                 ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                         ^
+// [diag.expectedClassMember] Expected a class member.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 27, 1),
-      error(diag.namedFunctionExpression, 19, 1),
-      error(diag.expectedClassMember, 27, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -595,19 +614,19 @@ CompilationUnit
   }
 
   void test_annotation_classMember_leftParen_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C { @a( set a(b) {} }
+//                ^
+// [diag.expectedToken] Expected to find ','.
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                        ^
+// [diag.expectedClassMember] Expected a class member.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 26, 1),
-      error(diag.expectedToken, 18, 1),
-      error(diag.namedFunctionExpression, 18, 1),
-      error(diag.expectedClassMember, 26, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -619,17 +638,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ assert (true); }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 6),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -654,7 +673,7 @@ CompilationUnit
               AssertStatement
                 assertKeyword: assert
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -663,17 +682,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -703,18 +722,18 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ break; }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 6, 1),
-      error(diag.breakOutsideOfLoop, 8, 5),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -744,18 +763,18 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ continue; }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 8),
-      error(diag.expectedToken, 6, 1),
-      error(diag.continueOutsideOfLoop, 8, 8),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -785,17 +804,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ do {} while (true); }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 2),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -824,7 +843,7 @@ CompilationUnit
                   rightBracket: }
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -833,17 +852,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 1),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -870,17 +889,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ for (var x in y) {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 3),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -910,7 +929,7 @@ CompilationUnit
                     keyword: var
                     name: x
                   inKeyword: in
-                  iterable: SimpleIdentifier
+                  iterable2: SimpleIdentifier
                     token: y
                 rightParenthesis: )
                 body: Block
@@ -921,17 +940,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ if (true) {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 2),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -956,7 +975,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: BooleanLiteral
+                expression2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 thenStatement: Block
@@ -967,17 +986,16 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ l: {} }
+//       ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 9, 1),
-      error(diag.expectedToken, 9, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1007,14 +1025,13 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ int f() {} }
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1046,14 +1063,15 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ void f() {} }
+//      ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1087,14 +1105,15 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ var x; }
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1122,17 +1141,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ return; }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 6),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1162,17 +1181,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ switch (x) {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 6),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1197,7 +1216,7 @@ CompilationUnit
               SwitchStatement
                 switchKeyword: switch
                 leftParenthesis: (
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: x
                 rightParenthesis: )
                 leftBracket: {
@@ -1207,17 +1226,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ try {} finally {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 3),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1253,17 +1272,17 @@ CompilationUnit
   }
 
   void test_annotation_local_ampersand_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @ while (true) {} }
+//    ^
+// [diag.expectedToken] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 6, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1288,7 +1307,7 @@ CompilationUnit
               WhileStatement
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 body: Block
@@ -1299,17 +1318,16 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_assert() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( assert (true); }
+//                     ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 23, 1),
-      error(diag.expectedToken, 23, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1329,13 +1347,13 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           FunctionExpressionInvocation
-                            function: SimpleIdentifier
+                            function2: SimpleIdentifier
                               token: assert
                             argumentList: ArgumentList
                               leftParenthesis: (
-                              arguments
+                              arguments2
                                 BooleanLiteral
                                   literal: true
                               rightParenthesis: )
@@ -1349,18 +1367,18 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_block() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( {} }
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 13, 1),
-      error(diag.missingIdentifier, 13, 1),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1380,7 +1398,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SetOrMapLiteral
                             leftBracket: {
                             rightBracket: }
@@ -1395,19 +1413,20 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_break() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( break; }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.breakOutsideOfLoop] A break statement can't be used outside of a loop or switch statement.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 5),
-      error(diag.breakOutsideOfLoop, 10, 5),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1427,7 +1446,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1443,19 +1462,20 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_continue() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( continue; }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.continueOutsideOfLoop] A continue statement can't be used outside of a loop or switch statement.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 8),
-      error(diag.continueOutsideOfLoop, 10, 8),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1475,7 +1495,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1491,18 +1511,19 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_do() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( do {} while (true); }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 2),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1522,7 +1543,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1537,7 +1558,7 @@ CompilationUnit
                   rightBracket: }
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 semicolon: ;
@@ -1546,18 +1567,18 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 10, 1),
-      error(diag.missingIdentifier, 10, 1),
-      error(diag.expectedToken, 8, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1587,18 +1608,19 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_for() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( for (var x in y) {} }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 3),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1618,7 +1640,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1634,7 +1656,7 @@ CompilationUnit
                     keyword: var
                     name: x
                   inKeyword: in
-                  iterable: SimpleIdentifier
+                  iterable2: SimpleIdentifier
                     token: y
                 rightParenthesis: )
                 body: Block
@@ -1645,18 +1667,19 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_if() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( if (true) {} }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 2),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1676,7 +1699,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1687,7 +1710,7 @@ CompilationUnit
               IfStatement
                 ifKeyword: if
                 leftParenthesis: (
-                expression: BooleanLiteral
+                expression2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 thenStatement: Block
@@ -1698,18 +1721,18 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_labeled() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( l: {} }
+//            ^
+// [diag.expectedToken] Expected to find ';'.
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 16, 1),
-      error(diag.missingIdentifier, 16, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1729,11 +1752,11 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           NamedArgument
                             name: l
                             colon: :
-                            argumentExpression: SetOrMapLiteral
+                            argumentExpression2: SetOrMapLiteral
                               leftBracket: {
                               rightBracket: }
                               isMap: false
@@ -1747,19 +1770,20 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_localFunctionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( int f() {} }
+//            ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                 ^
+// [diag.expectedToken] Expected to find ';'.
+//                   ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 21, 1),
-      error(diag.namedFunctionExpression, 14, 1),
-      error(diag.missingIdentifier, 21, 1),
-      error(diag.expectedToken, 19, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1779,7 +1803,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           FunctionExpression
                             parameters: FormalParameterList
                               leftParenthesis: (
@@ -1798,19 +1822,20 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_localFunctionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( void f() {} }
+//             ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//                  ^
+// [diag.expectedToken] Expected to find ';'.
+//                    ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
-      error(diag.namedFunctionExpression, 15, 1),
-      error(diag.missingIdentifier, 22, 1),
-      error(diag.expectedToken, 20, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1830,7 +1855,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           FunctionExpression
                             parameters: FormalParameterList
                               leftParenthesis: (
@@ -1849,17 +1874,17 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_localVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( var x; }
+//        ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 10, 3),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1879,7 +1904,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1893,18 +1918,18 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_return() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( return; }
+//        ^^^^^^
+// [diag.unexpectedToken] Unexpected text 'return'.
+//              ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.unexpectedToken, 10, 6),
-      error(diag.missingIdentifier, 16, 1),
-      error(diag.expectedToken, 16, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1924,7 +1949,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -1937,18 +1962,18 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_switch() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( switch (x) {} }
+//                    ^
+// [diag.expectedToken] Expected to find ';'.
+//                      ^
+// [diag.missingIdentifier] Expected an identifier.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 24, 1),
-      error(diag.missingIdentifier, 24, 1),
-      error(diag.expectedToken, 22, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1968,11 +1993,11 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SwitchExpression
                             switchKeyword: switch
                             leftParenthesis: (
-                            expression: SimpleIdentifier
+                            expression2: SimpleIdentifier
                               token: x
                             rightParenthesis: )
                             leftBracket: {
@@ -1987,18 +2012,19 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_try() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( try {} finally {} }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 3),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -2018,7 +2044,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -2040,18 +2066,19 @@ CompilationUnit
   }
 
   void test_annotation_local_leftParen_while() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f() { @a( while (true) {} }
+//      ^
+// [diag.expectedToken] Expected to find ';'.
+//        ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//        ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 1),
-      error(diag.missingIdentifier, 10, 5),
-      error(diag.expectedToken, 10, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -2071,7 +2098,7 @@ CompilationUnit
                         token: a
                       arguments: ArgumentList
                         leftParenthesis: (
-                        arguments
+                        arguments2
                           SimpleIdentifier
                             token: <empty> <synthetic>
                         rightParenthesis: ) <synthetic>
@@ -2082,7 +2109,7 @@ CompilationUnit
               WhileStatement
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BooleanLiteral
+                condition2: BooleanLiteral
                   literal: true
                 rightParenthesis: )
                 body: Block
@@ -2093,14 +2120,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ class A {}
+//^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       metadata
         Annotation
@@ -2117,14 +2145,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ const a = 0;
+//^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2137,21 +2166,22 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_annotation_topLevel_ampersand_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ enum E { v }
+//^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     EnumDeclaration
       metadata
         Annotation
@@ -2171,13 +2201,11 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @
+// [diag.missingIdentifier][column 2][length 0] Expected an identifier.
+// [diag.expectedExecutable][column 2][length 0] Expected a method, getter, setter or operator declaration.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 2, 0),
-      error(diag.expectedExecutable, 2, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2185,14 +2213,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ final a = 0;
+//^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2205,21 +2234,20 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_annotation_topLevel_ampersand_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ int f() {}
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       metadata
         Annotation
@@ -2239,14 +2267,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ void f() {}
+//^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       metadata
         Annotation
@@ -2268,14 +2297,27 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ int get a => 0;
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      metadata
+        Annotation
+          atSign: @
+          name: SimpleIdentifier
+            token: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       metadata
         Annotation
@@ -2294,14 +2336,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ mixin M {}
+//      ^
+// [diag.missingFunctionParameters] Functions must have an explicit list of parameters.
 ''');
-    parseResult.assertErrors([error(diag.missingFunctionParameters, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       metadata
         Annotation
@@ -2321,14 +2364,13 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ set a(b) {}
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       metadata
         Annotation
@@ -2338,6 +2380,12 @@ CompilationUnit
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -2350,17 +2398,17 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ typedef A = B Function(C, D);
+//        ^
+// [diag.missingConstFinalVarOrType] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+//            ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 10, 1),
-      error(diag.expectedToken, 14, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2372,13 +2420,21 @@ CompilationUnit
           VariableDeclaration
             name: A
             equals: =
-            initializer: SimpleIdentifier
+            initializer2: SimpleIdentifier
               token: B
       semicolon: ; <synthetic>
     FunctionDeclaration
       name: Function
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: C
+            RegularFormalParameter
+              name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: C
@@ -2391,14 +2447,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_ampersand_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @ var a;
+//^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([error(diag.missingIdentifier, 2, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2415,16 +2472,18 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( class A {}
+//  ^^^^^
+// [diag.expectedIdentifierButGotKeyword] 'class' can't be used as an identifier because it's a keyword.
+//        ^
+// [diag.expectedToken] Expected to find ','.
+//          ^
+// [diag.expectedToken] Expected to find ','.
+//            ^
+// [diag.expectedExecutable][column 15][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 15][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 15, 1),
-      error(diag.expectedIdentifierButGotKeyword, 4, 5),
-      error(diag.expectedToken, 10, 1),
-      error(diag.expectedToken, 12, 1),
-      error(diag.expectedExecutable, 15, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2432,15 +2491,16 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( const a = 0;
+//  ^^^^^^^^
+// [diag.missingAssignableSelector] Missing selector such as '.identifier' or '[0]'.
+//        ^
+// [diag.expectedToken] Expected to find '('.
+//             ^
+// [diag.unexpectedToken] Unexpected text ';'.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingAssignableSelector, 4, 8),
-      error(diag.expectedToken, 10, 1),
-      error(diag.unexpectedToken, 15, 1),
-      error(diag.expectedToken, 15, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2448,16 +2508,18 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( enum E { v }
+//  ^^^^
+// [diag.expectedIdentifierButGotKeyword] 'enum' can't be used as an identifier because it's a keyword.
+//       ^
+// [diag.expectedToken] Expected to find ','.
+//         ^
+// [diag.expectedToken] Expected to find ','.
+//              ^
+// [diag.expectedExecutable][column 17][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 17][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 17, 1),
-      error(diag.expectedIdentifierButGotKeyword, 4, 4),
-      error(diag.expectedToken, 9, 1),
-      error(diag.expectedToken, 11, 1),
-      error(diag.expectedExecutable, 17, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2465,13 +2527,12 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a(
+// ^
+// [diag.expectedExecutable][column 4][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 4][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 4, 1),
-      error(diag.expectedExecutable, 4, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2479,17 +2540,17 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( final a = 0;
+//  ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
+//  ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 5),
-      error(diag.expectedToken, 4, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2498,7 +2559,7 @@ CompilationUnit
             token: a
           arguments: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               SimpleIdentifier
                 token: <empty> <synthetic>
             rightParenthesis: ) <synthetic>
@@ -2508,21 +2569,21 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_annotation_topLevel_leftParen_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( int f() {}
+//      ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//            ^
+// [diag.expectedExecutable][column 15][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 15][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 15, 1),
-      error(diag.namedFunctionExpression, 8, 1),
-      error(diag.expectedExecutable, 15, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2530,14 +2591,14 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( void f() {}
+//       ^
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//             ^
+// [diag.expectedExecutable][column 16][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 16][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 16, 1),
-      error(diag.namedFunctionExpression, 9, 1),
-      error(diag.expectedExecutable, 16, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2545,17 +2606,21 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ','.
+//          ^
+// [diag.expectedToken] Expected to find ','.
+//            ^^
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
+//            ^
+// [diag.expectedToken] Expected to find ')'.
+//               ^
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
+//                ^
+// [diag.unexpectedToken] Unexpected text ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 8, 3),
-      error(diag.expectedToken, 12, 1),
-      error(diag.expectedExecutable, 14, 2),
-      error(diag.expectedToken, 14, 1),
-      error(diag.expectedExecutable, 17, 1),
-      error(diag.unexpectedToken, 18, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2563,15 +2628,16 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( mixin M {}
+//        ^
+// [diag.expectedToken] Expected to find ','.
+//          ^
+// [diag.expectedToken] Expected to find ','.
+//            ^
+// [diag.expectedExecutable][column 15][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 15][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 15, 1),
-      error(diag.expectedToken, 10, 1),
-      error(diag.expectedToken, 12, 1),
-      error(diag.expectedExecutable, 15, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2579,15 +2645,15 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( set a(b) {}
+//      ^
+// [diag.expectedToken] Expected to find ','.
+// [diag.namedFunctionExpression] Function expressions can't be named.
+//             ^
+// [diag.expectedExecutable][column 16][length 0] Expected a method, getter, setter or operator declaration.
+// [diag.expectedToken][column 16][length 1] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 16, 1),
-      error(diag.expectedToken, 8, 1),
-      error(diag.namedFunctionExpression, 8, 1),
-      error(diag.expectedExecutable, 16, 0),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2595,15 +2661,16 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( typedef A = B Function(C, D);
+//          ^
+// [diag.expectedToken] Expected to find ','.
+//                ^^^^^^^^
+// [diag.expectedToken] Expected to find ','.
+//                              ^
+// [diag.unexpectedToken] Unexpected text ';'.
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 12, 1),
-      error(diag.expectedToken, 18, 8),
-      error(diag.unexpectedToken, 32, 1),
-      error(diag.expectedToken, 32, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -2611,17 +2678,17 @@ CompilationUnit
   }
 
   void test_annotation_topLevel_leftParen_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 @a( var a;
+//  ^^^
+// [diag.missingIdentifier] Expected an identifier.
+//  ^
+// [diag.expectedToken] Expected to find ')'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 4, 3),
-      error(diag.expectedToken, 4, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       metadata
         Annotation
@@ -2630,7 +2697,7 @@ CompilationUnit
             token: a
           arguments: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               SimpleIdentifier
                 token: <empty> <synthetic>
             rightParenthesis: ) <synthetic>

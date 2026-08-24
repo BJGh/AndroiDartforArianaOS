@@ -26,7 +26,7 @@ class InvalidUseOfInternalMemberTest extends PubPackageResolutionTest {
     super.setUp();
     newAnalysisOptionsYamlFile(
       fooPackageRootPath,
-      analysisOptionsContent(experiments: experiments),
+      analysisOptionsContent(experimentalFeatures: experimentalFeatures),
     );
     writeTestPackageConfig(
       PackageConfigFileBuilder()
@@ -41,14 +41,13 @@ import 'package:meta/meta.dart';
 @internal
 class A {}
 ''');
-    var a = newFile('$fooPackageRootPath/lib/a.dart', '''
+
+    var a = getFile('$fooPackageRootPath/lib/a.dart');
+    await resolveFileWithDiagnostics(a, '''
 import 'src/a.dart';
 
 A a = A();
 ''');
-    await resolveFile2(a);
-
-    assertNoErrorsInResult();
   }
 
   test_insidePackage_extensionType() async {
@@ -57,14 +56,13 @@ import 'package:meta/meta.dart';
 @internal
 extension type E(int i) {}
 ''');
-    var a = newFile('$fooPackageRootPath/lib/a.dart', '''
+
+    var a = getFile('$fooPackageRootPath/lib/a.dart');
+    await resolveFileWithDiagnostics(a, '''
 import 'src/a.dart';
 
 E e = E(1);
 ''');
-    await resolveFile2(a);
-
-    assertNoErrorsInResult();
   }
 
   test_outsidePackage_class() async {
@@ -561,7 +559,7 @@ int a = C().m(a: 5);
 ''');
   }
 
-  @SkippedTest(issue: 'https://github.com/dart-lang/sdk/issues/28066')
+  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/28066')
   test_outsidePackage_methodParameter_positional() async {
     newFile('$fooPackageRootPath/lib/src/a.dart', '''
 import 'package:meta/meta.dart';
@@ -715,6 +713,24 @@ f() {
 ''');
   }
 
+  test_outsidePackage_setter_topLevel() async {
+    newFile('$fooPackageRootPath/lib/src/a.dart', '''
+import 'package:meta/meta.dart';
+@internal
+set s(int value) {}
+''');
+
+    await resolveTestCodeWithDiagnostics('''
+import 'package:foo/src/a.dart';
+
+f() {
+  s = 7;
+//^
+// [diag.invalidUseOfInternalMember] The member 's' can only be used within its package.
+}
+''');
+  }
+
   test_outsidePackage_superConstructor() async {
     newFile('$fooPackageRootPath/lib/src/a.dart', '''
 import 'package:meta/meta.dart';
@@ -784,7 +800,7 @@ t func = () {};
 ''');
   }
 
-  @SkippedTest(issue: 'https://github.com/dart-lang/sdk/issues/28066')
+  @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/28066')
   test_outsidePackage_typedefParameter() async {
     newFile('$fooPackageRootPath/lib/src/a.dart', '''
 import 'package:meta/meta.dart';

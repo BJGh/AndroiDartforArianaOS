@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class RelationalPatternResolutionTest extends PubPackageResolutionTest {
   test_equal_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator ==(_) => true;
 }
@@ -29,11 +29,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::==
@@ -42,7 +42,7 @@ RelationalPattern
   }
 
   test_equal_ofObject() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -52,11 +52,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: dart:core::@class::Object::@method::==
@@ -65,7 +65,7 @@ RelationalPattern
   }
 
   test_greaterThan_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator >(_) => true;
 }
@@ -77,11 +77,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::>
@@ -90,7 +90,7 @@ RelationalPattern
   }
 
   test_greaterThan_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -104,11 +104,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@extension::E::@method::>
@@ -117,7 +117,7 @@ RelationalPattern
   }
 
   test_greaterThan_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -129,11 +129,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <null>
@@ -142,7 +142,7 @@ RelationalPattern
   }
 
   test_greaterThanOrEqualTo_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator >=(_) => true;
 }
@@ -154,11 +154,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::>=
@@ -167,7 +167,7 @@ RelationalPattern
   }
 
   test_greaterThanOrEqualTo_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -181,11 +181,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@extension::E::@method::>=
@@ -194,7 +194,7 @@ RelationalPattern
   }
 
   test_greaterThanOrEqualTo_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -206,11 +206,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: >=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <null>
@@ -219,7 +219,7 @@ RelationalPattern
   }
 
   test_ifCase() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator ==(_) => true;
 }
@@ -228,11 +228,11 @@ void f(A x) {
   if (x case == 0) {}
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::==
@@ -241,7 +241,7 @@ RelationalPattern
   }
 
   test_lessThan_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator <(_) => true;
 }
@@ -253,11 +253,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::<
@@ -266,7 +266,7 @@ RelationalPattern
   }
 
   test_lessThan_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -280,11 +280,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@extension::E::@method::<
@@ -293,7 +293,7 @@ RelationalPattern
   }
 
   test_lessThan_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -305,11 +305,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <null>
@@ -318,7 +318,7 @@ RelationalPattern
   }
 
   test_lessThanOrEqualTo_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator <=(_) => true;
 }
@@ -330,11 +330,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::<=
@@ -343,7 +343,7 @@ RelationalPattern
   }
 
   test_lessThanOrEqualTo_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -357,11 +357,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@extension::E::@method::<=
@@ -370,7 +370,7 @@ RelationalPattern
   }
 
   test_lessThanOrEqualTo_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -382,11 +382,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: <=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <null>
@@ -395,7 +395,7 @@ RelationalPattern
   }
 
   test_notEqual_ofClass() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator ==(_) => true;
 }
@@ -407,11 +407,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: !=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::==
@@ -420,7 +420,7 @@ RelationalPattern
   }
 
   test_notEqual_ofObject() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f(A x) {
@@ -430,11 +430,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: !=
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: dart:core::@class::Object::@method::==
@@ -443,7 +443,7 @@ RelationalPattern
   }
 
   test_rewrite_operand() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(x, int Function() a) {
   switch (x) {
     case == a():
@@ -453,12 +453,12 @@ void f(x, int Function() a) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
-  operand: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  operand2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -474,7 +474,7 @@ RelationalPattern
   }
 
   test_switchCase() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   bool operator ==(_) => true;
 }
@@ -486,11 +486,11 @@ void f(A x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 RelationalPattern
   operator: ==
-  operand: IntegerLiteral
+  operand2: IntegerLiteral
     literal: 0
     staticType: int
   element: <testLibrary>::@class::A::@method::==

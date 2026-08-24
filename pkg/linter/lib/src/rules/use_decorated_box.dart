@@ -16,8 +16,7 @@ import '../util/flutter_utils.dart';
 const _desc = r'Use `DecoratedBox`.';
 
 class UseDecoratedBox extends AnalysisRule {
-  UseDecoratedBox()
-    : super(name: LintNames.use_decorated_box, description: _desc);
+  new() : super(name: LintNames.use_decorated_box, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.useDecoratedBox;
@@ -33,11 +32,7 @@ class UseDecoratedBox extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     if (!node.isWidgetTypeContainer) return;

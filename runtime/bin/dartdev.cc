@@ -51,10 +51,8 @@ namespace bin {
 /**
  * Global state used to control and store generation of application snapshots.
  */
-static const uint8_t* ignore_vm_snapshot_data = nullptr;
-static const uint8_t* ignore_vm_snapshot_instructions = nullptr;
-static const uint8_t* app_isolate_snapshot_data = nullptr;
-static const uint8_t* app_isolate_snapshot_instructions = nullptr;
+static const uint8_t* app_snapshot_data = nullptr;
+static const uint8_t* app_snapshot_text = nullptr;
 
 #define SAVE_ERROR_AND_RETURN(result)                                          \
   if (Dart_IsError(result)) {                                                  \
@@ -239,11 +237,11 @@ static Dart_Isolate CreateIsolateGroupAndSetupHelper(
   intptr_t kernel_buffer_size = 0;
   AppSnapshot* app_snapshot = nullptr;
 
-  const uint8_t* isolate_snapshot_data = nullptr;
-  const uint8_t* isolate_snapshot_instructions = nullptr;
+  const uint8_t* snapshot_data = nullptr;
+  const uint8_t* snapshot_text = nullptr;
   if (is_dartdev_isolate) {
-    isolate_snapshot_data = app_isolate_snapshot_data;
-    isolate_snapshot_instructions = app_isolate_snapshot_instructions;
+    snapshot_data = app_snapshot_data;
+    snapshot_text = app_snapshot_text;
   } else {
     // AOT: All isolates need to be run from AOT compiled snapshots.
     app_snapshot = Snapshot::TryReadAppSnapshot(
@@ -256,9 +254,7 @@ static Dart_Isolate CreateIsolateGroupAndSetupHelper(
       return nullptr;
     }
 
-    app_snapshot->SetBuffers(
-        &ignore_vm_snapshot_data, &ignore_vm_snapshot_instructions,
-        &isolate_snapshot_data, &isolate_snapshot_instructions);
+    app_snapshot->SetBuffers(&snapshot_data, &snapshot_text);
   }
 
   bool isolate_run_app_snapshot = true;
@@ -275,9 +271,9 @@ static Dart_Isolate CreateIsolateGroupAndSetupHelper(
 
   IsolateData* isolate_data = nullptr;
   isolate_data = new IsolateData(isolate_group_data);
-  isolate = Dart_CreateIsolateGroup(script_uri, name, isolate_snapshot_data,
-                                    isolate_snapshot_instructions, flags,
-                                    isolate_group_data, isolate_data, error);
+  isolate =
+      Dart_CreateIsolateGroup(script_uri, name, snapshot_data, snapshot_text,
+                              flags, isolate_group_data, isolate_data, error);
   Dart_Isolate created_isolate = nullptr;
   if (isolate == nullptr) {
     delete isolate_data;
@@ -598,6 +594,14 @@ class DartDev {
     for (intptr_t i = 0; i < argc_; ++i) {
       argv_[i] = Utils::StrDup(dart_args[i]->value.as_string);
     }
+
+    if (message->value.as_array.length > 5) {
+      auto item5 = GetArrayItem(message, 5);
+      if (item5->type == Dart_CObject_kString) {
+        Options::set_delete_temp_dir_on_shutdown(
+            Utils::StrDup(item5->value.as_string));
+      }
+    }
   }
 
   // Process the DartDev_Result_RunExec result message produced by
@@ -610,33 +614,56 @@ class DartDev {
       Syslog::PrintErr("Unable to locate the Dart VM executable");
       Platform::Exit(kErrorExitCode);
     }
+
     ASSERT(GetArrayItem(message, 1)->type == Dart_CObject_kString);
+
+    // scriptUriOverride.
     auto item2 = GetArrayItem(message, 2);
 
     ASSERT(item2->type == Dart_CObject_kString ||
            item2->type == Dart_CObject_kNull);
 
+    // packageConfigOverride.
+    auto item3 = GetArrayItem(message, 3);
+
+    ASSERT(item3->type == Dart_CObject_kString ||
+           item3->type == Dart_CObject_kNull);
+
     package_config_override_ = nullptr;
 
-    if (item2->type == Dart_CObject_kString) {
-      package_config_override_ = Utils::StrDup(item2->value.as_string);
+    if (item3->type == Dart_CObject_kString) {
+      package_config_override_ = Utils::StrDup(item3->value.as_string);
     }
 
-    intptr_t num_vm_options = dart_vm_options_->count();
-    const char** vm_options = dart_vm_options_->arguments();
-    ASSERT(GetArrayItem(message, 4)->type == Dart_CObject_kArray);
-    Dart_CObject* args = GetArrayItem(message, 4);
+    // markMainIsolateAsSystemIsolate
+    auto item4 = GetArrayItem(message, 4);
+    ASSERT(item4->type == Dart_CObject_kBool);
+    const bool mark_main_isolate_as_system_isolate = item4->value.as_bool;
+
+    // argsList
+    ASSERT(GetArrayItem(message, 5)->type == Dart_CObject_kArray);
+    Dart_CObject* args = GetArrayItem(message, 5);
     intptr_t argc = args->value.as_array.length;
     Dart_CObject** dart_args = args->value.as_array.values;
-    auto item3 = GetArrayItem(message, 3);
-    ASSERT(item3->type == Dart_CObject_kBool);
-    const bool mark_main_isolate_as_system_isolate = item3->value.as_bool;
+
+    const char* delete_temp_dir_on_shutdown = nullptr;
+    if (message->value.as_array.length > 6) {
+      auto item6 = GetArrayItem(message, 6);
+      if (item6->type == Dart_CObject_kString) {
+        delete_temp_dir_on_shutdown = item6->value.as_string;
+      }
+    }
+
     auto deleter = [](char** args) {
       for (intptr_t i = 0; i < argc_; ++i) {
         free(args[i]);
       }
       delete[] args;
     };
+
+    intptr_t num_vm_options = dart_vm_options_->count();
+    const char** vm_options = dart_vm_options_->arguments();
+
     // Total count of arguments to be passed to the script being execed.
     if (mark_main_isolate_as_system_isolate) {
       argc_ = argc + num_vm_options + 5;
@@ -644,6 +671,12 @@ class DartDev {
       argc_ = argc + num_vm_options + 4;
     }
     if (package_config_override_ != nullptr) {
+      argc_++;
+    }
+    if (item2->type == Dart_CObject_kString) {
+      argc_++;
+    }
+    if (delete_temp_dir_on_shutdown != nullptr) {
       argc_++;
     }
 
@@ -701,6 +734,31 @@ class DartDev {
       argv_[idx++] = Utils::SCreate("--packages=%s", package_config_override_);
 #endif
     }
+
+    if (item2->value.as_string != nullptr) {
+#if defined(DART_HOST_OS_WINDOWS)
+      char* script_uri_override =
+          Utils::SCreate("--script_uri_override=%s", item2->value.as_string);
+      argv_[idx++] = StringUtilsWin::ArgumentEscape(script_uri_override);
+      free(script_uri_override);
+#else
+      argv_[idx++] =
+          Utils::SCreate("--script_uri_override=%s", item2->value.as_string);
+#endif
+    }
+
+    if (delete_temp_dir_on_shutdown != nullptr) {
+#if defined(DART_HOST_OS_WINDOWS)
+      char* delete_arg = Utils::SCreate("--delete_temp_dir_on_shutdown=%s",
+                                        delete_temp_dir_on_shutdown);
+      argv_[idx++] = StringUtilsWin::ArgumentEscape(delete_arg);
+      free(delete_arg);
+#else
+      argv_[idx++] = Utils::SCreate("--delete_temp_dir_on_shutdown=%s",
+                                    delete_temp_dir_on_shutdown);
+#endif
+    }
+
     // Copy in name of the script to run.
     argv_[idx++] = Utils::StrDup(GetArrayItem(message, 1)->value.as_string);
     // Copy in the dart options that need to be passed to the script.
@@ -736,13 +794,22 @@ class DartDev {
   }
 
   static void SetEnvironmentVariableCallback(Dart_CObject* message) {
-    ASSERT(GetArrayItem(message, 1)->type == Dart_CObject_kString);
-    const char* name = GetArrayItem(message, 1)->value.as_string;
+    ASSERT(GetArrayItem(message, 1)->type == Dart_CObject_kSendPort);
+    Dart_Port reply_port = GetArrayItem(message, 1)->value.as_send_port.id;
+
+    ASSERT(GetArrayItem(message, 2)->type == Dart_CObject_kString);
+    const char* name = GetArrayItem(message, 2)->value.as_string;
+
     const char* value = nullptr;
-    if (GetArrayItem(message, 2)->type == Dart_CObject_kString) {
-      value = GetArrayItem(message, 2)->value.as_string;
+    if (GetArrayItem(message, 3)->type == Dart_CObject_kString) {
+      value = GetArrayItem(message, 3)->value.as_string;
     }
+
     Platform::SetEnvironmentVariable(name, value);
+
+    Dart_CObject reply;
+    reply.type = Dart_CObject_kNull;
+    Dart_PostCObject(reply_port, &reply);
   }
 
   // Callback that processes the result from execution of dartdev
@@ -1086,9 +1153,7 @@ void main(int argc, char** argv) {
     FreeConvertedArgs(argc, argv, argv_converted);
     Platform::Exit(kErrorExitCode);
   }
-  app_snapshot->SetBuffers(
-      &ignore_vm_snapshot_data, &ignore_vm_snapshot_instructions,
-      &app_isolate_snapshot_data, &app_isolate_snapshot_instructions);
+  app_snapshot->SetBuffers(&app_snapshot_data, &app_snapshot_text);
 
   vm_options.AddArgument("--precompilation");
 
@@ -1117,8 +1182,6 @@ void main(int argc, char** argv) {
   Dart_InitializeParams init_params;
   memset(&init_params, 0, sizeof(init_params));
   init_params.version = DART_INITIALIZE_PARAMS_CURRENT_VERSION;
-  init_params.vm_snapshot_data = ignore_vm_snapshot_data;
-  init_params.vm_snapshot_instructions = ignore_vm_snapshot_instructions;
   init_params.create_group = CreateIsolateGroupAndSetup;
   init_params.initialize_isolate = OnIsolateInitialize;
   init_params.shutdown_isolate = OnIsolateShutdown;

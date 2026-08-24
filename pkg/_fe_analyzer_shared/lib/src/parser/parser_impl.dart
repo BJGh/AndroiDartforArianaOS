@@ -348,7 +348,7 @@ class Parser {
   bool get allowedToShortcutParseExpression => true;
 
   /// `true` if the 'augmentations' feature is enabled.
-  final bool _isAugmentationsFeatureEnabled;
+  final bool isAugmentationsFeatureEnabled;
 
   Parser(
     this.listener, {
@@ -363,8 +363,9 @@ class Parser {
            .isExperimentEnabled(ExperimentalFlag.primaryConstructors),
        _isAnonymousMethodsFeatureEnabled = experimentalFeatures
            .isExperimentEnabled(ExperimentalFlag.anonymousMethods),
-       _isAugmentationsFeatureEnabled = experimentalFeatures
-           .isExperimentEnabled(ExperimentalFlag.augmentations);
+       isAugmentationsFeatureEnabled = experimentalFeatures.isExperimentEnabled(
+         ExperimentalFlag.augmentations,
+       );
 
   /// Executes [callback]; however if `this` is the `TestParser` (from
   /// `pkg/front_end/test/parser_test_parser.dart`) then no output is printed
@@ -458,9 +459,6 @@ class Parser {
     return token;
   }
 
-  /// This method exists for analyzer compatibility only
-  /// and will be removed once analyzer/cfe integration is complete.
-  ///
   /// Similar to [parseUnit], this method parses a compilation unit,
   /// but stops when it reaches the first declaration or EOF.
   ///
@@ -468,7 +466,13 @@ class Parser {
   /// method takes the next token to be consumed rather than the last consumed
   /// token and returns the token after the last consumed token rather than the
   /// last consumed token.
+  ///
+  /// Any initial error tokens will be skipped and those errors will not be
+  /// reported.
   Token parseDirectives(Token token) {
+    // Skip over error tokens so the directives would be the same as when
+    // scanning normally.
+    token = skipErrorTokens(token);
     listener.beginCompilationUnit(token);
     int count = 0;
     DirectiveContext directiveState = new DirectiveContext(
@@ -486,9 +490,11 @@ class Parser {
         break;
       }
 
+      bool reportTopLevelDeclarationEnd = true;
       if (identical(token.next!.type, TokenType.SCRIPT_TAG)) {
         directiveState.checkScriptTag(this, token.next!);
         token = parseScript(token);
+        reportTopLevelDeclarationEnd = false;
       } else {
         token = parseMetadataStar(token);
         Token keyword = token.next!;
@@ -507,12 +513,16 @@ class Parser {
         } else if (identical(value, ';')) {
           token = start;
           listener.handleDirectivesOnly();
+          reportTopLevelDeclarationEnd = false;
         } else {
           listener.handleDirectivesOnly();
+          reportTopLevelDeclarationEnd = false;
           break;
         }
       }
-      listener.endTopLevelDeclaration(token);
+      if (reportTopLevelDeclarationEnd) {
+        listener.endTopLevelDeclaration(token);
+      }
     }
     token = token.next!;
     listener.endCompilationUnit(count, token);
@@ -2188,6 +2198,21 @@ class Parser {
         nameContext = IdentifierContext.fieldInitializer;
       }
     }
+    if (memberKind == MemberKind.PrimaryConstructor) {
+      if (varFinalOrConst != null && !varFinalOrConst.isA(Keyword.CONST)) {
+        if (thisKeyword != null) {
+          reportRecoverableError(
+            thisKeyword,
+            diag.initializingDeclaringParameter,
+          );
+        } else if (superKeyword != null) {
+          reportRecoverableError(
+            superKeyword,
+            diag.superInitializingDeclaringParameter,
+          );
+        }
+      }
+    }
 
     if (next.isIdentifier) {
       token = next;
@@ -3067,12 +3092,12 @@ class Parser {
     Token? constToken,
     String className,
   ) {
-    Token start = token;
     token = parsePrimaryConstructorOpt(
       DeclarationKind.Class,
       token,
       constToken,
     );
+    Token headerStart = token;
     token = parseClassHeaderOpt(token, beginToken, classKeyword);
     if (token.next!.isA(TokenType.SEMICOLON)) {
       Token semicolonToken = token = token.next!;
@@ -3087,7 +3112,7 @@ class Parser {
     } else {
       if (!token.next!.isA(TokenType.OPEN_CURLY_BRACKET)) {
         // Recovery
-        token = parseClassHeaderRecovery(start, beginToken, classKeyword);
+        token = parseClassHeaderRecovery(headerStart, beginToken, classKeyword);
         ensureBlock(token, BlockKind.classDeclaration);
       }
       token = parseClassOrMixinOrExtensionBody(
@@ -3383,7 +3408,12 @@ class Parser {
       mixinKeyword,
       name,
     );
-    token = parseMixinHeaderOpt(headerStart, constKeyword, mixinKeyword);
+    token = parseMixinHeaderOpt(
+      headerStart,
+      constKeyword,
+      mixinKeyword,
+      /* isAugmentation */ augmentToken != null,
+    );
     if (token.next!.isA(TokenType.SEMICOLON)) {
       Token semicolonToken = token = token.next!;
       if (!isPrimaryConstructorsFeatureEnabled) {
@@ -3397,7 +3427,12 @@ class Parser {
     } else {
       if (!token.next!.isA(TokenType.OPEN_CURLY_BRACKET)) {
         // Recovery
-        token = parseMixinHeaderRecovery(token, mixinKeyword, headerStart);
+        token = parseMixinHeaderRecovery(
+          token,
+          mixinKeyword,
+          headerStart,
+          /* isAugmentation */ augmentToken != null,
+        );
         ensureBlock(token, BlockKind.mixinDeclaration);
       }
       token = parseClassOrMixinOrExtensionBody(
@@ -3414,13 +3449,14 @@ class Parser {
     Token token,
     Token? constKeyword,
     Token mixinKeyword,
+    bool isAugmentation,
   ) {
     token = parsePrimaryConstructorOpt(
       DeclarationKind.Mixin,
       token,
       constKeyword,
     );
-    token = parseMixinOnOpt(token);
+    token = parseMixinOnOpt(token, isAugmentation);
     token = parseClassOrMixinOrEnumImplementsOpt(token);
     listener.handleMixinHeader(mixinKeyword);
     return token;
@@ -3430,6 +3466,7 @@ class Parser {
     Token token,
     Token mixinKeyword,
     Token headerStart,
+    bool isAugmentation,
   ) {
     final Listener primaryListener = listener;
     final MixinHeaderRecoveryListener recoveryListener =
@@ -3442,6 +3479,7 @@ class Parser {
       headerStart,
       /* constKeyword */ null,
       mixinKeyword,
+      /* isAugmentation */ false,
     );
     bool hasOn = recoveryListener.onKeyword != null;
     bool hasImplements = recoveryListener.implementsKeyword != null;
@@ -3474,7 +3512,7 @@ class Parser {
         );
         token = parseMixinOn(token);
       } else {
-        token = parseMixinOnOpt(token);
+        token = parseMixinOnOpt(token, isAugmentation);
       }
 
       if (recoveryListener.onKeyword != null) {
@@ -3528,10 +3566,14 @@ class Parser {
   ///   'on' typeName (',' typeName)*
   /// ;
   /// ```
-  Token parseMixinOnOpt(Token token) {
-    if (!token.next!.isA(Keyword.ON)) {
+  Token parseMixinOnOpt(Token token, bool isAugmentation) {
+    Token onKeyword = token.next!;
+    if (!onKeyword.isA(Keyword.ON)) {
       listener.handleMixinOn(/* onKeyword = */ null, /* typeCount = */ 0);
       return token;
+    }
+    if (isAugmentation) {
+      reportRecoverableError(onKeyword, diag.mixinAugmentationHasOnClause);
     }
     return parseMixinOn(token);
   }
@@ -3621,6 +3663,12 @@ class Parser {
         );
       }
     } else {
+      if (augmentToken != null) {
+        reportRecoverableError(
+          augmentToken,
+          diag.extensionAugmentationWithoutName,
+        );
+      }
       name = null;
     }
     token = computeTypeParamOrArg(
@@ -3723,8 +3771,12 @@ class Parser {
   Token parsePrimaryConstructorOpt(
     DeclarationKind kind,
     Token token,
-    Token? constKeyword,
-  ) {
+    Token? constKeyword, {
+    bool allowExtensionTypeRepresentation = true,
+  }) {
+    assert(
+      allowExtensionTypeRepresentation || kind == DeclarationKind.ExtensionType,
+    );
     if (token.next!.isA(TokenType.OPEN_PAREN) ||
         token.next!.isA(TokenType.PERIOD)) {
       Token beginPrimaryConstructor = token.next!;
@@ -3761,9 +3813,18 @@ class Parser {
             );
           }
         case DeclarationKind.Class:
+          // Valid case.
+          break;
         case DeclarationKind.ExtensionType:
+          if (!allowExtensionTypeRepresentation) {
+            reportRecoverableError(
+              constKeyword ?? beginPrimaryConstructor,
+              diag.extensionTypeAugmentationSpecifiesRepresentationField,
+            );
+          }
+          break;
         case DeclarationKind.Enum:
-          // Valid cases.
+          // Valid case.
           break;
       }
 
@@ -3778,7 +3839,12 @@ class Parser {
       if (token.next!.isA(TokenType.OPEN_PAREN)) {
         token = parseFormalParameters(token, MemberKind.PrimaryConstructor);
       } else {
-        if (kind == DeclarationKind.ExtensionType) {
+        bool reportMissingParameters = switch (kind) {
+          DeclarationKind.Class || DeclarationKind.Enum => true,
+          DeclarationKind.ExtensionType => allowExtensionTypeRepresentation,
+          _ => false,
+        };
+        if (reportMissingParameters) {
           reportRecoverableError(
             token,
             diag.missingPrimaryConstructorParameters,
@@ -3794,7 +3860,8 @@ class Parser {
         hasConstructorName,
       );
     } else {
-      if (kind == DeclarationKind.ExtensionType) {
+      if (kind == DeclarationKind.ExtensionType &&
+          allowExtensionTypeRepresentation) {
         reportRecoverableError(token, diag.missingPrimaryConstructor);
       } else if (constKeyword != null) {
         if (isPrimaryConstructorsFeatureEnabled) {
@@ -3831,12 +3898,13 @@ class Parser {
     return token;
   }
 
-  Token parsePrimaryConstructorBody(Token token) {
+  Token parsePrimaryConstructorBody(Token token, Token? augmentToken) {
     Token beginToken = token;
-    listener.beginPrimaryConstructorBody(token);
+    listener.beginPrimaryConstructorBody(token, augmentToken);
 
     Token? beforeInitializers = token;
     token = parseInitializersOpt(beforeInitializers);
+    if (token == beforeInitializers) beforeInitializers = null;
 
     Token next = token.next!;
     if (next.isA(Keyword.ASYNC) || next.isA(Keyword.SYNC)) {
@@ -3859,7 +3927,11 @@ class Parser {
       /* allowAbstract = */ inPlainSync,
     );
 
-    listener.endPrimaryConstructorBody(beginToken, beforeInitializers, token);
+    listener.endPrimaryConstructorBody(
+      beginToken,
+      beforeInitializers?.next,
+      token,
+    );
     return token;
   }
 
@@ -3912,7 +3984,9 @@ class Parser {
       DeclarationKind.ExtensionType,
       token,
       constKeyword,
+      allowExtensionTypeRepresentation: augmentToken == null,
     );
+
     Token start = token;
     token = parseClassOrMixinOrEnumImplementsOpt(token);
     if (token.next!.isA(TokenType.SEMICOLON)) {
@@ -4327,7 +4401,7 @@ class Parser {
     if (getOrSet != null) {
       reportRecoverableErrorWithToken(getOrSet, diag.extraneousModifier);
     }
-    if (!_isAugmentationsFeatureEnabled && abstractToken != null) {
+    if (!isAugmentationsFeatureEnabled && abstractToken != null) {
       reportRecoverableErrorWithToken(abstractToken, diag.extraneousModifier);
     }
     return parseFields(
@@ -4563,7 +4637,7 @@ class Parser {
     token = parseFunctionBody(
       token,
       /* ofFunctionExpression = */ false,
-      isExternal || _isAugmentationsFeatureEnabled,
+      isExternal || isAugmentationsFeatureEnabled,
     );
     asyncState = savedAsyncModifier;
     listener.endTopLevelMethod(beforeStart.next!, getOrSet, token);
@@ -5230,7 +5304,7 @@ class Parser {
         next = token.next!;
       }
       if (isModifier(next)) {
-        if (next.isA(Keyword.STATIC)) {
+        if (next.isA(Keyword.STATIC) && abstractToken == null) {
           staticToken = token = next;
           next = token.next!;
         } else if (next.isA(Keyword.COVARIANT)) {
@@ -5512,7 +5586,7 @@ class Parser {
           if (lateToken != null) {
             reportRecoverableErrorWithToken(lateToken, diag.extraneousModifier);
           }
-          token = parsePrimaryConstructorBody(next);
+          token = parsePrimaryConstructorBody(next, augmentToken);
           listener.endMember();
           return token;
         }
@@ -5987,7 +6061,7 @@ class Parser {
         /* ofFunctionExpression = */ false,
         /* allowAbstract = */ (staticToken == null ||
                 externalToken != null ||
-                _isAugmentationsFeatureEnabled) &&
+                isAugmentationsFeatureEnabled) &&
             inPlainSync,
       );
     }
@@ -6189,7 +6263,7 @@ class Parser {
       token = parseFunctionBody(
         token,
         /* ofFunctionExpression = */ false,
-        /* allowAbstract = */ _isAugmentationsFeatureEnabled,
+        /* allowAbstract = */ isAugmentationsFeatureEnabled,
       );
     }
     switch (kind) {
@@ -6901,30 +6975,29 @@ class Parser {
         listener.handleIdentifier(token, IdentifierContext.expression);
       }
     } else {
-      if (isPatternsFeatureEnabled && looksLikeOuterPatternEquals(token)) {
-        token = parsePatternAssignment(token);
-      } else {
-        token = token.next!.isA(Keyword.THROW)
-            ? parseThrowExpression(token, /* allowCascades = */ true)
-            : parsePrecedenceExpression(
-                token,
-                ASSIGNMENT_PRECEDENCE,
-                /* allowCascades = */ true,
-                ConstantPatternContext.none,
-              );
-      }
+      token = _parseExpression(token, /* allowCascades = */ true);
     }
     expressionDepth--;
     return token;
   }
 
   Token parseExpressionWithoutCascade(Token token) {
+    return _parseExpression(token, /* allowCascades = */ false);
+  }
+
+  @pragma("vm:prefer-inline")
+  Token _parseExpression(Token token, bool allowCascades) {
+    if (isPatternsFeatureEnabled && looksLikeOuterPatternEquals(token)) {
+      return allowCascades
+          ? parsePatternAssignment(token)
+          : _parsePatternAssignment(token, /* allowCascades = */ false);
+    }
     return token.next!.isA(Keyword.THROW)
-        ? parseThrowExpression(token, /* allowCascades = */ false)
+        ? parseThrowExpression(token, allowCascades)
         : parsePrecedenceExpression(
             token,
             ASSIGNMENT_PRECEDENCE,
-            /* allowCascades = */ false,
+            allowCascades,
             ConstantPatternContext.none,
           );
   }
@@ -7149,6 +7222,7 @@ class Parser {
     Token next = token.next!;
     TokenType type = next.type;
     int tokenLevel = _computePrecedence(next, forPattern: false);
+
     if (constantPatternContext != ConstantPatternContext.none) {
       // For error recovery we allow too much when parsing constant patterns,
       // so for the cases that shouldn't be parsed as expressions in this
@@ -7167,32 +7241,14 @@ class Parser {
         return token;
       }
     }
-    if (constantPatternContext != ConstantPatternContext.none &&
-        precedence <= tokenLevel &&
-        tokenLevel < SELECTOR_PRECEDENCE) {
-      // If we are parsing a constant pattern, only [SELECTOR_PRECEDENCE] is
-      // supported but we allow for parsing [EQUALITY_PRECEDENCE] and higher for
-      // better error recovery.
-      if (constantPatternContext == ConstantPatternContext.explicit) {
-        reportRecoverableError(token, diag.invalidConstantPatternConstPrefix);
-      } else if (tokenLevel <= MULTIPLICATIVE_PRECEDENCE) {
-        reportRecoverableError(
-          next,
-          diag.invalidConstantPatternBinary.withArguments(
-            operatorName: type.lexeme,
-          ),
-        );
-      } else {
-        // These are prefix or postfix ++/-- and will not be constant
-        // expressions, anyway.
-        assert(
-          tokenLevel == POSTFIX_PRECEDENCE || tokenLevel == PREFIX_PRECEDENCE,
-          "Unexpected precedence level for $type: $tokenLevel",
-        );
-      }
-      // Avoid additional constant pattern errors.
-      constantPatternContext = ConstantPatternContext.none;
-    }
+    constantPatternContext = _checkForInvalidConstantPatternOperator(
+      constantPatternContext,
+      precedence,
+      token,
+      next,
+      type,
+      tokenLevel,
+    );
     if (tokenLevel < precedence) {
       if (_recoverAtPrecedenceLevel && !_currentlyRecovering) {
         // Attempt recovery
@@ -7248,14 +7304,7 @@ class Parser {
           );
           operator = next;
         }
-        token = next.next!.isA(Keyword.THROW)
-            ? parseThrowExpression(next, allowCascades)
-            : parsePrecedenceExpression(
-                next,
-                level,
-                allowCascades,
-                ConstantPatternContext.none,
-              );
+        token = _parseExpression(next, allowCascades);
         listener.handleAssignmentExpression(operator, token);
       } else if (tokenLevel == POSTFIX_PRECEDENCE) {
         if ((identical(type, TokenType.PLUS_PLUS)) ||
@@ -7419,6 +7468,15 @@ class Parser {
         }
       }
 
+      constantPatternContext = _checkForInvalidConstantPatternOperator(
+        constantPatternContext,
+        precedence,
+        token,
+        next,
+        type,
+        tokenLevel,
+      );
+
       if (_recoverAtPrecedenceLevel && !_currentlyRecovering) {
         // Attempt recovery
         if (_attemptPrecedenceLevelRecovery(
@@ -7446,6 +7504,44 @@ class Parser {
     }
 
     return token;
+  }
+
+  @pragma("vm:prefer-inline")
+  ConstantPatternContext _checkForInvalidConstantPatternOperator(
+    ConstantPatternContext constantPatternContext,
+    int precedence,
+    Token token,
+    Token next,
+    TokenType type,
+    int tokenLevel,
+  ) {
+    if (constantPatternContext != ConstantPatternContext.none &&
+        precedence <= tokenLevel &&
+        tokenLevel < SELECTOR_PRECEDENCE) {
+      // If we are parsing a constant pattern, only [SELECTOR_PRECEDENCE] is
+      // supported but we allow for parsing [EQUALITY_PRECEDENCE] and higher
+      // for better error recovery.
+      if (constantPatternContext == ConstantPatternContext.explicit) {
+        reportRecoverableError(token, diag.invalidConstantPatternConstPrefix);
+      } else if (tokenLevel <= MULTIPLICATIVE_PRECEDENCE) {
+        reportRecoverableError(
+          next,
+          diag.invalidConstantPatternBinary.withArguments(
+            operatorName: type.lexeme,
+          ),
+        );
+      } else {
+        // These are prefix or postfix ++/-- and will not be constant
+        // expressions, anyway.
+        assert(
+          tokenLevel == POSTFIX_PRECEDENCE || tokenLevel == PREFIX_PRECEDENCE,
+          "Unexpected precedence level for $type: $tokenLevel",
+        );
+      }
+      // Avoid additional constant pattern errors.
+      return ConstantPatternContext.none;
+    }
+    return constantPatternContext;
   }
 
   /// Can the next input be an anonymous method?
@@ -12307,11 +12403,17 @@ class Parser {
 
   /// patternAssignment ::= outerPattern '=' expression
   Token parsePatternAssignment(Token token) {
+    return _parsePatternAssignment(token, /* allowCascades = */ true);
+  }
+
+  Token _parsePatternAssignment(Token token, bool allowCascades) {
     token = parsePattern(token, PatternContext.assignment);
     Token equals = token.next!;
     // Caller should have assured that the pattern was followed by an `=`.
     assert(equals.isA(TokenType.EQ));
-    token = parseExpression(equals);
+    token = allowCascades
+        ? parseExpression(equals)
+        : parseExpressionWithoutCascade(equals);
     listener.handlePatternAssignment(equals);
     return token;
   }

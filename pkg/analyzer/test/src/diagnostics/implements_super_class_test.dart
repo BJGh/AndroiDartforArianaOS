@@ -14,8 +14,9 @@ main() {
 
 @reflectiveTest
 class ImplementsSuperClassTest extends PubPackageResolutionTest {
-  test_class() async {
+  test_class_beforeAugmentations() async {
     await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
 class A {}
 class B extends A implements A {}
 //                           ^
@@ -23,8 +24,100 @@ class B extends A implements A {}
 ''');
   }
 
+  test_class_extendsClass_implementsClass() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+class C extends A implements A {}
+''');
+  }
+
+  test_class_extendsClass_implementsTypeAlias() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+typedef B = A;
+class C extends A implements B {}
+''');
+  }
+
+  test_class_extendsThenAugmentsImplements() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+class B extends A {}
+augment class B implements A {}
+''');
+  }
+
+  test_class_extendsThenAugmentsImplements_part() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
+part 'b.dart';
+
+class A {}
+class B extends A {}
+''',
+      b: r'''
+part of 'a.dart';
+
+augment class B implements A {}
+''',
+    });
+  }
+
+  test_class_extendsTypeAlias_implementsClass() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+typedef B = A;
+class C extends B implements A {}
+''');
+  }
+
+  test_class_extendsTypeAlias_implementsTypeAlias() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+typedef B = A;
+class C extends B implements B {}
+''');
+  }
+
+  test_class_implementsThenAugmentsExtends() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class A {}
+class B implements A {}
+augment class B extends A {}
+''');
+  }
+
+  test_class_implementsThenAugmentsExtends_part() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
+part 'b.dart';
+
+class A {}
+class B implements A {}
+''',
+      b: r'''
+part of 'a.dart';
+
+augment class B extends A {}
+''',
+    });
+  }
+
   test_class_Object() async {
     await resolveTestCodeWithDiagnostics(r'''
+class A implements Object {}
+''');
+  }
+
+  test_class_Object_beforeAugmentations() async {
+    await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
 class A implements Object {}
 //                 ^^^^^^
 // [diag.implementsSuperClass] 'class Object' can't be used in both the 'extends' and 'implements' clauses.
@@ -33,6 +126,15 @@ class A implements Object {}
 
   test_class_viaTypeAlias() async {
     await resolveTestCodeWithDiagnostics(r'''
+class A {}
+typedef B = A;
+class C extends A implements B {}
+''');
+  }
+
+  test_class_viaTypeAlias_beforeAugmentations() async {
+    await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
 class A {}
 typedef B = A;
 class C extends A implements B {}
@@ -46,6 +148,15 @@ class C extends A implements B {}
 class A {}
 mixin M {}
 class B = A with M implements A;
+''');
+  }
+
+  test_classAlias_beforeAugmentations() async {
+    await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
+class A {}
+mixin M {}
+class B = A with M implements A;
 //                            ^
 // [diag.implementsSuperClass] 'class A' can't be used in both the 'extends' and 'implements' clauses.
 ''');
@@ -55,6 +166,14 @@ class B = A with M implements A;
     await resolveTestCodeWithDiagnostics(r'''
 mixin M {}
 class A = Object with M implements Object;
+''');
+  }
+
+  test_classAlias_Object_beforeAugmentations() async {
+    await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
+mixin M {}
+class A = Object with M implements Object;
 //                                 ^^^^^^
 // [diag.implementsSuperClass] 'class Object' can't be used in both the 'extends' and 'implements' clauses.
 ''');
@@ -62,6 +181,16 @@ class A = Object with M implements Object;
 
   test_classAlias_viaTypeAlias() async {
     await resolveTestCodeWithDiagnostics(r'''
+class A {}
+mixin M {}
+typedef B = A;
+class C = A with M implements B;
+''');
+  }
+
+  test_classAlias_viaTypeAlias_beforeAugmentations() async {
+    await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
 class A {}
 mixin M {}
 typedef B = A;

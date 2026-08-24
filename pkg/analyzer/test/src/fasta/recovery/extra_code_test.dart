@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../dart/resolution/node_text_expectations.dart';
@@ -25,18 +24,19 @@ main() {
 @reflectiveTest
 class AnnotationTest extends ParserDiagnosticsTest {
   void test_typeArgument() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 const annotation = null;
 class A<E> {}
 class C {
   m() => new A<@annotation C>();
+//             ^^^^^^^^^^^
+// [diag.annotationOnTypeArgument] Type arguments can't have annotations because they aren't declarations.
 }
 ''');
-    parseResult.assertErrors([error(diag.annotationOnTypeArgument, 64, 11)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -44,7 +44,7 @@ CompilationUnit
           VariableDeclaration
             name: annotation
             equals: =
-            initializer: NullLiteral
+            initializer2: NullLiteral
               literal: null
       semicolon: ;
     ClassDeclaration
@@ -74,7 +74,21 @@ CompilationUnit
               rightParenthesis: )
             body: ExpressionFunctionBody
               functionDefinition: =>
-              expression: InstanceCreationExpression
+              expression2: ConstructorInvocation
+                keyword: new
+                constructorReference: ConstructorReference2
+                  typeReference: ConstructorTypeReference
+                    name: A
+                    typeArguments: TypeArgumentList
+                      leftBracket: <
+                      arguments
+                        NamedType
+                          name: C
+                      rightBracket: >
+                argumentList: ArgumentList
+                  leftParenthesis: (
+                  rightParenthesis: )
+              expression(v1): InstanceCreationExpression
                 keyword: new
                 constructorName: ConstructorName
                   type: NamedType
@@ -98,17 +112,17 @@ CompilationUnit
 @reflectiveTest
 class MiscellaneousTest extends ParserDiagnosticsTest {
   void test_classTypeAlias_withBody() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class B = Object with A {}
+//                    ^
+// [diag.expectedToken] Expected to find ';'.
+//                      ^
+// [diag.expectedExecutable] Expected a method, getter, setter or operator declaration.
 ''');
-    parseResult.assertErrors([
-      error(diag.expectedToken, 22, 1),
-      error(diag.expectedExecutable, 24, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassTypeAlias
       typedefKeyword: class
       name: B
@@ -125,16 +139,32 @@ CompilationUnit
   }
 
   void test_getter_parameters() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 int get g(x) => 0;
+//       ^
+// [diag.getterWithParameters] Getters must be declared without a parameter list.
 ''');
-    parseResult.assertErrors([
-      error(diag.getterWithParameters, 9, 1), // Let's guess
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: g
+      recoveryFormalParameters: FormalParameterList
+        leftParenthesis: (
+        requiredPositionalFormalParameters
+          RegularFormalParameter
+            name: x
+        rightParenthesis: )
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -155,16 +185,17 @@ CompilationUnit
   }
 
   void test_identifier_afterNamedArgument() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 a() {
   b(c: c(d: d(e: null f,),),);
+//                    ^
+// [diag.expectedToken] Expected to find ','.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 28, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: a
       functionExpression: FunctionExpression
@@ -176,34 +207,34 @@ CompilationUnit
             leftBracket: {
             statements
               ExpressionStatement
-                expression: MethodInvocation
+                expression2: MethodInvocation
                   methodName: SimpleIdentifier
                     token: b
                   argumentList: ArgumentList
                     leftParenthesis: (
-                    arguments
+                    arguments2
                       NamedArgument
                         name: c
                         colon: :
-                        argumentExpression: MethodInvocation
+                        argumentExpression2: MethodInvocation
                           methodName: SimpleIdentifier
                             token: c
                           argumentList: ArgumentList
                             leftParenthesis: (
-                            arguments
+                            arguments2
                               NamedArgument
                                 name: d
                                 colon: :
-                                argumentExpression: MethodInvocation
+                                argumentExpression2: MethodInvocation
                                   methodName: SimpleIdentifier
                                     token: d
                                   argumentList: ArgumentList
                                     leftParenthesis: (
-                                    arguments
+                                    arguments2
                                       NamedArgument
                                         name: e
                                         colon: :
-                                        argumentExpression: NullLiteral
+                                        argumentExpression2: NullLiteral
                                           literal: null
                                       SimpleIdentifier
                                         token: f
@@ -216,22 +247,27 @@ CompilationUnit
   }
 
   void test_invalidRangeCheck() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 f(x) {
   while (1 < x < 3) {}
+//             ^
+// [diag.equalityCannotBeEqualityOperand] A comparison expression can't be an operand of another comparison expression.
 }
 ''');
-    parseResult.assertErrors([
-      error(diag.equalityCannotBeEqualityOperand, 22, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: x
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: x
@@ -243,7 +279,19 @@ CompilationUnit
               WhileStatement
                 whileKeyword: while
                 leftParenthesis: (
-                condition: BinaryExpression
+                condition2: BinaryOperatorInvocation
+                  leftOperand: BinaryOperatorInvocation
+                    leftOperand: IntegerLiteral
+                      literal: 1
+                    operator: <
+                    rightOperand: SimpleIdentifier
+                      token: x
+                    binaryOperator: lessThan
+                  operator: <
+                  rightOperand: IntegerLiteral
+                    literal: 3
+                  binaryOperator: lessThan
+                condition(v1): BinaryExpression
                   leftOperand: BinaryExpression
                     leftOperand: IntegerLiteral
                       literal: 1
@@ -262,14 +310,15 @@ CompilationUnit
   }
 
   void test_listLiteralType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 List<int> ints = List<int>[];
+//               ^^^^
+// [diag.literalWithClass] A list literal can't be prefixed by 'List'.
 ''');
-    parseResult.assertErrors([error(diag.literalWithClass, 17, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -284,7 +333,7 @@ CompilationUnit
           VariableDeclaration
             name: ints
             equals: =
-            initializer: ListLiteral
+            initializer2: ListLiteral
               typeArguments: TypeArgumentList
                 leftBracket: <
                 arguments
@@ -298,14 +347,15 @@ CompilationUnit
   }
 
   void test_mapLiteralType() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 Map<int, int> map = Map<int, int>{};
+//                  ^^^
+// [diag.literalWithClass] A map literal can't be prefixed by 'Map'.
 ''');
-    parseResult.assertErrors([error(diag.literalWithClass, 20, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -322,7 +372,7 @@ CompilationUnit
           VariableDeclaration
             name: map
             equals: =
-            initializer: SetOrMapLiteral
+            initializer2: SetOrMapLiteral
               typeArguments: TypeArgumentList
                 leftBracket: <
                 arguments
@@ -339,15 +389,16 @@ CompilationUnit
   }
 
   void test_mixin_using_with_clause() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 mixin M {}
 mixin N with M {}
+//      ^^^^
+// [diag.mixinWithClause] A mixin can't have a with clause.
 ''');
-    parseResult.assertErrors([error(diag.mixinWithClause, 19, 4)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -364,18 +415,17 @@ CompilationUnit
   }
 
   void test_multipleRedirectingInitializers() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A {
   A() : this.a(), this.b();
   A.a() {}
   A.b() {}
 }
 ''');
-    parseResult.assertErrors([]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -384,7 +434,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: A
+            typeName(v1): SimpleIdentifier
               token: A
             parameters: FormalParameterList
               leftParenthesis: (
@@ -393,24 +444,31 @@ CompilationUnit
             initializers
               RedirectingConstructorInvocation
                 thisKeyword: this
+                constructorSelector: ConstructorSelector
+                  period: .
+                  name2: a
+                argumentList: ArgumentList
+                  leftParenthesis: (
+                  rightParenthesis: )
                 period: .
                 constructorName: SimpleIdentifier
                   token: a
+              RedirectingConstructorInvocation
+                thisKeyword: this
+                constructorSelector: ConstructorSelector
+                  period: .
+                  name2: b
                 argumentList: ArgumentList
                   leftParenthesis: (
                   rightParenthesis: )
-              RedirectingConstructorInvocation
-                thisKeyword: this
                 period: .
                 constructorName: SimpleIdentifier
                   token: b
-                argumentList: ArgumentList
-                  leftParenthesis: (
-                  rightParenthesis: )
             body: EmptyFunctionBody
               semicolon: ;
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: A
+            typeName(v1): SimpleIdentifier
               token: A
             period: .
             name: a
@@ -422,7 +480,8 @@ CompilationUnit
                 leftBracket: {
                 rightBracket: }
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: A
+            typeName(v1): SimpleIdentifier
               token: A
             period: .
             name: b
@@ -438,19 +497,20 @@ CompilationUnit
   }
 
   void test_parenInMapLiteral() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {}
 final Map v = {
   'a': () => new C(),
   'b': () => new C()),
+//                  ^
+// [diag.expectedToken] Expected to find '}'.
   'c': () => new C(),
 };
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 69, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -467,20 +527,28 @@ CompilationUnit
           VariableDeclaration
             name: v
             equals: =
-            initializer: SetOrMapLiteral
+            initializer2: SetOrMapLiteral
               leftBracket: {
-              elements
+              elements2
                 MapLiteralEntry
-                  key: SimpleStringLiteral
+                  key2: SimpleStringLiteral
                     literal: 'a'
                   separator: :
-                  value: FunctionExpression
+                  value2: FunctionExpression
                     parameters: FormalParameterList
                       leftParenthesis: (
                       rightParenthesis: )
                     body: ExpressionFunctionBody
                       functionDefinition: =>
-                      expression: InstanceCreationExpression
+                      expression2: ConstructorInvocation
+                        keyword: new
+                        constructorReference: ConstructorReference2
+                          typeReference: ConstructorTypeReference
+                            name: C
+                        argumentList: ArgumentList
+                          leftParenthesis: (
+                          rightParenthesis: )
+                      expression(v1): InstanceCreationExpression
                         keyword: new
                         constructorName: ConstructorName
                           type: NamedType
@@ -489,16 +557,24 @@ CompilationUnit
                           leftParenthesis: (
                           rightParenthesis: )
                 MapLiteralEntry
-                  key: SimpleStringLiteral
+                  key2: SimpleStringLiteral
                     literal: 'b'
                   separator: :
-                  value: FunctionExpression
+                  value2: FunctionExpression
                     parameters: FormalParameterList
                       leftParenthesis: (
                       rightParenthesis: )
                     body: ExpressionFunctionBody
                       functionDefinition: =>
-                      expression: InstanceCreationExpression
+                      expression2: ConstructorInvocation
+                        keyword: new
+                        constructorReference: ConstructorReference2
+                          typeReference: ConstructorTypeReference
+                            name: C
+                        argumentList: ArgumentList
+                          leftParenthesis: (
+                          rightParenthesis: )
+                      expression(v1): InstanceCreationExpression
                         keyword: new
                         constructorName: ConstructorName
                           type: NamedType
@@ -517,14 +593,14 @@ CompilationUnit
 @reflectiveTest
 class ModifiersTest extends ParserDiagnosticsTest {
   void test_classDeclaration_static() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 static class A {}
+// [diag.extraneousModifier][column 1][length 6] Can't have modifier 'static' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 0, 6)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -536,15 +612,36 @@ CompilationUnit
   }
 
   void test_methodDeclaration_const_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 main() {}
 const int get foo => 499;
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 10, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
+    FunctionDeclaration
+      name: main
+      functionExpression: FunctionExpression
+        parameters: FormalParameterList
+          leftParenthesis: (
+          rightParenthesis: )
+        body: BlockFunctionBody
+          block: Block
+            leftBracket: {
+            rightBracket: }
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: foo
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 499
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       name: main
       functionExpression: FunctionExpression
@@ -570,15 +667,15 @@ CompilationUnit
   }
 
   void test_methodDeclaration_const_method() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 main() {}
 const int foo() => 499;
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 10, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: main
       functionExpression: FunctionExpression
@@ -599,22 +696,22 @@ CompilationUnit
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 499
           semicolon: ;
 ''');
   }
 
   void test_methodDeclaration_const_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 main() {}
 const set foo(v) => 499;
+// [diag.extraneousModifier][column 1][length 5] Can't have modifier 'const' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 10, 5)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: main
       functionExpression: FunctionExpression
@@ -631,12 +728,18 @@ CompilationUnit
       functionExpression: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: v
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
+          leftParenthesis: (
           parameter: RegularFormalParameter
             name: v
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 499
           semicolon: ;
 ''');
@@ -648,17 +751,15 @@ CompilationUnit
 @reflectiveTest
 class MultipleTypeTest extends ParserDiagnosticsTest {
   void test_topLevelVariable() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 String void bar() { }
+// [diag.missingConstFinalVarOrType][column 1][length 6] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 6] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 0, 6),
-      error(diag.expectedToken, 0, 6),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -685,18 +786,19 @@ CompilationUnit
 @reflectiveTest
 class PunctuationTest extends ParserDiagnosticsTest {
   void test_extraComma_extendsClause() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A { }
 class B { }
 class Foo extends A, B {
+//                 ^
+// [diag.multipleExtendsClauses] Each class definition can have at most one extends clause.
   Foo() { }
 }
 ''');
-    parseResult.assertErrors([error(diag.multipleExtendsClauses, 43, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -723,7 +825,8 @@ CompilationUnit
         leftBracket: {
         members
           ConstructorDeclaration
-            typeName: SimpleIdentifier
+            typeName2: Foo
+            typeName(v1): SimpleIdentifier
               token: Foo
             parameters: FormalParameterList
               leftParenthesis: (
@@ -737,16 +840,17 @@ CompilationUnit
   }
 
   void test_extraSemicolon_afterLastClassMember() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   foo() {};
+//        ^
+// [diag.expectedClassMember] Expected a class member.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedClassMember, 20, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -768,14 +872,15 @@ CompilationUnit
   }
 
   void test_extraSemicolon_afterLastTopLevelMember() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 foo() {};
+//      ^
+// [diag.unexpectedToken] Unexpected text ';'.
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: foo
       functionExpression: FunctionExpression
@@ -790,16 +895,17 @@ CompilationUnit
   }
 
   void test_extraSemicolon_beforeFirstClassMember() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   ;foo() {}
+//^
+// [diag.expectedClassMember] Expected a class member.
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedClassMember, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -821,14 +927,14 @@ CompilationUnit
   }
 
   void test_extraSemicolon_beforeFirstTopLevelMember() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 ;foo() {}
+// [diag.unexpectedToken][column 1][length 1] Unexpected text ';'.
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 0, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: foo
       functionExpression: FunctionExpression
@@ -843,17 +949,18 @@ CompilationUnit
   }
 
   void test_extraSemicolon_betweenClassMembers() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class C {
   foo() {};
+//        ^
+// [diag.expectedClassMember] Expected a class member.
   bar() {}
 }
 ''');
-    parseResult.assertErrors([error(diag.expectedClassMember, 20, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -884,15 +991,16 @@ CompilationUnit
   }
 
   void test_extraSemicolon_betweenTopLevelMembers() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 foo() {};
+//      ^
+// [diag.unexpectedToken] Unexpected text ';'.
 bar() {}
 ''');
-    parseResult.assertErrors([error(diag.unexpectedToken, 8, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     FunctionDeclaration
       name: foo
       functionExpression: FunctionExpression
@@ -921,14 +1029,15 @@ CompilationUnit
 @reflectiveTest
 class VarianceModifierTest extends ParserDiagnosticsTest {
   void test_extraModifier_inClass() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 class A<in out X> {}
+//         ^^^
+// [diag.multipleVarianceModifiers] Each type parameter can have at most one variance modifier.
 ''');
-    parseResult.assertErrors([error(diag.multipleVarianceModifiers, 11, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters

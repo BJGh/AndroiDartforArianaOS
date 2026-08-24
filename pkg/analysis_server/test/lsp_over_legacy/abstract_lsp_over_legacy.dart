@@ -11,109 +11,14 @@ import 'package:analysis_server/src/analytics/analytics_manager.dart';
 import 'package:analysis_server/src/lsp/client_capabilities.dart';
 import 'package:analysis_server/src/protocol/protocol_internal.dart';
 import 'package:analysis_server/src/protocol_server.dart';
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/src/utilities/extensions/file_system.dart';
 import 'package:analyzer_plugin/src/utilities/client_uri_converter.dart';
-import 'package:analyzer_utilities/testing/tree_string_sink.dart';
-import 'package:collection/collection.dart';
 import 'package:path/path.dart' as path;
-import 'package:test/test.dart';
 
 import '../analysis_server_base.dart';
 import '../lsp/request_helpers_mixin.dart';
 import '../lsp/server_abstract.dart';
-import '../services/completion/dart/text_expectations.dart';
 import '../shared/mixins/analytics_test_mixin.dart';
 import '../shared/shared_test_interface.dart';
-
-class EventsCollector {
-  final ContextResolutionTest test;
-  List<Object> events = [];
-
-  EventsCollector(this.test) {
-    test.notificationListener = (notification) {
-      switch (notification.event) {
-        case analysisNotificationErrors:
-          events.add(
-            AnalysisErrorsParams.fromNotification(
-              notification,
-              clientUriConverter: test.server.uriConverter,
-            ),
-          );
-        case analysisNotificationFlushResults:
-          events.add(
-            AnalysisFlushResultsParams.fromNotification(
-              notification,
-              clientUriConverter: test.server.uriConverter,
-            ),
-          );
-        case lspNotificationNotification:
-          var params = LspNotificationParams.fromNotification(
-            notification,
-            clientUriConverter: test.server.uriConverter,
-          );
-          events.add(params.lspNotification);
-        default:
-          throw StateError(notification.event);
-      }
-    };
-  }
-
-  List<Object> take() {
-    var result = events;
-    events = [];
-    return result;
-  }
-}
-
-class EventsPrinter {
-  final EventsPrinterConfiguration configuration;
-  final ResourceProvider resourceProvider;
-  final TreeStringSink sink;
-
-  EventsPrinter({
-    required this.configuration,
-    required this.resourceProvider,
-    required this.sink,
-  });
-
-  void write(List<Object> events) {
-    for (var event in events) {
-      switch (event) {
-        case AnalysisErrorsParams():
-          sink.writelnWithIndent('AnalysisErrors');
-          sink.withIndent(() {
-            _writelnFile(name: 'file', event.file);
-            if (event.errors.isNotEmpty) {
-              sink.writelnWithIndent('errors: notEmpty');
-            } else {
-              sink.writelnWithIndent('errors: empty');
-            }
-          });
-        case AnalysisFlushResultsParams():
-          sink.writeElements(
-            'AnalysisFlushResults',
-            event.files.sorted(),
-            _writelnFile,
-          );
-        default:
-          throw UnimplementedError('${event.runtimeType}');
-      }
-    }
-  }
-
-  void _writelnFile(String path, {String? name}) {
-    sink.writeIndentedLine(() {
-      if (name != null) {
-        sink.write('$name: ');
-      }
-      var file = resourceProvider.getFile(path);
-      sink.write(file.posixPath);
-    });
-  }
-}
-
-class EventsPrinterConfiguration {}
 
 abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
     with
@@ -131,7 +36,9 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
   final StreamController<NotificationMessage> _notificationsFromServer =
       StreamController<NotificationMessage>.broadcast();
 
-  LspOverLegacyTest() {
+  bool _hasSetClientCapabilities = false;
+
+  new() {
     // Ensure the base fields for the tests are populated with the same default
     // client caapbilities that the server uses. This ensures if a test does not
     // explicitly set capabilities, they match on the client+server (so we can -
@@ -209,31 +116,6 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
     );
   }
 
-  Future<void> assertEventsText(
-    EventsCollector collector,
-    String expected,
-  ) async {
-    await pumpEventQueue(times: 5000);
-
-    var buffer = StringBuffer();
-    var sink = TreeStringSink(sink: buffer, indent: '');
-
-    var events = collector.take();
-    EventsPrinter(
-      configuration: EventsPrinterConfiguration(),
-      resourceProvider: resourceProvider,
-      sink: sink,
-    ).write(events);
-
-    var actual = buffer.toString();
-    if (actual != expected) {
-      print('-------- Actual --------');
-      print('$actual------------------------');
-      TextExpectationsCollector.add(actual);
-    }
-    expect(actual, expected);
-  }
-
   /// Creates a legacy request with an auto-assigned ID.
   Request createLegacyRequest(RequestParams params) {
     return params.toRequest(
@@ -273,6 +155,11 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
     return super.handleRequest(request);
   }
 
+  Future<void> initializeServer() async {
+    await setRoots(included: [testPackageRootPath], excluded: []);
+    await waitForTasksFinished();
+  }
+
   /// Gets the number of recorded responses for [method].
   int numberOfRecordedResponses(String method) {
     return server.analyticsManager
@@ -292,9 +179,9 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
       // Round-trip response via JSON because this doesn't happen automatically
       // when we're bypassing the streams (running in-process) and we want to
       // validate everything.
-      var lspNotificationJson =
-          jsonDecode(jsonEncode(params.lspNotification))
-              as Map<String, Object?>;
+      var lspNotificationJson = jsonDecode(
+        jsonEncode(params.lspNotification),
+      ) as Map<String, Object?>;
       var lspNotificationMessage = NotificationMessage.fromJson(
         lspNotificationJson,
       );
@@ -316,6 +203,9 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
   /// Send the configured LSP client capabilities to the server in a
   /// `server.setClientCapabilities` request.
   Future<void> sendClientCapabilities() async {
+    expect(hasSetRoots, false);
+    expect(_hasSetClientCapabilities, false);
+    _hasSetClientCapabilities = true;
     var clientCapabilities = ClientCapabilities(
       workspace: workspaceCapabilities,
       textDocument: textDocumentCapabilities,
@@ -366,9 +256,8 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
         // A client-provided response to an LSP reverse-request is always
         // a full LSP result payload as the "result". The legacy request should
         // always succeed and any errors handled as LSP error responses within.
-        result: LspHandleResult(
-          response,
-        ).toJson(clientUriConverter: uriConverter),
+        result: LspHandleResult(response)
+            .toJson(clientUriConverter: uriConverter),
       ),
     );
   }
@@ -376,7 +265,6 @@ abstract class LspOverLegacyTest extends PubPackageAnalysisServerTest
   @override
   Future<void> setUp() async {
     super.setUp();
-    await setRoots(included: [testPackageRootPath], excluded: []);
   }
 
   Future<void> updateOverlay(String filePath, SourceEdit edit) {
@@ -403,9 +291,6 @@ abstract class SharedLspOverLegacyTest extends LspOverLegacyTest
   final Set<String> _priorityFiles = {};
 
   @override
-  Future<void> get currentAnalysis => waitForTasksFinished();
-
-  @override
   Future<void> closeFile(Uri uri) async {
     // closeFile should both remove the overlay and remove from priority files,
     // since that's equivalent of what the LSP document handlers do and shared
@@ -419,11 +304,6 @@ abstract class SharedLspOverLegacyTest extends LspOverLegacyTest
   @override
   void createFile(String path, String content) {
     newFile(path, content);
-  }
-
-  @override
-  Future<void> initializeServer() async {
-    await waitForTasksFinished();
   }
 
   @override
@@ -461,6 +341,9 @@ abstract class SharedLspOverLegacyTest extends LspOverLegacyTest
     // For legacy, we can use addOverlay to replace the whole file.
     await addOverlay(fromUri(uri), content);
   }
+
+  @override
+  Future<void> workspaceAnalysisComplete() => waitForTasksFinished();
 
   void _updatePriorityFiles() {
     setPriorityFiles(_priorityFiles.map(getFile).toList());

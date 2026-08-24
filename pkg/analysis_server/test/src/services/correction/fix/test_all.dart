@@ -13,7 +13,6 @@ import 'add_curly_braces_test.dart' as add_curly_braces;
 import 'add_diagnostic_property_reference_test.dart'
     as add_diagnostic_property_reference;
 import 'add_empty_argument_list_test.dart' as add_empty_argument_list;
-import 'add_enum_constant_test.dart' as add_enum_constant_test;
 import 'add_eol_at_end_of_file_test.dart' as add_eol_at_end_of_file;
 import 'add_explicit_call_test.dart' as add_explicit_call;
 import 'add_explicit_cast_test.dart' as add_explicit_cast;
@@ -75,7 +74,6 @@ import 'convert_into_is_not_test.dart' as convert_into_is_not;
 import 'convert_null_check_to_null_aware_element_or_entry_test.dart'
     as convert_null_check_to_null_aware_element_or_entry;
 import 'convert_quotes_test.dart' as convert_quotes;
-import 'convert_related_to_cascade_test.dart' as convert_related_to_cascade;
 import 'convert_to_block_function_body_test.dart'
     as convert_to_block_function_body;
 import 'convert_to_boolean_expression_test.dart'
@@ -129,6 +127,7 @@ import 'create_constructor_for_final_fields_test.dart'
     as create_constructor_for_final_field;
 import 'create_constructor_super_test.dart' as create_constructor_super;
 import 'create_constructor_test.dart' as create_constructor;
+import 'create_enum_constant_test.dart' as create_enum_constant;
 import 'create_extension_member_test.dart' as create_extension_member;
 import 'create_field_test.dart' as create_field;
 import 'create_file_test.dart' as create_file;
@@ -233,6 +232,8 @@ import 'remove_parameters_in_getter_declaration_test.dart'
     as remove_parameters_in_getter_declaration;
 import 'remove_parentheses_in_getter_invocation_test.dart'
     as remove_parentheses_in_getter_invocation;
+import 'remove_primary_constructor_body_test.dart'
+    as remove_primary_constructor_body;
 import 'remove_print_test.dart' as remove_print;
 import 'remove_question_mark_test.dart' as remove_question_mark;
 import 'remove_required_test.dart' as remove_required;
@@ -314,6 +315,7 @@ import 'replace_with_not_null_aware_element_or_entry_test.dart'
 import 'replace_with_not_null_aware_test.dart' as replace_with_not_null_aware;
 import 'replace_with_null_aware_test.dart' as replace_with_null_aware;
 import 'replace_with_part_of_uri_test.dart' as replace_with_part_of_uri;
+import 'replace_with_syncvalue_test.dart' as replace_with_syncvalue;
 import 'replace_with_tear_off_test.dart' as replace_with_tear_off;
 import 'replace_with_unicode_escape_test.dart' as replace_with_unicode_escape_;
 import 'replace_with_var_test.dart' as replace_with_var;
@@ -350,7 +352,6 @@ void main() {
     add_curly_braces.main();
     add_diagnostic_property_reference.main();
     add_empty_argument_list.main();
-    add_enum_constant_test.main();
     add_eol_at_end_of_file.main();
     add_explicit_call.main();
     add_explicit_cast.main();
@@ -400,7 +401,6 @@ void main() {
     convert_into_is_not.main();
     convert_null_check_to_null_aware_element_or_entry.main();
     convert_quotes.main();
-    convert_related_to_cascade.main();
     convert_to_block_function_body.main();
     convert_to_boolean_expression.main();
     convert_to_cascade.main();
@@ -440,6 +440,7 @@ void main() {
     create_constructor_for_final_field.main();
     create_constructor_super.main();
     create_constructor.main();
+    create_enum_constant.main();
     create_extension_member.main();
     create_field.main();
     create_file.main();
@@ -534,6 +535,7 @@ void main() {
     remove_operator.main();
     remove_parameters_in_getter_declaration.main();
     remove_parentheses_in_getter_invocation.main();
+    remove_primary_constructor_body.main();
     remove_print.main();
     remove_question_mark.main();
     remove_required.main();
@@ -604,6 +606,7 @@ void main() {
     replace_with_not_null_aware_element_or_entry.main();
     replace_with_null_aware.main();
     replace_with_part_of_uri.main();
+    replace_with_syncvalue.main();
     replace_with_tear_off.main();
     replace_with_unicode_escape_.main();
     replace_with_var.main();

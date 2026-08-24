@@ -19,7 +19,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'No await no async.';
 
 class UnnecessaryAsync extends AnalysisRule {
-  UnnecessaryAsync()
+  new()
     : super(
         name: LintNames.unnecessary_async,
         description: _desc,
@@ -97,11 +97,7 @@ class _HasAwaitVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFunctionDeclaration(covariant FunctionDeclarationImpl node) {
     var element = node.declaredFragment!.element;

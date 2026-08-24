@@ -62,7 +62,7 @@ library
           reference: <testLibrary>::@class::A::@constructor::new
           firstFragment: #F3
       methods
-        hasEnclosingTypeParameterReference isOriginDeclaration X
+        hasEnclosingTypeParameterReference hasImplicitReturnType isOriginDeclaration X
           reference: <testLibrary>::@class::A::@method::X
           firstFragment: #F4
           formalParameters
@@ -101,7 +101,7 @@ library
               element: <testLibrary>::@class::X::@field::f
               inducedGetter: #F3
           constructors
-            #F4 isCompleteDeclaration isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:76) (offset:82)
+            #F4 isComplete isConst isOriginDeclaration new (nameOffset:<null>) (firstTokenOffset:76) (offset:82)
               element: <testLibrary>::@class::X::@constructor::new
               typeName: X
               typeNameOffset: 82
@@ -110,7 +110,7 @@ library
                   element: <testLibrary>::@class::X::@constructor::new::@formalParameter::f
                   initializer: expression_0
                     FunctionReference
-                      function: SimpleIdentifier
+                      function2: SimpleIdentifier
                         token: defaultF @93
                         element: <testLibrary>::@function::defaultF
                         staticType: void Function<T>(T)
@@ -118,7 +118,7 @@ library
                       typeArgumentTypes
                         dynamic
           getters
-            #F3 isCompleteDeclaration isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:71)
+            #F3 isComplete isOriginVariable f (nameOffset:<null>) (firstTokenOffset:<null>) (offset:71)
               element: <testLibrary>::@class::X::@getter::f
               inducingVariable: #F2
       typeAliases
@@ -128,7 +128,7 @@ library
             #F7 T (nameOffset:15) (firstTokenOffset:15) (offset:15)
               element: #E0 T
       functions
-        #F8 isCompleteDeclaration isOriginDeclaration isStatic defaultF (nameOffset:30) (firstTokenOffset:25) (offset:30)
+        #F8 isComplete isOriginDeclaration isStatic defaultF (nameOffset:30) (firstTokenOffset:25) (offset:30)
           element: <testLibrary>::@function::defaultF
           typeParameters
             #F9 T (nameOffset:39) (firstTokenOffset:39) (offset:39)
@@ -230,16 +230,16 @@ library
               element: <testLibrary>::@class::B::@constructor::new
               typeName: B
           methods
-            #F6 isCompleteDeclaration isOriginDeclaration foo (nameOffset:46) (firstTokenOffset:41) (offset:46)
+            #F6 isComplete isOriginDeclaration foo (nameOffset:46) (firstTokenOffset:41) (offset:46)
               element: <testLibrary>::@class::B::@method::foo
               formalParameters
                 #F7 optionalNamed hasImplicitType isOriginDeclaration a (nameOffset:51) (firstTokenOffset:51) (offset:51)
                   element: <testLibrary>::@class::B::@method::foo::@formalParameter::a
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @54
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: A @60
                           typeArguments: TypeArgumentList
                             leftBracket: < @61
@@ -257,7 +257,7 @@ library
                             rightBracket: > @72
                           element: <testLibrary>::@class::A
                           type: A<dynamic Function()>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::A::@constructor::new
                           substitution: {T: dynamic Function()}
                       argumentList: ArgumentList
@@ -308,25 +308,11 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 requiredPositional isOriginDeclaration g (nameOffset:8) (firstTokenOffset:8) (offset:8)
               element: <testLibrary>::@function::f::@formalParameter::g
-              parameters
-                #F3 optionalNamed hasImplicitType isOriginDeclaration a (nameOffset:11) (firstTokenOffset:11) (offset:11)
-                  element: a@11
-                  initializer: expression_0
-                    IsExpression
-                      expression: IntegerLiteral
-                        literal: 0 @14
-                        staticType: null
-                      isOperator: is @16
-                      type: NamedType
-                        name: int @19
-                        element: <null>
-                        type: null
-                      staticType: null
   functions
     isOriginDeclaration isStatic f
       reference: <testLibrary>::@function::f
@@ -335,13 +321,6 @@ library
         #E0 requiredPositional g
           firstFragment: #F2
           type: dynamic Function({dynamic a})
-          formalParameters
-            #E1 optionalNamed hasDefaultValue hasImplicitType a
-              firstFragment: #F3
-              type: dynamic
-              constantInitializer
-                fragment: #F3
-                expression: expression_0
       returnType: void
 ''');
   }
@@ -357,7 +336,7 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 optionalPositional isOriginDeclaration compare (nameOffset:22) (firstTokenOffset:8) (offset:22)
@@ -404,7 +383,7 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 optionalNamed isOriginDeclaration x (nameOffset:28) (firstTokenOffset:8) (offset:28)
@@ -412,17 +391,17 @@ library
               initializer: expression_0
                 RecordLiteral
                   leftParenthesis: ( @32
-                  fields
+                  fields2
                     RecordLiteralNamedField
                       name: f1 @33
                       colon: : @35
-                      fieldExpression: IntegerLiteral
+                      fieldExpression2: IntegerLiteral
                         literal: 1 @37
                         staticType: int
                     RecordLiteralNamedField
                       name: f2 @40
                       colon: : @42
-                      fieldExpression: BooleanLiteral
+                      fieldExpression2: BooleanLiteral
                         literal: true @44
                         staticType: bool
                   rightParenthesis: ) @48
@@ -453,7 +432,7 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 optionalNamed isOriginDeclaration x (nameOffset:28) (firstTokenOffset:8) (offset:28)
@@ -462,17 +441,17 @@ library
                 RecordLiteral
                   constKeyword: const @32
                   leftParenthesis: ( @38
-                  fields
+                  fields2
                     RecordLiteralNamedField
                       name: f1 @39
                       colon: : @41
-                      fieldExpression: IntegerLiteral
+                      fieldExpression2: IntegerLiteral
                         literal: 1 @43
                         staticType: int
                     RecordLiteralNamedField
                       name: f2 @46
                       colon: : @48
-                      fieldExpression: BooleanLiteral
+                      fieldExpression2: BooleanLiteral
                         literal: true @50
                         staticType: bool
                   rightParenthesis: ) @54
@@ -503,7 +482,7 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 optionalNamed isOriginDeclaration x (nameOffset:20) (firstTokenOffset:8) (offset:20)
@@ -511,7 +490,7 @@ library
               initializer: expression_0
                 RecordLiteral
                   leftParenthesis: ( @24
-                  fields
+                  fields2
                     IntegerLiteral
                       literal: 1 @25
                       staticType: int
@@ -546,7 +525,7 @@ library
     #F0 <testLibraryFragment>
       element: <testLibrary>
       functions
-        #F1 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
+        #F1 isComplete isOriginDeclaration isStatic f (nameOffset:5) (firstTokenOffset:0) (offset:5)
           element: <testLibrary>::@function::f
           formalParameters
             #F2 optionalNamed isOriginDeclaration x (nameOffset:20) (firstTokenOffset:8) (offset:20)
@@ -555,7 +534,7 @@ library
                 RecordLiteral
                   constKeyword: const @24
                   leftParenthesis: ( @30
-                  fields
+                  fields2
                     IntegerLiteral
                       literal: 1 @31
                       staticType: int
@@ -605,9 +584,9 @@ library
         #F3 extension E (nameOffset:22) (firstTokenOffset:12) (offset:22)
           element: <testLibrary>::@extension::E
           methods
-            #F4 isCompleteDeclaration isOriginDeclaration isStatic f (nameOffset:45) (firstTokenOffset:33) (offset:45)
+            #F4 isComplete isOriginDeclaration isStatic f (nameOffset:45) (firstTokenOffset:33) (offset:45)
               element: <testLibrary>::@extension::E::@method::f
-            #F5 isCompleteDeclaration isOriginDeclaration isStatic g (nameOffset:66) (firstTokenOffset:54) (offset:66)
+            #F5 isComplete isOriginDeclaration isStatic g (nameOffset:66) (firstTokenOffset:54) (offset:66)
               element: <testLibrary>::@extension::E::@method::g
               formalParameters
                 #F6 optionalPositional isOriginDeclaration p (nameOffset:76) (firstTokenOffset:69) (offset:76)
@@ -686,20 +665,20 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           methods
-            #F7 isCompleteDeclaration isOriginDeclaration foo (nameOffset:51) (firstTokenOffset:46) (offset:51)
+            #F7 isComplete isOriginDeclaration foo (nameOffset:51) (firstTokenOffset:46) (offset:51)
               element: <testLibrary>::@class::C::@method::foo
               formalParameters
                 #F8 optionalPositional isOriginDeclaration b (nameOffset:71) (firstTokenOffset:56) (offset:71)
                   element: <testLibrary>::@class::C::@method::foo::@formalParameter::b
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @75
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @81
                           element: <testLibrary>::@class::B
                           type: B<int, double>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T1: int, T2: double}
                       argumentList: ArgumentList
@@ -782,14 +761,14 @@ library
                 #F7 optionalPositional isOriginDeclaration b (nameOffset:58) (firstTokenOffset:53) (offset:58)
                   element: <testLibrary>::@class::C::@constructor::new::@formalParameter::b
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @62
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @68
                           element: <testLibrary>::@class::B
                           type: B<Never>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T: Never}
                       argumentList: ArgumentList
@@ -879,14 +858,14 @@ library
                 #F10 optionalPositional isOriginDeclaration a (nameOffset:124) (firstTokenOffset:119) (offset:124)
                   element: <testLibrary>::@class::C::@constructor::new::@formalParameter::a
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @128
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @134
                           element: <testLibrary>::@class::B
                           type: B<Never>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T: Never}
                       argumentList: ArgumentList
@@ -964,7 +943,7 @@ library
               typeName: B
               typeNameOffset: 21
       functions
-        #F4 isCompleteDeclaration isOriginDeclaration isStatic foo (nameOffset:34) (firstTokenOffset:29) (offset:34)
+        #F4 isComplete isOriginDeclaration isStatic foo (nameOffset:34) (firstTokenOffset:29) (offset:34)
           element: <testLibrary>::@function::foo
           typeParameters
             #F5 T (nameOffset:38) (firstTokenOffset:38) (offset:38)
@@ -973,14 +952,14 @@ library
             #F6 optionalPositional isOriginDeclaration b (nameOffset:47) (firstTokenOffset:42) (offset:47)
               element: <testLibrary>::@function::foo::@formalParameter::b
               initializer: expression_0
-                InstanceCreationExpression
+                ConstructorInvocation
                   keyword: const @51
-                  constructorName: ConstructorName
-                    type: NamedType
+                  constructorReference: ConstructorReference2
+                    typeReference: ConstructorTypeReference
                       name: B @57
                       element: <testLibrary>::@class::B
                       type: B<Never>
-                    element: ConstructorMember
+                    element: SubstitutedConstructorElementImpl
                       baseElement: <testLibrary>::@class::B::@constructor::new
                       substitution: {T: Never}
                   argumentList: ArgumentList
@@ -1050,7 +1029,7 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           methods
-            #F6 isCompleteDeclaration isOriginDeclaration foo (nameOffset:46) (firstTokenOffset:41) (offset:46)
+            #F6 isComplete isOriginDeclaration foo (nameOffset:46) (firstTokenOffset:41) (offset:46)
               element: <testLibrary>::@class::C::@method::foo
               typeParameters
                 #F7 T (nameOffset:50) (firstTokenOffset:50) (offset:50)
@@ -1059,14 +1038,14 @@ library
                 #F8 optionalPositional isOriginDeclaration b (nameOffset:59) (firstTokenOffset:54) (offset:59)
                   element: <testLibrary>::@class::C::@method::foo::@formalParameter::b
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @63
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @69
                           element: <testLibrary>::@class::B
                           type: B<Never>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T: Never}
                       argumentList: ArgumentList
@@ -1148,7 +1127,7 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           methods
-            #F8 isCompleteDeclaration isOriginDeclaration foo (nameOffset:55) (firstTokenOffset:50) (offset:55)
+            #F8 isComplete isOriginDeclaration foo (nameOffset:55) (firstTokenOffset:50) (offset:55)
               element: <testLibrary>::@class::C::@method::foo
               typeParameters
                 #F9 E2 (nameOffset:59) (firstTokenOffset:59) (offset:59)
@@ -1157,14 +1136,14 @@ library
                 #F10 optionalPositional isOriginDeclaration b (nameOffset:74) (firstTokenOffset:64) (offset:74)
                   element: <testLibrary>::@class::C::@method::foo::@formalParameter::b
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @78
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @84
                           element: <testLibrary>::@class::B
                           type: B<Never, Never>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T1: Never, T2: Never}
                       argumentList: ArgumentList
@@ -1249,20 +1228,20 @@ library
               element: <testLibrary>::@class::C::@constructor::new
               typeName: C
           methods
-            #F7 isCompleteDeclaration isOriginDeclaration foo (nameOffset:49) (firstTokenOffset:44) (offset:49)
+            #F7 isComplete isOriginDeclaration foo (nameOffset:49) (firstTokenOffset:44) (offset:49)
               element: <testLibrary>::@class::C::@method::foo
               formalParameters
                 #F8 optionalPositional isOriginDeclaration b (nameOffset:59) (firstTokenOffset:54) (offset:59)
                   element: <testLibrary>::@class::C::@method::foo::@formalParameter::b
                   initializer: expression_0
-                    InstanceCreationExpression
+                    ConstructorInvocation
                       keyword: const @63
-                      constructorName: ConstructorName
-                        type: NamedType
+                      constructorReference: ConstructorReference2
+                        typeReference: ConstructorTypeReference
                           name: B @69
                           element: <testLibrary>::@class::B
                           type: B<Never>
-                        element: ConstructorMember
+                        element: SubstitutedConstructorElementImpl
                           baseElement: <testLibrary>::@class::B::@constructor::new
                           substitution: {T: Never}
                       argumentList: ArgumentList

@@ -282,13 +282,13 @@ class _SummaryNormalizer implements StatementVisitor {
 /// modified in loops and try blocks.
 class _VariablesInfoCollector extends RecursiveVisitor {
   /// Maps declared variables to their declaration index.
-  final Map<VariableDeclaration, int> varIndex = <VariableDeclaration, int>{};
+  final Map<Variable, int> varIndex = <Variable, int>{};
 
   /// Variable declarations.
-  final List<VariableDeclaration> varDeclarations = <VariableDeclaration>[];
+  final List<Variable> varDeclarations = <Variable>[];
 
   /// Set of captured variables.
-  Set<VariableDeclaration>? captured;
+  Set<Variable>? captured;
 
   /// Set of variables which were modified for each loop, switch statement
   /// and try block statement. Doesn't include captured variables and
@@ -314,7 +314,7 @@ class _VariablesInfoCollector extends RecursiveVisitor {
 
   int get numVariables => varDeclarations.length;
 
-  bool isCaptured(VariableDeclaration variable) {
+  bool isCaptured(Variable variable) {
     final captured = this.captured;
     return captured != null && captured.contains(variable);
   }
@@ -349,11 +349,11 @@ class _VariablesInfoCollector extends RecursiveVisitor {
   bool _isDeclaredBefore(int variableIndex, int entryDeclarationCounter) =>
       variableIndex < entryDeclarationCounter;
 
-  void _captureVariable(VariableDeclaration variable) {
-    (captured ??= <VariableDeclaration>{}).add(variable);
+  void _captureVariable(Variable variable) {
+    (captured ??= <Variable>{}).add(variable);
   }
 
-  void _useVariable(VariableDeclaration variable, bool isVarAssignment) {
+  void _useVariable(Variable variable, bool isVarAssignment) {
     final index = varIndex[variable]!;
     if (_isDeclaredBefore(index, numVariablesAtFunctionEntry)) {
       _captureVariable(variable);
@@ -409,7 +409,7 @@ class _VariablesInfoCollector extends RecursiveVisitor {
   }
 
   @override
-  defaultVariableDeclaration(VariableDeclaration node) {
+  defaultVariable(Variable node) {
     final int index = numVariables;
     varDeclarations.add(node);
     varIndex[node] = index;
@@ -593,7 +593,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
   // Cached unconditional reads of captured variables
   // (can be reused to avoid repetitive reads).
-  Map<VariableDeclaration, ReadVariable>? _capturedVariableReads;
+  Map<Variable, ReadVariable>? _capturedVariableReads;
 
   // Counts number of Joins inserted for each variable. Only used to set
   // readable names for such joins (foo_0, foo_1 etc.)
@@ -789,49 +789,20 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
         _genericInterfacesInfo,
       );
 
-      // Handle forwarding stubs. We need to check types against the types of
-      // the forwarding stub's target, [member.concreteForwardingStubTarget].
-      FunctionNode useTypesFrom = function;
-      if (member is Procedure &&
-          member.isForwardingStub &&
-          localFunction == null) {
-        final target = member.concreteForwardingStubTarget;
-        if (target != null) {
-          if (target is Field) {
-            useTypesFrom = FunctionNode(
-              null,
-              positionalParameters: [
-                VariableDeclaration(
-                  "value",
-                  type: target.type,
-                  isSynthesized: true,
-                ),
-              ],
-            );
-          } else {
-            useTypesFrom = target.function!;
-          }
-        }
-      }
-
       for (int i = 0; i < function.positionalParameters.length; ++i) {
         final decl = function.positionalParameters[i];
         _declareParameter(
-          decl.name!,
-          _useTypeCheckForParameter(decl)
-              ? null
-              : useTypesFrom.positionalParameters[i].type,
-          decl.initializer,
+          decl.parameterName,
+          _useTypeCheckForParameter(decl) ? null : decl.type,
+          decl.defaultValue,
         );
       }
       for (int i = 0; i < function.namedParameters.length; ++i) {
         final decl = function.namedParameters[i];
         _declareParameter(
-          decl.name!,
-          _useTypeCheckForParameter(decl)
-              ? null
-              : useTypesFrom.namedParameters[i].type,
-          decl.initializer,
+          decl.parameterName,
+          _useTypeCheckForParameter(decl) ? null : decl.type,
+          decl.defaultValue,
         );
       }
 
@@ -851,19 +822,17 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
       int count = firstParamIndex;
       for (int i = 0; i < function.positionalParameters.length; ++i) {
         final decl = function.positionalParameters[i];
-        final type = useTypesFrom.positionalParameters[i].type;
         TypeExpr param = _summary.statements[count++];
         if (_useTypeCheckForParameter(decl)) {
-          param = _typeCheck(param, type, decl);
+          param = _typeCheck(param, decl.type, decl);
         }
         _declareVariable(decl, param);
       }
       for (int i = 0; i < function.namedParameters.length; ++i) {
         final decl = function.namedParameters[i];
-        final type = useTypesFrom.namedParameters[i].type;
         TypeExpr param = _summary.statements[count++];
         if (_useTypeCheckForParameter(decl)) {
-          param = _typeCheck(param, type, decl);
+          param = _typeCheck(param, decl.type, decl);
         }
         _declareVariable(decl, param);
       }
@@ -979,7 +948,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
     return _summary;
   }
 
-  bool _useTypeCheckForParameter(VariableDeclaration decl) {
+  bool _useTypeCheckForParameter(Variable decl) {
     return decl.isCovariantByDeclaration || decl.isCovariantByClass;
   }
 
@@ -1022,7 +991,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
           if (function.namedParameters.isNotEmpty) {
             for (var param in function.namedParameters) {
-              names.add(param.name!);
+              names.add(param.parameterName);
             }
             // TODO(dartbug.com/32292): make sure parameters are sorted in
             // kernel AST and remove this sorting.
@@ -1097,7 +1066,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
   Parameter _declareParameter(
     String name,
     DartType? type,
-    Expression? initializer, {
+    Expression? defaultValue, {
     bool isReceiver = false,
   }) {
     Type? staticType;
@@ -1108,28 +1077,28 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
     _summary.add(param);
     assert(param.index < _summary.parameterCount);
     if (param.index >= _summary.requiredParameterCount) {
-      if (initializer != null) {
-        if (initializer is ConstantExpression) {
+      if (defaultValue != null) {
+        if (defaultValue is ConstantExpression) {
           param.defaultValue = constantAllocationCollector.typeFor(
-            initializer.constant,
+            defaultValue.constant,
           );
-        } else if (initializer is BasicLiteral ||
-            initializer is SymbolLiteral ||
-            initializer is TypeLiteral) {
-          param.defaultValue = _visit(initializer) as Type;
+        } else if (defaultValue is BasicLiteral ||
+            defaultValue is TypeLiteral) {
+          param.defaultValue = _visit(defaultValue) as Type;
         } else {
-          throw 'Unexpected parameter $name default value ${initializer.runtimeType} $initializer';
+          throw 'Unexpected parameter $name default value '
+              '${defaultValue.runtimeType} $defaultValue';
         }
       } else {
         param.defaultValue = _nullType;
       }
     } else {
-      assert(initializer == null);
+      assert(defaultValue == null);
     }
     return param;
   }
 
-  void _declareVariable(VariableDeclaration decl, TypeExpr initialValue) {
+  void _declareVariable(Variable decl, TypeExpr initialValue) {
     final int varIndex = _variablesInfo.varIndex[decl]!;
     assert(_variablesInfo.varDeclarations[varIndex] == decl);
     assert(_variableValues[varIndex] == null);
@@ -1144,7 +1113,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
     }
   }
 
-  void _writeVariable(VariableDeclaration variable, TypeExpr value) {
+  void _writeVariable(Variable variable, TypeExpr value) {
     if (_variablesInfo.isCaptured(variable)) {
       assert(_aggregateVariable[_variablesInfo.varIndex[variable]!]);
       final sharedVar = _sharedVariableBuilder.getSharedVariable(variable);
@@ -1164,7 +1133,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
   TypeExpr _readReceiver() => _receiver!;
 
-  TypeExpr _readVariable(VariableDeclaration variable, TreeNode node) {
+  TypeExpr _readVariable(Variable variable, TreeNode node) {
     if (_variablesInfo.isCaptured(variable)) {
       assert(_aggregateVariable[_variablesInfo.varIndex[variable]!]);
       final cachedRead = _capturedVariableReads?[variable];
@@ -1214,9 +1183,8 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
   }
 
   Join _makeJoin(int varIndex, TypeExpr value) {
-    final VariableDeclaration variable =
-        _variablesInfo.varDeclarations[varIndex];
-    final name = '${variable.name}_${_variableVersions[varIndex]++}';
+    final Variable variable = _variablesInfo.varDeclarations[varIndex];
+    final name = '${variable.cosmeticName}_${_variableVersions[varIndex]++}';
     final Join join = new Join(name, variable.type);
     join.condition = _currentCondition;
     _summary.add(join);
@@ -1363,7 +1331,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
   }
 
   // TODO(alexmarkov): Avoid declaring variables with static types.
-  void _declareVariableWithStaticType(VariableDeclaration decl) {
+  void _declareVariableWithStaticType(Variable decl) {
     final initializer = decl.initializer;
     if (initializer != null) {
       _visit(initializer);
@@ -1391,10 +1359,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
         staticResultType = emptyType;
       } else if (target is Procedure) {
         final returnType = target.function.returnType;
-        // TODO(dartbug.com/54200): static type cannot be trusted when
-        // function type is returned.
-        if (returnType is TypeParameterType ||
-            (returnType != staticDartType && returnType is! FunctionType)) {
+        if (returnType is TypeParameterType || returnType != staticDartType) {
           staticResultType = _typesBuilder.fromStaticType(staticDartType, true);
         }
       }
@@ -1742,7 +1707,6 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
                 _environment.coreTypes.doubleNullableRawType,
               )) ||
           (isStringConstant(rhs) &&
-              target.canInferStringClassAfterEqualityComparison &&
               _isSubtype(
                 lhs.variable.type,
                 _environment.coreTypes.stringNullableRawType,
@@ -1963,7 +1927,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
   @override
   TypeExpr visitLet(Let node) {
-    _declareVariable(node.variable, _visit(node.variable.initializer!));
+    _declareVariable(node.variable, _visit(node.value));
     return _visit(node.body);
   }
 
@@ -2457,9 +2421,9 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
   }
 
   @override
-  TypeExpr visitSymbolLiteral(SymbolLiteral node) {
-    return _staticType(node);
-  }
+  TypeExpr visitSymbolLiteral(SymbolLiteral node) => throw UnsupportedError(
+    "Expected SymbolLiteral to be lowered to SymbolConstant by CFE",
+  );
 
   @override
   TypeExpr visitThisExpression(ThisExpression node) {
@@ -2600,7 +2564,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
   @override
   TypeExpr? visitForStatement(ForStatement node) {
-    node.variables.forEach((v) => defaultVariableDeclaration(v.variable));
+    node.variables.forEach((v) => defaultVariable(v.variable));
     final List<Join?> joins = _insertJoinsForModifiedVariables(node, false);
     final trueState = _cloneVariableValues(_variableValues);
     final falseState = _cloneVariableValues(_variableValues);
@@ -2808,22 +2772,32 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
   }
 
   @override
-  TypeExpr? visitLegacyVariableStatement(LegacyVariableStatement node) {
-    defaultVariableDeclaration(node.variable);
+  TypeExpr? visitVariableDeclaration(VariableDeclaration node) {
+    defaultVariable(node.variable);
     return null;
   }
 
-  TypeExpr? defaultVariableDeclaration(VariableDeclaration node) {
-    final variable = node.variable;
-    variable.annotations.forEach(_visitAnnotation);
-    final initializer = variable.initializer;
+  @override
+  TypeExpr? visitVariableStatement(VariableStatement node) {
+    visitVariableDeclaration(node.declaration);
+    return null;
+  }
+
+  TypeExpr? defaultVariable(Variable node) {
+    node.annotations.forEach(_visitAnnotation);
+    final initializer = node.initializer;
+    final savedCondition = _currentCondition;
     final TypeExpr initialValue = initializer == null
-        ? ((variable.type.nullability == Nullability.nonNullable ||
-                  variable.isLate)
+        ? ((node.type.nullability == Nullability.nonNullable || node.isLate)
               ? emptyType
               : _nullType)
         : _visit(initializer);
-    _declareVariable(variable, initialValue);
+    _declareVariable(node, initialValue);
+    if (node.isLate) {
+      // Restore condition as initializer of a late variable
+      // is not evaluated immediately.
+      _currentCondition = savedCondition;
+    }
     return null;
   }
 
@@ -2893,7 +2867,7 @@ class SummaryCollector extends RecursiveResultVisitor<TypeExpr?> {
 
   @override
   TypeExpr? visitLocalInitializer(LocalInitializer node) {
-    defaultVariableDeclaration(node.variable);
+    defaultVariable(node.variable);
     return null;
   }
 
@@ -3194,6 +3168,16 @@ class ConstantAllocationCollector implements ConstantVisitor<Type> {
 
   @override
   Type visitSymbolConstant(SymbolConstant constant) {
+    final Class? concreteClass = summaryCollector.target
+        .concreteConstSymbolLiteralClass(
+          summaryCollector._environment.coreTypes,
+        );
+    if (concreteClass != null) {
+      return summaryCollector._entryPointsListener
+          .addAllocatedClass(concreteClass)
+          .cls
+          .constantConcreteType(constant);
+    }
     return summaryCollector._symbolType;
   }
 

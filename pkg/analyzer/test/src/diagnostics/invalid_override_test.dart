@@ -2,14 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
+import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(InvalidOverrideTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -31,7 +32,11 @@ abstract class C implements B {
   }
 
   test_class_augment_method_covariant_multiFile_invalid() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
@@ -39,22 +44,25 @@ class A {
 }
 
 class B extends A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
   void foo(covariant String a) {}
+//     ^^^
+// [diag.invalidOverride] 'B.foo' ('void Function(String)') isn't a valid override of 'A.foo' ('void Function(num)').
 }
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [error(diag.invalidOverride, 44, 3)]);
+''',
+    });
   }
 
   test_class_augment_method_covariant_multiFile_valid() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
@@ -62,18 +70,15 @@ class A {
 }
 
 class B extends A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
   void foo(covariant int a) {}
 }
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
+''',
+    });
   }
 
   test_class_augment_method_covariant_singleFile_invalid() async {
@@ -107,28 +112,31 @@ augment class B {
   }
 
   test_class_augment_method_multiFile() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
   int foo() => 0;
+//    ^^^
+// [context 1] The member being overridden.
 }
 
 class B extends A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
   String foo() => '';
+//       ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('String Function()') isn't a valid override of 'A.foo' ('int Function()').
 }
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(diag.invalidOverride, 46, 3, contextMessages: [message(a, 32, 3)]),
-    ]);
+''',
+    });
   }
 
   test_class_augment_method_singleFile() async {
@@ -150,33 +158,31 @@ augment class B {
   }
 
   test_class_augment_setter_multiFile() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 class A {
   void set foo(int value) {}
+//         ^^^
+// [context 1] The setter being overridden.
 }
 
 class B extends A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class B {
   void set foo(String value) {}
+//         ^^^
+// [diag.invalidOverrideSetter][context 1] The setter 'B.foo' ('void Function(String)') isn't a valid override of 'A.foo' ('void Function(int)').
 }
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, [
-      error(
-        diag.invalidOverrideSetter,
-        48,
-        3,
-        contextMessages: [message(a, 37, 3)],
-      ),
-    ]);
+''',
+    });
   }
 
   test_class_augment_setter_singleFile() async {
@@ -198,7 +204,12 @@ augment class B {
   }
 
   test_class_augment_withClause_multiFile__declaration0_augment1_augment1() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+    var c = getFile('$testPackageLibPath/c.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 part 'c.dart';
 
@@ -206,63 +217,60 @@ mixin M1 {}
 mixin M2 {}
 
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class A with M1 {}
-''');
-
-    var c = newFile('$testPackageLibPath/c.dart', r'''
+''',
+      c: r'''
 part of 'a.dart';
 
 augment class A with M2 {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
-    await assertErrorsInFile2(c, []);
+''',
+    });
   }
 
   test_class_augment_withClause_multiFile_declaration0_augment2() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 mixin M1 {}
 mixin M2 {}
 
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class A with M1, M2 {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
+''',
+    });
   }
 
   test_class_augment_withClause_multiFile_declaration1_augment1() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 mixin M1 {}
 mixin M2 {}
 
 class A with M1 {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class A with M2 {}
-''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
+''',
+    });
   }
 
   test_class_augment_withClause_singleFile_declaration0_augment1() async {
@@ -311,22 +319,184 @@ augment class A with M2 {}
   }
 
   test_class_augment_withClause_twoFiles_declaration0_augment1() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
 part 'b.dart';
 
 mixin M {}
 
 class A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
+''',
+      b: r'''
 part of 'a.dart';
 
 augment class A with M {}
-''');
+''',
+    });
+  }
 
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
+  test_class_declaringFormalParameter_covariantVar_implements_setter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+class A {}
+class B extends A {}
+
+abstract class I {
+  set foo(A value);
+}
+
+class C(covariant var B foo) implements I;
+''');
+  }
+
+  test_class_declaringFormalParameter_final_extends_getter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  int get foo;
+//        ^^^
+// [context 1] The member being overridden.
+}
+class B(final num foo) extends A;
+//                ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('num Function()') isn't a valid override of 'A.foo' ('int Function()').
+''');
+  }
+
+  test_class_declaringFormalParameter_final_extends_getter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  num get foo;
+}
+class B(final int foo) extends A;
+''');
+  }
+
+  test_class_declaringFormalParameter_final_with_getter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+mixin M {
+  int get foo;
+//        ^^^
+// [context 1] The member being overridden.
+}
+class A(final num foo) with M;
+//                ^^^
+// [diag.invalidOverride][context 1] 'A.foo' ('num Function()') isn't a valid override of 'M.foo' ('int Function()').
+''');
+  }
+
+  test_class_declaringFormalParameter_final_with_getter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+mixin M {
+  num get foo;
+}
+class A(final int foo) with M;
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_getter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  int get foo;
+//        ^^^
+// [context 1] The member being overridden.
+}
+class B(var num foo) implements A;
+//              ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('num Function()') isn't a valid override of 'A.foo' ('int Function()').
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_getter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  num get foo;
+}
+class B(var int foo) implements A;
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_getterSetter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  abstract String foo;
+//                ^^^
+// [context 1] The member being overridden.
+// [context 2] The setter being overridden.
+}
+class B(var int foo) implements A;
+//              ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('int Function()') isn't a valid override of 'A.foo' ('String Function()').
+// [diag.invalidOverrideSetter][context 2] The setter 'B.foo' ('void Function(int)') isn't a valid override of 'A.foo' ('void Function(String)').
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_getterSetter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  abstract int foo;
+}
+class B(var int foo) implements A;
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_setter_inheritsCovariant_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+class A {}
+class B extends A {}
+
+class C(covariant var A foo);
+class D(var B foo) implements C;
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_setter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  set foo(num value);
+//    ^^^
+// [context 1] The setter being overridden.
+}
+class B(var int foo) implements A;
+//              ^^^
+// [diag.invalidOverrideSetter][context 1] The setter 'B.foo' ('void Function(int)') isn't a valid override of 'A.foo' ('void Function(num)').
+''');
+  }
+
+  test_class_declaringFormalParameter_var_implements_setter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  set foo(int value);
+}
+class B(var num foo) implements A;
+''');
+  }
+
+  test_enum_declaringFormalParameter_final_implements_getter_invalid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  int get foo;
+//        ^^^
+// [context 1] The member being overridden.
+}
+enum E(final num foo) implements A {
+//               ^^^
+// [diag.invalidOverride][context 1] 'E.foo' ('num Function()') isn't a valid override of 'A.foo' ('int Function()').
+  v(0)
+}
+''');
+  }
+
+  test_enum_declaringFormalParameter_final_implements_getter_valid() async {
+    await resolveTestCodeWithDiagnostics('''
+abstract class A {
+  num get foo;
+}
+enum E(final int foo) implements A {
+  v(0)
+}
+''');
   }
 
   test_external_field_covariant_inheritance() async {
@@ -935,29 +1105,22 @@ class B implements A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_method_returnType_interface_fromAugmentation() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo() => 0;
+//    ^^^
+// [context 1] The member being overridden.
 }
 
 class B {
   String foo() => '';
+//       ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('String Function()') isn't a valid override of 'A.foo' ('int Function()').
 }
 
 augment class B implements A {}
-''',
-      [
-        error(
-          diag.invalidOverride,
-          50,
-          3,
-          contextMessages: [message(testFile, 16, 3)],
-        ),
-      ],
-    );
+''');
   }
 
   test_method_returnType_interface_grandparent() async {
@@ -1007,29 +1170,22 @@ class B extends A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_method_returnType_superclass_fromAugmentation() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 class A {
   int foo() => 0;
+//    ^^^
+// [context 1] The member being overridden.
 }
 
 class B {
   String foo() => '';
+//       ^^^
+// [diag.invalidOverride][context 1] 'B.foo' ('String Function()') isn't a valid override of 'A.foo' ('int Function()').
 }
 
 augment class B extends A {}
-''',
-      [
-        error(
-          diag.invalidOverride,
-          50,
-          3,
-          contextMessages: [message(testFile, 16, 3)],
-        ),
-      ],
-    );
+''');
   }
 
   test_method_returnType_superclass_grandparent() async {
@@ -1133,29 +1289,24 @@ mixin M on A {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_mixin_method_returnType_on_fromAugmentation() async {
-    await assertErrorsInCode(
-      r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int foo() => 0;
+//    ^^^
+// [context 1] The member being overridden.
 }
 
 mixin M {
   String foo() => '';
+//       ^^^
+// [diag.invalidOverride][context 1] 'M.foo' ('String Function()') isn't a valid override of 'A.foo' ('int Function()').
 }
 
 augment mixin M on A {}
-''',
-      [
-        error(
-          diag.invalidOverride,
-          50,
-          3,
-          contextMessages: [message(testFile, 16, 3)],
-        ),
-      ],
-    );
+//              ^^
+// [diag.mixinAugmentationHasOnClause] Mixin augmentations can't have 'on' clauses.
+''');
   }
 
   test_mixin_setter_type_on() async {

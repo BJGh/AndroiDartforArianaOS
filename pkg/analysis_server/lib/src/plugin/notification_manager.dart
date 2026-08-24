@@ -5,8 +5,12 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:analysis_server/lsp_protocol/protocol.dart' as lsp;
 import 'package:analysis_server/protocol/protocol_generated.dart' as server;
 import 'package:analysis_server/src/channel/channel.dart';
+import 'package:analysis_server/src/legacy_analysis_server.dart';
+import 'package:analysis_server/src/lsp/client_capabilities.dart';
+import 'package:analysis_server/src/lsp/mapping.dart' as lsp;
 import 'package:analysis_server/src/plugin/result_collector.dart';
 import 'package:analysis_server/src/plugin/result_converter.dart';
 import 'package:analysis_server/src/plugin/result_merger.dart';
@@ -84,7 +88,7 @@ abstract class AbstractNotificationManager {
       StreamController.broadcast();
 
   /// Initialize a newly created notification manager.
-  AbstractNotificationManager(this._pathContext)
+  new(this._pathContext)
     : folding = ResultCollector<List<FoldingRegion>>(serverId),
       highlights = ResultCollector<List<HighlightRegion>>(serverId),
       _navigation = ResultCollector<server.AnalysisNavigationParams>(serverId),
@@ -352,31 +356,30 @@ abstract class AbstractNotificationManager {
     _currentSubscriptions = newSubscriptions;
   }
 
-  /// Return `true` if errors should be collected for the file with the given
+  /// Returns whether errors should be collected for the file with the given
   /// [path] (because it is being analyzed).
   bool _isIncluded(String path) {
-    bool isIncluded() {
-      for (var includedPath in _includedPaths) {
-        if (_pathContext.isWithin(includedPath, path) ||
-            _pathContext.equals(includedPath, path)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    bool isExcluded() {
-      for (var excludedPath in _excludedPaths) {
-        if (_pathContext.isWithin(excludedPath, path)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
     // TODO(brianwilkerson): Return false if error notifications are globally
     // disabled.
-    return isIncluded() && !isExcluded();
+    var isIncluded = false;
+    for (var includedPath in _includedPaths) {
+      if (_pathContext.isWithin(includedPath, path) ||
+          _pathContext.equals(includedPath, path)) {
+        isIncluded = true;
+        break;
+      }
+    }
+    if (!isIncluded) {
+      return false;
+    }
+
+    for (var excludedPath in _excludedPaths) {
+      if (_pathContext.isWithin(excludedPath, path)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /// Records a print notification from the analyzer plugin.
@@ -405,12 +408,35 @@ class NotificationManager extends AbstractNotificationManager {
   /// The channel used to send notifications to the client.
   final ServerCommunicationChannel _channel;
 
+  /// Should be set immediately in [legacy.LegacyAnalysisServer] constructor.
+  LegacyAnalysisServer? analysisServer;
+
   /// Initialize a newly created notification manager.
-  NotificationManager(this._channel, super.pathContext);
+  new(this._channel, super.pathContext);
 
   /// Sends errors for a file to the client.
   @override
   void sendAnalysisErrors(String filePath, List<AnalysisError> mergedErrors) {
+    if (analysisServer case var analysisServer?) {
+      var clientCapabilities = analysisServer.editorClientCapabilities;
+
+      // Check if client prefers LSP diagnostics.
+      if (clientCapabilities.publishDiagnostics) {
+        var diagnostics = _convertErrorsToLsp(
+          analysisServer,
+          clientCapabilities,
+          mergedErrors,
+        );
+        var notification = _createLspDiagnosticsNotification(
+          filePath,
+          diagnostics,
+        );
+
+        analysisServer.sendLspNotification(notification);
+        return;
+      }
+    }
+
     _channel.sendNotification(
       server.AnalysisErrorsParams(
         filePath,
@@ -478,9 +504,8 @@ class NotificationManager extends AbstractNotificationManager {
   @override
   void sendPluginError(String message) {
     _channel.sendNotification(
-      server.ServerPluginErrorParams(
-        message,
-      ).toNotification(clientUriConverter: uriConverter),
+      server.ServerPluginErrorParams(message)
+          .toNotification(clientUriConverter: uriConverter),
     );
   }
 
@@ -502,5 +527,43 @@ class NotificationManager extends AbstractNotificationManager {
         params.stackTrace,
       ).toNotification(clientUriConverter: uriConverter),
     );
+  }
+
+  List<lsp.Diagnostic> _convertErrorsToLsp(
+    LegacyAnalysisServer analysisServer,
+    LspClientCapabilities clientCapabilities,
+    List<AnalysisError> mergedErrors,
+  ) {
+    var diagnostics = mergedErrors
+        .map(
+          (error) => lsp.pluginToDiagnostic(
+            analysisServer.uriConverter,
+            (path) => analysisServer.getLineInfo(path),
+            error,
+            supportedTags: clientCapabilities.diagnosticTags,
+            clientSupportsCodeDescription:
+                clientCapabilities.diagnosticCodeDescription,
+            clientSupportsDiagnosticData:
+                clientCapabilities.includeAdditionalDiagnosticData,
+          ),
+        )
+        .toList();
+    return diagnostics;
+  }
+
+  lsp.NotificationMessage _createLspDiagnosticsNotification(
+    String filePath,
+    List<lsp.Diagnostic> diagnostics,
+  ) {
+    var params = lsp.PublishDiagnosticsParams(
+      uri: uriConverter?.toClientUri(filePath) ?? _pathContext.toUri(filePath),
+      diagnostics: diagnostics,
+    );
+    var notification = lsp.NotificationMessage(
+      method: lsp.Method.textDocument_publishDiagnostics,
+      params: params,
+      jsonrpc: lsp.jsonRpcVersion,
+    );
+    return notification;
   }
 }

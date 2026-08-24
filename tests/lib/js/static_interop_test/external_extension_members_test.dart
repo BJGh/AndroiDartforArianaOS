@@ -81,6 +81,10 @@ extension BarExt on Bar {
   external var barField;
 }
 
+extension BarSelfRefExt<T extends Bar> on T {
+  external T? get selfReference;
+}
+
 @JS()
 @staticInterop
 class Nested<T extends JSAny?> {
@@ -240,19 +244,20 @@ void main() {
     Expect.equals(value, (foo.nested as Nested<JSString>).value.toDart);
     Expect.equals(
       '$value$value',
-      (foo.combineNested(Nested(value.toJS), Nested(jsValue))
-              as Nested<JSString>)
-          .value
-          .toDart,
+      (foo.combineNested(
+        Nested(value.toJS),
+        Nested(jsValue),
+      ) as Nested<JSString>).value.toDart,
     );
 
     foo.nestedU = Nested(jsValue);
     Expect.equals(value, (foo.nestedU as Nested<JSString>).value.toDart);
     Expect.equals(
       '$value$value',
-      (foo.combineNestedU(Nested(jsValue), Nested(jsValue)) as Nested<JSString>)
-          .value
-          .toDart,
+      (foo.combineNestedU(
+        Nested(jsValue),
+        Nested(jsValue),
+      ) as Nested<JSString>).value.toDart,
     );
     Expect.equals(
       '$value$value',
@@ -277,5 +282,12 @@ void main() {
           .toDart
           .split('foo'),
     );
+  }
+
+  {
+    // Generic extension on `T` where `T` extends a staticInterop class.
+    var obj = Bar(0);
+    (obj as JSObject)['selfReference'] = obj as JSObject;
+    Expect.equals(obj, obj.selfReference);
   }
 }

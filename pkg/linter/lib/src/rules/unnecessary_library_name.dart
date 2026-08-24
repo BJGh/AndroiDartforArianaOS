@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't have a library name in a `library` declaration.";
 
 class UnnecessaryLibraryName extends AnalysisRule {
-  UnnecessaryLibraryName()
-    : super(name: LintNames.unnecessary_library_name, description: _desc);
+  new() : super(name: LintNames.unnecessary_library_name, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.unnecessaryLibraryName;
@@ -34,11 +33,7 @@ class UnnecessaryLibraryName extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitLibraryDirective(LibraryDirective node) {
     var name = node.name;

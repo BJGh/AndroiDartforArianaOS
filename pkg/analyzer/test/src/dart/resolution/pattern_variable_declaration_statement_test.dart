@@ -18,13 +18,13 @@ main() {
 class PatternVariableDeclarationStatementResolutionTest
     extends PubPackageResolutionTest {
   test_final_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   final (num a) = 0;
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -44,7 +44,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: int
     equals: =
-    expression: IntegerLiteral
+    expression2: IntegerLiteral
       literal: 0
       staticType: int
     patternTypeSchema: num
@@ -53,13 +53,13 @@ PatternVariableDeclarationStatement
   }
 
   test_final_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   final (a) = 0;
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -75,7 +75,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: int
     equals: =
-    expression: IntegerLiteral
+    expression2: IntegerLiteral
       literal: 0
       staticType: int
     patternTypeSchema: _
@@ -84,7 +84,7 @@ PatternVariableDeclarationStatement
   }
 
   test_rewrite_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (a) = A();
 //     ^
@@ -93,7 +93,7 @@ void f() {
 
 class A {}
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -109,7 +109,18 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: A
     equals: =
-    expression: InstanceCreationExpression
+    expression2: ConstructorInvocation
+      constructorReference: ConstructorReference2
+        typeReference: ConstructorTypeReference
+          name: A
+          element: <testLibrary>::@class::A
+          type: A
+        element: <testLibrary>::@class::A::@constructor::new
+      argumentList: ArgumentList
+        leftParenthesis: (
+        rightParenthesis: )
+      staticType: A
+    expression(v1): InstanceCreationExpression
       constructorName: ConstructorName
         type: NamedType
           name: A
@@ -126,7 +137,7 @@ PatternVariableDeclarationStatement
   }
 
   test_scope_shadows_beforeDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 int a = 0;
 void f() {
   a;
@@ -138,17 +149,17 @@ void f() {
 }
 ''');
 
-    var node = findNode.simple('a;');
+    var node = result.findNode.simple('a;');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
-  element: a@149
+  element: a@34
   staticType: InvalidType
 ''');
   }
 
   test_scope_shadows_class() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 void f() {
@@ -158,7 +169,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -174,7 +185,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: List<InvalidType>
     equals: =
-    expression: ListLiteral
+    expression2: ListLiteral
       typeArguments: TypeArgumentList
         leftBracket: <
         arguments
@@ -192,13 +203,13 @@ PatternVariableDeclarationStatement
   }
 
   test_var_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (num a) = 0;
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -218,7 +229,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: int
     equals: =
-    expression: IntegerLiteral
+    expression2: IntegerLiteral
       literal: 0
       staticType: int
     patternTypeSchema: num
@@ -227,7 +238,7 @@ PatternVariableDeclarationStatement
   }
 
   test_var_typed_typeSchema() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (int a) = g();
 //         ^
@@ -236,7 +247,7 @@ void f() {
 
 T g<T>() => throw 0;
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -256,7 +267,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: int
     equals: =
-    expression: MethodInvocation
+    expression2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
@@ -274,13 +285,13 @@ PatternVariableDeclarationStatement
   }
 
   test_var_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (a) = 0;
   a;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -296,7 +307,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: int
     equals: =
-    expression: IntegerLiteral
+    expression2: IntegerLiteral
       literal: 0
       staticType: int
     patternTypeSchema: _
@@ -305,7 +316,7 @@ PatternVariableDeclarationStatement
   }
 
   test_var_untyped_multiple() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f((int, String) x) {
   var (a, b) = x;
 //     ^
@@ -314,7 +325,7 @@ void f((int, String) x) {
 // [diag.unusedLocalVariable] The value of the local variable 'b' isn't used.
 }
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -341,7 +352,7 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: (int, String)
     equals: =
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: (int, String)
@@ -351,7 +362,7 @@ PatternVariableDeclarationStatement
   }
 
   test_var_untyped_recordPattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (a,) = g((0,));
 //     ^
@@ -360,7 +371,7 @@ void f() {
 
 T g<T>(T a) => throw 0;
 ''');
-    var node = findNode.singlePatternVariableDeclarationStatement;
+    var node = result.findNode.singlePatternVariableDeclarationStatement;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclarationStatement
   declaration: PatternVariableDeclaration
@@ -379,17 +390,17 @@ PatternVariableDeclarationStatement
       rightParenthesis: )
       matchedValueType: (int,)
     equals: =
-    expression: MethodInvocation
+    expression2: MethodInvocation
       methodName: SimpleIdentifier
         token: g
         element: <testLibrary>::@function::g
         staticType: T Function<T>(T)
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           RecordLiteral
             leftParenthesis: (
-            fields
+            fields2
               IntegerLiteral
                 literal: 0
                 staticType: int

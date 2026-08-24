@@ -37,7 +37,7 @@ class AvoidWebLibrariesInFlutter extends AnalysisRule {
   /// Cache of most recent analysis root to parsed "hasFlutter" state.
   static final Map<String, bool> _rootHasFlutterCache = {};
 
-  AvoidWebLibrariesInFlutter()
+  new()
     : super(name: LintNames.avoid_web_libraries_in_flutter, description: _desc);
 
   @override
@@ -104,11 +104,7 @@ class AvoidWebLibrariesInFlutter extends AnalysisRule {
   static void clearCache() => _rootHasFlutterCache.clear();
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   bool isWebUri(String uri) {
     var uriLength = uri.length;
     return (uriLength == 9 && uri == 'dart:html') ||

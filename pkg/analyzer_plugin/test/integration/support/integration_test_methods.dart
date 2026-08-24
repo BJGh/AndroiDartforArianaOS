@@ -4,7 +4,10 @@
 //
 // This file has been automatically generated. Please do not edit it manually.
 // To regenerate the file, use the script
-// "pkg/analysis_server/tool/spec/generate_files".
+// "pkg/analyzer_plugin/tool/spec/generate_all.dart".
+
+// ignore_for_file: unnecessary_ignore, duplicate_ignore
+// ignore_for_file: unnecessary_type_name_in_constructor
 
 /// Convenience methods for running integration tests.
 library;
@@ -241,6 +244,51 @@ abstract class IntegrationTestMixin {
     return null;
   }
 
+  /// Sets the root paths used to determine which files to analyze. The set of
+  /// files to be analyzed are all of the files in one of the root paths that
+  /// are not excluded (explicitly or implicitly). A file is explicitly
+  /// excluded if it is in one of the excluded paths. A file is implicitly
+  /// excluded if it is in a subdirectory of one of the root paths where the
+  /// name of the subdirectory starts with a period (that is, a hidden
+  /// directory).
+  ///
+  /// Note that this request determines the set of requested analysis roots.
+  /// The actual set of analysis roots at any given time is the intersection of
+  /// this set with the set of files and directories actually present on the
+  /// filesystem. When the filesystem changes, the actual set of analysis roots
+  /// is automatically updated, but the set of requested analysis roots is
+  /// unchanged. This means that if the client sets an analysis root before the
+  /// root becomes visible to the server in the filesystem, there is no error;
+  /// once the server sees the root in the filesystem it will start analyzing
+  /// it. Similarly, the server will stop analyzing files that are removed from
+  /// the file system but they will remain in the set of requested roots.
+  ///
+  /// If an included path represents a file, then the server will look in the
+  /// directory containing the file for a pubspec.yaml file. If none is found,
+  /// then the parents of the directory will be searched until such a file is
+  /// found or the root of the file system is reached. If such a file is found,
+  /// it will be used to resolve "package:" URI's within the file.
+  ///
+  /// Parameters
+  ///
+  /// * `included: List<FilePath>`
+  ///
+  ///   A list of the files and directories that should be analyzed.
+  ///
+  /// * `excluded: List<FilePath>`
+  ///
+  ///   A list of the files and directories within the included directories
+  ///   that should not be analyzed.
+  Future sendAnalysisSetAnalysisRoots(
+    List<String> included,
+    List<String> excluded,
+  ) async {
+    var params = AnalysisSetAnalysisRootsParams(included, excluded).toJson();
+    var result = await server.send('analysis.setAnalysisRoots', params);
+    outOfTestExpect(result, isNull);
+    return null;
+  }
+
   /// Set the list of context roots that should be analyzed.
   ///
   /// Parameters
@@ -316,6 +364,25 @@ abstract class IntegrationTestMixin {
     var result = await server.send('analysis.updateContent', params);
     outOfTestExpect(result, isNull);
     return null;
+  }
+
+  /// Set the configurations for the plugins running in this isolate.
+  ///
+  /// Parameters
+  ///
+  /// * `configurations: Map<FilePath, Map<String, PluginConfiguration>>`
+  ///
+  ///   A table mapping the path of the directory to a map of plugin names to
+  ///   their configurations.
+  ///
+  /// Returns
+  Future<AnalysisSetConfigurationsResult> sendAnalysisSetConfigurations(
+    Map<String, Map<String, PluginConfiguration>> configurations,
+  ) async {
+    var params = AnalysisSetConfigurationsParams(configurations).toJson();
+    var result = await server.send('analysis.setConfigurations', params);
+    var decoder = ResponseDecoder(null);
+    return AnalysisSetConfigurationsResult.fromJson(decoder, 'result', result);
   }
 
   /// Used to report the errors associated with a given file. The set of errors

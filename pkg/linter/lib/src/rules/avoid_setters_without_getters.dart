@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid setters without getters.';
 
 class AvoidSettersWithoutGetters extends AnalysisRule {
-  AvoidSettersWithoutGetters()
+  new()
     : super(name: LintNames.avoid_setters_without_getters, description: _desc);
 
   @override
@@ -35,11 +35,7 @@ class AvoidSettersWithoutGetters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     visitMembers(node.body.members);

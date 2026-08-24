@@ -21,6 +21,7 @@ import '../../kernel/body_builder_context.dart';
 import '../../kernel/external_ast_helper.dart' as extern;
 import '../../kernel/hierarchy/class_member.dart';
 import '../../kernel/hierarchy/members_builder.dart';
+import '../../kernel/internal_ast.dart';
 import '../../kernel/type_algorithms.dart';
 import '../../source/check_helper.dart';
 import '../../source/name_scheme.dart';
@@ -32,6 +33,7 @@ import '../../source/source_property_builder.dart';
 import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
 import '../../type_inference/type_schema.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../fragment.dart';
 import 'body_builder_context.dart';
 import 'encoding.dart';
@@ -104,7 +106,7 @@ class RegularSetterDeclaration
   final SetterFragment _fragment;
   late final SetterEncoding _encoding;
 
-  RegularSetterDeclaration(this._fragment) {
+  new(this._fragment) {
     _fragment.declaration = this;
   }
 
@@ -153,7 +155,7 @@ class RegularSetterDeclaration
   List<TypeParameter>? get thisTypeParameters => _encoding.thisTypeParameters;
 
   @override
-  VariableDeclaration? get thisVariable => _encoding.thisVariable;
+  InternalVariable? get thisVariable => _encoding.thisVariable;
 
   @override
   Procedure get writeTarget => _encoding.writeTarget;
@@ -288,11 +290,6 @@ class RegularSetterDeclaration
         fileUri: _fragment.fileUri,
         nameOffset: _fragment.nameOffset,
         nameLength: _fragment.name.length,
-        isClosureContextLoweringEnabled: libraryBuilder
-            .loader
-            .target
-            .backendTarget
-            .isConstructorTearOffLoweringEnabled,
       );
     }
     _encoding.ensureTypes(libraryBuilder, membersBuilder.hierarchyBuilder);
@@ -313,40 +310,27 @@ class RegularSetterDeclaration
     required CompilerContext compilerContext,
     required ProblemReporting problemReporting,
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     List<FormalParameterBuilder>? declaredFormals = _fragment.declaredFormals;
     if (declaredFormals == null ||
         declaredFormals.length != 1 ||
         declaredFormals.single.isOptionalPositional) {
       int fileOffset = _fragment.formalsOffset;
-      if (body == null) {
-        body = extern.createEmptyStatement(fileOffset: fileOffset);
-      }
-      if (declaredFormals != null) {
-        // Illegal parameters were removed by the function builder.
-        // Add them as local variable to put them in scope of the body.
-        List<Statement> statements = <Statement>[];
-        for (FormalParameterBuilder parameter in declaredFormals) {
-          statements.add(extern.createVariableStatement(parameter.variable));
-        }
-        statements.add(body);
-        body = extern.createBlock(statements, fileOffset: fileOffset);
-      }
       body = extern.createBlock([
         extern.createExpressionStatement(
-          problemReporting.buildProblem(
-            compilerContext: compilerContext,
-            message: diag.setterWithWrongNumberOfFormals,
-            fileUri: _fragment.fileUri,
-            fileOffset: fileOffset,
-            length: noLength,
+          extern.createInvalidExpressionFromErrorText(
+            problemReporting.buildProblem(
+              compilerContext: compilerContext,
+              message: diag.setterWithWrongNumberOfFormals,
+              fileUri: _fragment.fileUri,
+              fileOffset: fileOffset,
+              length: noLength,
+            ),
           ),
         ),
-        body,
       ], fileOffset: fileOffset);
     }
     assert(
@@ -358,10 +342,9 @@ class RegularSetterDeclaration
       body: body,
       // TODO(cstefantsova): Update scope to handle the insertion of parameters
       // as locals above.
-      scope: scope,
       asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
-      thisVariable: thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 
@@ -395,7 +378,7 @@ abstract class SetterFragmentDeclaration {
 
   List<TypeParameter>? get thisTypeParameters;
 
-  VariableDeclaration? get thisVariable;
+  InternalVariable? get thisVariable;
 
   void becomeNative(SourceLoader loader);
 
@@ -409,10 +392,9 @@ abstract class SetterFragmentDeclaration {
     required CompilerContext compilerContext,
     required ProblemReporting problemReporting,
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   });
 
   DartType get returnTypeContext;

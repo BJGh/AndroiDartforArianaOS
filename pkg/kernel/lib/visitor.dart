@@ -9,7 +9,7 @@ import 'dart:collection';
 import 'ast.dart';
 
 abstract class ExpressionVisitor<R> {
-  const ExpressionVisitor();
+  const new();
 
   R visitAuxiliaryExpression(AuxiliaryExpression node);
   R visitInvalidExpression(InvalidExpression node);
@@ -262,6 +262,7 @@ abstract class PatternVisitor<R> {
   R visitRestPattern(RestPattern node);
   R visitVariablePattern(VariablePattern node);
   R visitWildcardPattern(WildcardPattern node);
+  R visitAuxiliaryPattern(AuxiliaryPattern node);
 }
 
 /// Helper mixin for [PatternVisitor] that implements visit methods by
@@ -304,202 +305,12 @@ mixin PatternVisitorDefaultMixin<R> implements PatternVisitor<R> {
   R visitVariablePattern(VariablePattern node) => defaultPattern(node);
   @override
   R visitWildcardPattern(WildcardPattern node) => defaultPattern(node);
-}
-
-/// [PatternVisitorInternalNodeMixin] is intended to reduce the effects of
-/// CFE internal nodes on the backends.
-///
-/// The mixin provides implementations of the visit methods for the internal
-/// nodes that are not expected to be part of AST delivered to backends. The
-/// methods throw an exception signaling that the internal nodes aren't
-/// supported.
-mixin PatternVisitorInternalNodeMixin<R> implements PatternVisitor<R> {
   @override
-  R visitAndPattern(AndPattern node) {
-    throw StateError("${runtimeType}.visitAndPattern isn't supported.");
-  }
-
-  @override
-  R visitAssignedVariablePattern(AssignedVariablePattern node) {
-    throw StateError(
-      "${runtimeType}.visitAssignedVariablePattern isn't supported.",
-    );
-  }
-
-  @override
-  R visitCastPattern(CastPattern node) {
-    throw StateError("${runtimeType}.visitCastPattern isn't supported.");
-  }
-
-  @override
-  R visitConstantPattern(ConstantPattern node) {
-    throw StateError("${runtimeType}.visitConstantPattern isn't supported.");
-  }
-
-  @override
-  R visitInvalidPattern(InvalidPattern node) {
-    throw StateError("${runtimeType}.visitInvalidPattern isn't supported.");
-  }
-
-  @override
-  R visitListPattern(ListPattern node) {
-    throw StateError("${runtimeType}.visitListPattern isn't supported.");
-  }
-
-  @override
-  R visitMapPattern(MapPattern node) {
-    throw StateError("${runtimeType}.visitMapPattern isn't supported.");
-  }
-
-  @override
-  R visitNamedPattern(NamedPattern node) {
-    throw StateError("${runtimeType}.visitNamedPattern isn't supported.");
-  }
-
-  @override
-  R visitNullAssertPattern(NullAssertPattern node) {
-    throw StateError("${runtimeType}.visitNullAssertPattern isn't supported.");
-  }
-
-  @override
-  R visitNullCheckPattern(NullCheckPattern node) {
-    throw StateError("${runtimeType}.visitNullCheckPattern isn't supported.");
-  }
-
-  @override
-  R visitObjectPattern(ObjectPattern node) {
-    throw StateError("${runtimeType}.visitObjectPattern isn't supported.");
-  }
-
-  @override
-  R visitOrPattern(OrPattern node) {
-    throw StateError("${runtimeType}.visitOrPattern isn't supported.");
-  }
-
-  @override
-  R visitRecordPattern(RecordPattern node) {
-    throw StateError("${runtimeType}.visitRecordPattern isn't supported.");
-  }
-
-  @override
-  R visitRelationalPattern(RelationalPattern node) {
-    throw StateError("${runtimeType}.visitRelationalPattern isn't supported.");
-  }
-
-  @override
-  R visitRestPattern(RestPattern node) {
-    throw StateError("${runtimeType}.visitRestPattern isn't supported.");
-  }
-
-  @override
-  R visitVariablePattern(VariablePattern node) {
-    throw StateError("${runtimeType}.visitVariablePattern isn't supported.");
-  }
-
-  @override
-  R visitWildcardPattern(WildcardPattern node) {
-    throw StateError("${runtimeType}.visitWildcardPattern isn't supported.");
-  }
-}
-
-/// [PatternVisitor1InternalNodeMixin] is intended to reduce the effects of
-/// CFE internal nodes on the backends.
-///
-/// The mixin provides implementations of the visit methods for the internal
-/// nodes that are not expected to be part of AST delivered to backends. The
-/// methods throw an exception signaling that the internal nodes aren't
-/// supported.
-mixin PatternVisitor1InternalNodeMixin<R, A> implements PatternVisitor1<R, A> {
-  @override
-  R visitAndPattern(AndPattern node, A arg) {
-    throw StateError("${runtimeType}.visitAndPattern isn't supported.");
-  }
-
-  @override
-  R visitAssignedVariablePattern(AssignedVariablePattern node, A arg) {
-    throw StateError(
-      "${runtimeType}.visitAssignedVariablePattern isn't supported.",
-    );
-  }
-
-  @override
-  R visitCastPattern(CastPattern node, A arg) {
-    throw StateError("${runtimeType}.visitCastPattern isn't supported.");
-  }
-
-  @override
-  R visitConstantPattern(ConstantPattern node, A arg) {
-    throw StateError("${runtimeType}.visitConstantPattern isn't supported.");
-  }
-
-  @override
-  R visitInvalidPattern(InvalidPattern node, A arg) {
-    throw StateError("${runtimeType}.visitInvalidPattern isn't supported.");
-  }
-
-  @override
-  R visitListPattern(ListPattern node, A arg) {
-    throw StateError("${runtimeType}.visitListPattern isn't supported.");
-  }
-
-  @override
-  R visitMapPattern(MapPattern node, A arg) {
-    throw StateError("${runtimeType}.visitMapPattern isn't supported.");
-  }
-
-  @override
-  R visitNamedPattern(NamedPattern node, A arg) {
-    throw StateError("${runtimeType}.visitNamedPattern isn't supported.");
-  }
-
-  @override
-  R visitNullAssertPattern(NullAssertPattern node, A arg) {
-    throw StateError("${runtimeType}.visitNullAssertPattern isn't supported.");
-  }
-
-  @override
-  R visitNullCheckPattern(NullCheckPattern node, A arg) {
-    throw StateError("${runtimeType}.visitNullCheckPattern isn't supported.");
-  }
-
-  @override
-  R visitObjectPattern(ObjectPattern node, A arg) {
-    throw StateError("${runtimeType}.visitObjectPattern isn't supported.");
-  }
-
-  @override
-  R visitOrPattern(OrPattern node, A arg) {
-    throw StateError("${runtimeType}.visitOrPattern isn't supported.");
-  }
-
-  @override
-  R visitRecordPattern(RecordPattern node, A arg) {
-    throw StateError("${runtimeType}.visitRecordPattern isn't supported.");
-  }
-
-  @override
-  R visitRelationalPattern(RelationalPattern node, A arg) {
-    throw StateError("${runtimeType}.visitRelationalPattern isn't supported.");
-  }
-
-  @override
-  R visitRestPattern(RestPattern node, A arg) {
-    throw StateError("${runtimeType}.visitRestPattern isn't supported.");
-  }
-
-  @override
-  R visitVariablePattern(VariablePattern node, A arg) {
-    throw StateError("${runtimeType}.visitVariablePattern isn't supported.");
-  }
-
-  @override
-  R visitWildcardPattern(WildcardPattern node, A arg) {
-    throw StateError("${runtimeType}.visitWildcardPattern isn't supported.");
-  }
+  R visitAuxiliaryPattern(AuxiliaryPattern node) => defaultPattern(node);
 }
 
 abstract class StatementVisitor<R> {
-  const StatementVisitor();
+  const new();
 
   R visitAuxiliaryStatement(AuxiliaryStatement node);
 
@@ -514,8 +325,6 @@ abstract class StatementVisitor<R> {
   R visitAssertStatement(AssertStatement node);
 
   R visitLabeledStatement(LabeledStatement node);
-
-  R visitVariableInitialization(VariableInitialization node);
 
   R visitBreakStatement(BreakStatement node);
 
@@ -549,7 +358,7 @@ abstract class StatementVisitor<R> {
 
   R visitFunctionDeclaration(FunctionDeclaration node);
 
-  R visitLegacyVariableStatement(LegacyVariableStatement node);
+  R visitVariableStatement(VariableStatement node);
 }
 
 /// Helper mixin for [StatementVisitor] that implements visit methods by
@@ -572,9 +381,6 @@ mixin StatementVisitorDefaultMixin<R> implements StatementVisitor<R> {
   R visitAssertStatement(AssertStatement node) => defaultStatement(node);
   @override
   R visitLabeledStatement(LabeledStatement node) => defaultStatement(node);
-  @override
-  R visitVariableInitialization(VariableInitialization node) =>
-      defaultStatement(node);
   @override
   R visitBreakStatement(BreakStatement node) => defaultStatement(node);
   @override
@@ -612,49 +418,51 @@ mixin StatementVisitorDefaultMixin<R> implements StatementVisitor<R> {
   R visitFunctionDeclaration(FunctionDeclaration node) =>
       defaultStatement(node);
   @override
-  R visitLegacyVariableStatement(LegacyVariableStatement node) =>
-      defaultStatement(node);
+  R visitVariableStatement(VariableStatement node) => defaultStatement(node);
 }
 
 abstract class VariableVisitor<R> {
-  const VariableVisitor();
+  const new();
 
-  R visitLegacyVariable(LegacyVariable node);
   R visitPositionalParameter(PositionalParameter node);
   R visitNamedParameter(NamedParameter node);
   R visitLocalVariable(LocalVariable node);
+  R visitLocalFunctionVariable(LocalFunctionVariable node);
+  R visitLateVariable(LateVariable node);
+  R visitConstVariable(ConstVariable node);
   R visitCatchVariable(CatchVariable node);
   R visitThisVariable(ThisVariable node);
   R visitSyntheticVariable(SyntheticVariable node);
 }
 
 /// Helper mixin for [VariableVisitor] that implements visit methods by
-/// delegating to the [visitVariableDeclaration] method.
+/// delegating to the [visitVariable] method.
 mixin VariableVisitorDefaultMixin<R> implements VariableVisitor<R> {
-  R defaultVariableDeclaration(VariableDeclaration node);
+  R defaultVariable(Variable node);
 
   @override
-  R visitLegacyVariable(LegacyVariable node) =>
-      defaultVariableDeclaration(node);
+  R visitPositionalParameter(PositionalParameter node) => defaultVariable(node);
   @override
-  R visitPositionalParameter(PositionalParameter node) =>
-      defaultVariableDeclaration(node);
+  R visitNamedParameter(NamedParameter node) => defaultVariable(node);
   @override
-  R visitNamedParameter(NamedParameter node) =>
-      defaultVariableDeclaration(node);
+  R visitLocalVariable(LocalVariable node) => defaultVariable(node);
   @override
-  R visitLocalVariable(LocalVariable node) => defaultVariableDeclaration(node);
+  R visitLocalFunctionVariable(LocalFunctionVariable node) =>
+      defaultVariable(node);
   @override
-  R visitCatchVariable(CatchVariable node) => defaultVariableDeclaration(node);
+  R visitLateVariable(LateVariable node) => defaultVariable(node);
   @override
-  R visitThisVariable(ThisVariable node) => defaultVariableDeclaration(node);
+  R visitConstVariable(ConstVariable node) => defaultVariable(node);
   @override
-  R visitSyntheticVariable(SyntheticVariable node) =>
-      defaultVariableDeclaration(node);
+  R visitCatchVariable(CatchVariable node) => defaultVariable(node);
+  @override
+  R visitThisVariable(ThisVariable node) => defaultVariable(node);
+  @override
+  R visitSyntheticVariable(SyntheticVariable node) => defaultVariable(node);
 }
 
 abstract class MemberVisitor<R> {
-  const MemberVisitor();
+  const new();
 
   R visitConstructor(Constructor node);
   R visitProcedure(Procedure node);
@@ -675,7 +483,7 @@ mixin MemberVisitorDefaultMixin<R> implements MemberVisitor<R> {
 }
 
 abstract class MemberVisitor1<R, A> {
-  const MemberVisitor1();
+  const new();
 
   R visitConstructor(Constructor node, A arg);
   R visitProcedure(Procedure node, A arg);
@@ -696,7 +504,7 @@ mixin MemberVisitor1DefaultMixin<R, A> implements MemberVisitor1<R, A> {
 }
 
 abstract class InitializerVisitor<R> {
-  const InitializerVisitor();
+  const new();
 
   R visitAuxiliaryInitializer(AuxiliaryInitializer node);
   R visitInvalidInitializer(InvalidInitializer node);
@@ -732,7 +540,7 @@ mixin InitializerVisitorDefaultMixin<R> implements InitializerVisitor<R> {
 }
 
 abstract class InitializerVisitor1<R, A> {
-  const InitializerVisitor1();
+  const new();
 
   R visitAuxiliaryInitializer(AuxiliaryInitializer node, A arg);
   R visitInvalidInitializer(InvalidInitializer node, A arg);
@@ -780,7 +588,7 @@ abstract class TreeVisitor<R>
         VariableVisitor<R>,
         MemberVisitor<R>,
         InitializerVisitor<R> {
-  const TreeVisitor();
+  const new();
 
   // Classes
   R visitClass(Class node);
@@ -807,6 +615,7 @@ abstract class TreeVisitor<R>
   R visitComponent(Component node);
   R visitTypeVariable(TypeVariable node);
   R visitNominalParameter(NominalParameter node);
+  R visitVariableDeclaration(VariableDeclaration node);
 }
 
 /// Helper mixin for [TreeVisitor] that implements visit methods by delegating
@@ -864,6 +673,8 @@ mixin TreeVisitorDefaultMixin<R> implements TreeVisitor<R> {
   R visitTypeVariable(TypeVariable node) => defaultTreeNode(node);
   @override
   R visitNominalParameter(NominalParameter node) => visitTypeParameter(node);
+  @override
+  R visitVariableDeclaration(VariableDeclaration node) => defaultTreeNode(node);
 }
 
 /// Base class for implementing [TreeVisitor1] that implements visit methods
@@ -879,7 +690,7 @@ abstract class TreeVisitorDefault<R>
         MemberVisitorDefaultMixin<R>,
         TreeVisitorDefaultMixin<R>
     implements TreeVisitor<R> {
-  const TreeVisitorDefault();
+  const new();
 
   @override
   R defaultExpression(Expression node) => defaultTreeNode(node);
@@ -888,8 +699,7 @@ abstract class TreeVisitorDefault<R>
   @override
   R defaultStatement(Statement node) => defaultTreeNode(node);
   @override
-  R defaultVariableDeclaration(VariableDeclaration node) =>
-      defaultTreeNode(node);
+  R defaultVariable(Variable node) => defaultTreeNode(node);
   @override
   R defaultInitializer(Initializer node) => defaultTreeNode(node);
   @override
@@ -904,7 +714,7 @@ abstract class TreeVisitor1<R, A>
         VariableVisitor1<R, A>,
         MemberVisitor1<R, A>,
         InitializerVisitor1<R, A> {
-  const TreeVisitor1();
+  const new();
 
   // Classes
   R visitClass(Class node, A arg);
@@ -931,6 +741,7 @@ abstract class TreeVisitor1<R, A>
   R visitComponent(Component node, A arg);
   R visitTypeVariable(TypeVariable node, A arg);
   R visitNominalParameter(NominalParameter node, A arg);
+  R visitVariableDeclaration(VariableDeclaration node, A arg);
 }
 
 /// Helper mixin for [TreeVisitor1] that implements visit methods by delegating
@@ -995,6 +806,9 @@ mixin TreeVisitor1DefaultMixin<R, A> implements TreeVisitor1<R, A> {
   @override
   R visitNominalParameter(NominalParameter node, A arg) =>
       visitTypeParameter(node, arg);
+  @override
+  R visitVariableDeclaration(VariableDeclaration node, A arg) =>
+      defaultTreeNode(node, arg);
 }
 
 /// Base class for implementing [TreeVisitor1] that implements visit methods
@@ -1010,7 +824,7 @@ abstract class TreeVisitor1Default<R, A>
         InitializerVisitor1DefaultMixin<R, A>,
         MemberVisitor1DefaultMixin<R, A>
     implements TreeVisitor1<R, A> {
-  const TreeVisitor1Default();
+  const new();
 
   @override
   R defaultExpression(Expression node, A arg) => defaultTreeNode(node, arg);
@@ -1019,19 +833,20 @@ abstract class TreeVisitor1Default<R, A>
   @override
   R defaultStatement(Statement node, A arg) => defaultTreeNode(node, arg);
   @override
-  R defaultVariableDeclaration(VariableDeclaration node, A arg) =>
-      defaultTreeNode(node, arg);
+  R defaultVariable(Variable node, A arg) => defaultTreeNode(node, arg);
   @override
   R defaultInitializer(Initializer node, A arg) => defaultTreeNode(node, arg);
   @override
   R defaultMember(Member node, A arg) => defaultTreeNode(node, arg);
 }
 
-typedef DartTypeVisitorAuxiliaryFunction<R> =
-    R Function(AuxiliaryType node, R Function(AuxiliaryType node) recursor);
+typedef DartTypeVisitorAuxiliaryFunction<R> = R Function(
+  AuxiliaryType node,
+  R Function(AuxiliaryType node) recursor,
+);
 
 abstract class DartTypeVisitor<R> {
-  const DartTypeVisitor();
+  const new();
 
   R visitAuxiliaryType(AuxiliaryType node);
   R visitInvalidType(InvalidType node);
@@ -1096,15 +911,14 @@ mixin DartTypeVisitorDefaultMixin<R> implements DartTypeVisitor<R> {
       defaultDartType(node);
 }
 
-typedef DartTypeVisitor1AuxiliaryFunction<R, A> =
-    R Function(
-      AuxiliaryType node,
-      A arg,
-      R Function(AuxiliaryType node, A arg) recursor,
-    );
+typedef DartTypeVisitor1AuxiliaryFunction<R, A> = R Function(
+  AuxiliaryType node,
+  A arg,
+  R Function(AuxiliaryType node, A arg) recursor,
+);
 
 abstract class DartTypeVisitor1<R, A> {
-  const DartTypeVisitor1();
+  const new();
 
   R visitAuxiliaryType(AuxiliaryType node, A arg);
   R visitInvalidType(InvalidType node, A arg);
@@ -1180,7 +994,7 @@ mixin DartTypeVisitor1DefaultMixin<R, A> implements DartTypeVisitor1<R, A> {
 /// Use [ComputeOnceConstantVisitor] or [VisitOnceConstantVisitor] to visit
 /// a constant node while ensuring each subnode is only visited once.
 abstract class ConstantVisitor<R> {
-  const ConstantVisitor();
+  const new();
 
   R visitAuxiliaryConstant(AuxiliaryConstant node);
   R visitNullConstant(NullConstant node);
@@ -1257,7 +1071,7 @@ mixin ConstantVisitorDefaultMixin<R> implements ConstantVisitor<R> {
 }
 
 abstract class ConstantVisitor1<R, A> {
-  const ConstantVisitor1();
+  const new();
 
   R visitAuxiliaryConstant(AuxiliaryConstant node, A arg);
   R visitNullConstant(NullConstant node, A arg);
@@ -1557,7 +1371,7 @@ abstract class _ConstantCallback<R> {
 class _ConstantCallbackVisitor<R> implements ConstantVisitor<R> {
   final _ConstantCallback _callback;
 
-  _ConstantCallbackVisitor(this._callback);
+  new(this._callback);
 
   @override
   R visitUnevaluatedConstant(UnevaluatedConstant node) =>
@@ -1690,7 +1504,7 @@ abstract class ComputeOnceConstantVisitor<R> implements _ConstantCallback<R> {
   late final _ConstantCallbackVisitor<R> _visitor;
   Map<Constant, R> cache = new LinkedHashMap.identity();
 
-  ComputeOnceConstantVisitor() {
+  new() {
     _visitor = new _ConstantCallbackVisitor<R>(this);
   }
 
@@ -1721,7 +1535,7 @@ abstract class VisitOnceConstantVisitor implements _ConstantCallback<void> {
   late final _ConstantCallbackVisitor<void> _visitor;
   Set<Constant> cache = new LinkedHashSet.identity();
 
-  VisitOnceConstantVisitor() {
+  new() {
     _visitor = new _ConstantCallbackVisitor<void>(this);
   }
 
@@ -1737,7 +1551,7 @@ abstract class VisitOnceConstantVisitor implements _ConstantCallback<void> {
 }
 
 abstract class MemberReferenceVisitor<R> {
-  const MemberReferenceVisitor();
+  const new();
 
   R visitFieldReference(Field node);
   R visitConstructorReference(Constructor node);
@@ -1759,7 +1573,7 @@ mixin MemberReferenceVisitorDefaultMixin<R>
 }
 
 abstract class MemberReferenceVisitor1<R, A> {
-  const MemberReferenceVisitor1();
+  const new();
 
   R visitFieldReference(Field node, A arg);
   R visitConstructorReference(Constructor node, A arg);
@@ -1789,7 +1603,7 @@ abstract class Visitor<R>
         ConstantVisitor<R>,
         MemberReferenceVisitor<R>,
         ConstantReferenceVisitor<R> {
-  const Visitor();
+  const new();
 
   // TODO(johnniwinther): Move these to [MemberReferenceVisitor].
   R visitClassReference(Class node);
@@ -1827,7 +1641,7 @@ abstract class VisitorDefault<R> extends TreeVisitorDefault<R>
         ConstantVisitorDefaultMixin<R>,
         MemberReferenceVisitorDefaultMixin<R>,
         ConstantReferenceVisitorDefaultMixin<R> {
-  const VisitorDefault();
+  const new();
 
   @override
   R defaultTreeNode(TreeNode node) => defaultNode(node);
@@ -1845,7 +1659,7 @@ abstract class Visitor1<R, A> extends TreeVisitor1<R, A>
         ConstantVisitor1<R, A>,
         MemberReferenceVisitor1<R, A>,
         ConstantReferenceVisitor1<R, A> {
-  const Visitor1();
+  const new();
 
   // TODO(johnniwinther): Move these to [MemberReferenceVisitor1].
   R visitClassReference(Class node, A arg);
@@ -1890,7 +1704,7 @@ abstract class Visitor1Default<R, A> extends TreeVisitor1Default<R, A>
         ConstantVisitor1DefaultMixin<R, A>,
         MemberReferenceVisitor1DefaultMixin<R, A>,
         ConstantReferenceVisitor1DefaultMixin<R, A> {
-  const Visitor1Default();
+  const new();
 
   @override
   R defaultTreeNode(TreeNode node, A arg) => defaultNode(node, arg);
@@ -2040,7 +1854,7 @@ mixin VisitorDefaultValueMixin<R> implements VisitorDefault<R> {
 
 /// Recursive visitor that doesn't return anything from its visit methods.
 class RecursiveVisitor extends VisitorDefault<void> with VisitorVoidMixin {
-  const RecursiveVisitor();
+  const new();
 
   @override
   void defaultNode(Node node) {
@@ -2052,7 +1866,7 @@ class RecursiveVisitor extends VisitorDefault<void> with VisitorVoidMixin {
 /// visit methods.
 class RecursiveResultVisitor<R> extends VisitorDefault<R?>
     with VisitorNullMixin<R> {
-  const RecursiveResultVisitor();
+  const new();
 
   @override
   R? defaultNode(Node node) {
@@ -2087,7 +1901,7 @@ class RecursiveResultVisitor<R> extends VisitorDefault<R?>
 ///     }
 ///
 class Transformer extends TreeVisitorDefault<TreeNode> {
-  const Transformer();
+  const new();
 
   T transform<T extends TreeNode>(T node) {
     return node.accept<TreeNode>(this) as T;
@@ -2194,7 +2008,7 @@ class Transformer extends TreeVisitorDefault<TreeNode> {
 ///     }
 ///
 class RemovingTransformer extends TreeVisitor1Default<TreeNode, TreeNode?> {
-  const RemovingTransformer();
+  const new();
 
   /// Visits [node], returning the transformation result.
   ///
@@ -2225,11 +2039,20 @@ class RemovingTransformer extends TreeVisitor1Default<TreeNode, TreeNode?> {
   /// supported with `null` as the result.
   ///
   /// This is convenience method for calling [transformOrRemove] with removal
-  /// sentinel for [VariableDeclaration] nodes.
+  /// sentinel for [Variable] nodes.
   VariableDeclaration? transformOrRemoveVariableDeclaration(
     VariableDeclaration node,
   ) {
     return transformOrRemove(node, dummyVariableDeclaration);
+  }
+
+  /// Visits [node], returning the transformation result. Removal of [node] is
+  /// supported with `null` as the result.
+  ///
+  /// This is convenience method for calling [transformOrRemove] with removal
+  /// sentinel for [Variable] nodes.
+  Variable? transformOrRemoveVariable(Variable node) {
+    return transformOrRemove(node, dummyVariable);
   }
 
   /// Visits [node] using [removalSentinel] as the removal sentinel.
@@ -2462,6 +2285,15 @@ class RemovingTransformer extends TreeVisitor1Default<TreeNode, TreeNode?> {
     transformList(nodes, parent, dummyVariableDeclaration);
   }
 
+  /// Transforms or removes [Variable] nodes in [nodes] as children
+  /// of [parent].
+  ///
+  /// This is convenience method for calling [transformList] with removal
+  /// sentinel for [Variable] nodes.
+  void transformVariableList(List<Variable> nodes, TreeNode parent) {
+    transformList(nodes, parent, dummyVariable);
+  }
+
   /// Transforms or removes [T] nodes in [nodes] as children of [parent] by
   /// calling [transformOrRemove] using [removalSentinel] as the removal
   /// sentinel.
@@ -2501,7 +2333,7 @@ class RemovingTransformer extends TreeVisitor1Default<TreeNode, TreeNode?> {
 }
 
 abstract class ExpressionVisitor1<R, A> {
-  const ExpressionVisitor1();
+  const new();
 
   R visitAuxiliaryExpression(AuxiliaryExpression node, A arg);
   R visitInvalidExpression(InvalidExpression node, A arg);
@@ -2795,6 +2627,7 @@ abstract class PatternVisitor1<R, A> {
   R visitRestPattern(RestPattern node, A arg);
   R visitVariablePattern(VariablePattern node, A arg);
   R visitWildcardPattern(WildcardPattern node, A arg);
+  R visitAuxiliaryPattern(AuxiliaryPattern node, A arg);
 }
 
 /// Helper mixin for [PatternVisitor1] that implements visit methods by
@@ -2843,10 +2676,13 @@ mixin PatternVisitor1DefaultMixin<R, A> implements PatternVisitor1<R, A> {
   @override
   R visitWildcardPattern(WildcardPattern node, A arg) =>
       defaultPattern(node, arg);
+  @override
+  R visitAuxiliaryPattern(AuxiliaryPattern node, A arg) =>
+      defaultPattern(node, arg);
 }
 
 abstract class StatementVisitor1<R, A> {
-  const StatementVisitor1();
+  const new();
 
   R visitAuxiliaryStatement(AuxiliaryStatement node, A arg);
   R visitExpressionStatement(ExpressionStatement node, A arg);
@@ -2855,7 +2691,6 @@ abstract class StatementVisitor1<R, A> {
   R visitEmptyStatement(EmptyStatement node, A arg);
   R visitAssertStatement(AssertStatement node, A arg);
   R visitLabeledStatement(LabeledStatement node, A arg);
-  R visitVariableInitialization(VariableInitialization node, A arg);
   R visitBreakStatement(BreakStatement node, A arg);
   R visitWhileStatement(WhileStatement node, A arg);
   R visitDoStatement(DoStatement node, A arg);
@@ -2872,7 +2707,7 @@ abstract class StatementVisitor1<R, A> {
   R visitYieldStatement(YieldStatement node, A arg);
   R visitPatternVariableDeclaration(PatternVariableDeclaration node, A arg);
   R visitFunctionDeclaration(FunctionDeclaration node, A arg);
-  R visitLegacyVariableStatement(LegacyVariableStatement node, A arg);
+  R visitVariableStatement(VariableStatement node, A arg);
 }
 
 /// Helper mixin for [StatementVisitor1] that implements visit methods by
@@ -2898,9 +2733,6 @@ mixin StatementVisitor1DefaultMixin<R, A> implements StatementVisitor1<R, A> {
       defaultStatement(node, arg);
   @override
   R visitLabeledStatement(LabeledStatement node, A arg) =>
-      defaultStatement(node, arg);
-  @override
-  R visitVariableInitialization(VariableInitialization node, A arg) =>
       defaultStatement(node, arg);
   @override
   R visitBreakStatement(BreakStatement node, A arg) =>
@@ -2946,48 +2778,51 @@ mixin StatementVisitor1DefaultMixin<R, A> implements StatementVisitor1<R, A> {
   R visitFunctionDeclaration(FunctionDeclaration node, A arg) =>
       defaultStatement(node, arg);
   @override
-  R visitLegacyVariableStatement(LegacyVariableStatement node, A arg) =>
+  R visitVariableStatement(VariableStatement node, A arg) =>
       defaultStatement(node, arg);
 }
 
 abstract class VariableVisitor1<R, A> {
-  const VariableVisitor1();
+  const new();
 
-  R visitLegacyVariable(LegacyVariable node, A arg);
   R visitPositionalParameter(PositionalParameter node, A arg);
   R visitNamedParameter(NamedParameter node, A arg);
   R visitLocalVariable(LocalVariable node, A arg);
+  R visitLocalFunctionVariable(LocalFunctionVariable node, A arg);
+  R visitLateVariable(LateVariable node, A arg);
+  R visitConstVariable(ConstVariable node, A arg);
   R visitCatchVariable(CatchVariable node, A arg);
   R visitThisVariable(ThisVariable node, A arg);
   R visitSyntheticVariable(SyntheticVariable node, A arg);
 }
 
 /// Helper mixin for [VariableVisitor1] that implements visit methods by
-/// delegating to the [visitVariableDeclaration] method.
+/// delegating to the [defaultVariable] method.
 mixin VariableVisitor1DefaultMixin<R, A> implements VariableVisitor1<R, A> {
-  R defaultVariableDeclaration(VariableDeclaration node, A arg);
+  R defaultVariable(Variable node, A arg);
 
   @override
-  R visitLegacyVariable(LegacyVariable node, A arg) =>
-      defaultVariableDeclaration(node, arg);
-  @override
   R visitPositionalParameter(PositionalParameter node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+      defaultVariable(node, arg);
   @override
   R visitNamedParameter(NamedParameter node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+      defaultVariable(node, arg);
   @override
-  R visitLocalVariable(LocalVariable node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+  R visitLocalVariable(LocalVariable node, A arg) => defaultVariable(node, arg);
   @override
-  R visitCatchVariable(CatchVariable node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+  R visitLocalFunctionVariable(LocalFunctionVariable node, A arg) =>
+      defaultVariable(node, arg);
   @override
-  R visitThisVariable(ThisVariable node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+  R visitLateVariable(LateVariable node, A arg) => defaultVariable(node, arg);
+  @override
+  R visitConstVariable(ConstVariable node, A arg) => defaultVariable(node, arg);
+  @override
+  R visitCatchVariable(CatchVariable node, A arg) => defaultVariable(node, arg);
+  @override
+  R visitThisVariable(ThisVariable node, A arg) => defaultVariable(node, arg);
   @override
   R visitSyntheticVariable(SyntheticVariable node, A arg) =>
-      defaultVariableDeclaration(node, arg);
+      defaultVariable(node, arg);
 }
 
 /// [DartTypeVisitorExperimentExclusionMixin] is intended to reduce the effects
@@ -3224,27 +3059,20 @@ mixin StatementVisitor1InternalNodeMixin<R, A>
 /// aren't supported.
 mixin StatementVisitorExperimentExclusionMixin<R>
     implements StatementVisitor<R> {
-  @override
-  R visitVariableInitialization(VariableInitialization node) {
-    throw StateError(
-      "${runtimeType}.visitVariableInitialization isn't supported.",
-    );
-  }
-
-  /// Since [VariableDeclaration] is abstract due to an experiment, it doesn't
+  /// Since [Variable] is abstract due to an experiment, it doesn't
   /// have its own visit method in [StatementVisitor]. However, for the
   /// transitional period the backends would rely on having
-  /// [visitVariableDeclaration] and on needing to override it. Since the
+  /// [visitVariable] and on needing to override it. Since the
   /// statement visitors in the backends should mix in
   /// [StatementVisitorExperimentExclusionMixin], we can deliver the abstract
-  /// declaration of [visitVariableDeclaration] to them via the mixin. At the
+  /// declaration of [visitVariable] to them via the mixin. At the
   /// same time, it allows us to redirect [visitVariableStatement] to the
-  /// overrides of [visitVariableDeclarations] the backends already have.
-  R visitVariableDeclaration(VariableDeclaration node);
+  /// overrides of [visitVariable] the backends already have.
+  R visitVariable(Variable node);
 
   @override
-  R visitLegacyVariableStatement(LegacyVariableStatement node) {
-    return visitVariableDeclaration(node.variable);
+  R visitVariableStatement(VariableStatement node) {
+    return visitVariable(node.declaration.variable);
   }
 }
 
@@ -3255,19 +3083,16 @@ mixin StatementVisitorExperimentExclusionMixin<R>
 /// nodes. The methods throw an exception signaling that the experimental nodes
 /// aren't supported.
 mixin VariableVisitorExperimentExclusionMixin<R> implements VariableVisitor<R> {
-  /// Since [VariableDeclaration] is abstract due to an experiment, it doesn't
+  /// Since [Variable] is abstract due to an experiment, it doesn't
   /// have its own visit method in [VariableVisitor]. However, for the
   /// transitional period the backends would rely on having
-  /// [visitVariableDeclaration] and on needing to override it. Since the
+  /// [visitVariable] and on needing to override it. Since the
   /// statement visitors in the backends should mix in
   /// [VariableVisitorExperimentExclusionMixin], we can deliver the abstract
-  /// declaration of [visitVariableDeclaration] to them via the mixin. At the
+  /// declaration of [visitVariable] to them via the mixin. At the
   /// same time, it allows us to redirect [visitVariableStatement] to the
-  /// overrides of [visitVariableDeclarations] the backends already have.
-  R visitVariableDeclaration(VariableDeclaration node);
-
-  @override
-  R visitLegacyVariable(LegacyVariable node) => visitVariableDeclaration(node);
+  /// overrides of [visitVariable] the backends already have.
+  R visitVariable(Variable node);
 
   @override
   R visitPositionalParameter(PositionalParameter node) {
@@ -3279,6 +3104,11 @@ mixin VariableVisitorExperimentExclusionMixin<R> implements VariableVisitor<R> {
   @override
   R visitNamedParameter(NamedParameter node) {
     throw StateError("${runtimeType}.visitNamedParameter isn't supported.");
+  }
+
+  @override
+  R visitLateVariable(LateVariable node) {
+    throw StateError("${runtimeType}.visitLateVariable isn't supported.");
   }
 
   @override
@@ -3310,27 +3140,20 @@ mixin VariableVisitorExperimentExclusionMixin<R> implements VariableVisitor<R> {
 /// aren't supported.
 mixin StatementVisitor1ExperimentExclusionMixin<R, A>
     implements StatementVisitor1<R, A> {
-  @override
-  R visitVariableInitialization(VariableInitialization node, A arg) {
-    throw StateError(
-      "${runtimeType}.visitVariableInitialization isn't supported.",
-    );
-  }
-
-  /// Since [VariableDeclaration] is abstract due to an experiment, it doesn't
+  /// Since [Variable] is abstract due to an experiment, it doesn't
   /// have its own visit method in [StatementVisitor1]. However, for the
   /// transitional period the backends would rely on having
-  /// [visitVariableDeclaration] and on needing to override it. Since the
+  /// [visitVariable] and on needing to override it. Since the
   /// statement visitors in the backends should mix in
   /// [StatementVisitor1ExperimentExclusionMixin], we can deliver the abstract
-  /// declaration of [visitVariableDeclaration] to them via the mixin. At the
+  /// declaration of [visitVariable] to them via the mixin. At the
   /// same time, it allows us to redirect [visitVariableStatement] to the
   /// overrides of [visitVariableDeclarations] the backends already have.
-  R visitVariableDeclaration(VariableDeclaration node, A arg);
+  R visitVariable(Variable node, A arg);
 
   @override
-  R visitLegacyVariableStatement(LegacyVariableStatement node, A arg) {
-    return visitVariableDeclaration(node.variable, arg);
+  R visitVariableStatement(VariableStatement node, A arg) {
+    return visitVariable(node.declaration.variable, arg);
   }
 }
 

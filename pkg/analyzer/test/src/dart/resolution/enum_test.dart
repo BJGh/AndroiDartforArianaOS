@@ -21,7 +21,7 @@ class EnumDeclarationResolutionTest extends PubPackageResolutionTest {
     await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(() {
-// [diag.constWithNonConstantArgument][column 5][length 193] Arguments of a constant creation must be constant expressions.
+// [diag.constWithNonConstantArgument][column 5][length 69] Arguments of a constant creation must be constant expressions.
     Object? x = 0;
     if (x is int) {
       x.isEven;
@@ -34,15 +34,217 @@ enum E {
 ''');
   }
 
+  test_constant_augmentation_add() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+enum A {
+  v1
+}
+
+augment enum A {
+  v2
+}
+
+void f() {
+  A.v2;
+}
+''');
+
+    assertResolvedNodeText(result.unit, r'''
+CompilationUnit
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: A
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: v1
+            constructorElement: <testLibrary>::@enum::A::@constructor::new
+            declaredFragment: <testLibraryFragment> v1@11
+        rightBracket: }
+      declaredFragment: <testLibraryFragment> A@5
+    EnumDeclaration
+      augmentKeyword: augment
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: A
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: v2
+            constructorElement: <testLibrary>::@enum::A::@constructor::new
+            declaredFragment: <testLibraryFragment> v2@36
+        rightBracket: }
+      declaredFragment: <testLibraryFragment> A@30
+    FunctionDeclaration
+      returnType: NamedType
+        name: void
+        element: <null>
+        type: void
+      name: f
+      functionExpression: FunctionExpression
+        parameters: FormalParameterList
+          leftParenthesis: (
+          rightParenthesis: )
+        body: BlockFunctionBody
+          block: Block
+            leftBracket: {
+            statements
+              ExpressionStatement
+                expression2: PrefixedIdentifier
+                  prefix: SimpleIdentifier
+                    token: A
+                    element: <testLibrary>::@enum::A
+                    staticType: null
+                  period: .
+                  identifier: SimpleIdentifier
+                    token: v2
+                    element: <testLibrary>::@enum::A::@getter::v2
+                    staticType: A
+                  element: <testLibrary>::@enum::A::@getter::v2
+                  staticType: A
+                semicolon: ;
+            rightBracket: }
+        declaredFragment: <testLibraryFragment> f@47
+          element: <testLibrary>::@function::f
+            type: void Function()
+        staticType: void Function()
+      declaredFragment: <testLibraryFragment> f@47
+        element: <testLibrary>::@function::f
+          type: void Function()
+''');
+  }
+
+  test_constant_augmentation_valuesGetter_recovery() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+enum A {
+  v1
+}
+
+augment enum A {;
+  static int get values => 0;
+//               ^^^^^^
+// [diag.valuesDeclarationInEnum] A member named 'values' can't be declared in an enum.
+}
+
+augment enum A {
+  v2
+}
+
+void f() {
+  A.values;
+}
+''');
+
+    assertResolvedNodeText(result.unit, r'''
+CompilationUnit
+  declarations2
+    EnumDeclaration
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: A
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: v1
+            constructorElement: <testLibrary>::@enum::A::@constructor::new
+            declaredFragment: <testLibraryFragment> v1@11
+        rightBracket: }
+      declaredFragment: <testLibraryFragment> A@5
+    EnumDeclaration
+      augmentKeyword: augment
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: A
+      body: BlockEnumBody
+        leftBracket: {
+        semicolon: ;
+        members
+          MethodDeclaration
+            modifierKeyword: static
+            returnType: NamedType
+              name: int
+              element: dart:core::@class::int
+              type: int
+            propertyKeyword: get
+            name: values
+            body: ExpressionFunctionBody
+              functionDefinition: =>
+              expression2: IntegerLiteral
+                literal: 0
+                staticType: int
+              semicolon: ;
+            declaredFragment: <testLibraryFragment> values@52
+              element: <testLibrary>::@enum::A::@getter::values#1
+                type: int Function()
+        rightBracket: }
+      declaredFragment: <testLibraryFragment> A@30
+    EnumDeclaration
+      augmentKeyword: augment
+      enumKeyword: enum
+      namePart: NameWithTypeParameters
+        typeName: A
+      body: BlockEnumBody
+        leftBracket: {
+        constants
+          EnumConstantDeclaration
+            name: v2
+            constructorElement: <testLibrary>::@enum::A::@constructor::new
+            declaredFragment: <testLibraryFragment> v2@87
+        rightBracket: }
+      declaredFragment: <testLibraryFragment> A@81
+    FunctionDeclaration
+      returnType: NamedType
+        name: void
+        element: <null>
+        type: void
+      name: f
+      functionExpression: FunctionExpression
+        parameters: FormalParameterList
+          leftParenthesis: (
+          rightParenthesis: )
+        body: BlockFunctionBody
+          block: Block
+            leftBracket: {
+            statements
+              ExpressionStatement
+                expression2: PrefixedIdentifier
+                  prefix: SimpleIdentifier
+                    token: A
+                    element: <testLibrary>::@enum::A
+                    staticType: null
+                  period: .
+                  identifier: SimpleIdentifier
+                    token: values
+                    element: <testLibrary>::@enum::A::@getter::values
+                    staticType: List<A>
+                  element: <testLibrary>::@enum::A::@getter::values
+                  staticType: List<A>
+                semicolon: ;
+            rightBracket: }
+        declaredFragment: <testLibraryFragment> f@98
+          element: <testLibrary>::@function::f
+            type: void Function()
+        staticType: void Function()
+      declaredFragment: <testLibraryFragment> f@98
+        element: <testLibrary>::@function::f
+          type: void Function()
+''');
+  }
+
   test_constructor_argumentList_contextType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v([]);
   const E(List<int> a);
 }
 ''');
 
-    var node = findNode.listLiteral('[]');
+    var node = result.findNode.listLiteral('[]');
     assertResolvedNodeText(node, r'''
 ListLiteral
   leftBracket: [
@@ -53,14 +255,14 @@ ListLiteral
   }
 
   test_constructor_argumentList_namedType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(<void Function(double)>[]);
   const E(Object a);
 }
 ''');
 
-    var node = findNode.genericFunctionType('Function');
+    var node = result.findNode.genericFunctionType('Function');
     assertResolvedNodeText(node, r'''
 GenericFunctionType
   returnType: NamedType
@@ -69,6 +271,18 @@ GenericFunctionType
     type: void
   functionKeyword: Function
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: double
+          element: dart:core::@class::double
+          type: double
+        declaredFragment: <testLibraryFragment> null@null
+          element: isPrivate
+            type: double
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -92,35 +306,36 @@ GenericFunctionType
   }
 
   test_constructor_generic_noTypeArguments_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v.named(42);
   const E.named(T a);
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v.');
+    var node = result.findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     constructorSelector: ConstructorSelector
       period: .
-      name: SimpleIdentifier
+      name2: named
+      name(v1): SimpleIdentifier
         token: named
         element: <null>
         staticType: null
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
-          correspondingParameter: ParameterMember
+          correspondingParameter: SubstitutedFormalParameterElementImpl
             baseElement: <testLibrary>::@enum::E::@constructor::named::@formalParameter::a
             substitution: {T: int}
           staticType: int
       rightParenthesis: )
-  constructorElement: ConstructorMember
+  constructorElement: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@enum::E::@constructor::named
     substitution: {T: int}
   declaredFragment: <testLibraryFragment> v@14
@@ -128,29 +343,29 @@ EnumConstantDeclaration
   }
 
   test_constructor_generic_noTypeArguments_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v(42);
   const E(T a);
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v(');
+    var node = result.findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
-          correspondingParameter: ParameterMember
+          correspondingParameter: SubstitutedFormalParameterElementImpl
             baseElement: <testLibrary>::@enum::E::@constructor::new::@formalParameter::a
             substitution: {T: int}
           staticType: int
       rightParenthesis: )
-  constructorElement: ConstructorMember
+  constructorElement: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@enum::E::@constructor::new
     substitution: {T: int}
   declaredFragment: <testLibraryFragment> v@14
@@ -158,14 +373,14 @@ EnumConstantDeclaration
   }
 
   test_constructor_generic_typeArguments_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v<double>.named(42);
   const E.named(T a);
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v<');
+    var node = result.findNode.enumConstantDeclaration('v<');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -180,21 +395,22 @@ EnumConstantDeclaration
       rightBracket: >
     constructorSelector: ConstructorSelector
       period: .
-      name: SimpleIdentifier
+      name2: named
+      name(v1): SimpleIdentifier
         token: named
         element: <null>
         staticType: null
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
-          correspondingParameter: ParameterMember
+          correspondingParameter: SubstitutedFormalParameterElementImpl
             baseElement: <testLibrary>::@enum::E::@constructor::named::@formalParameter::a
             substitution: {T: double}
           staticType: double
       rightParenthesis: )
-  constructorElement: ConstructorMember
+  constructorElement: SubstitutedConstructorElementImpl
     baseElement: <testLibrary>::@enum::E::@constructor::named
     substitution: {T: double}
   declaredFragment: <testLibraryFragment> v@14
@@ -202,14 +418,14 @@ EnumConstantDeclaration
   }
 
   test_constructor_newHead_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   new ();
 }
 ''');
 
-    var node = findNode.singleConstructorDeclaration;
+    var node = result.findNode.singleConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   newKeyword: new
@@ -225,14 +441,14 @@ ConstructorDeclaration
   }
 
   test_constructor_newHead_unnamed_const() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   const new ();
 }
 ''');
 
-    var node = findNode.singleConstructorDeclaration;
+    var node = result.findNode.singleConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 ConstructorDeclaration
   constKeyword: const
@@ -249,27 +465,28 @@ ConstructorDeclaration
   }
 
   test_constructor_notGeneric_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v.named(42);
   const E.named(int a);
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v.');
+    var node = result.findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     constructorSelector: ConstructorSelector
       period: .
-      name: SimpleIdentifier
+      name2: named
+      name(v1): SimpleIdentifier
         token: named
         element: <null>
         staticType: null
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
           correspondingParameter: <testLibrary>::@enum::E::@constructor::named::@formalParameter::a
@@ -281,21 +498,21 @@ EnumConstantDeclaration
   }
 
   test_constructor_notGeneric_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(42);
   const E(int a);
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v(');
+    var node = result.findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
           correspondingParameter: <testLibrary>::@enum::E::@constructor::new::@formalParameter::a
@@ -307,13 +524,13 @@ EnumConstantDeclaration
   }
 
   test_constructor_notGeneric_unnamed_implicit() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v\n');
+    var node = result.findNode.enumConstantDeclaration('v\n');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
@@ -323,7 +540,7 @@ EnumConstantDeclaration
   }
 
   test_constructor_unresolved_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v.named(42);
 //  ^^^^^
@@ -332,20 +549,21 @@ enum E {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v.');
+    var node = result.findNode.enumConstantDeclaration('v.');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     constructorSelector: ConstructorSelector
       period: .
-      name: SimpleIdentifier
+      name2: named
+      name(v1): SimpleIdentifier
         token: named
         element: <null>
         staticType: null
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
           correspondingParameter: <null>
@@ -357,7 +575,7 @@ EnumConstantDeclaration
   }
 
   test_constructor_unresolved_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(42);
 //^
@@ -366,14 +584,14 @@ enum E {
 }
 ''');
 
-    var node = findNode.enumConstantDeclaration('v(');
+    var node = result.findNode.enumConstantDeclaration('v(');
     assertResolvedNodeText(node, r'''
 EnumConstantDeclaration
   name: v
   arguments: EnumConstantArguments
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         IntegerLiteral
           literal: 42
           correspondingParameter: <null>
@@ -385,13 +603,13 @@ EnumConstantDeclaration
   }
 
   test_emptyBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E;
 //   ^
 // [diag.enumWithoutConstants] The enum must have at least one enum constant.
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -403,9 +621,9 @@ EnumDeclaration
 ''');
   }
 
-  test_emptyBody_language310() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.10
+  test_emptyBody_beforePrimaryConstructors() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: primary-constructors
 enum E;
 //   ^
 // [diag.enumWithoutConstants] The enum must have at least one enum constant.
@@ -413,7 +631,7 @@ enum E;
 // [diag.experimentNotEnabled] This requires the 'primary-constructors' language feature to be enabled.
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -426,14 +644,14 @@ EnumDeclaration
   }
 
   test_field() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   final foo = 42;
 }
 ''');
 
-    var node = findNode.fieldDeclaration('foo =');
+    var node = result.findNode.fieldDeclaration('foo =');
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -442,7 +660,7 @@ FieldDeclaration
       VariableDeclaration
         name: foo
         equals: =
-        initializer: IntegerLiteral
+        initializer2: IntegerLiteral
           literal: 42
           staticType: int
         declaredFragment: <testLibraryFragment> foo@22
@@ -452,14 +670,14 @@ FieldDeclaration
   }
 
   test_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v;
   T get foo => throw 0;
 }
 ''');
 
-    var node = findNode.methodDeclaration('get foo');
+    var node = result.findNode.methodDeclaration('get foo');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -470,9 +688,9 @@ MethodDeclaration
   name: foo
   body: ExpressionFunctionBody
     functionDefinition: =>
-    expression: ThrowExpression
+    expression2: ThrowExpression
       throwKeyword: throw
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       staticType: Never
@@ -484,26 +702,26 @@ MethodDeclaration
   }
 
   test_inference_listLiteral() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E1 {a, b}
 enum E2 {a, b}
 
 var v = [E1.a, E2.b];
 ''');
 
-    var v = findElement2.topVar('v');
+    var v = result.findElement.topVar('v');
     assertType(v.type, 'List<Enum>');
   }
 
   test_interfaces() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class I {}
 enum E implements I {
   v;
 }
 ''');
 
-    var node = findNode.implementsClause('implements');
+    var node = result.findNode.implementsClause('implements');
     assertResolvedNodeText(node, r'''
 ImplementsClause
   implementsKeyword: implements
@@ -516,27 +734,27 @@ ImplementsClause
   }
 
   test_isEnumConstant() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   a, b
 }
 ''');
 
-    expect(findElement2.field('a').isEnumConstant, isTrue);
-    expect(findElement2.field('b').isEnumConstant, isTrue);
+    expect(result.findElement.field('a').isEnumConstant, isTrue);
+    expect(result.findElement.field('b').isEnumConstant, isTrue);
 
-    expect(findElement2.field('values').isEnumConstant, isFalse);
+    expect(result.findElement.field('values').isEnumConstant, isFalse);
   }
 
   test_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v;
   int foo<U>(T t, U u) => 0;
 }
 ''');
 
-    var node = findNode.singleMethodDeclaration;
+    var node = result.findNode.singleMethodDeclaration;
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -553,6 +771,28 @@ MethodDeclaration
           defaultType: dynamic
     rightBracket: >
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: T
+          element: #E0 T
+          type: T
+        name: t
+        declaredFragment: <testLibraryFragment> t@32
+          element: isPublic
+            type: T
+      RegularFormalParameter
+        type: NamedType
+          name: U
+          element: #E1 U
+          type: U
+        name: u
+        declaredFragment: <testLibraryFragment> u@37
+          element: isPublic
+            type: U
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -575,7 +815,7 @@ MethodDeclaration
     rightParenthesis: )
   body: ExpressionFunctionBody
     functionDefinition: =>
-    expression: IntegerLiteral
+    expression2: IntegerLiteral
       literal: 0
       staticType: int
     semicolon: ;
@@ -586,14 +826,14 @@ MethodDeclaration
   }
 
   test_method_toString() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   String toString() => 'E';
 }
 ''');
 
-    var node = findNode.methodDeclaration('toString()');
+    var node = result.findNode.methodDeclaration('toString()');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   returnType: NamedType
@@ -606,7 +846,7 @@ MethodDeclaration
     rightParenthesis: )
   body: ExpressionFunctionBody
     functionDefinition: =>
-    expression: SimpleStringLiteral
+    expression2: SimpleStringLiteral
       literal: 'E'
     semicolon: ;
   declaredFragment: <testLibraryFragment> toString@23
@@ -616,14 +856,14 @@ MethodDeclaration
   }
 
   test_mixins() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M {}
 enum E with M {
   v;
 }
 ''');
 
-    var node = findNode.withClause('with M');
+    var node = result.findNode.withClause('with M');
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
@@ -636,7 +876,7 @@ WithClause
   }
 
   test_mixins_inference() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M1<T> {}
 mixin M2<T> on M1<T> {}
 enum E with M1<int>, M2 {
@@ -644,7 +884,7 @@ enum E with M1<int>, M2 {
 }
 ''');
 
-    var node = findNode.withClause('with');
+    var node = result.findNode.withClause('with');
     assertResolvedNodeText(node, r'''
 WithClause
   withKeyword: with
@@ -669,11 +909,11 @@ WithClause
   }
 
   test_nameWithTypeParameters_hasTypeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A<T extends int> {v}
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -697,7 +937,7 @@ EnumDeclaration
     constants
       EnumConstantDeclaration
         name: v
-        constructorElement: ConstructorMember
+        constructorElement: SubstitutedConstructorElementImpl
           baseElement: <testLibrary>::@enum::A::@constructor::new
           substitution: {T: int}
         declaredFragment: <testLibraryFragment> v@23
@@ -707,11 +947,11 @@ EnumDeclaration
   }
 
   test_nameWithTypeParameters_noTypeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A {v}
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -730,17 +970,40 @@ EnumDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_default_namedOptional_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A({final int a = 0}) { v(a: 1) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      delimitedFormalParameters: DelimitedFormalParameters
+        leftDelimiter: {
+        formalParameters
+          RegularFormalParameter
+            constFinalOrVarKeyword: final
+            type: NamedType
+              name: int
+              element: dart:core::@class::int
+              type: int
+            name: a
+            defaultClause: FormalParameterDefaultClause
+              separator: =
+              value2: IntegerLiteral
+                literal: 0
+                staticType: int
+            declaredFragment: <testLibraryFragment> a@18
+              element: isFinal isPublic
+                type: int
+                field: <testLibrary>::@enum::A::@field::a
+        rightDelimiter: }
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
       parameter: RegularFormalParameter
@@ -772,11 +1035,11 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               NamedArgument
                 name: a
                 colon: :
-                argumentExpression: IntegerLiteral
+                argumentExpression2: IntegerLiteral
                   literal: 1
                   staticType: int
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -789,17 +1052,36 @@ EnumDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_default_namedRequired_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A({required final int a}) { v(a: 0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      delimitedFormalParameters: DelimitedFormalParameters
+        leftDelimiter: {
+        formalParameters
+          RegularFormalParameter
+            requiredKeyword: required
+            constFinalOrVarKeyword: final
+            type: NamedType
+              name: int
+              element: dart:core::@class::int
+              type: int
+            name: a
+            declaredFragment: <testLibraryFragment> a@27
+              element: isFinal isPublic
+                type: int
+                field: <testLibrary>::@enum::A::@field::a
+        rightDelimiter: }
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       leftDelimiter: {
       parameter: RegularFormalParameter
@@ -827,11 +1109,11 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               NamedArgument
                 name: a
                 colon: :
-                argumentExpression: IntegerLiteral
+                argumentExpression2: IntegerLiteral
                   literal: 0
                   staticType: int
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -844,18 +1126,59 @@ EnumDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_functionTyped_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(final int a(String x)) { v(foo) }
 int foo(String _) => 0;
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          functionTypedSuffix: FunctionTypedFormalParameterSuffix
+            formalParameters: FormalParameterList
+              leftParenthesis: (
+              requiredPositionalFormalParameters
+                RegularFormalParameter
+                  type: NamedType
+                    name: String
+                    element: dart:core::@class::String
+                    type: String
+                  name: x
+                  declaredFragment: <testLibraryFragment> x@26
+                    element: isPublic
+                      type: String
+              rightParenthesis: )
+            formalParameters(v1): FormalParameterList
+              leftParenthesis: (
+              parameter: RegularFormalParameter
+                type: NamedType
+                  name: String
+                  element: dart:core::@class::String
+                  type: String
+                name: x
+                declaredFragment: <testLibraryFragment> x@26
+                  element: isPublic
+                    type: String
+              rightParenthesis: )
+          declaredFragment: <testLibraryFragment> a@17
+            element: isFinal isPublic
+              type: int Function(String)
+              field: <testLibrary>::@enum::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: final
@@ -893,7 +1216,7 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               SimpleIdentifier
                 token: foo
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -908,17 +1231,32 @@ EnumDeclaration
   }
 
   test_primaryConstructor_declaringFormalParameter_simple_final() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(final int a) { v(0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          constFinalOrVarKeyword: final
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@17
+            element: isFinal isPublic
+              type: int
+              field: <testLibrary>::@enum::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         constFinalOrVarKeyword: final
@@ -943,7 +1281,7 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -957,20 +1295,36 @@ EnumDeclaration
   }
 
   test_primaryConstructor_fieldFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int this.a) {
   v(0);
   final int a;
 }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        FieldFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          thisKeyword: this
+          period: .
+          name: a
+          declaredFragment: <testLibraryFragment> a@16
+            element: isFinal isPublic
+              type: int
+              field: <testLibrary>::@enum::A::@field::a
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: FieldFormalParameter
         type: NamedType
@@ -996,7 +1350,7 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -1025,7 +1379,7 @@ EnumDeclaration
   }
 
   test_primaryConstructor_formalParameters_bodyScope_metadata() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 0;
 enum A(@foo int x) {
   v(0);
@@ -1033,11 +1387,32 @@ enum A(@foo int x) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        metadata
+          Annotation
+            atSign: @
+            name: SimpleIdentifier
+              token: foo
+              element: <testLibrary>::@enum::A::@getter::foo
+              staticType: null
+            element: <testLibrary>::@enum::A::@getter::foo
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: x
+        declaredFragment: <testLibraryFragment> x@31
+          element: isPublic
+            type: int
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       metadata
@@ -1064,7 +1439,7 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_formalParameters_bodyScope_type() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int x) {
 //     ^^^
 // [diag.notAType] int isn't a type.
@@ -1073,11 +1448,24 @@ enum A(int x) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: int
+          element: <testLibrary>::@enum::A::@getter::int
+          type: InvalidType
+        name: x
+        declaredFragment: <testLibraryFragment> x@11
+          element: isPublic
+            type: InvalidType
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -1096,11 +1484,11 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_hasTypeParameters_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A<T>.named(T t) { v.named(0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -1118,6 +1506,19 @@ EnumDeclaration
       period: .
       name: named
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E0 T
+            type: T
+          name: t
+          declaredFragment: <testLibraryFragment> t@18
+            element: isPublic
+              type: T
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1140,21 +1541,22 @@ EnumDeclaration
         arguments: EnumConstantArguments
           constructorSelector: ConstructorSelector
             period: .
-            name: SimpleIdentifier
+            name2: named
+            name(v1): SimpleIdentifier
               token: named
               element: <null>
               staticType: null
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
-                correspondingParameter: ParameterMember
+                correspondingParameter: SubstitutedFormalParameterElementImpl
                   baseElement: <testLibrary>::@enum::A::@constructor::named::@formalParameter::t
                   substitution: {T: int}
                 staticType: int
             rightParenthesis: )
-        constructorElement: ConstructorMember
+        constructorElement: SubstitutedConstructorElementImpl
           baseElement: <testLibrary>::@enum::A::@constructor::named
           substitution: {T: int}
         declaredFragment: <testLibraryFragment> v@23
@@ -1164,11 +1566,11 @@ EnumDeclaration
   }
 
   test_primaryConstructor_hasTypeParameters_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A<T>(T t) { v(0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -1183,6 +1585,19 @@ EnumDeclaration
             defaultType: dynamic
       rightBracket: >
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: T
+            element: #E0 T
+            type: T
+          name: t
+          declaredFragment: <testLibraryFragment> t@12
+            element: isPublic
+              type: T
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1205,15 +1620,15 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
-                correspondingParameter: ParameterMember
+                correspondingParameter: SubstitutedFormalParameterElementImpl
                   baseElement: <testLibrary>::@enum::A::@constructor::new::@formalParameter::t
                   substitution: {T: int}
                 staticType: int
             rightParenthesis: )
-        constructorElement: ConstructorMember
+        constructorElement: SubstitutedConstructorElementImpl
           baseElement: <testLibrary>::@enum::A::@constructor::new
           substitution: {T: int}
         declaredFragment: <testLibraryFragment> v@17
@@ -1223,11 +1638,11 @@ EnumDeclaration
   }
 
   test_primaryConstructor_noTypeParameters_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A.named(int a) { v.named(0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
@@ -1237,6 +1652,19 @@ EnumDeclaration
       period: .
       name: named
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@17
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1259,13 +1687,14 @@ EnumDeclaration
         arguments: EnumConstantArguments
           constructorSelector: ConstructorSelector
             period: .
-            name: SimpleIdentifier
+            name2: named
+            name(v1): SimpleIdentifier
               token: named
               element: <null>
               staticType: null
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::named::@formalParameter::a
@@ -1279,17 +1708,30 @@ EnumDeclaration
   }
 
   test_primaryConstructor_noTypeParameters_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int a) { v(0) }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@11
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1312,7 +1754,7 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               IntegerLiteral
                 literal: 0
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
@@ -1326,7 +1768,7 @@ EnumDeclaration
   }
 
   test_primaryConstructor_scopes() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const foo = 0;
 enum A<@foo T>([@foo int x = foo]) {
   v;
@@ -1334,7 +1776,7 @@ enum A<@foo T>([@foo int x = foo]) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: A
@@ -1355,6 +1797,36 @@ PrimaryConstructorDeclaration
           defaultType: dynamic
     rightBracket: >
   formalParameters: FormalParameterList
+    leftParenthesis: (
+    delimitedFormalParameters: DelimitedFormalParameters
+      leftDelimiter: [
+      formalParameters
+        RegularFormalParameter
+          metadata
+            Annotation
+              atSign: @
+              name: SimpleIdentifier
+                token: foo
+                element: <testLibrary>::@enum::A::@getter::foo
+                staticType: null
+              element: <testLibrary>::@enum::A::@getter::foo
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: x
+          defaultClause: FormalParameterDefaultClause
+            separator: =
+            value2: SimpleIdentifier
+              token: foo
+              element: <testLibrary>::@enum::A::@getter::foo
+              staticType: int
+          declaredFragment: <testLibraryFragment> x@40
+            element: isPublic
+              type: int
+      rightDelimiter: ]
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
     leftParenthesis: (
     leftDelimiter: [
     parameter: RegularFormalParameter
@@ -1389,13 +1861,13 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructor_typeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T extends U, U extends num>(T t, U u) {
   v(0, 0);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorDeclaration;
+    var node = result.findNode.singlePrimaryConstructorDeclaration;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorDeclaration
   typeName: E
@@ -1423,6 +1895,28 @@ PrimaryConstructorDeclaration
     rightBracket: >
   formalParameters: FormalParameterList
     leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: T
+          element: #E1 T
+          type: T
+        name: t
+        declaredFragment: <testLibraryFragment> t@37
+          element: isPublic
+            type: T
+      RegularFormalParameter
+        type: NamedType
+          name: U
+          element: #E0 U
+          type: U
+        name: u
+        declaredFragment: <testLibraryFragment> u@42
+          element: isPublic
+            type: U
+    rightParenthesis: )
+  formalParameters(v1): FormalParameterList
+    leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
         name: T
@@ -1449,7 +1943,7 @@ PrimaryConstructorDeclaration
   }
 
   test_primaryConstructorBody_duplicate() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(bool x, bool y) {
   v(true, true);
   this : assert(x) {
@@ -1465,13 +1959,35 @@ enum A(bool x, bool y) {
 }
 ''');
 
-    var node = findNode.singleEnumDeclaration;
+    var node = result.findNode.singleEnumDeclaration;
     assertResolvedNodeText(node, r'''
 EnumDeclaration
   enumKeyword: enum
   namePart: PrimaryConstructorDeclaration
     typeName: A
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: bool
+            element: dart:core::@class::bool
+            type: bool
+          name: x
+          declaredFragment: <testLibraryFragment> x@12
+            element: isPublic
+              type: bool
+        RegularFormalParameter
+          type: NamedType
+            name: bool
+            element: dart:core::@class::bool
+            type: bool
+          name: y
+          declaredFragment: <testLibraryFragment> y@20
+            element: isPublic
+              type: bool
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -1503,7 +2019,7 @@ EnumDeclaration
         arguments: EnumConstantArguments
           argumentList: ArgumentList
             leftParenthesis: (
-            arguments
+            arguments2
               BooleanLiteral
                 literal: true
                 correspondingParameter: <testLibrary>::@enum::A::@constructor::new::@formalParameter::x
@@ -1524,7 +2040,7 @@ EnumDeclaration
           AssertInitializer
             assertKeyword: assert
             leftParenthesis: (
-            condition: SimpleIdentifier
+            condition2: SimpleIdentifier
               token: x
               element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::x
               staticType: bool
@@ -1534,7 +2050,7 @@ EnumDeclaration
             leftBracket: {
             statements
               ExpressionStatement
-                expression: SimpleIdentifier
+                expression2: SimpleIdentifier
                   token: y
                   element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::y
                   staticType: bool
@@ -1547,7 +2063,14 @@ EnumDeclaration
           AssertInitializer
             assertKeyword: assert
             leftParenthesis: (
-            condition: PrefixExpression
+            condition2: LogicalNot
+              operator: !
+              operand: SimpleIdentifier
+                token: x
+                element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::x
+                staticType: bool
+              staticType: bool
+            condition(v1): PrefixExpression
               operator: !
               operand: SimpleIdentifier
                 token: x
@@ -1561,7 +2084,14 @@ EnumDeclaration
             leftBracket: {
             statements
               ExpressionStatement
-                expression: PrefixExpression
+                expression2: LogicalNot
+                  operator: !
+                  operand: SimpleIdentifier
+                    token: y
+                    element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::y
+                    staticType: bool
+                  staticType: bool
+                expression(v1): PrefixExpression
                   operator: !
                   operand: SimpleIdentifier
                     token: y
@@ -1577,7 +2107,7 @@ EnumDeclaration
   }
 
   test_primaryConstructorBody_metadata() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E(int a) {
   v(0);
   @deprecated
@@ -1585,7 +2115,7 @@ enum E(int a) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   metadata
@@ -1603,7 +2133,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_metadata_noDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v;
   @deprecated
@@ -1613,7 +2143,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   metadata
@@ -1631,7 +2161,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_noDeclaration() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A/*(bool x, int y)*/ {
   v();
   this : assert(x) {
@@ -1646,7 +2176,7 @@ enum A/*(bool x, int y)*/ {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1655,7 +2185,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: x
         element: <null>
         staticType: InvalidType
@@ -1665,7 +2195,7 @@ PrimaryConstructorBody
       leftBracket: {
       statements
         ExpressionStatement
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: y
             element: <null>
             staticType: InvalidType
@@ -1675,14 +2205,14 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_declaringFormalParameter_optionalNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A({final x = false}) {
   v(x: true);
   this : assert(x);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1691,7 +2221,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: x
         element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::x
         staticType: bool
@@ -1702,14 +2232,14 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_declaringFormalParameter_requiredPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(final bool a) {
   v(true);
   this : assert(a);
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1718,7 +2248,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: a
         element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::a
         staticType: bool
@@ -1729,7 +2259,7 @@ PrimaryConstructorBody
   }
 
   test_primaryConstructorBody_primaryInitializerScope_fieldFormalParameter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(this.x) {
   v(true);
   final bool x;
@@ -1737,7 +2267,7 @@ enum A(this.x) {
 }
 ''');
 
-    var node = findNode.singlePrimaryConstructorBody;
+    var node = result.findNode.singlePrimaryConstructorBody;
     assertResolvedNodeText(node, r'''
 PrimaryConstructorBody
   thisKeyword: this
@@ -1746,7 +2276,7 @@ PrimaryConstructorBody
     AssertInitializer
       assertKeyword: assert
       leftParenthesis: (
-      condition: SimpleIdentifier
+      condition2: SimpleIdentifier
         token: x
         element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::x
         staticType: bool
@@ -1757,14 +2287,14 @@ PrimaryConstructorBody
   }
 
   test_primaryInitializerScope_fieldInitializer_instance() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int foo) {
   v(0);
   final bar = foo;
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1773,7 +2303,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::foo
           staticType: int
@@ -1784,14 +2314,14 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldInitializer_instance_declaringFormal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(final int foo) {
   v(0);
   final bar = foo;
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1800,7 +2330,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <testLibrary>::@enum::A::@constructor::new::@formalParameter::foo
           staticType: int
@@ -1811,7 +2341,7 @@ FieldDeclaration
   }
 
   test_primaryInitializerScope_fieldInitializer_instance_late() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int foo) {
 //   ^
 // [diag.constConstructorWithFieldInitializedByNonConst] Can't define the 'const' constructor because the field 'bar' is initialized with a non-constant value.
@@ -1824,7 +2354,7 @@ enum A(int foo) {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   fields: VariableDeclarationList
@@ -1834,18 +2364,18 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <null>
           staticType: InvalidType
-        declaredFragment: <testLibraryFragment> bar@206
+        declaredFragment: <testLibraryFragment> bar@39
   semicolon: ;
   declaredFragment: <null>
 ''');
   }
 
   test_primaryInitializerScope_fieldInitializer_static() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum A(int foo) {
   v(0);
   static var bar = foo;
@@ -1854,7 +2384,7 @@ enum A(int foo) {
 }
 ''');
 
-    var node = findNode.singleFieldDeclaration;
+    var node = result.findNode.singleFieldDeclaration;
     assertResolvedNodeText(node, r'''
 FieldDeclaration
   staticKeyword: static
@@ -1864,7 +2394,7 @@ FieldDeclaration
       VariableDeclaration
         name: bar
         equals: =
-        initializer: SimpleIdentifier
+        initializer2: SimpleIdentifier
           token: foo
           element: <null>
           staticType: InvalidType
@@ -1875,19 +2405,32 @@ FieldDeclaration
   }
 
   test_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E<T> {
   v;
   set foo(T a) {}
 }
 ''');
 
-    var node = findNode.methodDeclaration('set foo');
+    var node = result.findNode.methodDeclaration('set foo');
     assertResolvedNodeText(node, r'''
 MethodDeclaration
   propertyKeyword: set
   name: foo
   parameters: FormalParameterList
+    leftParenthesis: (
+    requiredPositionalFormalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: T
+          element: #E0 T
+          type: T
+        name: a
+        declaredFragment: <testLibraryFragment> a@29
+          element: isPublic
+            type: T
+    rightParenthesis: )
+  parameters(v1): FormalParameterList
     leftParenthesis: (
     parameter: RegularFormalParameter
       type: NamedType
@@ -1910,7 +2453,7 @@ MethodDeclaration
   }
 
   test_value_underscore() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E { _ }
 
 void f() {
@@ -1918,10 +2461,10 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singlePropertyAccess;
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: PrefixedIdentifier
+  target2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: E
       element: <testLibrary>::@enum::E

@@ -47,7 +47,7 @@ import "package:vm/modular/target/flutter.dart" show FlutterTarget;
 import "package:vm/modular/target/vm.dart" show VmTarget;
 
 import 'incremental_suite.dart' show getOptions;
-import 'parser_suite.dart' as parser_suite;
+import 'parser_suite_utils.dart' as parser_suite_utils;
 import 'parser_test_listener.dart' show ParserTestListener;
 
 class TestMinimizerSettings {
@@ -185,7 +185,7 @@ class TestMinimizer {
 
   static const int _$LF = 10;
 
-  TestMinimizer(this._settings);
+  new(this._settings);
 
   bool? _oldEchoMode;
   bool? _oldLineMode;
@@ -1219,7 +1219,7 @@ worlds:
 
     List<int> lineStarts = [];
 
-    Token firstToken = parser_suite.scanRawBytes(
+    Token firstToken = parser_suite_utils.scanRawBytes(
       data,
       _scannerConfiguration,
       lineStarts,
@@ -2307,7 +2307,7 @@ worlds:
   String _getFileAsStringContent(Uint8List rawBytes) {
     List<int> lineStarts = [];
 
-    Token firstToken = parser_suite.scanRawBytes(
+    Token firstToken = parser_suite_utils.scanRawBytes(
       rawBytes,
       _scannerConfiguration,
       lineStarts,
@@ -2320,14 +2320,14 @@ worlds:
       experimentalFeatures: const DefaultExperimentalFeatures(),
     );
     parser.parseUnit(firstToken);
-    String parsedString = parser_suite
+    String parsedString = parser_suite_utils
         .tokenStreamToString(firstToken, lineStarts)
         .toString();
     return parsedString;
   }
 
   bool _parsesWithoutError(Uint8List rawBytes) {
-    Token firstToken = parser_suite.scanRawBytes(
+    Token firstToken = parser_suite_utils.scanRawBytes(
       rawBytes,
       _scannerConfiguration,
       null,
@@ -2408,7 +2408,7 @@ class _CompilationHelperClass {
   Uint8List latestCrashData;
   final Uint8List originalData;
 
-  _CompilationHelperClass(this.originalData) : latestCrashData = originalData;
+  new(this.originalData) : latestCrashData = originalData;
 }
 
 class _Replacement implements Comparable<_Replacement> {
@@ -2416,7 +2416,7 @@ class _Replacement implements Comparable<_Replacement> {
   final int to;
   final String? nullOrReplacement;
 
-  _Replacement(this.from, this.to, {this.nullOrReplacement});
+  new(this.from, this.to, {this.nullOrReplacement});
 
   @override
   int compareTo(_Replacement other) {
@@ -2475,7 +2475,7 @@ class _FakeFileSystemEntity extends FileSystemEntity {
   final _FakeFileSystem fs;
   @override
   final Uri uri;
-  _FakeFileSystemEntity(this.fs, this.uri);
+  new(this.fs, this.uri);
 
   void _ensureCachedIfOk() {
     if (fs.data.containsKey(uri)) return;
@@ -2523,5 +2523,5 @@ class _FakeFileSystemEntity extends FileSystemEntity {
 }
 
 class _DoesntCrashOnInput {
-  _DoesntCrashOnInput();
+  new();
 }

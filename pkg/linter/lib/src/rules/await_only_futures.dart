@@ -17,8 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Await only futures.';
 
 class AwaitOnlyFutures extends AnalysisRule {
-  AwaitOnlyFutures()
-    : super(name: LintNames.await_only_futures, description: _desc);
+  new() : super(name: LintNames.await_only_futures, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.awaitOnlyFutures;
@@ -33,13 +32,8 @@ class AwaitOnlyFutures extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitAwaitExpression(AwaitExpression node) {
     if (node.expression is NullLiteral) return;

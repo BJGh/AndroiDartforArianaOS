@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
 import 'package:analyzer_testing/package_config_file_builder.dart';
@@ -12,6 +13,7 @@ import 'abstract_rename.dart';
 
 void main() {
   defineReflectiveSuite(() {
+    defineReflectiveTests(RenameClassMemberClass_OutsideOfProjectTest);
     defineReflectiveTests(RenameClassMemberClassTest);
     defineReflectiveTests(
       RenameClassMemberClassTest_WithoutPrivateNamedParameters,
@@ -19,6 +21,100 @@ void main() {
     defineReflectiveTests(RenameClassMemberEnumTest);
     defineReflectiveTests(RenameClassMemberExtensionTypeTest);
   });
+}
+
+@reflectiveTest
+class RenameClassMemberClass_OutsideOfProjectTest
+    extends RenameRefactoringTest {
+  @override
+  String get testFilePath => convertPath('/home/test/bin/test.dart');
+
+  Future<void> test_createChange_declarationInPackage() async {
+    newFile('$workspaceRootPath/aaa/lib/aaa.dart', r'''
+class A {
+  void test() {}
+}
+
+void foo(A a) {
+  a.test();
+}
+''');
+
+    writeTestPackageConfig(
+      config: PackageConfigFileBuilder()
+        ..add(name: 'aaa', rootFolder: getFolder('$workspaceRootPath/aaa')),
+    );
+
+    await indexTestUnit('''
+import 'package:aaa/aaa.dart';
+
+class B extends A {
+  void te^st() {}
+}
+
+void f(A a, B b) {
+  a.test();
+  b.test();
+}
+''');
+    createRenameRefactoring();
+    refactoring.newName = 'newName';
+
+    await assertSuccessfulRefactoring('''
+import 'package:aaa/aaa.dart';
+
+class B extends A {
+  void newName() {}
+}
+
+void f(A a, B b) {
+  a.newName();
+  b.newName();
+}
+''');
+
+    expect(refactoringChange.edits, hasLength(1));
+    expect(refactoringChange.edits.first.file, testFile.path);
+  }
+
+  Future<void> test_createChange_referenceInPart() async {
+    newFile('/home/part.dart', r'''
+part of 'test/bin/test.dart';
+
+void foo(A a) {
+  a.test();
+}
+''');
+
+    await indexTestUnit('''
+part '../../part.dart';
+
+class A {
+  void tes^t() {}
+}
+
+void f(A a) {
+  a.test();
+}
+''');
+    createRenameRefactoring();
+    refactoring.newName = 'newName';
+
+    await assertSuccessfulRefactoring('''
+part '../../part.dart';
+
+class A {
+  void newName() {}
+}
+
+void f(A a) {
+  a.newName();
+}
+''');
+
+    expect(refactoringChange.edits, hasLength(1));
+    expect(refactoringChange.edits.first.file, testFile.path);
+  }
 }
 
 @reflectiveTest
@@ -339,6 +435,91 @@ class B extends NewName {
     );
   }
 
+  /// Private named parameters can be renamed without warning about becoming
+  /// invisible to other libraries because the parameter name is public.
+  Future<void>
+  test_checkFinalConditions_declaringParameter_privateNamedParameter_privateToPrivate() async {
+    await indexTestUnit(
+      '''
+class A({final int? _f^oo});
+''',
+      ignore: [diag.unusedFieldFromPrimaryConstructor],
+    );
+    await indexUnit('$testPackageLibPath/lib.dart', '''
+import 'test.dart';
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    // check status
+    refactoring.newName = '_newName';
+    var status = await refactoring.checkFinalConditions();
+    assertRefactoringStatusOK(status);
+  }
+
+  /// Private named parameters can be created without warning about becoming
+  /// invisible to other libraries because the parameter name remains public.
+  Future<void>
+  test_checkFinalConditions_declaringParameter_privateNamedParameter_publicToPrivate() async {
+    await indexTestUnit('''
+class A({final int? f^oo});
+''');
+    await indexUnit('$testPackageLibPath/lib.dart', '''
+import 'test.dart';
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    // check status
+    refactoring.newName = '_newName';
+    var status = await refactoring.checkFinalConditions();
+    assertRefactoringStatusOK(status);
+  }
+
+  /// Private named parameters can be renamed without warning about becoming
+  /// invisible to other libraries because the parameter name is public.
+  Future<void>
+  test_checkFinalConditions_fieldFormalParameter_privateNamedParameter_privateToPrivate() async {
+    await indexTestUnit('''
+class A {
+  final int? _foo;
+  A({this._f^oo});
+}
+''');
+    await indexUnit('$testPackageLibPath/lib.dart', '''
+import 'test.dart';
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    // check status
+    refactoring.newName = '_newName';
+    var status = await refactoring.checkFinalConditions();
+    assertRefactoringStatusOK(status);
+  }
+
+  /// Private named parameters can be created without warning about becoming
+  /// invisible to other libraries because the parameter name remains public.
+  Future<void>
+  test_checkFinalConditions_fieldFormalParameter_privateNamedParameter_publicToPrivate() async {
+    await indexTestUnit('''
+class A {
+  final int? foo;
+  A({this.f^oo});
+}
+''');
+    await indexUnit('$testPackageLibPath/lib.dart', '''
+import 'test.dart';
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    // check status
+    refactoring.newName = '_newName';
+    var status = await refactoring.checkFinalConditions();
+    assertRefactoringStatusOK(status);
+  }
+
   Future<void> test_checkFinalConditions_hasMember_MethodElement() async {
     await indexTestUnit('''
 class A {
@@ -515,8 +696,7 @@ class A {
     assertRefactoringStatus(
       status,
       RefactoringProblemSeverity.ERROR,
-      expectedMessage:
-          "Usage of renamed method will be shadowed by local variable 'newName'.",
+      expectedMessage: "Usage of renamed method will be shadowed by local variable 'newName'.",
       rangeIndex: 0,
     );
   }
@@ -541,8 +721,7 @@ class B extends A {
     assertRefactoringStatus(
       status,
       RefactoringProblemSeverity.ERROR,
-      expectedMessage:
-          "Usage of renamed method will be shadowed by local variable 'newName'.",
+      expectedMessage: "Usage of renamed method will be shadowed by local variable 'newName'.",
       rangeIndex: 0,
     );
   }
@@ -715,8 +894,7 @@ void f() {
     assertRefactoringStatus(
       status,
       RefactoringProblemSeverity.FATAL,
-      expectedMessage:
-          "The method 'String.toUpperCase' is defined in the SDK, so cannot be renamed.",
+      expectedMessage: "The method 'String.toUpperCase' is defined in the SDK, so cannot be renamed.",
     );
   }
 
@@ -1333,6 +1511,47 @@ void f() {
 ''');
   }
 
+  /// The local `test` does not "shadow" the dot shorthand `.test`, so the
+  /// reference in the other library must be renamed too.
+  Future<void>
+  test_createChange_MethodElement_dotShorthand_otherFile_localWithSameName() async {
+    newFile('$testPackageLibPath/lib.dart', r'''
+import 'test.dart';
+
+void f() {
+  var test = 0;
+  print(test);
+  g(.test());
+}
+''');
+
+    await indexTestUnit('''
+class A {
+  static A te^st() => A();
+}
+void g(A a) {}
+''');
+
+    createRenameRefactoring();
+    refactoring.newName = 'newName';
+
+    await assertSuccessfulRefactoring2(r'''
+>>>>>>>>>> /home/test/lib/test.dart
+class A {
+  static A newName() => A();
+}
+void g(A a) {}
+>>>>>>>>>> /home/test/lib/lib.dart
+import 'test.dart';
+
+void f() {
+  var test = 0;
+  print(test);
+  g(.newName());
+}
+''');
+  }
+
   Future<void> test_createChange_MethodElement_potential() async {
     await indexTestUnit('''
 class A {
@@ -1441,96 +1660,6 @@ void f(a) {
 }
 ''');
     assertNoFileChange('/lib.dart');
-  }
-
-  Future<void> test_createChange_outsideOfProject_declarationInPackage() async {
-    newFile('$workspaceRootPath/aaa/lib/aaa.dart', r'''
-class A {
-  void test() {}
-}
-
-void foo(A a) {
-  a.test();
-}
-''');
-
-    writeTestPackageConfig(
-      config: PackageConfigFileBuilder()
-        ..add(name: 'aaa', rootFolder: getFolder('$workspaceRootPath/aaa')),
-    );
-
-    await indexTestUnit('''
-import 'package:aaa/aaa.dart';
-
-class B extends A {
-  void te^st() {}
-}
-
-void f(A a, B b) {
-  a.test();
-  b.test();
-}
-''');
-    createRenameRefactoring();
-    refactoring.newName = 'newName';
-
-    await assertSuccessfulRefactoring('''
-import 'package:aaa/aaa.dart';
-
-class B extends A {
-  void newName() {}
-}
-
-void f(A a, B b) {
-  a.newName();
-  b.newName();
-}
-''');
-
-    expect(refactoringChange.edits, hasLength(1));
-    expect(refactoringChange.edits.first.file, testFile.path);
-  }
-
-  Future<void> test_createChange_outsideOfProject_referenceInPart() async {
-    newFile('/home/part.dart', r'''
-part of 'test/bin/test.dart';
-
-void foo(A a) {
-  a.test();
-}
-''');
-
-    // To use file:// URI.
-    testFilePath = convertPath('/home/test/bin/test.dart');
-
-    await indexTestUnit('''
-part '../../part.dart';
-
-class A {
-  void tes^t() {}
-}
-
-void f(A a) {
-  a.test();
-}
-''');
-    createRenameRefactoring();
-    refactoring.newName = 'newName';
-
-    await assertSuccessfulRefactoring('''
-part '../../part.dart';
-
-class A {
-  void newName() {}
-}
-
-void f(A a) {
-  a.newName();
-}
-''');
-
-    expect(refactoringChange.edits, hasLength(1));
-    expect(refactoringChange.edits.first.file, testFile.path);
   }
 
   Future<void> test_createChange_PropertyAccessorElement_getter() async {
@@ -1698,6 +1827,97 @@ class A<NewName> {
   A(this.field);
   NewName method(NewName p) => field;
 }
+''');
+  }
+
+  /// Private named parameters can be renamed without warning about becoming
+  /// invisible to other libraries because the parameter name is public.
+  Future<void>
+  test_FieldElement_declaringParameter_privateNamedParameter_privateToPrivate() async {
+    await indexTestUnit(
+      '''
+class A({final int? _f^oo});
+
+var a = A(foo: 1);
+''',
+      ignore: [diag.unusedFieldFromPrimaryConstructor],
+    );
+    createRenameRefactoring();
+    refactoring.newName = '_newName';
+    // validate change
+    return assertSuccessfulRefactoring('''
+class A({final int? _newName});
+
+var a = A(newName: 1);
+''');
+  }
+
+  /// Private named parameters can be created without warning about becoming
+  /// invisible to other libraries because the parameter name remains public.
+  Future<void>
+  test_FieldElement_declaringParameter_privateNamedParameter_publicToPrivate() async {
+    await indexTestUnit('''
+class A({final int? f^oo});
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    refactoring.newName = '_newName';
+    // validate change
+    return assertSuccessfulRefactoring('''
+class A({final int? _newName});
+
+var a = A(newName: 1);
+''');
+  }
+
+  /// Private named parameters can be renamed without warning about becoming
+  /// invisible to other libraries because the parameter name is public.
+  Future<void>
+  test_FieldElement_fieldFormalParameter_privateNamedParameter_privateToPrivate() async {
+    await indexTestUnit('''
+class A {
+  final int? _foo;
+  A({this._f^oo});
+}
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    refactoring.newName = '_newName';
+    // validate change
+    return assertSuccessfulRefactoring('''
+class A {
+  final int? _newName;
+  A({this._newName});
+}
+
+var a = A(newName: 1);
+''');
+  }
+
+  /// Private named parameters can be created without warning about becoming
+  /// invisible to other libraries because the parameter name remains public.
+  Future<void>
+  test_FieldElement_fieldFormalParameter_privateNamedParameter_publicToPrivate() async {
+    await indexTestUnit('''
+class A {
+  final int? foo;
+  A({this.f^oo});
+}
+
+var a = A(foo: 1);
+''');
+    createRenameRefactoring();
+    refactoring.newName = '_newName';
+    // validate change
+    return assertSuccessfulRefactoring('''
+class A {
+  final int? _newName;
+  A({this._newName});
+}
+
+var a = A(newName: 1);
 ''');
   }
 
@@ -2108,7 +2328,7 @@ void f() {
 }
 ''');
     // configure refactoring
-    var element = findElement2.field('field');
+    var element = findElement.field('field');
     createRenameRefactoringForElement2(element);
     expect(refactoring.refactoringName, 'Rename Field');
     expect(refactoring.oldName, 'field');
@@ -2281,8 +2501,7 @@ enum E {
     assertRefactoringStatus(
       status,
       RefactoringProblemSeverity.ERROR,
-      expectedMessage:
-          "Usage of renamed method will be shadowed by local variable 'newName'.",
+      expectedMessage: "Usage of renamed method will be shadowed by local variable 'newName'.",
       rangeIndex: 0,
     );
   }
@@ -2589,7 +2808,7 @@ void f() {
 }
 ''');
     // configure refactoring
-    var element = findElement2.field('field');
+    var element = findElement.field('field');
     createRenameRefactoringForElement2(element);
     expect(refactoring.refactoringName, 'Rename Field');
     expect(refactoring.oldName, 'field');
@@ -2619,7 +2838,7 @@ void f() {
 }
 ''');
     // configure refactoring
-    var element = findElement2.field('field');
+    var element = findElement.field('field');
     createRenameRefactoringForElement2(element);
     expect(refactoring.refactoringName, 'Rename Field');
     expect(refactoring.oldName, 'field');

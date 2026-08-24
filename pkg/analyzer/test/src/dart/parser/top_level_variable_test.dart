@@ -2,24 +2,24 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../diagnostics/parser_diagnostics.dart';
+import '../resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(TopLevelVariableParserTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
 class TopLevelVariableParserTest extends ParserDiagnosticsTest {
   test_abstract() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 abstract int foo;
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleTopLevelVariableDeclaration;
     assertParsedNodeText(node, r'''
@@ -35,12 +35,12 @@ TopLevelVariableDeclaration
 ''');
   }
 
-  test_abstract_language305() {
-    var parseResult = parseStringWithErrors(r'''
-// @dart = 3.5
+  test_abstract_beforeAugmentations() {
+    var parseResult = parseTestCodeWithDiagnostics(r'''
+// %before-language-feature: augmentations
 abstract int foo;
+// [diag.extraneousModifier][column 1][length 8] Can't have modifier 'abstract' here.
 ''');
-    parseResult.assertErrors([error(diag.extraneousModifier, 15, 8)]);
 
     var node = parseResult.findNode.singleTopLevelVariableDeclaration;
     assertParsedNodeText(node, r'''
@@ -57,10 +57,9 @@ TopLevelVariableDeclaration
   }
 
   test_augment() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 augment final foo = 0;
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleTopLevelVariableDeclaration;
     assertParsedNodeText(node, r'''
@@ -72,17 +71,16 @@ TopLevelVariableDeclaration
       VariableDeclaration
         name: foo
         equals: =
-        initializer: IntegerLiteral
+        initializer2: IntegerLiteral
           literal: 0
   semicolon: ;
 ''');
   }
 
   test_augment_abstract() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 augment abstract int foo;
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleTopLevelVariableDeclaration;
     assertParsedNodeText(node, r'''
@@ -99,17 +97,18 @@ TopLevelVariableDeclaration
 ''');
   }
 
-  test_augment_abstract_language305() {
-    var parseResult = parseStringWithErrors('''
-// @dart = 3.5
+  test_augment_abstract_beforeAugmentations() {
+    var parseResult = parseTestCodeWithDiagnostics('''
+// %before-language-feature: augmentations
 augment abstract int foo;
+//      ^^^^^^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 23, 8)]);
 
     var node = parseResult.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         type: NamedType
@@ -129,20 +128,18 @@ CompilationUnit
 ''');
   }
 
-  test_augment_language305() {
-    var parseResult = parseStringWithErrors('''
-// @dart = 3.5
+  test_augment_beforeAugmentations() {
+    var parseResult = parseTestCodeWithDiagnostics('''
+// %before-language-feature: augmentations
 augment final foo = 0;
+// [diag.missingConstFinalVarOrType][column 1][length 7] Variables must be declared using the keywords 'const', 'final', 'var' or a type name.
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingConstFinalVarOrType, 15, 7),
-      error(diag.expectedToken, 15, 7),
-    ]);
 
     var node = parseResult.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         variables
@@ -156,17 +153,36 @@ CompilationUnit
           VariableDeclaration
             name: foo
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
+  test_augment_external() {
+    var parseResult = parseTestCodeWithDiagnostics(r'''
+augment external int foo;
+''');
+
+    var node = parseResult.findNode.singleTopLevelVariableDeclaration;
+    assertParsedNodeText(node, r'''
+TopLevelVariableDeclaration
+  augmentKeyword: augment
+  externalKeyword: external
+  variables: VariableDeclarationList
+    type: NamedType
+      name: int
+    variables
+      VariableDeclaration
+        name: foo
+  semicolon: ;
+''');
+  }
+
   test_external() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 external int foo;
 ''');
-    parseResult.assertNoErrors();
 
     var node = parseResult.findNode.singleTopLevelVariableDeclaration;
     assertParsedNodeText(node, r'''

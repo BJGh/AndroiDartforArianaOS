@@ -181,7 +181,7 @@ class SourceCompilationUnitImpl implements SourceCompilationUnit {
   @override
   final bool mayImplementRestrictedTypes;
 
-  factory SourceCompilationUnitImpl({
+  factory({
     required Uri importUri,
     required Uri fileUri,
     required Uri? packageUri,
@@ -229,7 +229,7 @@ class SourceCompilationUnitImpl implements SourceCompilationUnit {
     );
   }
 
-  SourceCompilationUnitImpl._(
+  new _(
     LibraryNameSpaceBuilder libraryNameSpaceBuilder, {
     required this.importUri,
     required this.fileUri,
@@ -607,7 +607,7 @@ class SourceCompilationUnitImpl implements SourceCompilationUnit {
   }
 
   @override
-  void buildOutline(Token tokens) {
+  void buildOutline(Token tokens, {bool onlyDirectives = false}) {
     assert(_offsetMap == null, "OffsetMap has already been set for $this");
 
     // TODO(johnniwinther): Create these in [createOutlineBuilder].
@@ -631,10 +631,16 @@ class SourceCompilationUnitImpl implements SourceCompilationUnit {
       _offsetMap = new OffsetMap(fileUri),
     );
 
-    new ClassMemberParser(
+    ClassMemberParser classMemberParser = new ClassMemberParser(
       listener,
       experimentalFeatures: new LibraryExperimentalFeatures(libraryFeatures),
-    ).parseUnit(tokens);
+    );
+    if (onlyDirectives) {
+      // Coverage-ignore-block(suite): Not run.
+      classMemberParser.parseDirectives(tokens);
+    } else {
+      classMemberParser.parseUnit(tokens);
+    }
   }
 
   @override

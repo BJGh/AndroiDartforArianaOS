@@ -15,8 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Only reference in-scope identifiers in doc comments.';
 
 class CommentReferences extends AnalysisRule {
-  CommentReferences()
-    : super(name: LintNames.comment_references, description: _desc);
+  new() : super(name: LintNames.comment_references, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.commentReferences;
@@ -32,16 +31,12 @@ class CommentReferences extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   static final _commentStartPattern = RegExp(r'^///+\s*$');
-
-  final AnalysisRule rule;
 
   /// Recognized Markdown link references (see
   /// https://spec.commonmark.org/0.31.2/#link-reference-definitions).
   final linkReferences = <String>[];
-
-  _Visitor(this.rule);
 
   @override
   void visitComment(Comment node) {

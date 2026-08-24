@@ -19,8 +19,7 @@ const _desc =
     r'Avoid <Type>.toString() in production code since results may be minified.';
 
 class AvoidTypeToString extends AnalysisRule {
-  AvoidTypeToString()
-    : super(name: LintNames.avoid_type_to_string, description: _desc);
+  new() : super(name: LintNames.avoid_type_to_string, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.avoidTypeToString;
@@ -50,15 +49,13 @@ class AvoidTypeToString extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final TypeSystem typeSystem;
-  final InterfaceType typeType;
-
+class _Visitor(
+  final AnalysisRule rule,
+  final TypeSystem typeSystem,
+  final InterfaceType typeType,
+) extends SimpleAstVisitor<void> {
   // Null if there is no logical `this` in the given context.
   InterfaceType? thisType;
-
-  _Visitor(this.rule, this.typeSystem, this.typeType);
 
   @override
   void visitArgumentList(ArgumentList node) {

@@ -17,8 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use predefined named constants.';
 
 class UseNamedConstants extends AnalysisRule {
-  UseNamedConstants()
-    : super(name: LintNames.use_named_constants, description: _desc);
+  new() : super(name: LintNames.use_named_constants, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.useNamedConstants;
@@ -34,11 +33,7 @@ class UseNamedConstants extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitDotShorthandConstructorInvocation(
     DotShorthandConstructorInvocation node,

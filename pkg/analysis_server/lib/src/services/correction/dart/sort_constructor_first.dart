@@ -11,7 +11,7 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class SortConstructorFirst extends ResolvedCorrectionProducer {
-  SortConstructorFirst({required super.context});
+  new({required super.context});
 
   @override
   CorrectionApplicability get applicability =>
@@ -25,12 +25,27 @@ class SortConstructorFirst extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    // TODO(srawlins): Support PrimaryConstructorBody.
-    var constructor = coveringNode
-        ?.thisOrAncestorOfType<ConstructorDeclaration>();
+    var constructor =
+        coveringNode?.thisOrAncestorOfType<ConstructorDeclaration>() ??
+        coveringNode?.thisOrAncestorOfType<PrimaryConstructorBody>();
     if (constructor == null) return;
-    var classBody = constructor.thisOrAncestorOfType<BlockClassBody>();
-    if (classBody == null) return;
+
+    var body =
+        constructor.thisOrAncestorOfType<BlockClassBody>() ??
+        constructor.thisOrAncestorOfType<BlockEnumBody>();
+    if (body == null) return;
+
+    int insertionOffset;
+    if (body is BlockClassBody) {
+      insertionOffset = body.leftBracket.end;
+    } else if (body is BlockEnumBody) {
+      insertionOffset =
+          body.semicolon?.end ??
+          body.constants.lastOrNull?.end ??
+          body.leftBracket.end;
+    } else {
+      return;
+    }
 
     await builder.addDartFileEdit(file, (builder) {
       var deletionRange = range.endEnd(
@@ -40,7 +55,7 @@ class SortConstructorFirst extends ResolvedCorrectionProducer {
 
       builder.addDeletion(deletionRange);
       builder.addSimpleInsertion(
-        classBody.leftBracket.end,
+        insertionOffset,
         utils.getRangeText(deletionRange),
       );
     });

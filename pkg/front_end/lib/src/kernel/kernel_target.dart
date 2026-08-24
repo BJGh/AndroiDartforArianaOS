@@ -69,6 +69,7 @@ import 'constant_evaluator.dart'
         ConstantEvaluationData;
 import 'constructor_tearoff_lowering.dart';
 import 'dynamic_module_validator.dart' as dynamic_module_validator;
+import 'external_ast_helper.dart' as extern;
 import 'kernel_constants.dart' show KernelConstantErrorReporter;
 import 'kernel_helper.dart';
 import 'utils.dart';
@@ -167,7 +168,7 @@ class KernelTarget {
 
   final Benchmarker? benchmarker;
 
-  KernelTarget(
+  new(
     this.context,
     this.fileSystem,
     this.includeComments,
@@ -240,36 +241,30 @@ class KernelTarget {
     );
   }
 
-  String get currentSdkVersionString {
-    return context.options.currentSdkVersion;
-  }
-
   Version get leastSupportedVersion => const Version(2, 12);
 
   Version? _currentSdkVersion;
 
   Version get currentSdkVersion {
     if (_currentSdkVersion == null) {
-      _parseCurrentSdkVersion();
+      _currentSdkVersion = calculateCurrentSdkVersion(context.options);
     }
     return _currentSdkVersion!;
   }
 
-  void _parseCurrentSdkVersion() {
-    bool good = false;
+  static Version calculateCurrentSdkVersion(ProcessedOptions options) {
+    String currentSdkVersionString = options.currentSdkVersion;
     List<String> dotSeparatedParts = currentSdkVersionString.split(".");
     if (dotSeparatedParts.length >= 2) {
-      _currentSdkVersion = new Version(
+      return new Version(
         int.tryParse(dotSeparatedParts[0])!,
         int.tryParse(dotSeparatedParts[1])!,
       );
-      good = true;
     }
-    if (!good) {
-      throw new StateError(
-        "Unparsable sdk version given: $currentSdkVersionString",
-      );
-    }
+    // Coverage-ignore-block(suite): Not run.
+    throw new StateError(
+      "Unparsable sdk version given: $currentSdkVersionString",
+    );
   }
 
   SourceLoader createLoader() =>
@@ -361,7 +356,9 @@ class KernelTarget {
   bool _hasComputedNeededPrecompilations = false;
 
   // TODO(johnniwinther): Remove this.
-  Future<void> computeNeededPrecompilations() async {
+  Future<void> computeNeededPrecompilations({
+    bool onlyDirectives = false,
+  }) async {
     assert(
       !_hasComputedNeededPrecompilations,
       "Needed precompilations have already been computed.",
@@ -372,7 +369,7 @@ class KernelTarget {
       benchmarker
       // Coverage-ignore(suite): Not run.
       ?.enterPhase(BenchmarkPhases.outline_kernelBuildOutlines);
-      await loader.buildOutlines();
+      await loader.buildOutlines(onlyDirectives: onlyDirectives);
 
       benchmarker
       // Coverage-ignore(suite): Not run.
@@ -462,10 +459,6 @@ class KernelTarget {
         // Coverage-ignore(suite): Not run.
         ?.enterPhase(BenchmarkPhases.outline_computeSupertypes);
         loader.computeSupertypes(loader.sourceLibraryBuilders);
-
-        benchmarker
-        // Coverage-ignore(suite): Not run.
-        ?.enterPhase(BenchmarkPhases.outline_computeMacroApplications);
 
         benchmarker
         // Coverage-ignore(suite): Not run.
@@ -1078,47 +1071,38 @@ class KernelTarget {
     bool hasTypeDependency = false;
     Substitution substitution = Substitution.fromMap(substitutionMap);
 
-    bool isClosureContextLoweringEnabled = libraryBuilder
-        .loader
-        .target
-        .backendTarget
-        .flags
-        .isClosureContextLoweringEnabled;
-
-    VariableDeclaration copyFormal(
-      VariableDeclaration formal, {
+    PositionalParameter copyPositionalParameter(
+      PositionalParameter formal, {
       required bool isPositional,
     }) {
-      VariableDeclaration copy;
-      if (isClosureContextLoweringEnabled) {
-        // Coverage-ignore-block(suite): Not run.
-        if (isPositional) {
-          copy = new PositionalParameter(
-            cosmeticName: formal.name,
-            type: const UnknownType(),
-            isFinal: formal.isFinal,
-            isRequired: formal.isRequired,
-            hasDeclaredDefaultType: formal.hasDeclaredInitializer,
-          );
-        } else {
-          copy = new NamedParameter(
-            parameterName: formal.name!,
-            type: const UnknownType(),
-            isFinal: formal.isFinal,
-            isRequired: formal.isRequired,
-            hasDeclaredDefaultType: formal.hasDeclaredInitializer,
-          );
-        }
+      PositionalParameter copy = extern.createPositionalParameter(
+        parameterName: formal.parameterName,
+        type: const UnknownType(),
+        isFinal: formal.isFinal,
+        isRequired: formal.isRequired,
+        hasDeclaredDefaultValue: formal.hasDeclaredDefaultValue,
+        fileOffset: TreeNode.noOffset,
+      );
+      if (!hasTypeDependency && formal.type is! UnknownType) {
+        copy.type = substitution.substituteType(formal.type);
       } else {
-        copy = new VariableDeclaration(
-          formal.name,
-          isFinal: formal.isFinal,
-          isConst: formal.isConst,
-          isRequired: formal.isRequired,
-          hasDeclaredInitializer: formal.hasDeclaredInitializer,
-          type: const UnknownType(),
-        );
+        hasTypeDependency = true;
       }
+      return copy;
+    }
+
+    NamedParameter copyNamedParameter(
+      NamedParameter formal, {
+      required bool isPositional,
+    }) {
+      NamedParameter copy = extern.createNamedParameter(
+        parameterName: formal.parameterName,
+        type: const UnknownType(),
+        isFinal: formal.isFinal,
+        isRequired: formal.isRequired,
+        hasDeclaredDefaultValue: formal.hasDeclaredDefaultValue,
+        fileOffset: TreeNode.noOffset,
+      );
       if (!hasTypeDependency && formal.type is! UnknownType) {
         copy.type = substitution.substituteType(formal.type);
       } else {
@@ -1137,23 +1121,24 @@ class KernelTarget {
         }
       }
     }
-    List<VariableDeclaration> positionalParameters = <VariableDeclaration>[];
-    List<VariableDeclaration> namedParameters = <VariableDeclaration>[];
+    List<PositionalParameter> positionalParameters = [];
+    List<NamedParameter> namedParameters = [];
     List<Expression> positional = <Expression>[];
     List<NamedExpression> named = <NamedExpression>[];
 
-    for (VariableDeclaration formal
+    for (PositionalParameter formal
         in superConstructor.function.positionalParameters) {
-      positionalParameters.add(copyFormal(formal, isPositional: true));
+      positionalParameters.add(
+        copyPositionalParameter(formal, isPositional: true),
+      );
       positional.add(new VariableGet(positionalParameters.last));
     }
-    for (VariableDeclaration formal
-        in superConstructor.function.namedParameters) {
-      VariableDeclaration clone = copyFormal(formal, isPositional: false);
+    for (NamedParameter formal in superConstructor.function.namedParameters) {
+      NamedParameter clone = copyNamedParameter(formal, isPositional: false);
       namedParameters.add(clone);
       named.add(
         new NamedExpression(
-          formal.name!,
+          formal.parameterName,
           new VariableGet(namedParameters.last),
         ),
       );
@@ -1535,6 +1520,9 @@ class KernelTarget {
           /// >and no body is provided, then c implicitly has an empty body {}.
           /// We use an empty statement instead.
           constructor.function.registerFunctionBody(new EmptyStatement());
+          // TODO(cstefantsova): Verify that null should be passed for
+          //  scopeProviderInfo in the call below.
+          constructor.function.registerScopeProviderInfo(null);
         }
       }
     }
@@ -1688,7 +1676,8 @@ class KernelTarget {
                 ],
               );
             }
-          } else if (!constructor.isConst) {
+          } else if (!constructor.isConst &&
+              constructor.shouldTakeFieldInitializers) {
             constructor.prependInitializer(
               field.takePrimaryConstructorFieldInitializer(),
             );
@@ -1973,10 +1962,16 @@ class KernelTarget {
         // An error has already been reported.
       },
     );
-    verifyGetStaticType(
+    errors = verifyGetStaticType(
       new TypeEnvironment(loader.coreTypes, hierarchy),
       component!,
       skipPlatform: context.options.skipPlatformVerification,
+    );
+    assert(
+      allowVerificationErrorForTesting ||
+          // Coverage-ignore(suite): Not run.
+          errors.isEmpty,
+      "Verification errors found: $errors",
     );
     ticker.logMs("Verified component");
   }
@@ -2046,7 +2041,7 @@ class KernelDiagnosticReporter
     extends DiagnosticReporter<Message, LocatedMessage> {
   final SourceLoader loader;
 
-  KernelDiagnosticReporter(this.loader);
+  new(this.loader);
 
   @override
   void report(
@@ -2063,5 +2058,5 @@ class KernelDiagnosticReporter
 class BuildResult {
   final Component? component;
 
-  BuildResult({this.component});
+  new({this.component});
 }

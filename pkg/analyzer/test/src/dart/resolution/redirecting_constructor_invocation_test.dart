@@ -18,36 +18,39 @@ main() {
 class RedirectingConstructorInvocationResolutionTest
     extends PubPackageResolutionTest {
   test_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C.named(int a);
   C.other() : this.named(0);
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    var node = result.findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <testLibrary>::@class::C::@constructor::named
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@constructor::named::@formalParameter::a
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <testLibrary>::@class::C::@constructor::named
+    staticType: null
   element: <testLibrary>::@class::C::@constructor::named
 ''');
   }
 
   test_named_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C.other() : this.named(0);
 //            ^^^^^^^^^^^^^
@@ -55,71 +58,77 @@ class C {
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    var node = result.findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <null>
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <null>
+    staticType: null
   element: <null>
 ''');
   }
 
   test_named_unresolved_hasFormalParameter() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCode(r'''
 class C {
   C(int a);
   C.other(int named) : this.named(0);
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    var node = result.findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
-  period: .
-  constructorName: SimpleIdentifier
-    token: named
-    element: <null>
-    staticType: null
+  constructorSelector: ConstructorSelector
+    period: .
+    name2: named
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>
         staticType: int
     rightParenthesis: )
+  period: .
+  constructorName: SimpleIdentifier
+    token: named
+    element: <null>
+    staticType: null
   element: <null>
 ''');
   }
 
   test_unnamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C(int a);
   C.other() : this(0);
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    var node = result.findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <testLibrary>::@class::C::@constructor::new::@formalParameter::a
@@ -130,7 +139,7 @@ RedirectingConstructorInvocation
   }
 
   test_unnamed_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   C.named();
   C.other() : this(0);
@@ -139,13 +148,13 @@ class C {
 }
 ''');
 
-    var node = findNode.singleRedirectingConstructorInvocation;
+    var node = result.findNode.singleRedirectingConstructorInvocation;
     assertResolvedNodeText(node, r'''
 RedirectingConstructorInvocation
   thisKeyword: this
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
         correspondingParameter: <null>

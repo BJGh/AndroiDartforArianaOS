@@ -18,6 +18,7 @@ void main() {
     defineReflectiveTests(PreferTypingUninitializedVariablesBulkTest);
     defineReflectiveTests(PreferTypingUninitializedVariablesInFileTest);
     defineReflectiveTests(PreferTypingUninitializedVariablesLintTest);
+    defineReflectiveTests(RepresentationFieldModifierTest);
     defineReflectiveTests(SpecifyNonObviousLocalVariableTypesBulkTest);
     defineReflectiveTests(SpecifyNonObviousLocalVariableTypesInFileTest);
     defineReflectiveTests(SpecifyNonObviousLocalVariableTypesLintTest);
@@ -224,7 +225,7 @@ f() {
 
   Future<void> test_primaryConstructor_final() async {
     createAnalysisOptionsFile(
-      experiments: experiments,
+      experimentalFeatures: experimentalFeatures,
       lints: [LintNames.always_specify_types],
     );
     await resolveTestCode(r'''
@@ -237,7 +238,7 @@ class A([final int b = 1]);
 
   Future<void> test_primaryConstructor_var() async {
     createAnalysisOptionsFile(
-      experiments: experiments,
+      experimentalFeatures: experimentalFeatures,
       lints: [LintNames.always_specify_types],
     );
     await resolveTestCode(r'''
@@ -449,6 +450,21 @@ void f() {
   l = 0;
   print(l);
 }
+''');
+  }
+}
+
+@reflectiveTest
+class RepresentationFieldModifierTest extends FixProcessorTest {
+  @override
+  FixKind get kind => DartFixKind.addTypeAnnotation;
+
+  Future<void> test_var() async {
+    await resolveTestCode('''
+extension type E(var v);
+''');
+    await assertHasFix('''
+extension type E(Object? v);
 ''');
   }
 }

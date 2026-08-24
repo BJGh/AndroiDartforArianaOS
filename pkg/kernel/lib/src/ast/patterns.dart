@@ -9,7 +9,7 @@ sealed class Pattern extends TreeNode {
   ///
   /// These variables are initialized to the values captured by the variable
   /// patterns nested in the pattern.
-  List<VariableDeclaration> get declaredVariables;
+  List<DeclaredVariable> get declaredVariables;
 
   @override
   R accept<R>(PatternVisitor<R> visitor);
@@ -50,7 +50,7 @@ class ConstantPattern extends Pattern {
   /// This is set during constant evaluation.
   Constant? value;
 
-  ConstantPattern(this.expression) {
+  new(this.expression) {
     expression.parent = this;
   }
 
@@ -64,7 +64,7 @@ class ConstantPattern extends Pattern {
   }
 
   @override
-  List<VariableDeclaration> get declaredVariables => const [];
+  List<DeclaredVariable> get declaredVariables => const [];
 
   @override
   R accept<R>(PatternVisitor<R> visitor) => visitor.visitConstantPattern(this);
@@ -105,12 +105,12 @@ class AndPattern extends Pattern {
   Pattern right;
 
   @override
-  List<VariableDeclaration> get declaredVariables => [
+  List<DeclaredVariable> get declaredVariables => [
     ...left.declaredVariables,
     ...right.declaredVariables,
   ];
 
-  AndPattern(this.left, this.right) {
+  new(this.left, this.right) {
     left.parent = this;
     right.parent = this;
   }
@@ -158,15 +158,15 @@ class OrPattern extends Pattern {
   Pattern left;
   Pattern right;
 
-  final List<VariableDeclaration> orPatternJointVariables;
+  final List<DeclaredVariable> orPatternJointVariables;
 
   @override
-  List<VariableDeclaration> get declaredVariables => orPatternJointVariables;
+  List<DeclaredVariable> get declaredVariables => orPatternJointVariables;
 
-  OrPattern(
+  new(
     this.left,
     this.right, {
-    required List<VariableDeclaration> orPatternJointVariables,
+    required List<DeclaredVariable> orPatternJointVariables,
   }) : orPatternJointVariables = orPatternJointVariables {
     left.parent = this;
     right.parent = this;
@@ -215,7 +215,7 @@ class CastPattern extends Pattern {
   Pattern pattern;
   DartType type;
 
-  CastPattern(this.pattern, this.type) {
+  new(this.pattern, this.type) {
     pattern.parent = this;
   }
 
@@ -223,7 +223,7 @@ class CastPattern extends Pattern {
   String? get variableName => pattern.variableName;
 
   @override
-  List<VariableDeclaration> get declaredVariables => pattern.declaredVariables;
+  List<DeclaredVariable> get declaredVariables => pattern.declaredVariables;
 
   @override
   R accept<R>(PatternVisitor<R> visitor) => visitor.visitCastPattern(this);
@@ -267,7 +267,7 @@ class CastPattern extends Pattern {
 class NullAssertPattern extends Pattern {
   Pattern pattern;
 
-  NullAssertPattern(this.pattern) {
+  new(this.pattern) {
     pattern.parent = this;
   }
 
@@ -275,7 +275,7 @@ class NullAssertPattern extends Pattern {
   String? get variableName => pattern.variableName;
 
   @override
-  List<VariableDeclaration> get declaredVariables => pattern.declaredVariables;
+  List<DeclaredVariable> get declaredVariables => pattern.declaredVariables;
 
   @override
   R accept<R>(PatternVisitor<R> visitor) =>
@@ -316,7 +316,7 @@ class NullAssertPattern extends Pattern {
 class NullCheckPattern extends Pattern {
   Pattern pattern;
 
-  NullCheckPattern(this.pattern) {
+  new(this.pattern) {
     pattern.parent = this;
   }
 
@@ -324,7 +324,7 @@ class NullCheckPattern extends Pattern {
   String? get variableName => pattern.variableName;
 
   @override
-  List<VariableDeclaration> get declaredVariables => pattern.declaredVariables;
+  List<DeclaredVariable> get declaredVariables => pattern.declaredVariables;
 
   @override
   R accept<R>(PatternVisitor<R> visitor) => visitor.visitNullCheckPattern(this);
@@ -478,11 +478,11 @@ class ListPattern extends Pattern {
   FunctionType? indexGetType;
 
   @override
-  List<VariableDeclaration> get declaredVariables => [
+  List<DeclaredVariable> get declaredVariables => [
     for (Pattern pattern in patterns) ...pattern.declaredVariables,
   ];
 
-  ListPattern(this.typeArgument, this.patterns) {
+  new(this.typeArgument, this.patterns) {
     setParents(patterns, this);
   }
 
@@ -628,7 +628,7 @@ class ObjectPattern extends Pattern {
   // TODO(johnniwinther): Remove this field. It is no longer used.
   DartType? lookupType;
 
-  ObjectPattern(this.requiredType, this.fields) {
+  new(this.requiredType, this.fields) {
     setParents(fields, this);
   }
 
@@ -658,7 +658,7 @@ class ObjectPattern extends Pattern {
   }
 
   @override
-  List<VariableDeclaration> get declaredVariables {
+  List<DeclaredVariable> get declaredVariables {
     return [for (NamedPattern field in fields) ...field.declaredVariables];
   }
 
@@ -744,7 +744,7 @@ class RelationalPattern extends Pattern {
   /// This is set during constant evaluation.
   Constant? expressionValue;
 
-  RelationalPattern(this.kind, this.expression) {
+  new(this.kind, this.expression) {
     expression.parent = this;
   }
 
@@ -761,7 +761,7 @@ class RelationalPattern extends Pattern {
   }
 
   @override
-  List<VariableDeclaration> get declaredVariables => const [];
+  List<DeclaredVariable> get declaredVariables => const [];
 
   @override
   R accept<R>(PatternVisitor<R> visitor) =>
@@ -820,10 +820,10 @@ class RelationalPattern extends Pattern {
 class WildcardPattern extends Pattern {
   DartType? type;
 
-  WildcardPattern(this.type);
+  new(this.type);
 
   @override
-  List<VariableDeclaration> get declaredVariables => const [];
+  List<DeclaredVariable> get declaredVariables => const [];
 
   @override
   R accept<R>(PatternVisitor<R> visitor) => visitor.visitWildcardPattern(this);
@@ -872,7 +872,11 @@ class WildcardPattern extends Pattern {
 }
 
 class AssignedVariablePattern extends Pattern {
-  final VariableDeclaration variable;
+  final Variable variable;
+
+  /// If [variable] is a lowered late variable, [setter] holds the variable of
+  /// the local function that should be used for assignment.
+  Variable? setter;
 
   /// The type of the expression against which this pattern is matched.
   ///
@@ -916,7 +920,7 @@ class AssignedVariablePattern extends Pattern {
   /// not.
   bool hasObservableEffect = true;
 
-  AssignedVariablePattern(this.variable);
+  new(this.variable);
 
   @override
   R accept<R>(PatternVisitor<R> visitor) =>
@@ -936,14 +940,14 @@ class AssignedVariablePattern extends Pattern {
   void visitChildren(Visitor v) {}
 
   @override
-  List<VariableDeclaration> get declaredVariables => const [];
+  List<DeclaredVariable> get declaredVariables => const [];
 
   @override
-  String? get variableName => variable.name!;
+  String? get variableName => variable.cosmeticName!;
 
   @override
   void toTextInternal(AstPrinter printer) {
-    printer.write(variable.name!);
+    printer.write(variable.cosmeticName!);
   }
 
   @override
@@ -1016,12 +1020,12 @@ class MapPattern extends Pattern {
   FunctionType? indexGetType;
 
   @override
-  List<VariableDeclaration> get declaredVariables => [
+  List<DeclaredVariable> get declaredVariables => [
     for (MapPatternEntry entry in entries)
       if (entry is! MapPatternRestEntry) ...entry.value.declaredVariables,
   ];
 
-  MapPattern(this.keyType, this.valueType, this.entries)
+  new(this.keyType, this.valueType, this.entries)
     : assert((keyType == null) == (valueType == null)) {
     setParents(entries, this);
   }
@@ -1182,9 +1186,9 @@ class NamedPattern extends Pattern {
   List<DartType>? typeArguments;
 
   @override
-  List<VariableDeclaration> get declaredVariables => pattern.declaredVariables;
+  List<DeclaredVariable> get declaredVariables => pattern.declaredVariables;
 
-  NamedPattern(this.name, this.pattern) {
+  new(this.name, this.pattern) {
     pattern.parent = this;
   }
 
@@ -1268,11 +1272,11 @@ class RecordPattern extends Pattern {
   RecordType? lookupType;
 
   @override
-  List<VariableDeclaration> get declaredVariables => [
+  List<DeclaredVariable> get declaredVariables => [
     for (Pattern pattern in patterns) ...pattern.declaredVariables,
   ];
 
-  RecordPattern(this.patterns) {
+  new(this.patterns) {
     setParents(patterns, this);
   }
 
@@ -1319,7 +1323,7 @@ class RecordPattern extends Pattern {
 class VariablePattern extends Pattern {
   // TODO(johnniwinther): Should this be accessed through [variable] instead?
   DartType? type;
-  VariableDeclaration variable;
+  DeclaredVariable variable;
 
   /// The type of the expression against which this pattern is matched.
   ///
@@ -1327,14 +1331,14 @@ class VariablePattern extends Pattern {
   DartType? matchedValueType;
 
   @override
-  List<VariableDeclaration> get declaredVariables => [variable];
+  List<DeclaredVariable> get declaredVariables => [variable];
 
-  VariablePattern(this.type, this.variable) {
+  new(this.type, this.variable) {
     variable.parent = this;
   }
 
   @override
-  String? get variableName => variable.name;
+  String? get variableName => variable.cosmeticName;
 
   @override
   R accept<R>(PatternVisitor<R> visitor) => visitor.visitVariablePattern(this);
@@ -1378,7 +1382,7 @@ class VariablePattern extends Pattern {
     } else {
       printer.write("var ");
     }
-    printer.write(variable.name!);
+    printer.write(variable.cosmeticName!);
   }
 
   @override
@@ -1390,7 +1394,7 @@ class VariablePattern extends Pattern {
 class RestPattern extends Pattern {
   Pattern? subPattern;
 
-  RestPattern(this.subPattern) {
+  new(this.subPattern) {
     subPattern?.parent = this;
   }
 
@@ -1421,7 +1425,7 @@ class RestPattern extends Pattern {
   }
 
   @override
-  List<VariableDeclaration> get declaredVariables =>
+  List<DeclaredVariable> get declaredVariables =>
       subPattern?.declaredVariables ?? const [];
 
   @override
@@ -1442,9 +1446,9 @@ class InvalidPattern extends Pattern {
   Expression invalidExpression;
 
   @override
-  final List<VariableDeclaration> declaredVariables;
+  final List<DeclaredVariable> declaredVariables;
 
-  InvalidPattern(this.invalidExpression, {required this.declaredVariables}) {
+  new(this.invalidExpression, {required this.declaredVariables}) {
     invalidExpression.parent = this;
     setParents(declaredVariables, this);
   }
@@ -1465,7 +1469,7 @@ class InvalidPattern extends Pattern {
   @override
   void transformOrRemoveChildren(RemovingTransformer v) {
     invalidExpression = v.transform(invalidExpression)..parent = this;
-    v.transformVariableDeclarationList(declaredVariables, this);
+    v.transformVariableList(declaredVariables, this);
   }
 
   @override
@@ -1485,6 +1489,17 @@ class InvalidPattern extends Pattern {
   }
 }
 
+/// Abstract subclass of [Pattern] that can be used to add [Pattern]
+/// subclasses from outside `package:kernel`.
+abstract class AuxiliaryPattern extends Pattern {
+  @override
+  R accept<R>(PatternVisitor<R> v) => v.visitAuxiliaryPattern(this);
+
+  @override
+  R accept1<R, A>(PatternVisitor1<R, A> v, A arg) =>
+      v.visitAuxiliaryPattern(this, arg);
+}
+
 class MapPatternEntry extends TreeNode {
   Expression key;
   Pattern value;
@@ -1496,7 +1511,7 @@ class MapPatternEntry extends TreeNode {
   /// This is set during constant evaluation.
   Constant? keyValue;
 
-  MapPatternEntry(this.key, this.value) {
+  new(this.key, this.value) {
     key.parent = this;
     value.parent = this;
   }
@@ -1550,7 +1565,7 @@ class MapPatternEntry extends TreeNode {
 }
 
 class MapPatternRestEntry extends TreeNode implements MapPatternEntry {
-  MapPatternRestEntry();
+  new();
 
   @override
   Expression get key => throw new UnsupportedError('MapPatternRestEntry.key');
@@ -1674,7 +1689,7 @@ class PatternGuard extends TreeNode {
   Pattern pattern;
   Expression? guard;
 
-  PatternGuard(this.pattern, [this.guard]) {
+  new(this.pattern, [this.guard]) {
     pattern.parent = this;
     guard?.parent = this;
   }
@@ -1724,7 +1739,7 @@ class PatternGuard extends TreeNode {
   String toString() => 'PatternGuard(${toStringInternal()})';
 }
 
-class PatternSwitchCase extends TreeNode implements SwitchCase {
+class PatternSwitchCase extends TreeNode implements SwitchCase, ScopeProvider {
   final List<int> caseOffsets;
   final List<PatternGuard> patternGuards;
   // TODO(johnniwinther): Handle this through serialization. Currently this
@@ -1741,22 +1756,25 @@ class PatternSwitchCase extends TreeNode implements SwitchCase {
 
   bool hasLabel;
 
-  final List<VariableDeclaration> jointVariables;
+  final List<VariableDeclaration> jointVariableDeclarations;
 
   // TODO(johnniwinther): Serialize this field.
   final List<int>? jointVariableFirstUseOffsets;
 
-  PatternSwitchCase(
+  @override
+  Scope? scope;
+
+  new(
     this.caseOffsets,
     this.patternGuards,
     this.body, {
     required this.isDefault,
     required this.hasLabel,
-    required this.jointVariables,
+    required this.jointVariableDeclarations,
     required this.jointVariableFirstUseOffsets,
   }) {
     setParents(patternGuards, this);
-    setParents(jointVariables, this);
+    setParents(jointVariableDeclarations, this);
     body.parent = this;
   }
 
@@ -1851,7 +1869,7 @@ class PatternSwitchStatement extends Statement implements SwitchStatement {
   // TODO(johnniwinther): Serialize this.
   bool lastCaseTerminates = false;
 
-  PatternSwitchStatement(this.expression, this.cases) {
+  new(this.expression, this.cases) {
     expression.parent = this;
     setParents(cases, this);
   }
@@ -1937,7 +1955,7 @@ class SwitchExpressionCase extends TreeNode {
   PatternGuard patternGuard;
   Expression expression;
 
-  SwitchExpressionCase(this.patternGuard, this.expression) {
+  new(this.patternGuard, this.expression) {
     patternGuard.parent = this;
     expression.parent = this;
   }
@@ -1998,7 +2016,7 @@ class SwitchExpression extends Expression {
   /// This is set during inference.
   DartType? staticType;
 
-  SwitchExpression(this.expression, this.cases) {
+  new(this.expression, this.cases) {
     expression.parent = this;
     setParents(cases, this);
   }
@@ -2069,11 +2087,7 @@ class PatternVariableDeclaration extends Statement {
   /// This is set during inference.
   DartType? matchedValueType;
 
-  PatternVariableDeclaration(
-    this.pattern,
-    this.initializer, {
-    required this.isFinal,
-  }) {
+  new(this.pattern, this.initializer, {required this.isFinal}) {
     pattern.parent = this;
     initializer.parent = this;
   }
@@ -2134,7 +2148,7 @@ class PatternAssignment extends Expression {
   /// This is set during inference.
   DartType? matchedValueType;
 
-  PatternAssignment(this.pattern, this.expression) {
+  new(this.pattern, this.expression) {
     pattern.parent = this;
     expression.parent = this;
   }
@@ -2203,12 +2217,7 @@ class IfCaseStatement extends Statement {
   /// This is set during inference.
   DartType? matchedValueType;
 
-  IfCaseStatement(
-    this.expression,
-    this.patternGuard,
-    this.then, [
-    this.otherwise,
-  ]) {
+  new(this.expression, this.patternGuard, this.then, [this.otherwise]) {
     expression.parent = this;
     patternGuard.parent = this;
     then.parent = this;
@@ -2290,7 +2299,7 @@ final PatternSwitchCase dummyPatternSwitchCase = new PatternSwitchCase(
   dummyStatement,
   isDefault: true,
   hasLabel: false,
-  jointVariables: [],
+  jointVariableDeclarations: [],
   jointVariableFirstUseOffsets: null,
 );
 

@@ -22,14 +22,23 @@ main() {
 
 @reflectiveTest
 class LibraryElementTest_featureSet extends PubPackageResolutionTest {
+  static String get _currentLanguageVersion {
+    var currentVersion = ExperimentStatus.currentVersion;
+    return '${currentVersion.major}.${currentVersion.minor}';
+  }
+
   test_language205() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.5');
 
-    await resolveTestCode('');
+    var result = await resolveTestCodeWithDiagnostics('');
 
-    _assertLanguageVersion(package: Version.parse('2.5.0'), override: null);
+    _assertLanguageVersion(
+      result,
+      package: Version.parse('2.5.0'),
+      override: null,
+    );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.set_literals,
@@ -40,11 +49,15 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
   test_language208() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.8');
 
-    await resolveTestCode('');
+    var result = await resolveTestCodeWithDiagnostics('');
 
-    _assertLanguageVersion(package: Version.parse('2.8.0'), override: null);
+    _assertLanguageVersion(
+      result,
+      package: Version.parse('2.8.0'),
+      override: null,
+    );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.extension_methods,
@@ -56,15 +69,19 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
   test_language208_override205() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.8');
 
-    await resolveTestCode('// @dart = 2.5');
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// @dart = 2.5
+// [diag.illegalLanguageVersionOverride][column 1][length 14] The language version must be >=2.12.0.
+''');
 
     // Valid override, less than the latest supported language version.
     _assertLanguageVersion(
+      result,
       package: Version.parse('2.8.0'),
       override: Version.parse('2.5.0'),
     );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.set_literals,
@@ -75,11 +92,15 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
   test_language209() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.9');
 
-    await resolveTestCode('');
+    var result = await resolveTestCodeWithDiagnostics('');
 
-    _assertLanguageVersion(package: Version.parse('2.9.0'), override: null);
+    _assertLanguageVersion(
+      result,
+      package: Version.parse('2.9.0'),
+      override: null,
+    );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.extension_methods,
@@ -91,12 +112,19 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
   test_language212_override399() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.12');
 
-    await resolveTestCode('// @dart = 3.99');
+    var result = await resolveTestCodeWithDiagnostics('''
+// @dart = 3.99
+// [diag.invalidLanguageVersionOverrideGreater][column 1][length 15] The language version override can't specify a version greater than the latest known language version: $_currentLanguageVersion.
+''');
 
     // Invalid override: minor is greater than the latest minor.
-    _assertLanguageVersion(package: Version.parse('2.12.0'), override: null);
+    _assertLanguageVersion(
+      result,
+      package: Version.parse('2.12.0'),
+      override: null,
+    );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.extension_methods,
@@ -109,12 +137,19 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
   test_language212_override400() async {
     writeTestPackageConfig(PackageConfigFileBuilder(), languageVersion: '2.12');
 
-    await resolveTestCode('// @dart = 4.00');
+    var result = await resolveTestCodeWithDiagnostics('''
+// @dart = 4.00
+// [diag.invalidLanguageVersionOverrideGreater][column 1][length 15] The language version override can't specify a version greater than the latest known language version: $_currentLanguageVersion.
+''');
 
     // Invalid override: major is greater than the latest major.
-    _assertLanguageVersion(package: Version.parse('2.12.0'), override: null);
+    _assertLanguageVersion(
+      result,
+      package: Version.parse('2.12.0'),
+      override: null,
+    );
 
-    _assertFeatureSet([
+    _assertFeatureSet(result, [
       Feature.constant_update_2018,
       Feature.control_flow_collections,
       Feature.extension_methods,
@@ -124,7 +159,10 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
     ]);
   }
 
-  void _assertFeatureSet(List<Feature> expected) {
+  void _assertFeatureSet(
+    TestResolvedUnitResult result,
+    List<Feature> expected,
+  ) {
     var featureSet = result.libraryElement.featureSet;
 
     var actual = ExperimentStatus.knownFeatures.values
@@ -134,7 +172,8 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
     expect(actual, unorderedEquals(expected));
   }
 
-  void _assertLanguageVersion({
+  void _assertLanguageVersion(
+    TestResolvedUnitResult result, {
     required Version package,
     required Version? override,
   }) {
@@ -147,7 +186,7 @@ class LibraryElementTest_featureSet extends PubPackageResolutionTest {
 @reflectiveTest
 class LibraryElementTest_toString extends PubPackageResolutionTest {
   test_hasLibraryDirective_hasName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 library my.name;
 ''');
 
@@ -155,7 +194,7 @@ library my.name;
   }
 
   test_hasLibraryDirective_noName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 library;
 ''');
 
@@ -163,7 +202,7 @@ library;
   }
 
   test_noLibraryDirective() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 ''');
 

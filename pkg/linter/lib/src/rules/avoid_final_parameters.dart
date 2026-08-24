@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid `final` for parameter declarations.';
 
 class AvoidFinalParameters extends AnalysisRule {
-  AvoidFinalParameters()
-    : super(name: LintNames.avoid_final_parameters, description: _desc);
+  new() : super(name: LintNames.avoid_final_parameters, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.avoidFinalParameters;
@@ -40,11 +39,7 @@ class AvoidFinalParameters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFormalParameterList(FormalParameterList node) {
     // A compile-time error is already reported on `GenericFunctionType`s that

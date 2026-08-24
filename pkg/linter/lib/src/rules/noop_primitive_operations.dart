@@ -16,8 +16,7 @@ import '../extensions.dart';
 const _desc = r'Noop primitive operations.';
 
 class NoopPrimitiveOperations extends AnalysisRule {
-  NoopPrimitiveOperations()
-    : super(name: LintNames.noop_primitive_operations, description: _desc);
+  new() : super(name: LintNames.noop_primitive_operations, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.noopPrimitiveOperations;
@@ -34,12 +33,8 @@ class NoopPrimitiveOperations extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  final RuleContext context;
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitAdjacentStrings(AdjacentStrings node) {
     // We allow empty string literals at the beginning or end of a string:

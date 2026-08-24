@@ -19,8 +19,7 @@ import 'package:analyzer_plugin/utilities/range_factory.dart';
 /// The enclosing else block must have only one statement which is the inner
 /// `if` statement.
 class JoinElseWithIf extends _JoinIfWithElseBlock {
-  JoinElseWithIf({required super.context})
-    : super(DartAssistKind.joinElseWithIf);
+  new({required super.context}) : super(DartAssistKind.joinElseWithIf);
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -65,8 +64,7 @@ class JoinElseWithIf extends _JoinIfWithElseBlock {
 /// The enclosing else block must have only one statement which is the inner
 /// `if` statement.
 class JoinIfWithElse extends _JoinIfWithElseBlock {
-  JoinIfWithElse({required super.context})
-    : super(DartAssistKind.joinIfWithElse);
+  new({required super.context}) : super(DartAssistKind.joinIfWithElse);
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -136,20 +134,25 @@ abstract class _JoinIfWithElseBlock extends ResolvedCorrectionProducer {
   @override
   final AssistKind assistKind;
 
-  _JoinIfWithElseBlock(this.assistKind, {required super.context});
+  new(this.assistKind, {required super.context});
 
   @override
   CorrectionApplicability get applicability =>
       // TODO(applicability): comment on why.
       CorrectionApplicability.singleLocation;
 
-  String _blockSource(
+  String? _blockSource(
     Block block,
     String? startCommentsSource,
     String prefix,
     String? endCommentSource, {
     required String eol,
   }) {
+    // A synthetic right bracket has no corresponding `}` in the source.
+    if (block.rightBracket.isSynthetic) {
+      return null;
+    }
+
     var lineRanges = range.node(block);
     var blockSource = utils.getRangeText(lineRanges);
     blockSource = utils.indentSourceLeftRight(blockSource).trimRight();
@@ -258,13 +261,17 @@ abstract class _JoinIfWithElseBlock extends ResolvedCorrectionProducer {
         );
 
         if (statement case Block block) {
-          newBlockSource = _blockSource(
+          var blockSource = _blockSource(
             block,
             beginCommentsSource,
             prefix,
             endCommentSource,
             eol: eol,
           );
+          if (blockSource == null) {
+            return;
+          }
+          newBlockSource = blockSource;
         } else {
           var statementSource = utils.getNodeText(statement);
           // Add indentation for the else statement if it is missing.

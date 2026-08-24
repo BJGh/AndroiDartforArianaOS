@@ -42,8 +42,6 @@ Set<String> allowedPackages = {
   "kernel",
   "_fe_analyzer_shared",
   "package_config",
-  "macros",
-  "_macros",
   // package:front_end imports package:yaml for the 'dynamic modules'
   // experiment.
   "yaml",
@@ -59,8 +57,6 @@ Set<String> allowedPackages = {
 };
 
 List<String> allowedRelativePaths = [
-  // For VmTarget for macros.
-  "pkg/vm/lib/modular/",
   // Platform.
   "sdk/lib/",
 ];
@@ -81,9 +77,8 @@ Future<bool> main() async {
   ProcessedOptions options = new ProcessedOptions(options: compilerOptions);
 
   Uri frontendLibUri = repoDir.resolve("pkg/front_end/lib/");
-  List<FileSystemEntity> entities = new Directory.fromUri(
-    frontendLibUri,
-  ).listSync(recursive: true);
+  List<FileSystemEntity> entities = new Directory.fromUri(frontendLibUri)
+      .listSync(recursive: true);
   for (FileSystemEntity entity in entities) {
     if (entity is File && entity.path.endsWith(".dart")) {
       options.inputs.add(entity.uri);

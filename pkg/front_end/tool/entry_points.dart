@@ -220,7 +220,7 @@ class BatchCompiler {
 
   void Function(CfeDiagnosticMessage)? _originalOnDiagnostic;
 
-  BatchCompiler(this.lines);
+  new(this.lines);
 
   Future<void> run() async {
     await for (String line in lines!) {
@@ -421,8 +421,9 @@ Future<Uri?> deps(List<String> arguments) async {
       }
       await generateKernelInternal(
         c,
-        buildSummary: true,
-        serializeIfBuildingSummary: false,
+        onlyDirectives: true,
+        buildComponent: false,
+        buildSummary: false,
       );
       return await _emitDeps(tracker, c.options.output);
     });

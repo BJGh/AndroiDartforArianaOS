@@ -15,13 +15,13 @@ library;
 // pkg/front_end/testcases/general/bounds_parameters.dart:21:3: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//   F<int> t8, // Error
+//   F<int> t8, { // Error
 //   ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:29:12: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:28:12: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -31,7 +31,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:30:12: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:29:12: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //   required G<int> s8, // Error
@@ -40,7 +40,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:99:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:95:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -50,16 +50,16 @@ library;
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:100:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:96:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//     F<int> t8, // Error
+//     F<int> t8, { // Error
 //     ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:108:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:103:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -69,7 +69,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:109:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:104:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //     required G<int> s8, // Error
@@ -78,7 +78,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:80:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:77:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -88,16 +88,16 @@ library;
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:81:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:78:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//     F<int> t8, // Error
+//     F<int> t8, { // Error
 //     ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:89:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:85:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -107,7 +107,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:90:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:86:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //     required G<int> s8, // Error
@@ -116,7 +116,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:121:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:116:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -126,16 +126,16 @@ library;
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:122:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:117:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//     F<int> t8, // Error
+//     F<int> t8, { // Error
 //     ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:130:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:124:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -145,7 +145,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:131:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:125:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //     required G<int> s8, // Error
@@ -154,7 +154,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:39:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:38:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -164,16 +164,16 @@ library;
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:40:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:39:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//     F<int> t8, // Error
+//     F<int> t8, { // Error
 //     ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:48:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:46:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -183,7 +183,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:49:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:47:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //     required G<int> s8, // Error
@@ -192,7 +192,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:58:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:56:5: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -202,16 +202,16 @@ library;
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:59:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:57:5: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'F'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
-//     F<int> t8, // Error
+//     F<int> t8, { // Error
 //     ^
 // pkg/front_end/testcases/general/bounds_parameters.dart:9:11: Context: This is the type variable whose bound isn't conformed to.
 // typedef F<X extends Class<X>> = X;
 //           ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:67:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:64:14: Error: Type argument 'Object' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Object' is from 'dart:core'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
@@ -221,7 +221,7 @@ library;
 // class G<X extends Class<X>> {}
 //         ^
 //
-// pkg/front_end/testcases/general/bounds_parameters.dart:68:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
+// pkg/front_end/testcases/general/bounds_parameters.dart:65:14: Error: Type argument 'int' doesn't conform to the bound 'Class<X>' of the type variable 'X' on 'G'.
 //  - 'Class' is from 'pkg/front_end/testcases/general/bounds_parameters.dart'.
 // Try changing type arguments so that they conform to the bounds.
 //     required G<int> s8, // Error
@@ -260,8 +260,8 @@ extension Extension1 on core::int {
   method tearoff method3 = self::Extension1|get#method3;
 }
 static method method1(self::Class<dynamic> t1, dynamic t2, self::Class<dynamic> t3, self::Class<dynamic> t4, self::ConcreteClass t5, self::Class<self::ConcreteClass> t6, core::Object t7, core::int t8, {required self::G<self::Class<dynamic>> s1, required self::G<dynamic> s2, required self::G<self::Class<dynamic>> s3, required self::G<self::Class<dynamic>> s4, required self::G<self::ConcreteClass> s5, required self::G<self::Class<self::ConcreteClass>> s6, required self::G<core::Object> s7, required self::G<core::int> s8}) → void {
-  function local(self::Class<dynamic> t1, dynamic t2, self::Class<dynamic> t3, self::Class<dynamic> t4, self::ConcreteClass t5, self::Class<self::ConcreteClass> t6, core::Object t7, core::int t8, {required self::G<self::Class<dynamic>> s1, required self::G<dynamic> s2, required self::G<self::Class<dynamic>> s3, required self::G<self::Class<dynamic>> s4, required self::G<self::ConcreteClass> s5, required self::G<self::Class<self::ConcreteClass>> s6, required self::G<core::Object> s7, required self::G<core::int> s8}) → void {}
-  (self::Class<dynamic> t1, dynamic t2, self::Class<dynamic> t3, self::Class<dynamic> t4, self::ConcreteClass t5, self::Class<self::ConcreteClass> t6, core::Object t7, core::int t8, {required self::G<self::Class<dynamic>> s1, required self::G<dynamic> s2, required self::G<self::Class<dynamic>> s3, required self::G<self::Class<dynamic>> s4, required self::G<self::ConcreteClass> s5, required self::G<self::Class<self::ConcreteClass>> s6, required self::G<core::Object> s7, required self::G<core::int> s8}) → Null {};
+  function local(self::Class<dynamic> t1##1, dynamic t2##1, self::Class<dynamic> t3##1, self::Class<dynamic> t4##1, self::ConcreteClass t5##1, self::Class<self::ConcreteClass> t6##1, core::Object t7##1, core::int t8##1, {required self::G<self::Class<dynamic>> s1##1, required self::G<dynamic> s2##1, required self::G<self::Class<dynamic>> s3##1, required self::G<self::Class<dynamic>> s4##1, required self::G<self::ConcreteClass> s5##1, required self::G<self::Class<self::ConcreteClass>> s6##1, required self::G<core::Object> s7##1, required self::G<core::int> s8##1}) → void {}
+  (self::Class<dynamic> t1##2, dynamic t2##2, self::Class<dynamic> t3##2, self::Class<dynamic> t4##2, self::ConcreteClass t5##2, self::Class<self::ConcreteClass> t6##2, core::Object t7##2, core::int t8##2, {required self::G<self::Class<dynamic>> s1##2, required self::G<dynamic> s2##2, required self::G<self::Class<dynamic>> s3##2, required self::G<self::Class<dynamic>> s4##2, required self::G<self::ConcreteClass> s5##2, required self::G<self::Class<self::ConcreteClass>> s6##2, required self::G<core::Object> s7##2, required self::G<core::int> s8##2}) → Null {};
 }
 static extension-member method Extension1|method3(lowered final core::int #this, self::Class<dynamic> t1, dynamic t2, self::Class<dynamic> t3, self::Class<dynamic> t4, self::ConcreteClass t5, self::Class<self::ConcreteClass> t6, core::Object t7, core::int t8, {required self::G<self::Class<dynamic>> s1, required self::G<dynamic> s2, required self::G<self::Class<dynamic>> s3, required self::G<self::Class<dynamic>> s4, required self::G<self::ConcreteClass> s5, required self::G<self::Class<self::ConcreteClass>> s6, required self::G<core::Object> s7, required self::G<core::int> s8}) → void {}
 static extension-member method Extension1|get#method3(lowered final core::int #this) → (self::Class<dynamic>, dynamic, self::Class<dynamic>, self::Class<dynamic>, self::ConcreteClass, self::Class<self::ConcreteClass>, core::Object, core::int, {required s1: self::G<self::Class<dynamic>>, required s2: self::G<dynamic>, required s3: self::G<self::Class<dynamic>>, required s4: self::G<self::Class<dynamic>>, required s5: self::G<self::ConcreteClass>, required s6: self::G<self::Class<self::ConcreteClass>>, required s7: self::G<core::Object>, required s8: self::G<core::int>}) → void

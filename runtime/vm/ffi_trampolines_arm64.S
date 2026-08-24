@@ -12,11 +12,11 @@
 #define LOCAL_SYMBOL(x) .L##x
 #endif
 
-#if defined(__aarch64__) && (defined(SIMULATOR_FFI) || (defined(DART_DYNAMIC_MODULES) && !defined(DART_PRECOMPILED_RUNTIME)))
+#if defined(__aarch64__) && (defined(SIMULATOR_FFI) || defined(DART_DYNAMIC_MODULES))
 
 .text
 
-#if defined(DART_DYNAMIC_MODULES) && !defined(DART_PRECOMPILED_RUNTIME)
+#if defined(DART_DYNAMIC_MODULES)
 
 #if defined(__APPLE__)
 .globl _FfiCallTrampoline
@@ -72,8 +72,7 @@ LOCAL_SYMBOL(copy1):
 #if !defined(__APPLE__)
 .size FfiCallTrampoline,.-FfiCallTrampoline
 #endif
-
-#endif  // defined(DART_DYNAMIC_MODULES) && !defined(DART_PRECOMPILED_RUNTIME)
+#endif  // defined(DART_DYNAMIC_MODULES)
 
 #if defined(SIMULATOR_FFI)
 
@@ -133,23 +132,32 @@ LOCAL_SYMBOL(copy2):
 #if !defined(__APPLE__)
 .size SimulatorFfiCalloutTrampoline,.-SimulatorFfiCalloutTrampoline
 #endif
+#endif  // defined(SIMULATOR_FFI)
 
+// The FFI callback trampoline is used by both the simulator and
+// the interpreter, with DoRedirectedFfiCallback calling into
+// the simulator or interpreter as appropriate.
 #if defined(__APPLE__)
-.globl _SimulatorFfiCallbackTrampoline
-.private_extern _SimulatorFfiCallbackTrampoline
-_SimulatorFfiCallbackTrampoline:
+.globl _FfiCallbackTrampoline
+.private_extern _FfiCallbackTrampoline
+_FfiCallbackTrampoline:
 #else
-.globl SimulatorFfiCallbackTrampoline
-.type SimulatorFfiCallbackTrampoline, %function
-SimulatorFfiCallbackTrampoline:
+.globl FfiCallbackTrampoline
+.type FfiCallbackTrampoline, %function
+FfiCallbackTrampoline:
 #endif
+LOCAL_SYMBOL(start_before_padding):
+  brk 0 // ubsan padding
+  brk 0 // ubsan padding
+  brk 0 // ubsan padding
+  brk 0 // ubsan padding
 LOCAL_SYMBOL(start):
 #if defined(__Fuchsia__)
   .rept 483 // FfiCallbackMetadata::NumCallbackTrampolinesPerPage()
 #elif defined(__APPLE__)
-  .rept 2019 // FfiCallbackMetadata::NumCallbackTrampolinesPerPage()
+  .rept 2013 // FfiCallbackMetadata::NumCallbackTrampolinesPerPage()
 #else
-  .rept 8163 // FfiCallbackMetadata::NumCallbackTrampolinesPerPage()
+  .rept 8157 // FfiCallbackMetadata::NumCallbackTrampolinesPerPage()
 #endif
   adr x9, 0
   b LOCAL_SYMBOL(body)
@@ -188,6 +196,7 @@ LOCAL_SYMBOL(body):
   and x2, x2, ~(0x10000-1)  // FfiCallbackMetadata::kPageSize = 64k
   add x2, x2, 0x20000
 #endif
+  add x2, x2, LOCAL_SYMBOL(start) - LOCAL_SYMBOL(start_before_padding)
   ldr x2, [x2, #8]  // FfiCallbackMetadata::kDoRedirectedFfiCallback
   blr x2  // DoRedirectedFfiCallback
 
@@ -200,20 +209,18 @@ LOCAL_SYMBOL(body):
   ldp fp, lr, [sp], #16
   ret
 #if !defined(__APPLE__)
-.size SimulatorFfiCallbackTrampoline,.-SimulatorFfiCallbackTrampoline
+.size FfiCallbackTrampoline,.-FfiCallbackTrampoline
 #endif
 
 #if defined(__APPLE__)
-.globl _SimulatorFfiCallbackTrampolineEnd
-.private_extern _SimulatorFfiCallbackTrampolineEnd
-_SimulatorFfiCallbackTrampolineEnd:
+.globl _FfiCallbackTrampolineEnd
+.private_extern _FfiCallbackTrampolineEnd
+_FfiCallbackTrampolineEnd:
 #else
-.globl SimulatorFfiCallbackTrampolineEnd
-.type SimulatorFfiCallbackTrampolineEnd, %function
-SimulatorFfiCallbackTrampolineEnd:
+.globl FfiCallbackTrampolineEnd
+.type FfiCallbackTrampolineEnd, %function
+FfiCallbackTrampolineEnd:
 #endif
   brk 0
 
-#endif  // defined(SIMULATOR_FFI)
-
-#endif  // defined(__aarch64__) && (defined(SIMULATOR_FFI) || (defined(DART_DYNAMIC_MODULES) && !defined(DART_PRECOMPILED_RUNTIME)))
+#endif  // defined(__aarch64__) && (defined(SIMULATOR_FFI) || defined(DART_DYNAMIC_MODULES))

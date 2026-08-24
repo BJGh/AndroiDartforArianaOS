@@ -15,8 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Use `;` instead of `{}` for empty constructor bodies.';
 
 class EmptyConstructorBodies extends AnalysisRule {
-  EmptyConstructorBodies()
-    : super(name: LintNames.empty_constructor_bodies, description: _desc);
+  new() : super(name: LintNames.empty_constructor_bodies, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.emptyConstructorBodies;
@@ -32,11 +31,7 @@ class EmptyConstructorBodies extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     if (node.factoryKeyword != null) return;

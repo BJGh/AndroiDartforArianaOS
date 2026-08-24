@@ -27,7 +27,7 @@ class Scenario {
   /// Handles project setup.
   final ProjectGenerator project;
 
-  Scenario({required this.name, required this.logFile, required this.project});
+  new({required this.name, required this.logFile, required this.project});
 
   Future<void> run(Duration timeout, {bool verbose = false}) async {
     var watch = Stopwatch()..start();
@@ -55,7 +55,9 @@ class Scenario {
 
     // Set up the normalizer that will be used to reverse the normalization.
     var normalizer = LogNormalizer();
-    normalizer.addReplacementsForPath(sdkPath, 'dartSdkRoot');
+    if (sdkPath case var path?) {
+      normalizer.addReplacementsForPath(path, 'dartSdkRoot');
+    }
     // TODO(somebody): replace {{flutterSdkRoot}} with the flutter SDK path
     for (var i = 0; i < workspace.workspaceDirectories.length; i++) {
       normalizer.addReplacementsForPath(

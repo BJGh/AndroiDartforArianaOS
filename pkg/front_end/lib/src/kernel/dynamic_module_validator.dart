@@ -9,6 +9,7 @@ import 'package:kernel/core_types.dart' show CoreTypes;
 import 'package:kernel/library_index.dart' show LibraryIndex;
 import 'package:kernel/names.dart' show noSuchMethodName;
 import 'package:yaml/yaml.dart';
+
 import '../source/source_loader.dart' show SourceLoader;
 import '../api_prototype/lowering_predicates.dart'
     show extractQualifiedNameFromExtensionMethodName;
@@ -68,7 +69,7 @@ extension on YamlMap {
 class DynamicInterfaceYamlFile {
   final YamlNode _root;
 
-  DynamicInterfaceYamlFile(String contents) : _root = loadYamlNode(contents) {
+  new(String contents) : _root = loadYamlNode(contents) {
     if (!isEmpty) {
       sections.verifyKeys(const {
         'extendable',
@@ -116,7 +117,7 @@ class DynamicInterfaceSpecification {
   final Set<TreeNode> canBeUsedAsType = {};
   final Set<TreeNode> dynamicallyCallable = {};
 
-  factory DynamicInterfaceSpecification(
+  factory(
     String dynamicInterfaceSpecification,
     Uri baseUri,
     Component component,
@@ -126,7 +127,7 @@ class DynamicInterfaceSpecification {
     component,
   );
 
-  DynamicInterfaceSpecification.fromYamlFile(
+  new fromYamlFile(
     DynamicInterfaceYamlFile yamlFile,
     Uri baseUri,
     Component component,
@@ -390,7 +391,7 @@ class DynamicInterfaceLanguageImplPragmas {
       "dyn-module:language-impl:can-be-used-as-type";
 
   final CoreTypes coreTypes;
-  DynamicInterfaceLanguageImplPragmas(this.coreTypes);
+  new(this.coreTypes);
 
   bool isPlatformLibrary(Library library) => library.importUri.isScheme('dart');
 
@@ -443,10 +444,8 @@ class DynamicInterfaceLanguageImplPragmas {
   bool isAnnotatedWith(Annotatable node, String pragmaName) {
     for (Expression annotation in node.annotations) {
       if (annotation case ConstantExpression(:var constant)) {
-        if (constant case InstanceConstant(
-          :var classNode,
-          :var fieldValues,
-        ) when classNode == coreTypes.pragmaClass) {
+        if (constant case InstanceConstant(:var classNode, :var fieldValues)
+            when classNode == coreTypes.pragmaClass) {
           if (fieldValues[coreTypes.pragmaName.fieldReference]
               case StringConstant(:var value) when value == pragmaName) {
             return true;
@@ -470,7 +469,7 @@ class _DynamicModuleValidator extends RecursiveVisitor {
 
   TreeNode? _enclosingTreeNode;
 
-  _DynamicModuleValidator(
+  new(
     this.spec,
     this.languageImplPragmas,
     this.moduleLibraries,
@@ -1112,12 +1111,19 @@ class _DynamicCallValidator {
   final _DynamicModuleValidator validator;
   final Set<_Selector> _dynamicallyCallable = {};
   final Set<Class> classesExposedDynamically = {};
+  bool _allowAll = false;
   DynamicInterfaceSpecification get spec => validator.spec;
 
-  _DynamicCallValidator(
-    this.validator,
-    List<String> dynamicCallsSelectorAllowList,
-  ) {
+  new(this.validator, List<String> dynamicCallsSelectorAllowList) {
+    if (dynamicCallsSelectorAllowList.contains('*')) {
+      // Coverage-ignore-block(suite): Not run.
+      if (dynamicCallsSelectorAllowList.length > 1) {
+        throw "Unexpected selector descriptor '*': "
+            "wildcard '*' cannot be combined with other selectors.";
+      }
+      _allowAll = true;
+      return;
+    }
     for (final String descriptor in dynamicCallsSelectorAllowList) {
       List<String> split = descriptor.split(':');
       if (split.length == 1) {
@@ -1153,7 +1159,8 @@ class _DynamicCallValidator {
   }
 
   /// Whether [selectorName] should be allowed in a dynamic module.
-  bool isAllowed(_Selector selector) => _dynamicallyCallable.contains(selector);
+  bool isAllowed(_Selector selector) =>
+      _allowAll || _dynamicallyCallable.contains(selector);
 
   /// Registers exposed selectors based on [spec] and validates classes in
   /// [component] to ensure dynamically callable classes cannot directly or
@@ -1163,13 +1170,15 @@ class _DynamicCallValidator {
 
     for (TreeNode node in spec.dynamicallyCallable) {
       if (node is Member) {
-        checkExposedClass(node.enclosingClass!, node);
-        registerSelectorName(node);
+        if (node.enclosingClass case final enclosingClass?) {
+          checkExposedClass(enclosingClass, node);
+          registerSelectorName(node);
+        }
       } else if (node is Class) {
         checkExposedClass(node, node);
         registerClassMembers(node);
-      } else {
-        for (Class c in (node as Library).classes) {
+      } else if (node is Library) {
+        for (Class c in node.classes) {
           checkExposedClass(c, c);
           registerClassMembers(c);
         }
@@ -1261,7 +1270,7 @@ class _Selector {
   final _SelectorKind kind;
   final Name name;
 
-  _Selector(this.kind, this.name);
+  new(this.kind, this.name);
 
   String get _prefix => switch (kind) {
     .Method => '',

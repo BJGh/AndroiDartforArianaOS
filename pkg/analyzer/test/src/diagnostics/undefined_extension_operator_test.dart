@@ -28,7 +28,7 @@ f() {
   }
 
   test_binary_undefined() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on String {}
 f() {
   E('a') + 1;
@@ -37,9 +37,29 @@ f() {
 }
 ''');
 
-    var node = findNode.binary('+ 1');
+    var node = result.findNode.binaryOperatorInvocation('+ 1');
     assertResolvedNodeText(node, r'''
-BinaryExpression
+BinaryOperatorInvocation
+  leftOperand: ExtensionOverride
+    name: E
+    argumentList: ArgumentList
+      leftParenthesis: (
+      arguments2
+        SimpleStringLiteral
+          literal: 'a'
+      rightParenthesis: )
+    element: <testLibrary>::@extension::E
+    extendedType: String
+    staticType: null
+  operator: +
+  rightOperand: IntegerLiteral
+    literal: 1
+    correspondingParameter: <null>
+    staticType: int
+  binaryOperator: add
+  element: <null>
+  staticType: InvalidType
+V1: BinaryExpression
   leftOperand: ExtensionOverride
     name: E
     argumentList: ArgumentList

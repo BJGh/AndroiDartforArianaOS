@@ -18,8 +18,7 @@ import '../extensions.dart';
 const _desc = "Don't use `final` for local variables.";
 
 class UnnecessaryFinal extends MultiAnalysisRule {
-  UnnecessaryFinal()
-    : super(name: LintNames.unnecessary_final, description: _desc);
+  new() : super(name: LintNames.unnecessary_final, description: _desc);
 
   @override
   List<DiagnosticCode> get diagnosticCodes => [
@@ -48,13 +47,8 @@ class UnnecessaryFinal extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final MultiAnalysisRule rule;
-
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final MultiAnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitDeclaredVariablePattern(DeclaredVariablePattern node) {
     var keyword = node.keyword;

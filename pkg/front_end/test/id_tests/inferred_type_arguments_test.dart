@@ -7,6 +7,7 @@ import 'dart:io' show Directory, Platform;
 import 'package:_fe_analyzer_shared/src/testing/id.dart' show ActualData, Id;
 import 'package:_fe_analyzer_shared/src/testing/id_testing.dart'
     show DataInterpreter, runTests;
+import 'package:front_end/src/source/source_loader.dart';
 import 'package:front_end/src/source/source_member_builder.dart';
 import 'package:front_end/src/testing/id_testing_helper.dart';
 import 'package:front_end/src/testing/id_testing_utils.dart';
@@ -32,7 +33,7 @@ Future<void> main(List<String> args) async {
 }
 
 class InferredTypeArgumentDataComputer extends CfeDataComputer<List<DartType>> {
-  const InferredTypeArgumentDataComputer();
+  const new();
 
   @override
   DataInterpreter<List<DartType>> get dataValidator =>
@@ -51,13 +52,18 @@ class InferredTypeArgumentDataComputer extends CfeDataComputer<List<DartType>> {
     Map<Id, ActualData<List<DartType>>> actualMap, {
     bool? verbose,
   }) {
-    SourceMemberBuilder memberBuilder =
-        lookupMemberBuilder(testResultData.compilerResult, member)
-            as SourceMemberBuilder;
+    SourceMemberBuilder memberBuilder = lookupMemberBuilder(
+      testResultData.compilerResult,
+      member,
+    ) as SourceMemberBuilder;
     member.accept(
       new InferredTypeArgumentDataExtractor(
         testResultData.compilerResult,
-        memberBuilder.dataForTesting!.inferenceData.externalToInternalNodeMap,
+        testResultData
+            .compilerResult
+            .kernelTargetForTesting!
+            .loader
+            .dataForTesting!,
         memberBuilder.dataForTesting!.inferenceData.typeInferenceResult,
         actualMap,
       ),
@@ -67,12 +73,12 @@ class InferredTypeArgumentDataComputer extends CfeDataComputer<List<DartType>> {
 
 class InferredTypeArgumentDataExtractor
     extends CfeDataExtractor<List<DartType>> {
-  final Map<Node, Node> externalToInternalNodeMap;
+  final SourceLoaderDataForTesting sourceLoaderDataForTesting;
   final TypeInferenceResultForTesting typeInferenceResult;
 
-  InferredTypeArgumentDataExtractor(
+  new(
     InternalCompilerResult compilerResult,
-    this.externalToInternalNodeMap,
+    this.sourceLoaderDataForTesting,
     this.typeInferenceResult,
     Map<Id, ActualData<List<DartType>>> actualMap,
   ) : super(compilerResult, actualMap);
@@ -84,7 +90,9 @@ class InferredTypeArgumentDataExtractor
         node is SetLiteral ||
         node is MapLiteral) {
       return typeInferenceResult
-          .inferredTypeArguments[externalToInternalNodeMap[node] ?? node];
+          .inferredTypeArguments[sourceLoaderDataForTesting.toInternalNode(
+        node,
+      )];
     }
     return null;
   }
@@ -92,7 +100,7 @@ class InferredTypeArgumentDataExtractor
 
 class _InferredTypeArgumentsDataInterpreter
     implements DataInterpreter<List<DartType>> {
-  const _InferredTypeArgumentsDataInterpreter();
+  const new();
 
   @override
   String getText(List<DartType> actualData, [String? indentation]) {

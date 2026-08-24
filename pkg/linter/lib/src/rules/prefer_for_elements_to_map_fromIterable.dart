@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Prefer `for` elements when building maps from iterables.';
 
 class PreferForElementsToMapFromIterable extends AnalysisRule {
-  PreferForElementsToMapFromIterable()
+  new()
     : super(
         name: LintNames.prefer_for_elements_to_map_fromiterable,
         description: _desc,
@@ -35,12 +35,8 @@ class PreferForElementsToMapFromIterable extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression creation) {
     var element = creation.constructorName.element;

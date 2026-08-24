@@ -24,8 +24,7 @@ class FlutterStyleTodos extends AnalysisRule {
     r'//\s*TODO\([a-zA-Z0-9][-a-zA-Z0-9\.]*\): ',
   );
 
-  FlutterStyleTodos()
-    : super(name: LintNames.flutter_style_todos, description: _desc);
+  new() : super(name: LintNames.flutter_style_todos, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.flutterStyleTodos;
@@ -45,11 +44,7 @@ class FlutterStyleTodos extends AnalysisRule {
       !content.startsWith(_todoExpectedRegExp);
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   void checkComments(Token token) {
     Token? comment = token.precedingComments;
     while (comment != null) {

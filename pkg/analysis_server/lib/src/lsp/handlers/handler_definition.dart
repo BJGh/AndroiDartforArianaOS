@@ -25,18 +25,21 @@ typedef StaticOptions = Either2<bool, DefinitionOptions>;
 
 class DefinitionHandler
     extends
-        LspMessageHandler<
+        SharedMessageHandler<
           TextDocumentPositionParams,
           TextDocumentDefinitionResult
         >
     with LspPluginRequestHandlerMixin {
-  DefinitionHandler(super.server);
+  new(super.server);
   @override
   Method get handlesMessage => Method.textDocument_definition;
 
   @override
   LspJsonHandler<TextDocumentPositionParams> get jsonHandler =>
       TextDocumentPositionParams.jsonHandler;
+
+  @override
+  bool get requiresTrustedCaller => false;
 
   Future<List<AnalysisNavigationParams>> getPluginResults(
     String path,
@@ -350,7 +353,7 @@ class DefinitionHandler
 
 class DefinitionRegistrations extends FeatureRegistration
     with SingleDynamicRegistration, StaticRegistration<StaticOptions> {
-  DefinitionRegistrations(super.info);
+  new(super.info);
 
   @override
   ToJsonable? get options =>

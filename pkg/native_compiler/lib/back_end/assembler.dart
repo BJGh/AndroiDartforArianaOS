@@ -57,27 +57,19 @@ enum OperandSize {
 }
 
 /// Immediate operand.
-class Immediate implements Operand {
-  final int value;
-  const Immediate(this.value);
-}
+class const Immediate(final int value) implements Operand;
 
 /// Address operand.
-abstract interface class Address implements Operand {}
+abstract interface class Address implements Operand;
 
 /// [base + offset] address operand.
-class RegOffsetAddress implements Address {
-  final Register base;
-  final int offset;
-  RegOffsetAddress(this.base, this.offset);
-}
+class RegOffsetAddress(final Register base, final int offset)
+    implements Address;
 
 /// Destination of a branch.
 class Label {
   int _offset = -1;
   final branchOffsets = <int>[];
-
-  Label();
 
   bool get isBound => _offset >= 0;
 
@@ -119,6 +111,16 @@ enum Condition {
   static const Condition notZero = notEqual;
 }
 
+enum CallSiteKind {
+  dartCall,
+  stubCall,
+  runtimeCall,
+  leafRuntimeCall,
+  // FatalError runtime call doesn't need to have a safepoint.
+  fatalError,
+  exceptionHandler,
+}
+
 /// Base class for architecture-specific assembler.
 ///
 /// Contains declarations of macro-instructions
@@ -126,10 +128,14 @@ enum Condition {
 abstract base class Assembler {
   final VMOffsets vmOffsets;
   final ObjectPool objectPool = ObjectPool();
+  final void Function(CallSiteKind kind)? addCallSiteMetadata;
 
-  Assembler(this.vmOffsets);
+  Assembler(this.vmOffsets, this.addCallSiteMetadata);
 
   Uint8List get bytes;
+
+  /// Offset of the current position from the beginning of the generated code, in bytes.
+  int get currentPcOffset;
 
   /// Create a [base + offset] address for arbitrary offset,
   /// generating extra code if necessary.
@@ -162,6 +168,9 @@ abstract base class Assembler {
 
   /// Load arbitrary integer [value] into register.
   void loadImmediate(Register reg, int value);
+
+  /// Load arbitrary double [value] into a floating-point register.
+  void loadDoubleImmediate(FPRegister reg, double v);
 
   /// [dst] = [src] + arbitrary integer [value].
   void addImmediate(
@@ -199,6 +208,20 @@ abstract base class Assembler {
   void callStub(Code stub);
 
   void unimplemented(String message);
+  void breakpoint();
+
+  void smiTag(Register rd);
+  void smiUntag(Register rd);
+  void branchIfSmi(Register object, Label target);
+  void branchIfNotSmi(Register object, Label target);
+
+  void loadClassId(Register result, Register object);
+  void loadClassIdMayBeSmi(Register result, Register object);
+  void loadIsolateGroup(Register rd);
+  void loadClassById(Register result, Register classId);
+
+  void combineHashes(Register hash, Register other);
+  void finalizeHash(int bitSize, Register hash);
 }
 
 /// Assembler output buffer holding 32-bit instructions.

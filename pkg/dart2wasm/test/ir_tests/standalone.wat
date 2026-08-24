@@ -1,9 +1,9 @@
-(module $module0
+(module $M
   (type $#Top (struct
     (field $field0 i32)))
-  (type $JSExternWrapper (sub $#Top (struct
+  (type $EmbedderStringImpl (sub final $#Top (struct
     (field $field0 i32)
-    (field $_externRef externref))))
-  (global $"\"Hello world\"" (mut (ref null $JSExternWrapper))
+    (field $_ref (ref extern)))))
+  (global $"\"Hello world\"" (mut (ref null $EmbedderStringImpl))
     (ref.null none))
 )

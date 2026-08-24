@@ -14,10 +14,9 @@ import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/test_utilities/test_code_format.dart';
+import 'package:analyzer/src/util/sdk.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart'
     hide AnalysisError;
-import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
-import 'package:analyzer_testing/experiments/experiments.dart';
 import 'package:test/test.dart';
 
 import '../../../../abstract_single_unit.dart';
@@ -32,7 +31,7 @@ abstract class BaseFixProcessorTest extends AbstractSingleUnitTest {
   late SourceChange change;
 
   /// The result of applying the [change] to the file content.
-  late String resultCode;
+  late String _resultCode;
 
   /// The workspace in which fixes contributor operates.
   Future<ChangeWorkspace> get workspace async {
@@ -115,11 +114,11 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   /// The processor used to compute bulk fixes.
   late BulkFixProcessor processor;
 
-  @override
-  List<String> get experiments => experimentsForTests;
-
   /// The name of the lint code being tested.
   String? get lintCode => null;
+
+  @override
+  Folder get sdkRoot => newFolder(getSdkPath());
 
   /// The workspace in which fixes contributor operates.
   Future<DartChangeWorkspace> get workspace async {
@@ -136,6 +135,7 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
     var processor = BulkFixProcessor(
       TestInstrumentationService(),
       await workspace,
+      byteStore: byteStore,
     );
     var fixes = (await processor.fixPubspec([analysisContext])).edits;
     var edits = [for (var fix in fixes) ...fix.edits];
@@ -145,7 +145,11 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
 
   Future<void> assertFormat(String expectedCode) async {
     var analysisContext = contextFor(testFile);
-    processor = BulkFixProcessor(TestInstrumentationService(), await workspace);
+    processor = BulkFixProcessor(
+      TestInstrumentationService(),
+      await workspace,
+      byteStore: byteStore,
+    );
     await processor.formatCode([analysisContext]);
     var change = processor.builder.sourceChange;
     var fileEdits = change.edits;
@@ -154,8 +158,12 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
     expect(resultCode, normalizeSource(expectedCode));
   }
 
-  Future<void> assertHasFix(String expected, {bool isParse = false}) async {
-    change = await _computeSourceChange(isParse: isParse);
+  Future<void> assertHasFix(
+    String expected, {
+    List<String>? codes,
+    bool isParse = false,
+  }) async {
+    change = await _computeSourceChange(codes: codes, isParse: isParse);
 
     // apply to "file"
     var fileEdits = change.edits;
@@ -174,7 +182,11 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
 
   Future<void> assertOrganize(String expectedCode) async {
     var analysisContext = contextFor(testFile);
-    processor = BulkFixProcessor(TestInstrumentationService(), await workspace);
+    processor = BulkFixProcessor(
+      TestInstrumentationService(),
+      await workspace,
+      byteStore: byteStore,
+    );
     await processor.organizeDirectives([analysisContext]);
     var change = processor.builder.sourceChange;
     var fileEdits = change.edits;
@@ -184,11 +196,16 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   }
 
   /// Computes fixes for the specified [testUnit].
-  Future<BulkFixProcessor> computeFixes({bool isParse = false}) async {
+  Future<BulkFixProcessor> computeFixes({
+    List<String>? codes,
+    bool isParse = false,
+  }) async {
     var analysisContext = contextFor(testFile);
     var processor = BulkFixProcessor(
       TestInstrumentationService(),
       await workspace,
+      codes: codes,
+      byteStore: byteStore,
     );
     if (isParse) {
       await processor.fixErrorsUsingParsedResult([analysisContext]);
@@ -202,7 +219,11 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   /// [testFile].
   Future<bool> computeHasFixes() async {
     var analysisContext = contextFor(testFile);
-    processor = BulkFixProcessor(TestInstrumentationService(), await workspace);
+    processor = BulkFixProcessor(
+      TestInstrumentationService(),
+      await workspace,
+      byteStore: byteStore,
+    );
     return processor.hasFixes([analysisContext]);
   }
 
@@ -214,8 +235,11 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   }
 
   /// Returns the source change for computed fixes in the specified [testUnit].
-  Future<SourceChange> _computeSourceChange({bool isParse = false}) async {
-    processor = await computeFixes(isParse: isParse);
+  Future<SourceChange> _computeSourceChange({
+    List<String>? codes,
+    bool isParse = false,
+  }) async {
+    processor = await computeFixes(codes: codes, isParse: isParse);
     return processor.builder.sourceChange;
   }
 
@@ -224,9 +248,12 @@ abstract class BulkFixProcessorTest extends AbstractSingleUnitTest {
   void _createAnalysisOptionsFile() {
     var code = lintCode;
     if (code == null) {
-      createAnalysisOptionsFile(experiments: experiments);
+      createAnalysisOptionsFile(experimentalFeatures: experimentalFeatures);
     } else {
-      createAnalysisOptionsFile(experiments: experiments, lints: [code]);
+      createAnalysisOptionsFile(
+        experimentalFeatures: experimentalFeatures,
+        lints: [code],
+      );
     }
   }
 }
@@ -240,8 +267,8 @@ abstract class FixInFileProcessorTest extends BaseFixProcessorTest {
     expected = normalizeSource(expected);
 
     var fileContent = testCode;
-    resultCode = SourceEdit.applySequence(fileContent, fileEdits[0].edits);
-    expect(resultCode, expected);
+    _resultCode = SourceEdit.applySequence(fileContent, fileEdits[0].edits);
+    expect(_resultCode, expected);
   }
 
   Future<List<Fix>> getFixesForAllErrors(Set<String>? alreadyCalculated) async {
@@ -334,23 +361,10 @@ abstract class FixProcessorErrorCodeTest extends FixProcessorTest {
 /// A base class defining support for writing fix processor tests that are
 /// specific to fixes associated with lints that use the FixKind.
 abstract class FixProcessorLintTest extends FixProcessorTest {
-  /// Return the lint code being tested.
+  /// The lint code being tested.
   String get lintCode;
 
-  /// Returns the [LintCode] for the [lintCode] (which is actually a name).
-  Future<LintCode> lintCodeByName(String name) async {
-    var diagnostics = testAnalysisResult.diagnostics;
-    var lintCodeSet = diagnostics
-        .map((d) => d.diagnosticCode)
-        .whereType<LintCode>()
-        .where((lintCode) => lintCode.lowerCaseName == name)
-        .toSet();
-    if (lintCodeSet.length != 1) {
-      fail('Expected exactly one LintCode, actually: $lintCodeSet');
-    }
-    return lintCodeSet.single;
-  }
-
+  /// A filter that filters by [name], for use in [assertHasFix].
   DiagnosticFilter lintNameFilter(String name) {
     return (e) {
       return e.diagnosticCode is LintCode &&
@@ -361,7 +375,10 @@ abstract class FixProcessorLintTest extends FixProcessorTest {
   @override
   void setUp() {
     super.setUp();
-    createAnalysisOptionsFile(experiments: experiments, lints: [lintCode]);
+    createAnalysisOptionsFile(
+      experimentalFeatures: experimentalFeatures,
+      lints: [lintCode],
+    );
   }
 }
 
@@ -385,32 +402,14 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
     String? matchFixMessage,
     bool allowFixAllFixes = false,
   }) async {
-    parsedExpectedCode = TestCode.parseNormalized(
+    await assertHasFixForTarget(
       expectedContent,
-      positionShorthand: allowTestCodeShorthand,
-      rangeShorthand: allowTestCodeShorthand,
-    );
-    var diagnostic = await _findDiagnosticToFix(filter: filter);
-    var fix = await _assertHasFix(
-      diagnostic,
+      target: target ?? testFilePath,
+      filter: filter,
       expectedNumberOfFixesForKind: expectedNumberOfFixesForKind,
       matchFixMessage: matchFixMessage,
       allowFixAllFixes: allowFixAllFixes,
     );
-    change = fix.change;
-
-    // Apply to file.
-    var fileEdits = change.edits;
-    expect(fileEdits, hasLength(1));
-
-    var fileContent = testCode;
-    if (target != null) {
-      expect(fileEdits.first.file, convertPath(target));
-      fileContent = getFile(target).readAsStringSync();
-    }
-
-    resultCode = SourceEdit.applySequence(fileContent, change.edits[0].edits);
-    expect(resultCode, parsedExpectedCode.code);
   }
 
   Future<void> assertHasFixAllFix(
@@ -433,8 +432,8 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
       fileContent = getFile(target).readAsStringSync();
     }
 
-    resultCode = SourceEdit.applySequence(fileContent, change.edits[0].edits);
-    expect(resultCode, expected);
+    _resultCode = SourceEdit.applySequence(fileContent, change.edits[0].edits);
+    expect(_resultCode, expected);
   }
 
   /// Computes an error from [filter], and verifies that
@@ -451,6 +450,45 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
       expectedNumberOfFixesForKind: expectedNumberOfFixesForKind,
       matchFixMessages: matchFixMessages,
     );
+  }
+
+  /// Asserts that the resolved compilation unit has a fix which produces
+  /// [expected] output.
+  ///
+  /// [expected] will have newlines normalized and be parsed with
+  /// [TestCode.parse], with the resulting code stored in [parsedExpectedCode].
+  Future<void> assertHasFixForTarget(
+    String expected, {
+    required String target,
+    DiagnosticFilter? filter,
+    int? expectedNumberOfFixesForKind,
+    String? matchFixMessage,
+    bool allowFixAllFixes = false,
+  }) async {
+    parsedExpectedCode = TestCode.parseNormalized(expected);
+    var diagnostic = await _findDiagnosticToFix(filter: filter);
+    var fix = await _assertHasFix(
+      diagnostic,
+      expectedNumberOfFixesForKind: expectedNumberOfFixesForKind,
+      matchFixMessage: matchFixMessage,
+      allowFixAllFixes: allowFixAllFixes,
+    );
+    change = fix.change;
+
+    // Apply to file.
+    var fileEdits = change.edits;
+    var targetEdits = fileEdits
+        .where((edit) => edit.file == convertPath(target))
+        .singleOrNull;
+    expect(
+      targetEdits,
+      isNotNull,
+      reason: 'Expected a single fileEdit for ${convertPath(target)}',
+    );
+    var fileContent = getFile(target).readAsStringSync();
+
+    _resultCode = SourceEdit.applySequence(fileContent, targetEdits!.edits);
+    expect(_resultCode, parsedExpectedCode.code);
   }
 
   Future<void> assertHasFixWithoutApplying({DiagnosticFilter? filter}) async {
@@ -661,12 +699,10 @@ abstract class FixProcessorTest extends BaseFixProcessorTest {
   }
 
   List<Position> _findResultPositions(List<String> searchStrings) {
-    var positions = <Position>[];
-    for (var search in searchStrings) {
-      var offset = resultCode.indexOf(search);
-      positions.add(Position(testFile.path, offset));
-    }
-    return positions;
+    return [
+      for (var search in searchStrings)
+        Position(testFile.path, _resultCode.indexOf(search)),
+    ];
   }
 }
 

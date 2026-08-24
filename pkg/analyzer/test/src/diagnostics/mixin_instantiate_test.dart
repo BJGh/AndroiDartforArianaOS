@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class MixinInstantiateTest extends PubPackageResolutionTest {
   test_namedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M {
   M.named() {}
 //^
@@ -31,9 +31,24 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleInstanceCreationExpression;
+    var node = result.findNode.singleConstructorInvocation;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: new
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: M
+      element: <testLibrary>::@mixin::M
+      type: M
+    selector: ConstructorSelector
+      period: .
+      name2: named
+    element: <null>
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: M
+V1: InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType
@@ -56,7 +71,7 @@ invalidNodes
   }
 
   test_unnamedConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M {}
 
 void f() {
@@ -66,9 +81,21 @@ void f() {
 }
 ''');
 
-    var node = findNode.singleInstanceCreationExpression;
+    var node = result.findNode.singleConstructorInvocation;
     assertResolvedNodeText(node, r'''
-InstanceCreationExpression
+ConstructorInvocation
+  keyword: new
+  constructorReference: ConstructorReference2
+    typeReference: ConstructorTypeReference
+      name: M
+      element: <testLibrary>::@mixin::M
+      type: M
+    element: <null>
+  argumentList: ArgumentList
+    leftParenthesis: (
+    rightParenthesis: )
+  staticType: M
+V1: InstanceCreationExpression
   keyword: new
   constructorName: ConstructorName
     type: NamedType

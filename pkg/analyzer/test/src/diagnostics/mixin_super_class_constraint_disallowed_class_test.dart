@@ -23,15 +23,15 @@ mixin M on Enum {}
 ''');
   }
 
-  test_dartCoreEnum_language216() async {
-    await resolveTestCodeWithDiagnostics(r'''
-// @dart = 2.16
+  test_dartCoreEnum_beforeEnhancedEnums() async {
+    var result = await resolveTestCodeWithDiagnostics(r'''
+// %before-language-feature: enhanced-enums
 mixin M on Enum {}
 //         ^^^^
 // [diag.mixinSuperClassConstraintDisallowedClass] 'Enum' can't be used as a superclass constraint.
 ''');
 
-    var node = findNode.singleMixinOnClause;
+    var node = result.findNode.singleMixinOnClause;
     assertResolvedNodeText(node, r'''
 MixinOnClause
   onKeyword: on
@@ -43,30 +43,25 @@ MixinOnClause
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_in_inAugmentation() async {
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-part 'b.dart';
+    await resolveTestCodeWithDiagnostics(r'''
 mixin A {}
-''');
-
-    var b = newFile('$testPackageLibPath/b.dart', r'''
-part of 'a.dart';
 augment mixin A on int {}
+//              ^^
+// [diag.mixinAugmentationHasOnClause] Mixin augmentations can't have 'on' clauses.
+//                 ^^^
+// [diag.mixinSuperClassConstraintDisallowedClass] 'int' can't be used as a superclass constraint.
 ''');
-
-    await assertErrorsInFile2(a, []);
-    await assertErrorsInFile2(b, []);
   }
 
   test_int() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin M on int {}
 //         ^^^
 // [diag.mixinSuperClassConstraintDisallowedClass] 'int' can't be used as a superclass constraint.
 ''');
 
-    var node = findNode.singleMixinOnClause;
+    var node = result.findNode.singleMixinOnClause;
     assertResolvedNodeText(node, r'''
 MixinOnClause
   onKeyword: on

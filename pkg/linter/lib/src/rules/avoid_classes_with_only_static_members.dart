@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid defining a class that contains only static members.';
 
 class AvoidClassesWithOnlyStaticMembers extends AnalysisRule {
-  AvoidClassesWithOnlyStaticMembers()
+  new()
     : super(
         name: LintNames.avoid_classes_with_only_static_members,
         description: _desc,
@@ -35,12 +35,8 @@ class AvoidClassesWithOnlyStaticMembers extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, var RuleContext context)
+    extends SimpleAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     var fragment = node.declaredFragment;

@@ -244,13 +244,13 @@ class CoverageInfo {
   final int hitCount;
   final String visualization;
 
-  CoverageInfo.error(this.visualization)
+  new error(this.visualization)
     : error = true,
       allCovered = false,
       missCount = 0,
       hitCount = 0;
 
-  CoverageInfo({
+  new({
     required this.allCovered,
     required this.missCount,
     required this.hitCount,
@@ -909,7 +909,7 @@ class AstIndexerAndIgnoreCollector extends AstIndexer {
     return collector;
   }
 
-  AstIndexerAndIgnoreCollector._(this.hitsSorted, this.allSorted) {}
+  new _(this.hitsSorted, this.allSorted) {}
 
   bool _hasIgnoreComment(
     Token tokenWithPossibleComment, {
@@ -1293,7 +1293,7 @@ class AstIndexerAndIgnoreCollector extends AstIndexer {
 class _AstIndexerAndIgnoreCollectorBody extends RecursiveParserAstVisitor {
   final AstIndexerAndIgnoreCollector _collector;
 
-  _AstIndexerAndIgnoreCollectorBody(this._collector);
+  new(this._collector);
 
   bool _recordIfIsCallToNotExpectedCoverage(
     BeginAndEndTokenParserAstNode node,
@@ -1351,6 +1351,39 @@ class _AstIndexerAndIgnoreCollectorBody extends RecursiveParserAstVisitor {
       return;
     }
     super.visitBlockEnd(node);
+  }
+
+  @override
+  void visitForInControlFlowEnd(ForInControlFlowEnd node) {
+    ParserAstNode? beginNode = node.children?.firstOrNull;
+    if (beginNode is ForControlFlowBegin) {
+      Token beginToken = beginNode.awaitToken ?? beginNode.forToken;
+      if (_collector._checkCommentAndIgnoreCoverageWithBeginAndEnd(
+        beginToken,
+        beginToken,
+        node.token,
+        allowReplace: false,
+      )) {
+        return;
+      }
+    }
+    super.visitForInControlFlowEnd(node);
+  }
+
+  @override
+  void visitForInExpressionEnd(ForInExpressionEnd node) {
+    ParserAstNode? parent = node.parent;
+    if (parent is ForInControlFlowEnd) {
+      if (_collector._checkCommentAndIgnoreCoverageWithBeginAndEnd(
+        node.token.next!,
+        node.token,
+        parent.token,
+        allowReplace: false,
+      )) {
+        return;
+      }
+    }
+    super.visitForInExpressionEnd(node);
   }
 
   @override
@@ -1776,7 +1809,7 @@ class _CommentOn implements Comparable<_CommentOn> {
   final bool isBlock;
   final bool allowToWrapInBlock;
 
-  _CommentOn({
+  new({
     required this.commentOnToken,
     required this.beginToken,
     required this.endToken,

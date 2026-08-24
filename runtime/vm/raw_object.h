@@ -47,9 +47,15 @@ class CodeStatistics;
 class StackFrame;
 
 namespace module_snapshot {
+class CatchEntryMovesDeserializationCluster;
+class ClosureDataDeserializationCluster;
 class CodeDeserializationCluster;
+class CodeSourceMapDeserializationCluster;
+class CompressedStackMapsDeserializationCluster;
 class Deserializer;
 class DoubleDeserializationCluster;
+class ExceptionHandlersDeserializationCluster;
+class FunctionDeserializationCluster;
 class FunctionTypeDeserializationCluster;
 class ICDataDeserializationCluster;
 class IntDeserializationCluster;
@@ -57,12 +63,14 @@ class InterfaceTypeDeserializationCluster;
 class ListDeserializationCluster;
 class MapDeserializationCluster;
 class ObjectPoolDeserializationCluster;
+class PcDescriptorsDeserializationCluster;
 class RecordDeserializationCluster;
 class RecordTypeDeserializationCluster;
 class SetDeserializationCluster;
 class SubtypeTestCacheDeserializationCluster;
 class TypeArgumentsDeserializationCluster;
 class TypeParameterTypeDeserializationCluster;
+class TypeParametersDeserializationCluster;
 }  // namespace module_snapshot
 
 #define DEFINE_CONTAINS_COMPRESSED(type)                                       \
@@ -170,7 +178,7 @@ enum TypedDataElementType {
   friend class object##MessageDeserializationCluster;                          \
   friend class Serializer;                                                     \
   friend class Deserializer;                                                   \
-  template <typename Base>                                                     \
+  template <typename Base, bool>                                               \
   friend class ObjectCopy;                                                     \
   friend class Pass2Visitor;
 
@@ -401,8 +409,6 @@ class UntaggedObject {
   bool IsImmutable() const {
     return IsShallowImmutable() || IsDeeplyImmutable();
   }
-
-  bool InVMIsolateHeap() const;
 
   // Support for GC remembered bit.
   bool IsRemembered() const {
@@ -1280,7 +1286,6 @@ class UntaggedClass : public UntaggedObject {
         return reinterpret_cast<CompressedObjectPtr*>(&direct_subclasses_);
 #endif  // defined(PRODUCT)
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
 #if !defined(DART_PRECOMPILED_RUNTIME)
         return reinterpret_cast<CompressedObjectPtr*>(&allocation_stub_);
 #endif
@@ -1289,7 +1294,6 @@ class UntaggedClass : public UntaggedObject {
         return reinterpret_cast<CompressedObjectPtr*>(&dependent_code_);
 #endif
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1315,7 +1319,6 @@ class UntaggedClass : public UntaggedObject {
   // Offset of the next instance field.
   int32_t host_next_field_offset_in_words_;
 
-#if defined(DART_PRECOMPILER)
   // Size if fixed len or 0 if variable len (target).
   int32_t target_instance_size_in_words_;
 
@@ -1324,7 +1327,6 @@ class UntaggedClass : public UntaggedObject {
 
   // Offset of the next instance field (target).
   int32_t target_next_field_offset_in_words_;
-#endif  // defined(DART_PRECOMPILER)
 
 #if !defined(DART_PRECOMPILED_RUNTIME)
   uint32_t kernel_offset_;
@@ -1342,7 +1344,6 @@ class UntaggedClass : public UntaggedObject {
   friend class InstanceSerializationCluster;
   friend class TypeSerializationCluster;
   friend class CidRewriteVisitor;
-  friend class FinalizeVMIsolateVisitor;
   friend class Api;
   friend class module_snapshot::ObjectPoolDeserializationCluster;
 };
@@ -1366,7 +1367,6 @@ class UntaggedPatchClass : public UntaggedObject {
       case Snapshot::kFullAOT:
         return reinterpret_cast<CompressedObjectPtr*>(&script_);
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
 #if !defined(DART_PRECOMPILED_RUNTIME)
         return reinterpret_cast<CompressedObjectPtr*>(&kernel_program_info_);
@@ -1375,7 +1375,6 @@ class UntaggedPatchClass : public UntaggedObject {
         return nullptr;
 #endif
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1439,6 +1438,12 @@ class UntaggedFunction : public UntaggedObject {
 #undef KIND_DEFN
   };
   static constexpr int kKindBitSize = Utils::BitLength(kRecordFieldGetter);
+
+  static constexpr const char* kKindNames[] = {
+#define NAME_DEF(name) #name,
+      FOR_EACH_RAW_FUNCTION_KIND(NAME_DEF)
+#undef NAME_DEF
+  };
 
   static const char* KindToCString(Kind k) {
     switch (k) {
@@ -1544,11 +1549,6 @@ class UntaggedFunction : public UntaggedObject {
   };
 
  private:
-  friend class Class;
-  friend class Interpreter;
-  friend class InterpreterHelpers;
-  friend class UnitDeserializationRoots;
-
   RAW_HEAP_OBJECT_IMPLEMENTATION(Function);
 
   uword entry_point_;            // Accessed from generated code.
@@ -1566,11 +1566,9 @@ class UntaggedFunction : public UntaggedObject {
     switch (kind) {
       case Snapshot::kFullAOT:
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
         return reinterpret_cast<CompressedObjectPtr*>(&data_);
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1621,6 +1619,12 @@ class UntaggedFunction : public UntaggedObject {
 
   std::atomic<bool> is_optimizable_;
 #endif  // !defined(DART_PRECOMPILED_RUNTIME)
+
+  friend class Class;
+  friend class Interpreter;
+  friend class InterpreterHelpers;
+  friend class UnitDeserializationRoots;
+  friend class module_snapshot::FunctionDeserializationCluster;
 };
 
 enum class InstantiationMode : uint8_t {
@@ -1673,6 +1677,7 @@ class UntaggedClosureData : public UntaggedObject {
                                             PackedAwaiterLinkIndex::kNextBit>;
   friend class Function;
   friend class UnitDeserializationRoots;
+  friend class module_snapshot::ClosureDataDeserializationCluster;
 };
 
 class UntaggedFfiTrampolineData : public UntaggedObject {
@@ -1730,12 +1735,10 @@ class UntaggedField : public UntaggedObject {
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) {
     switch (kind) {
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
       case Snapshot::kFullAOT:
         return reinterpret_cast<CompressedObjectPtr*>(&initializer_function_);
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1801,11 +1804,9 @@ class alignas(8) UntaggedScript : public UntaggedObject {
         return reinterpret_cast<CompressedObjectPtr*>(&resolved_url_);
 #endif
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
         return reinterpret_cast<CompressedObjectPtr*>(&kernel_program_info_);
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1874,7 +1875,6 @@ class UntaggedLibrary : public UntaggedObject {
       case Snapshot::kFullAOT:
         return reinterpret_cast<CompressedObjectPtr*>(&exports_);
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
 #if !defined(DART_PRECOMPILED_RUNTIME)
         return reinterpret_cast<CompressedObjectPtr*>(&kernel_program_info_);
@@ -1883,7 +1883,6 @@ class UntaggedLibrary : public UntaggedObject {
         return nullptr;
 #endif
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -1933,11 +1932,9 @@ class UntaggedNamespace : public UntaggedObject {
       case Snapshot::kFullAOT:
         return reinterpret_cast<CompressedObjectPtr*>(&target_);
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
         return reinterpret_cast<CompressedObjectPtr*>(&owner_);
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -2100,11 +2097,11 @@ class UntaggedCode : public UntaggedObject {
   // offsets.
   // Alive: If true, the embedded object pointers will be visited during GC.
   int32_t state_bits_;
+  // Stores the instructions length when not using RawInstructions objects.
+  uint32_t instructions_length_;
   // Caches the unchecked entry point offset for instructions_, in case we need
   // to reset the active_instructions_ to instructions_.
   NOT_IN_PRECOMPILED(uint32_t unchecked_offset_);
-  // Stores the instructions length when not using RawInstructions objects.
-  ONLY_IN_PRECOMPILED(uint32_t instructions_length_);
 
   // Variable length data follows here.
   int32_t* data() { OPEN_ARRAY_START(int32_t, int32_t); }
@@ -2135,14 +2132,29 @@ class UntaggedBytecode : public UntaggedObject {
   COMPRESSED_POINTER_FIELD(ArrayPtr, closures);
   COMPRESSED_POINTER_FIELD(TypedDataBasePtr, binary);
   COMPRESSED_POINTER_FIELD(ExceptionHandlersPtr, exception_handlers);
-#if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
-  COMPRESSED_POINTER_FIELD(LocalVarDescriptorsPtr, var_descriptors);
-#endif
   COMPRESSED_POINTER_FIELD(PcDescriptorsPtr, pc_descriptors);
+#if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
+  COMPRESSED_POINTER_FIELD(TypedDataPtr, coverage_array);
+  COMPRESSED_POINTER_FIELD(LocalVarDescriptorsPtr, var_descriptors);
+  VISIT_TO(var_descriptors);
+#else
   VISIT_TO(pc_descriptors);
+#endif
 
-  ObjectPtr* to_snapshot(Snapshot::Kind kind) {
-    return reinterpret_cast<ObjectPtr*>(&pc_descriptors_);
+  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) {
+#if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
+    switch (kind) {
+      case Snapshot::kFull:
+      case Snapshot::kFullJIT:
+        return reinterpret_cast<CompressedObjectPtr*>(&var_descriptors_);
+      case Snapshot::kFullAOT:
+        return reinterpret_cast<CompressedObjectPtr*>(&pc_descriptors_);
+      default:
+        UNREACHABLE();
+    }
+#else
+    return reinterpret_cast<CompressedObjectPtr*>(&pc_descriptors_);
+#endif
   }
 
   int32_t instructions_binary_offset_;
@@ -2150,6 +2162,7 @@ class UntaggedBytecode : public UntaggedObject {
   int32_t source_positions_binary_offset_;
 #if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
   int32_t local_variables_binary_offset_;
+  int32_t recorded_coverage_binary_offset_;
 #endif
 
   static bool ContainsPC(ObjectPtr raw_obj, uword pc);
@@ -2244,41 +2257,53 @@ class UntaggedInstructionsSection : public UntaggedObject {
 
 class UntaggedPcDescriptors : public UntaggedObject {
  public:
-// The macro argument V is passed two arguments, the raw name of the enum value
-// and the initialization expression used within the enum definition.  The uses
-// of enum values inside the initialization expression are hardcoded currently,
-// so the second argument is useless outside the enum definition and should be
-// dropped by other users of this macro.
-#define FOR_EACH_RAW_PC_DESCRIPTOR(V)                                          \
+#define FOR_EACH_PC_DESCRIPTOR_KIND(V)                                         \
   /* Deoptimization continuation point. */                                     \
-  V(Deopt, 1)                                                                  \
+  V(Deopt)                                                                     \
   /* IC call. */                                                               \
-  V(IcCall, kDeopt << 1)                                                       \
+  V(IcCall)                                                                    \
   /* Call to a known target via stub. */                                       \
-  V(UnoptStaticCall, kIcCall << 1)                                             \
+  V(UnoptStaticCall)                                                           \
   /* Runtime call. */                                                          \
-  V(RuntimeCall, kUnoptStaticCall << 1)                                        \
+  V(RuntimeCall)                                                               \
   /* OSR entry point in unopt. code. */                                        \
-  V(OsrEntry, kRuntimeCall << 1)                                               \
+  V(OsrEntry)                                                                  \
   /* Call rewind target address. */                                            \
-  V(Rewind, kOsrEntry << 1)                                                    \
-  /* Target-word-size relocation. */                                           \
-  V(BSSRelocation, kRewind << 1)                                               \
-  V(Other, kBSSRelocation << 1)                                                \
-  V(AnyKind, -1)
+  V(Rewind)                                                                    \
+  V(Other)
 
-  enum Kind {
-#define ENUM_DEF(name, init) k##name = init,
-    FOR_EACH_RAW_PC_DESCRIPTOR(ENUM_DEF)
+  enum class KindBit {
+#define ENUM_DEF(name) k##name,
+    FOR_EACH_PC_DESCRIPTOR_KIND(ENUM_DEF)
 #undef ENUM_DEF
-        kLastKind = kOther,
   };
 
-  static const char* KindToCString(Kind k);
-  static bool ParseKind(const char* cstr, Kind* out);
+  enum Kind {
+#define ENUM_DEF(name) k##name = 1 << static_cast<int>(KindBit::k##name),
+    FOR_EACH_PC_DESCRIPTOR_KIND(ENUM_DEF)
+#undef ENUM_DEF
+        kLastKind = kOther,
+    kAnyKind = -1,
+  };
+
+  static constexpr const char* kKindNames[] = {
+#define NAME_DEF(name) #name,
+      FOR_EACH_PC_DESCRIPTOR_KIND(NAME_DEF)
+#undef NAME_DEF
+  };
 
   // Used to represent the absence of a yield index in PcDescriptors.
   static constexpr intptr_t kInvalidYieldIndex = -1;
+
+  static constexpr intptr_t kKindBitsPos = 0;
+  static constexpr intptr_t kKindBitsSize =
+      Utils::BitLength(Utils::ShiftForPowerOfTwo<int>(kLastKind));
+  static constexpr intptr_t kTryIndexBitsPos = kKindBitsPos + kKindBitsSize;
+  static constexpr intptr_t kTryIndexBitsSize = 10;
+  static constexpr intptr_t kYieldIndexBitsPos =
+      kTryIndexBitsPos + kTryIndexBitsSize;
+  static constexpr intptr_t kYieldIndexBitsSize =
+      kBitsPerInt32 - kYieldIndexBitsPos;
 
   class KindAndMetadata : AllStatic {
    public:
@@ -2306,13 +2331,11 @@ class UntaggedPcDescriptors : public UntaggedObject {
 
    private:
     using KindShiftBits =
-        BitField<uint32_t,
-                 intptr_t,
-                 0,
-                 Utils::BitLength(Utils::ShiftForPowerOfTwo<int>(kLastKind))>;
+        BitField<uint32_t, intptr_t, kKindBitsPos, kKindBitsSize>;
     using TryIndexBits =
-        BitField<uint32_t, intptr_t, KindShiftBits::kNextBit, 10>;
-    using YieldIndexBits = BitField<uint32_t, intptr_t, TryIndexBits::kNextBit>;
+        BitField<uint32_t, intptr_t, kTryIndexBitsPos, kTryIndexBitsSize>;
+    using YieldIndexBits =
+        BitField<uint32_t, intptr_t, kYieldIndexBitsPos, kYieldIndexBitsSize>;
   };
 
  private:
@@ -2330,6 +2353,7 @@ class UntaggedPcDescriptors : public UntaggedObject {
 
   friend class Object;
   friend class ImageWriter;
+  friend class module_snapshot::PcDescriptorsDeserializationCluster;
 };
 
 // CodeSourceMap encodes a mapping from code PC ranges to source token
@@ -2349,6 +2373,7 @@ class UntaggedCodeSourceMap : public UntaggedObject {
 
   friend class Object;
   friend class ImageWriter;
+  friend class module_snapshot::CodeSourceMapDeserializationCluster;
 };
 
 // RawCompressedStackMaps is a compressed representation of the stack maps
@@ -2460,6 +2485,7 @@ class UntaggedCompressedStackMaps : public UntaggedObject {
   friend class Object;
   friend class ImageWriter;
   friend class StackMapEntry;
+  friend class module_snapshot::CompressedStackMapsDeserializationCluster;
 };
 
 class UntaggedInstructionsTable : public UntaggedObject {
@@ -2599,6 +2625,7 @@ class UntaggedExceptionHandlers : public UntaggedObject {
   }
 
   friend class Object;
+  friend class module_snapshot::ExceptionHandlersDeserializationCluster;
 };
 
 class UntaggedContext : public UntaggedObject {
@@ -2761,11 +2788,9 @@ class UntaggedICData : public UntaggedCallSiteData {
       case Snapshot::kFullAOT:
         return reinterpret_cast<ObjectPtr*>(&entries_);
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
         return to();
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -2905,11 +2930,9 @@ class UntaggedLibraryPrefix : public UntaggedInstance {
       case Snapshot::kFullAOT:
         return reinterpret_cast<CompressedObjectPtr*>(&imports_);
       case Snapshot::kFull:
-      case Snapshot::kFullCore:
       case Snapshot::kFullJIT:
         return reinterpret_cast<CompressedObjectPtr*>(&importer_);
       case Snapshot::kModule:
-      case Snapshot::kNone:
       case Snapshot::kInvalid:
         break;
     }
@@ -2958,6 +2981,7 @@ class UntaggedTypeParameters : public UntaggedObject {
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
 
   friend class Object;
+  friend class module_snapshot::TypeParametersDeserializationCluster;
 };
 
 class UntaggedAbstractType : public UntaggedInstance {
@@ -3406,14 +3430,16 @@ class UntaggedTypedData : public UntaggedTypedDataBase {
   }
 
   friend class Api;
-  friend class Instance;
   friend class DeltaEncodedTypedDataDeserializationCluster;
+  friend class Instance;
+  friend class Interpreter;
   friend class NativeEntryData;
   friend class Object;
   friend class ObjectPool;
   friend class ObjectPoolDeserializationCluster;
   friend class ObjectPoolSerializationCluster;
   friend class UntaggedObjectPool;
+  friend class module_snapshot::CatchEntryMovesDeserializationCluster;
 };
 
 // All _*ArrayView/_ByteDataView classes share the same layout.
@@ -3690,8 +3716,9 @@ class UntaggedDynamicLibrary : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(DynamicLibrary);
   VISIT_NOTHING();
   void* handle_;
-  bool isClosed_;
-  bool canBeClosed_;
+  Dart_NativeAssetsDlsymCallback dlsym_;
+  Dart_NativeAssetsDlcloseCallback dlclose_;
+  bool is_closed_;
 
   friend class DynamicLibrary;
 };

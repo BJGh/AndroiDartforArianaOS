@@ -17,17 +17,17 @@ main() {
 @reflectiveTest
 class AsExpressionResolutionTest extends PubPackageResolutionTest {
   test_expression_constVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 const num a = 1.2;
 const int b = a as int;
 //            ^^^^^^^^
 // [diag.constEvalThrowsException] Evaluation of this constant expression throws an exception.
 ''');
 
-    var node = findNode.asExpression('as int');
+    var node = result.findNode.asExpression('as int');
     assertResolvedNodeText(node, r'''
 AsExpression
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: num
@@ -41,17 +41,17 @@ AsExpression
   }
 
   test_expression_localVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f() {
   num v = 42;
   v as int;
 }
 ''');
 
-    var node = findNode.singleAsExpression;
+    var node = result.findNode.singleAsExpression;
     assertResolvedNodeText(node, r'''
 AsExpression
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: v
     element: v@17
     staticType: num
@@ -65,7 +65,7 @@ AsExpression
   }
 
   test_expression_super() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   void f() {
     super as T;
@@ -75,10 +75,10 @@ class A<T> {
 }
 ''');
 
-    var node = findNode.singleAsExpression;
+    var node = result.findNode.singleAsExpression;
     assertResolvedNodeText(node, r'''
 AsExpression
-  expression: SuperExpression
+  expression2: SuperExpression
     superKeyword: super
     staticType: A<T>
   asOperator: as
@@ -91,7 +91,7 @@ AsExpression
   }
 
   test_expression_switchExpression() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(Object? x) {
   (switch (x) {
     _ => 0,
@@ -99,13 +99,13 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.singleAsExpression;
+    var node = result.findNode.singleAsExpression;
     assertResolvedNodeText(node, r'''
 AsExpression
-  expression: SwitchExpression
+  expression2: SwitchExpression
     switchKeyword: switch
     leftParenthesis: (
-    expression: SimpleIdentifier
+    expression2: SimpleIdentifier
       token: x
       element: <testLibrary>::@function::f::@formalParameter::x
       staticType: Object?
@@ -118,7 +118,7 @@ AsExpression
             name: _
             matchedValueType: Object?
         arrow: =>
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
     rightBracket: }

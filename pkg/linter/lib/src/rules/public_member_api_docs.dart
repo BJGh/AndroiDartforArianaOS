@@ -22,8 +22,7 @@ const _desc = r'Document all public members.';
 // exports - and linting against that.
 
 class PublicMemberApiDocs extends AnalysisRule {
-  PublicMemberApiDocs()
-    : super(name: LintNames.public_member_api_docs, description: _desc);
+  new() : super(name: LintNames.public_member_api_docs, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.publicMemberApiDocs;
@@ -58,12 +57,8 @@ class PublicMemberApiDocs extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context);
-
+class _Visitor(final AnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
   bool check(Declaration node) {
     if (node.isInternal) return false;
 
@@ -215,7 +210,7 @@ class _Visitor extends SimpleAstVisitor<void> {
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
     if (node.declaredFragment?.element == null) return;
-    _visitMembers(node, node.primaryConstructor.typeName, node.body.members);
+    _visitMembers(node, node.namePart.typeName, node.body.members);
   }
 
   @override

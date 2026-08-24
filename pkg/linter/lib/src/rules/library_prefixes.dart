@@ -18,8 +18,7 @@ const _desc =
     r'Use `lowercase_with_underscores` when specifying a library prefix.';
 
 class LibraryPrefixes extends AnalysisRule {
-  LibraryPrefixes()
-    : super(name: LintNames.library_prefixes, description: _desc);
+  new() : super(name: LintNames.library_prefixes, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.libraryPrefixes;
@@ -34,16 +33,12 @@ class LibraryPrefixes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule, RuleContext context)
+    extends SimpleAstVisitor<void> {
   /// Whether the `wildcard_variables` feature is enabled.
-  final bool _wildCardVariablesEnabled;
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule, RuleContext context)
-    : _wildCardVariablesEnabled = context.isFeatureEnabled(
-        Feature.wildcard_variables,
-      );
+  final bool _wildCardVariablesEnabled = context.isFeatureEnabled(
+    Feature.wildcard_variables,
+  );
 
   @override
   void visitImportDirective(ImportDirective node) {

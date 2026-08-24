@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:analyzer/src/dart/element/member.dart';
-import 'package:analyzer/src/test_utilities/find_element2.dart';
+import 'package:analyzer/src/test_utilities/find_element.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'context_collection_resolution.dart';
@@ -19,7 +19,7 @@ main() {
 @reflectiveTest
 class SuperFormalParameterResolutionTest extends PubPackageResolutionTest {
   test_element_typeParameterSubstitution_chained() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {
   A({int? key});
 }
@@ -33,26 +33,26 @@ class C<V> extends B<V> {
 }
 ''');
 
-    var C = findElement2.unnamedConstructor('C');
+    var C = result.findElement.unnamedConstructor('C');
     var C_key = C.superFormalParameter('key');
 
     var B_key_member = C_key.superConstructorParameter;
     B_key_member as SubstitutedSuperFormalParameterElementImpl;
 
-    var B = findElement2.unnamedConstructor('B');
+    var B = result.findElement.unnamedConstructor('B');
     var B_key = B.superFormalParameter('key');
     assertElement(B_key_member, declaration: B_key, substitution: {'U': 'V'});
 
     var A_key_member = B_key_member.superConstructorParameter;
     A_key_member as SubstitutedFormalParameterElementImpl;
 
-    var A = findElement2.unnamedConstructor('A');
+    var A = result.findElement.unnamedConstructor('A');
     var A_key = A.parameter('key');
     assertElement(A_key_member, declaration: A_key, substitution: {'T': 'V'});
   }
 
   test_functionTyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(Object a);
 }
@@ -62,7 +62,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   type: NamedType
@@ -83,6 +83,19 @@ SuperFormalParameter
       rightBracket: >
     formalParameters: FormalParameterList
       leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: b
+          declaredFragment: <testLibraryFragment> b@69
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
+      leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
           name: int
@@ -100,13 +113,13 @@ SuperFormalParameter
   }
 
   test_invalid_notConstructor() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(super.a) {}
 //     ^^^^^
 // [diag.invalidSuperFormalParameterLocation] Super parameters can only be used in non-redirecting generative constructors.
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
@@ -119,7 +132,7 @@ SuperFormalParameter
   }
 
   test_optionalNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A({int? a});
 }
@@ -129,7 +142,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
@@ -142,7 +155,7 @@ SuperFormalParameter
   }
 
   test_optionalPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A([int? a]);
 }
@@ -152,7 +165,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
@@ -165,7 +178,7 @@ SuperFormalParameter
   }
 
   test_requiredNamed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A({required int a});
 }
@@ -175,7 +188,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   requiredKeyword: required
@@ -189,7 +202,7 @@ SuperFormalParameter
   }
 
   test_requiredPositional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -199,7 +212,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.superFormalParameter('super.');
+    var node = result.findNode.superFormalParameter('super.');
     assertResolvedNodeText(node, r'''
 SuperFormalParameter
   superKeyword: super
@@ -212,7 +225,7 @@ SuperFormalParameter
   }
 
   test_scoping_inBody() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int a;
   A(this.a);
@@ -225,7 +238,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.simple('a; // ref');
+    var node = result.findNode.simple('a; // ref');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a
@@ -235,7 +248,7 @@ SimpleIdentifier
   }
 
   test_scoping_inInitializer() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   A(int a);
 }
@@ -246,7 +259,7 @@ class B extends A {
 }
 ''');
 
-    var node = findNode.simple('a; }');
+    var node = result.findNode.simple('a; }');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: a

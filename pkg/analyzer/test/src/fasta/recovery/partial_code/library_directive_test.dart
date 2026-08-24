@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../../../dart/resolution/node_text_expectations.dart';
@@ -18,13 +17,12 @@ main() {
 @reflectiveTest
 class LibraryDirectivesTest extends ParserDiagnosticsTest {
   void test_library_directive_keyword_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library class A {}
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -35,7 +33,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -47,13 +45,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library const a = 0;
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -64,7 +61,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -72,20 +69,19 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_keyword_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library enum E { v }
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 4),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -96,7 +92,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -111,13 +107,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//     ^
+// [diag.missingIdentifier][column 8][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 0),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -132,13 +127,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library export 'a.dart';
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 6),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -158,13 +152,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library final a = 0;
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -175,7 +168,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -183,17 +176,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_keyword_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library int f() {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -204,7 +198,7 @@ CompilationUnit
         tokens
           int
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -219,13 +213,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library void f() {}
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 4),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -236,7 +229,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -253,10 +246,11 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -267,7 +261,16 @@ CompilationUnit
         tokens
           int
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       propertyKeyword: get
       name: a
@@ -281,13 +284,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library import 'a.dart';
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 6),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -307,13 +309,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library mixin M {}
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 5),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -324,7 +325,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -335,13 +336,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library part 'a.dart';
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 4),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -361,13 +361,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library set a(b) {}
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 3),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -378,12 +377,18 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -396,13 +401,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library typedef A = B Function(C, D);
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 7),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -413,7 +417,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -423,6 +427,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -436,13 +450,12 @@ CompilationUnit
   }
 
   void test_library_directive_keyword_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library var a;
+// [diag.expectedToken][column 1][length 7] Expected to find ';'.
+//      ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 8, 3),
-      error(diag.expectedToken, 0, 7),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -453,7 +466,7 @@ CompilationUnit
         tokens
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -465,10 +478,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib class A {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -479,7 +493,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -491,10 +505,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib const a = 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -505,7 +520,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -513,17 +528,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_name_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib enum E { v }
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -534,7 +550,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -549,10 +565,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -567,10 +584,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib export 'a.dart';
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -590,10 +608,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib final a = 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -604,7 +623,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -612,17 +631,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_name_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib int f() {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -633,7 +653,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -650,10 +670,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib void f() {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -664,7 +685,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -681,10 +702,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib int get a => 0;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -695,7 +717,18 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -711,10 +744,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib import 'a.dart';
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -734,10 +768,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib mixin M {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -748,7 +783,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -759,10 +794,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib part 'a.dart';
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -782,10 +818,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib set a(b) {}
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -796,12 +833,18 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -814,10 +857,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib typedef A = B Function(C, D);
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -828,7 +872,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -838,6 +882,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -851,10 +905,11 @@ CompilationUnit
   }
 
   void test_library_directive_name_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib var a;
+//      ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 8, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -865,7 +920,7 @@ CompilationUnit
         tokens
           lib
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -877,13 +932,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. class A {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -896,7 +951,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -908,13 +963,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. const a = 0;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -927,7 +982,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -935,20 +990,20 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_nameDot_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. enum E { v }
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 4),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -961,7 +1016,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -976,13 +1031,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//          ^
+// [diag.missingIdentifier][column 13][length 0] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 0),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -999,13 +1054,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. export 'a.dart';
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 6),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1027,13 +1082,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. final a = 0;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1046,7 +1101,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -1054,17 +1109,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_nameDot_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. int f() {}
+//           ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1077,7 +1133,7 @@ CompilationUnit
           .
           int
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       name: f
       functionExpression: FunctionExpression
@@ -1092,13 +1148,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. void f() {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 4),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1111,7 +1167,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -1128,10 +1184,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. int get a => 0;
+//           ^^^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 13, 3)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1144,7 +1201,16 @@ CompilationUnit
           .
           int
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       propertyKeyword: get
       name: a
@@ -1158,13 +1224,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. import 'a.dart';
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 6),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1186,13 +1252,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. mixin M {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 5),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1205,7 +1271,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -1216,13 +1282,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. part 'a.dart';
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 4),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1244,13 +1310,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. set a(b) {}
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1263,12 +1329,18 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -1281,13 +1353,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. typedef A = B Function(C, D);
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^^^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 7),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1300,7 +1372,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -1310,6 +1382,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -1323,13 +1405,13 @@ CompilationUnit
   }
 
   void test_library_directive_nameDot_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib. var a;
+//         ^
+// [diag.expectedToken] Expected to find ';'.
+//           ^^^
+// [diag.missingIdentifier] Expected an identifier.
 ''');
-    parseResult.assertErrors([
-      error(diag.missingIdentifier, 13, 3),
-      error(diag.expectedToken, 11, 1),
-    ]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1342,7 +1424,7 @@ CompilationUnit
           .
           <empty> <synthetic>
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var
@@ -1354,10 +1436,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_class() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a class A {}
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1370,7 +1453,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     ClassDeclaration
       classKeyword: class
       namePart: NameWithTypeParameters
@@ -1382,10 +1465,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_const() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a const a = 0;
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1398,7 +1482,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: const
@@ -1406,17 +1490,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_nameDotName_enum() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a enum E { v }
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1429,7 +1514,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     EnumDeclaration
       enumKeyword: enum
       namePart: NameWithTypeParameters
@@ -1444,10 +1529,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_eof() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1464,10 +1550,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_export() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a export 'a.dart';
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1489,10 +1576,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_final() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a final a = 0;
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1505,7 +1593,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: final
@@ -1513,17 +1601,18 @@ CompilationUnit
           VariableDeclaration
             name: a
             equals: =
-            initializer: IntegerLiteral
+            initializer2: IntegerLiteral
               literal: 0
       semicolon: ;
 ''');
   }
 
   void test_library_directive_nameDotName_functionNonVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a int f() {}
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1536,7 +1625,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -1553,10 +1642,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_functionVoid() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a void f() {}
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1569,7 +1659,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       returnType: NamedType
         name: void
@@ -1586,10 +1676,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_getter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a int get a => 0;
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1602,7 +1693,18 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
+    TopLevelGetterDeclaration
+      returnType: NamedType
+        name: int
+      getKeyword: get
+      name: a
+      body: ExpressionFunctionBody
+        functionDefinition: =>
+        expression2: IntegerLiteral
+          literal: 0
+        semicolon: ;
+  declarations(v1)
     FunctionDeclaration
       returnType: NamedType
         name: int
@@ -1618,10 +1720,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_import() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a import 'a.dart';
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1643,10 +1746,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_mixin() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a mixin M {}
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1659,7 +1763,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     MixinDeclaration
       mixinKeyword: mixin
       name: M
@@ -1670,10 +1774,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_part() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a part 'a.dart';
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1695,10 +1800,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_setter() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a set a(b) {}
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1711,12 +1817,18 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     FunctionDeclaration
       propertyKeyword: set
       name: a
       functionExpression: FunctionExpression
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              name: b
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             name: b
@@ -1729,10 +1841,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_typedef() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a typedef A = B Function(C, D);
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1745,7 +1858,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     GenericTypeAlias
       typedefKeyword: typedef
       name: A
@@ -1755,6 +1868,16 @@ CompilationUnit
           name: B
         functionKeyword: Function
         parameters: FormalParameterList
+          leftParenthesis: (
+          requiredPositionalFormalParameters
+            RegularFormalParameter
+              type: NamedType
+                name: C
+            RegularFormalParameter
+              type: NamedType
+                name: D
+          rightParenthesis: )
+        parameters(v1): FormalParameterList
           leftParenthesis: (
           parameter: RegularFormalParameter
             type: NamedType
@@ -1768,10 +1891,11 @@ CompilationUnit
   }
 
   void test_library_directive_nameDotName_var() {
-    var parseResult = parseStringWithErrors(r'''
+    var parseResult = parseTestCodeWithDiagnostics(r'''
 library lib.a var a;
+//          ^
+// [diag.expectedToken] Expected to find ';'.
 ''');
-    parseResult.assertErrors([error(diag.expectedToken, 12, 1)]);
     var node = parseResult.findNode.unit;
     assertParsedNodeText(node, r'''
 CompilationUnit
@@ -1784,7 +1908,7 @@ CompilationUnit
           .
           a
       semicolon: ; <synthetic>
-  declarations
+  declarations2
     TopLevelVariableDeclaration
       variables: VariableDeclarationList
         keyword: var

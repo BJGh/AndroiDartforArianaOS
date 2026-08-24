@@ -18,7 +18,7 @@ main() {
 class ConstructorFieldInitializerResolutionTest
     extends PubPackageResolutionTest {
   test_fieldOfAugmentation() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int get foo;
 }
@@ -32,63 +32,68 @@ augment class A {
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: _foo
+  fieldName(v1): SimpleIdentifier
     token: _foo
     element: <testLibrary>::@class::A::@field::_foo
     staticType: null
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::_foo
 ''');
   }
 
   test_formalParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   final int f;
   A(int a) : f = a;
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: f
+  fieldName(v1): SimpleIdentifier
     token: f
     element: <testLibrary>::@class::A::@field::f
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::f
 ''');
   }
 
   test_functionExpressionInvocation_blockBody() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final x;
   A(int a) : x = (() {return a + 1;})();
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@field::x
     staticType: null
   equals: =
-  expression: FunctionExpressionInvocation
-    function: ParenthesizedExpression
+  expression2: FunctionExpressionInvocation
+    function2: ParenthesizedExpression
       leftParenthesis: (
-      expression: FunctionExpression
+      expression2: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
           rightParenthesis: )
@@ -98,7 +103,20 @@ ConstructorFieldInitializer
             statements
               ReturnStatement
                 returnKeyword: return
-                expression: BinaryExpression
+                expression2: BinaryOperatorInvocation
+                  leftOperand: SimpleIdentifier
+                    token: a
+                    element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+                    staticType: int
+                  operator: +
+                  rightOperand: IntegerLiteral
+                    literal: 1
+                    correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+                    staticType: int
+                  binaryOperator: add
+                  element: dart:core::@class::num::@method::+
+                  staticType: int
+                expression(v1): BinaryExpression
                   leftOperand: SimpleIdentifier
                     token: a
                     element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
@@ -125,35 +143,50 @@ ConstructorFieldInitializer
     element: <null>
     staticInvokeType: int Function()
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::x
 ''');
   }
 
   test_functionExpressionInvocation_expressionBody() async {
-    await resolveTestCode(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   final int x;
   A(int a) : x = (() => a + 1)();
 }
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@field::x
     staticType: null
   equals: =
-  expression: FunctionExpressionInvocation
-    function: ParenthesizedExpression
+  expression2: FunctionExpressionInvocation
+    function2: ParenthesizedExpression
       leftParenthesis: (
-      expression: FunctionExpression
+      expression2: FunctionExpression
         parameters: FormalParameterList
           leftParenthesis: (
           rightParenthesis: )
         body: ExpressionFunctionBody
           functionDefinition: =>
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
+              staticType: int
+            operator: +
+            rightOperand: IntegerLiteral
+              literal: 1
+              correspondingParameter: dart:core::@class::num::@method::+::@formalParameter::other
+              staticType: int
+            binaryOperator: add
+            element: dart:core::@class::num::@method::+
+            staticType: int
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: <testLibrary>::@class::A::@constructor::new::@formalParameter::a
@@ -178,11 +211,12 @@ ConstructorFieldInitializer
     element: <null>
     staticInvokeType: int Function()
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::x
 ''');
   }
 
   test_invalid_declarationAndInitializer() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   final x = 0;
   const A() : x = a;
@@ -192,23 +226,25 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@field::x
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::x
 ''');
   }
 
   test_invalid_notField_class() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   const A() : X = a;
 //            ^^^^^
@@ -218,23 +254,25 @@ const a = 0;
 class X {}
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: X
+  fieldName(v1): SimpleIdentifier
     token: X
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -244,23 +282,25 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@field::x
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::x
 ''');
   }
 
   test_invalid_notField_importPrefix() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'dart:async' as x;
 //     ^^^^^^^^^^^^
 // [diag.unusedImport] Unused import: 'dart:async'.
@@ -272,23 +312,25 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_method() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -298,23 +340,25 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_setter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -324,23 +368,25 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@field::x
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <testLibrary>::@class::A::@field::x
 ''');
   }
 
   test_invalid_notField_topLevelFunction() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -350,23 +396,25 @@ const a = 0;
 void x() {}
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_topLevelVariable() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -376,23 +424,25 @@ const a = 0;
 var x = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_typeParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {
   A() : T = a;
 //      ^^^^^
@@ -401,23 +451,25 @@ class A<T> {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: T
+  fieldName(v1): SimpleIdentifier
     token: T
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 
   test_invalid_notField_unresolved() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A {
   A() : x = a;
 //      ^^^^^
@@ -426,18 +478,20 @@ class A {
 const a = 0;
 ''');
 
-    var node = findNode.singleConstructorFieldInitializer;
+    var node = result.findNode.singleConstructorFieldInitializer;
     assertResolvedNodeText(node, r'''
 ConstructorFieldInitializer
-  fieldName: SimpleIdentifier
+  fieldName2: x
+  fieldName(v1): SimpleIdentifier
     token: x
     element: <null>
     staticType: null
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: int
+  fieldElement: <null>
 ''');
   }
 }

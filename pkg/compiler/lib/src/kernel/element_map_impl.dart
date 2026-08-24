@@ -340,10 +340,9 @@ class KernelToElementMap implements IrToElementMap {
       } else {
         data.instantiationToBounds = getInterfaceType(
           ir.instantiateToBounds(
-                coreTypes.nonNullableRawType(node),
-                coreTypes.objectClass,
-              )
-              as ir.InterfaceType,
+            coreTypes.nonNullableRawType(node),
+            coreTypes.objectClass,
+          ) as ir.InterfaceType,
         );
       }
     }
@@ -571,7 +570,7 @@ class KernelToElementMap implements IrToElementMap {
     List<DartType> parameterTypes = <DartType>[];
     List<DartType> optionalParameterTypes = <DartType>[];
 
-    DartType getParameterType(ir.VariableDeclaration variable) {
+    DartType getParameterType(ir.Variable variable) {
       // isCovariant implies this FunctionNode is a class Procedure.
       var isCovariant =
           variable.isCovariantByDeclaration || variable.isCovariantByClass;
@@ -581,24 +580,24 @@ class KernelToElementMap implements IrToElementMap {
       );
     }
 
-    for (ir.VariableDeclaration variable in node.positionalParameters) {
+    for (ir.PositionalParameter parameter in node.positionalParameters) {
       if (parameterTypes.length == node.requiredParameterCount) {
-        optionalParameterTypes.add(getParameterType(variable));
+        optionalParameterTypes.add(getParameterType(parameter));
       } else {
-        parameterTypes.add(getParameterType(variable));
+        parameterTypes.add(getParameterType(parameter));
       }
     }
     List<String> namedParameters = <String>[];
     Set<String> requiredNamedParameters = <String>{};
     List<DartType> namedParameterTypes = <DartType>[];
-    List<ir.VariableDeclaration> sortedNamedParameters =
+    List<ir.NamedParameter> sortedNamedParameters =
         node.namedParameters.toList()
-          ..sort((a, b) => a.name!.compareTo(b.name!));
-    for (ir.VariableDeclaration variable in sortedNamedParameters) {
-      namedParameters.add(variable.name!);
-      namedParameterTypes.add(getParameterType(variable));
-      if (variable.isRequired) {
-        requiredNamedParameters.add(variable.name!);
+          ..sort((a, b) => a.parameterName.compareTo(b.parameterName));
+    for (ir.NamedParameter parameter in sortedNamedParameters) {
+      namedParameters.add(parameter.parameterName);
+      namedParameterTypes.add(getParameterType(parameter));
+      if (parameter.isRequired) {
+        requiredNamedParameters.add(parameter.parameterName);
       }
     }
     List<FunctionTypeVariable> typeVariables;
@@ -903,13 +902,13 @@ class KernelToElementMap implements IrToElementMap {
     int typeParameters = node.typeParameters.length;
     List<String> namedParameters = <String>[];
     Set<String> requiredNamedParameters = <String>{};
-    List<ir.VariableDeclaration> sortedNamedParameters =
+    List<ir.NamedParameter> sortedNamedParameters =
         node.namedParameters.toList()
-          ..sort((a, b) => a.name!.compareTo(b.name!));
+          ..sort((a, b) => a.parameterName.compareTo(b.parameterName));
     for (var variable in sortedNamedParameters) {
-      namedParameters.add(variable.name!);
+      namedParameters.add(variable.parameterName);
       if (variable.isRequired) {
-        requiredNamedParameters.add(variable.name!);
+        requiredNamedParameters.add(variable.parameterName);
       }
     }
     return ParameterStructure(

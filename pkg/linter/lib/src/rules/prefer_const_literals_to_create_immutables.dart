@@ -17,7 +17,7 @@ const desc =
     'Prefer const literals as parameters of constructors on @immutable classes.';
 
 class PreferConstLiteralsToCreateImmutables extends AnalysisRule {
-  PreferConstLiteralsToCreateImmutables()
+  new()
     : super(
         name: LintNames.prefer_const_literals_to_create_immutables,
         description: desc,
@@ -38,11 +38,7 @@ class PreferConstLiteralsToCreateImmutables extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitListLiteral(ListLiteral node) => _visitTypedLiteral(node);
 

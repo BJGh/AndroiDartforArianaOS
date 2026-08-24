@@ -15,7 +15,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid return types on setters.';
 
 class AvoidReturnTypesOnSetters extends AnalysisRule {
-  AvoidReturnTypesOnSetters()
+  new()
     : super(name: LintNames.avoid_return_types_on_setters, description: _desc);
 
   @override
@@ -35,11 +35,7 @@ class AvoidReturnTypesOnSetters extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     if (node.isSetter) {

@@ -11,163 +11,195 @@ import '../dot_shorthand_helper.dart';
 /// resolve.
 void notSymmetrical(StaticMember member, ConstructorWithNonFinal ctor) {
   bool eqField = .member().field == member;
-  //              ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //             ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //              ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool eqMethod = .member().method() == member;
-  //               ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //              ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //               ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool eqMixed = .member().method().field == member;
-  //              ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //             ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //              ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool eqMixed2 = .member().field.method() == member;
-  //               ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //              ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //               ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool neqField = .member().field != member;
-  //               ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //              ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //               ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool neqMethod = .member().method() != member;
-  //                ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //               ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool neqMixed = .member().method().field != member;
-  //               ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //              ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //               ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool neqMixed2 = .member().field.method() != member;
-  //                ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //               ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   bool eqCtorField = .new(1).field == ctor;
-  //                  ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                 ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                  ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool eqCtorMethod = .new(1).method() == ctor;
-  //                   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool eqCtorMixed = .new(1).method().field == ctor;
-  //                  ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                 ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                  ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool eqCtorMixed2 = .new(1).field.method() == ctor;
-  //                   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool neqCtorField = .new(1).field != ctor;
-  //                   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool neqCtorMethod = .new(1).method() != ctor;
-  //                    ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                   ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                    ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool neqCtorMixed = .new(1).method().field != ctor;
-  //                   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   bool neqCtorMixed2 = .new(1).field.method() != ctor;
-  //                    ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //                   ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //                    ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.member().field == member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().method() == member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().method().field == member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().field.method() == member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().field != member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().method() != member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().method().field != member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.member().field.method() != member) print('ok');
-  //   ^^^^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'member'.
 
   if (.new(1).field == ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).method() == ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).method().field == ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).field.method() == ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).field != ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).method() != ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).method().field != ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 
   if (.new(1).field.method() != ctor) print('ok');
-  //   ^^^
-  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  //  ^^^^^^^
+  // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+  //   ^
   // [cfe] No type was provided to find the dot shorthand 'new'.
 }
 
@@ -177,163 +209,153 @@ void rhsNeedsToBeShorthand(
   bool condition,
 ) {
   if (member == (.member().field)) {
-    //            ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //           ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //            ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member == (.member().method())) {
-    //            ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //           ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //            ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member == (condition ? StaticMember.member() : .member().field)) {
-    //                                                ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                               ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member == (condition ? StaticMember.member() : .member().method())) {
-    //                                                ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                               ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member ==
-      (condition
-          ? StaticMember.member()
-          : .member().method().field)) {
-    //       ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? StaticMember.member() : .member().method().field)) {
+    //                                     ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                      ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member ==
-      (condition
-          ? StaticMember.member()
-          : .member().field.method())) {
-    //       ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? StaticMember.member() : .member().field.method())) {
+    //                                     ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                      ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member != (condition ? StaticMember.member() : .member().field)) {
-    //                                                ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                               ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member != (condition ? StaticMember.member() : .member().method())) {
-    //                                                ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+    //                                               ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member !=
-      (condition
-          ? StaticMember.member()
-          : .member().method().field)) {
-    //       ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? StaticMember.member() : .member().method().field)) {
+    //                                     ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                      ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
   if (member !=
-      (condition
-          ? StaticMember.member()
-          : .member().field.method())) {
-    //       ^^^^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? StaticMember.member() : .member().field.method())) {
+    //                                     ^^^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                      ^
     // [cfe] No type was provided to find the dot shorthand 'member'.
     print('not ok');
   }
 
-  if (ctor ==
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).field)) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  if (ctor == (condition ? ConstructorWithNonFinal(1) : .new(1).field)) {
+    //                                                  ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                   ^
+    // [cfe] No type was provided to find the dot shorthand 'new'.
+    print('not ok');
+  }
+
+  if (ctor == (condition ? ConstructorWithNonFinal(1) : .new(1).method())) {
+    //                                                  ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                   ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor ==
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).method())) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? ConstructorWithNonFinal(1) : .new(1).method().field)) {
+    //                                          ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                           ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor ==
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).method().field)) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? ConstructorWithNonFinal(1) : .new(1).field.method())) {
+    //                                          ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                           ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
-  if (ctor ==
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).field.method())) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  if (ctor != (condition ? ConstructorWithNonFinal(1) : .new(1).field)) {
+    //                                                  ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                   ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
-  if (ctor !=
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).field)) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+  if (ctor != (condition ? ConstructorWithNonFinal(1) : .new(1).method())) {
+    //                                                  ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                                   ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor !=
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).method())) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? ConstructorWithNonFinal(1) : .new(1).method().field)) {
+    //                                          ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                           ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
 
   if (ctor !=
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).method().field)) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
-    // [cfe] No type was provided to find the dot shorthand 'new'.
-    print('not ok');
-  }
-
-  if (ctor !=
-      (condition
-          ? ConstructorWithNonFinal(1)
-          : .new(1).field.method())) {
-    //       ^^^
-    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
+      (condition ? ConstructorWithNonFinal(1) : .new(1).field.method())) {
+    //                                          ^^^^^^^
+    // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_MISSING_CONTEXT
+    //                                           ^
     // [cfe] No type was provided to find the dot shorthand 'new'.
     print('not ok');
   }
@@ -380,7 +402,7 @@ void objectContextType(StaticMember member, ConstructorWithNonFinal ctor) {
   // [analyzer] COMPILE_TIME_ERROR.DOT_SHORTHAND_UNDEFINED_MEMBER
   // [cfe] The static method or constructor 'member' isn't defined for the type 'Object'.
 
-  // The following shorthands have the context type of `Object` instead of 
+  // The following shorthands have the context type of `Object` instead of
   // `ConstructorWithNonFinal`.
   // Even though `Object` has a default constructor, it doesn't accept a
   // positional argument and furthermore, the rest of the chain will produce an

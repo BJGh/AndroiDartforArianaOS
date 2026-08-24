@@ -15,7 +15,7 @@ main() {
 @reflectiveTest
 class InstanceAccessToStaticMemberTest extends PubPackageResolutionTest {
   test_class_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class C {
   static void a() {}
 }
@@ -27,10 +27,10 @@ f(C c) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a();');
+    var node = result.findNode.methodInvocation('a();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C
@@ -131,7 +131,7 @@ f(A a) {
   }
 
   test_mixin_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 mixin A {
   static void a() {}
 }
@@ -143,10 +143,10 @@ f(A a) {
 }
 ''');
 
-    var node = findNode.methodInvocation('a();');
+    var node = result.findNode.methodInvocation('a();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A

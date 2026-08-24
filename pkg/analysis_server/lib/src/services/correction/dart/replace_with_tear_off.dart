@@ -10,7 +10,7 @@ import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 
 class ReplaceWithTearOff extends ResolvedCorrectionProducer {
-  ReplaceWithTearOff({required super.context});
+  new({required super.context});
 
   @override
   CorrectionApplicability get applicability =>
@@ -33,14 +33,11 @@ class ReplaceWithTearOff extends ResolvedCorrectionProducer {
       if (expression is InvocationExpression) {
         await builder.addDartFileEdit(file, (builder) {
           builder.addReplacement(range.node(ancestor), (builder) {
-            if (expression is MethodInvocation) {
-              var target = expression.target;
-              if (target != null) {
-                builder.write(utils.getNodeText(target));
-                builder.write('.');
-              }
-            }
-            builder.write(utils.getNodeText(expression.function));
+            builder.write(
+              utils.getRangeText(
+                range.startEnd(expression, expression.function),
+              ),
+            );
           });
         });
       } else if (expression is InstanceCreationExpression) {

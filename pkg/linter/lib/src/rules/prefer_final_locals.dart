@@ -21,8 +21,7 @@ const _desc =
     r'Prefer final for variable declarations if they are not reassigned.';
 
 class PreferFinalLocals extends AnalysisRule {
-  PreferFinalLocals()
-    : super(name: LintNames.prefer_final_locals, description: _desc);
+  new() : super(name: LintNames.prefer_final_locals, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.preferFinalLocals;
@@ -57,12 +56,8 @@ class _DeclaredVariableVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-  final String currentFilePath;
-
-  _Visitor(this.rule, {required this.currentFilePath});
-
+class _Visitor(final AnalysisRule rule, {required final String currentFilePath})
+    extends SimpleAstVisitor<void> {
   bool isPotentiallyMutated(AstNode pattern, FunctionBody function) {
     if (pattern is DeclaredVariablePattern) {
       VariableElement? element = pattern.declaredFragment?.element;
@@ -88,10 +83,24 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (node.thisOrAncestorOfType<PatternVariableDeclaration>() != null) return;
     if (node.isDeclaredFinal) return;
 
-    var function = node.thisOrAncestorOfType<FunctionBody>();
-    if (function == null) return;
+    FunctionBody? function;
+    var inCaseClause = false;
+    var parent = node.parent;
+    while (parent != null) {
+      // We do not report final variable patterns declared in switch expression
+      // cases.
+      if (parent is SwitchExpressionCase) return;
+      if (parent is CaseClause) {
+        inCaseClause = true;
+      }
+      if (parent is FunctionBody) {
+        function = parent;
+        break;
+      }
+      parent = parent.parent;
+    }
 
-    var inCaseClause = node.thisOrAncestorOfType<CaseClause>() != null;
+    if (function == null) return;
     if (inCaseClause) {
       if (!isPotentiallyMutated(node, function)) {
         var join = _joinPatternVariable(node.declaredFragment?.element);

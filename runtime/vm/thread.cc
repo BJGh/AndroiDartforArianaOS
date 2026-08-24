@@ -47,6 +47,10 @@ Thread::~Thread() {
   ASSERT(!ActiveMutatorStolenField::decode(safepoint_state_));
   ASSERT(deopt_context_ ==
          nullptr);  // No deopt in progress when thread is deleted.
+#if defined(DART_INCLUDE_SIMULATOR)
+  delete simulator_;
+  simulator_ = nullptr;
+#endif
 #if defined(DART_DYNAMIC_MODULES)
   delete interpreter_;
   interpreter_ = nullptr;
@@ -71,7 +75,7 @@ Thread::~Thread() {
 
 #define REUSABLE_HANDLE_INITIALIZERS(object) object##_handle_(nullptr),
 
-Thread::Thread(bool is_vm_isolate)
+Thread::Thread(bool is_bootstrapping)
     : ThreadState(false),
       write_barrier_mask_(UntaggedObject::kGenerationalBarrierMask),
       active_exception_(Object::null()),
@@ -123,9 +127,9 @@ Thread::Thread(bool is_vm_isolate)
   LEAF_RUNTIME_ENTRY_LIST(DEFAULT_INIT)
 #undef DEFAULT_INIT
 
-  // We cannot initialize the VM constants here for the vm isolate thread
-  // due to boot strapping issues.
-  if (!is_vm_isolate) {
+  // We cannot initialize the constants here for the first thread in the isolate
+  // group because they haven't been created or deserialized yet.
+  if (!is_bootstrapping) {
     InitVMConstants();
   }
 
@@ -231,6 +235,16 @@ void Thread::InitVMConstants() {
 #undef REUSABLE_HANDLE_ALLOCATION
 }
 
+void Thread::FixInitiallyNullFields() {
+  global_object_pool_ = ObjectPool::null();
+  active_exception_ = Object::null();
+  active_stacktrace_ = Object::null();
+  sticky_error_ = Error::null();
+  default_tag_ = UserTag::null();
+  current_tag_ = UserTag::null();
+  thread_locals_ = Array::null();
+}
+
 void Thread::set_active_exception(const Object& value) {
   active_exception_ = value.ptr();
 }
@@ -269,6 +283,9 @@ void Thread::set_default_tag(const UserTag& tag) {
 }
 
 void Thread::set_thread_locals(const Array& thread_locals) {
+  if (isolate_ != nullptr) {
+    isolate_->isolate_object_store()->set_thread_locals(thread_locals);
+  }
   thread_locals_ = thread_locals.ptr();
 }
 
@@ -369,9 +386,13 @@ void Thread::AssertEmptyThreadInvariants() {
     ASSERT(field_table_values_ == nullptr);
     ASSERT(shared_field_table_values_ == nullptr);
     ASSERT(global_object_pool_ == Object::null());
+
+    // Might be null if we failed during early bootstrap.
+    if (Object_handle_ != nullptr) {
 #define CHECK_REUSABLE_HANDLE(object) ASSERT(object##_handle_->IsNull());
-    REUSABLE_HANDLE_LIST(CHECK_REUSABLE_HANDLE)
+      REUSABLE_HANDLE_LIST(CHECK_REUSABLE_HANDLE)
 #undef CHECK_REUSABLE_HANDLE
+    }
   }
 }
 
@@ -422,10 +443,6 @@ void Thread::EnterIsolate(Isolate* isolate) {
                              /*bypass_safepoint=*/false);
     thread->SetupMutatorState();
     thread->SetupDartMutatorState(isolate);
-
-    if (!isolate->is_vm_isolate()) {
-      thread->set_thread_locals(Array::empty_array());
-    }
   }
 
   isolate->scheduled_mutator_thread_ = thread;
@@ -476,6 +493,8 @@ void Thread::ExitIsolate(bool isolate_shutdown) {
   ASSERT(thread->isolate()->mutator_thread_ == thread);
   ASSERT(thread->isolate()->scheduled_mutator_thread_ == thread);
   DEBUG_ASSERT(!thread->IsAnyReusableHandleScopeActive());
+
+  ASSERT(thread->execution_state() == Thread::kThreadInVM);
 
   auto isolate = thread->isolate();
   auto group = thread->isolate_group();
@@ -549,16 +568,41 @@ void Thread::ExitIsolateGroupAsHelper(bool bypass_safepoint) {
   Roots::ClearCurrent();
 }
 
+DART_FORCE_INLINE static void SetThreadStackLimit(Thread* thread) {
+#if defined(DART_INCLUDE_SIMULATOR)
+  if (FLAG_use_simulator) {
+    thread->SetStackLimit(Simulator::Current()->overflow_stack_limit());
+    return;
+  }
+#endif
+  thread->SetStackLimit(OSThread::Current()->overflow_stack_limit());
+}
+
 void Thread::EnterIsolateGroupAsMutator(IsolateGroup* isolate_group,
-                                        bool bypass_safepoint) {
+                                        bool bypass_safepoint,
+                                        Thread* suspended_thread) {
   Roots::SetCurrent(isolate_group->roots());
   isolate_group->IncreaseMutatorCount(/*thread=*/nullptr,
                                       /*is_nested_reenter=*/true,
                                       /*was_stolen=*/false);
   isolate_group->IncrementIsolateGroupMutatorCount();
-  Thread* thread = AddActiveThread(isolate_group, /*isolate=*/nullptr,
-                                   kMutatorTask, bypass_safepoint);
 
+  auto thread = suspended_thread;
+  if (thread != nullptr) {
+    ResumeThreadInternal(thread);
+    {
+      // Descheduled isolates are reloadable (if nothing else prevents it).
+      RawReloadParticipationScope enable_reload(thread);
+      thread->ExitSafepoint();
+    }
+
+    thread->AssertDartMutatorInvariants();
+    ASSERT(thread->isolate() == nullptr);
+    ASSERT(thread->isolate_group() == isolate_group);
+    return;
+  }
+  thread = AddActiveThread(isolate_group, /*isolate=*/nullptr, kMutatorTask,
+                           bypass_safepoint);
   RELEASE_ASSERT(thread != nullptr);
   // Even if [bypass_safepoint] is true, a thread may need mutator state (e.g.
   // parallel scavenger threads write to the [Thread]s storebuffer)
@@ -569,15 +613,7 @@ void Thread::EnterIsolateGroupAsMutator(IsolateGroup* isolate_group,
   thread->SetupDartMutatorStateDependingOnSnapshot(isolate_group);
 
   ResumeThreadInternal(thread);
-#if defined(DART_INCLUDE_SIMULATOR)
-  if (FLAG_use_simulator) {
-    thread->SetStackLimit(Simulator::Current()->overflow_stack_limit());
-  } else {
-    thread->SetStackLimit(OSThread::Current()->overflow_stack_limit());
-  }
-#else
-  thread->SetStackLimit(OSThread::Current()->overflow_stack_limit());
-#endif
+  SetThreadStackLimit(thread);
 
   thread->set_thread_locals(Array::empty_array());
   thread->AssertDartMutatorInvariants();
@@ -594,15 +630,26 @@ void Thread::EnterIsolateGroupAsMutator(IsolateGroup* isolate_group,
 void Thread::ExitIsolateGroupAsMutator(bool bypass_safepoint) {
   Thread* thread = Thread::Current();
   thread->AssertDartMutatorInvariants();
+  auto group = thread->isolate_group();
 
   // Even if [bypass_safepoint] is true, a thread may need mutator state (e.g.
   // parallel scavenger threads write to the [Thread]s storebuffer)
-  thread->ResetDartMutatorState();
-  thread->ResetMutatorState();
-  thread->ClearStackLimit();
-  SuspendThreadInternal(thread, VMTag::kInvalidTagId);
-  auto group = thread->isolate_group();
-  FreeActiveThread(thread, /*isolate=*/nullptr, bypass_safepoint);
+  if (thread->HasActiveState() || thread->OwnsSafepoint()) {
+    // must not free the thread
+    SuspendThreadInternal(thread, VMTag::kLoadWaitTagId);
+    {
+      // Descheduled isolates are reloadable (if nothing else prevents it).
+      RawReloadParticipationScope enable_reload(thread);
+      thread->EnterSafepoint();
+    }
+    thread->set_execution_state(Thread::kThreadInNative);
+  } else {
+    thread->ResetDartMutatorState();
+    thread->ResetMutatorState();
+    thread->ClearStackLimit();
+    SuspendThreadInternal(thread, VMTag::kInvalidTagId);
+    FreeActiveThread(thread, /*isolate=*/nullptr, bypass_safepoint);
+  }
   group->DecrementIsolateGroupMutatorCount();
   group->DecreaseMutatorCount(/*is_nested_exit=*/true);
   Roots::ClearCurrent();
@@ -631,18 +678,7 @@ void Thread::ExitIsolateGroupAsNonMutator() {
 
 void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
-  if (Dart::vm_isolate() != nullptr &&
-      thread->isolate() != Dart::vm_isolate()) {
-#if defined(DART_INCLUDE_SIMULATOR)
-    if (FLAG_use_simulator) {
-      thread->SetStackLimit(Simulator::Current()->overflow_stack_limit());
-    } else {
-      thread->SetStackLimit(OSThread::Current()->overflow_stack_limit());
-    }
-#else
-    thread->SetStackLimit(OSThread::Current()->overflow_stack_limit());
-#endif
-  }
+  SetThreadStackLimit(thread);
 }
 
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
@@ -693,11 +729,6 @@ Thread* Thread::AddActiveThread(IsolateGroup* group,
                                 Isolate* isolate,
                                 TaskKind task_kind,
                                 bool bypass_safepoint) {
-  // NOTE: We cannot just use `Dart::vm_isolate() == this` here, since during
-  // VM startup it might not have been set at this point.
-  const bool is_vm_isolate =
-      Dart::vm_isolate() == nullptr || Dart::vm_isolate() == isolate;
-
   auto thread_registry = group->thread_registry();
   auto safepoint_handler = group->safepoint_handler();
   MonitorLocker ml(thread_registry->threads_lock());
@@ -708,7 +739,8 @@ Thread* Thread::AddActiveThread(IsolateGroup* group,
     }
   }
 
-  Thread* thread = thread_registry->GetFreeThreadLocked(is_vm_isolate);
+  Thread* thread =
+      thread_registry->GetFreeThreadLocked(group->is_bootstrapping());
   thread->AssertEmptyThreadInvariants();
   thread->SetupStateLocked(task_kind);
 
@@ -1077,6 +1109,9 @@ C* Thread::AllocateReusableHandle() {
 }
 
 void Thread::ClearReusableHandles() {
+  // Might be null if we failed during early bootstrap.
+  if (Object_handle_ == nullptr) return;
+
 #define CLEAR_REUSABLE_HANDLE(object) *object##_handle_ = object::null();
   REUSABLE_HANDLE_LIST(CLEAR_REUSABLE_HANDLE)
 #undef CLEAR_REUSABLE_HANDLE
@@ -1193,11 +1228,6 @@ class RestoreWriteBarrierInvariantVisitor : public ObjectPointerVisitor {
       // Dart code won't store into canonical instances.
       if (obj->untag()->IsCanonical()) continue;
 
-      // Objects in the VM isolate heap are immutable and won't be
-      // stored into. Check this condition last because there's no bit
-      // in the header for it.
-      if (obj->untag()->InVMIsolateHeap()) continue;
-
       switch (op_) {
         case Thread::RestoreWriteBarrierInvariantOp::kAddToRememberedSet:
           if (obj->IsOldObject()) {
@@ -1250,7 +1280,6 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
                                      ValidationPolicy::kDontValidateFrames,
                                      this, cross_thread_policy);
   RestoreWriteBarrierInvariantVisitor visitor(isolate_group(), this, op);
-  ObjectStore* object_store = isolate_group()->object_store();
   bool scan_next_dart_frame = false;
   for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr;
        frame = frames_iterator.NextFrame()) {
@@ -1260,14 +1289,14 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
       /* Continue searching. */
     } else if (frame->IsStubFrame()) {
       const uword pc = frame->pc();
-      if (Code::ContainsInstructionAt(
-              object_store->init_late_static_field_stub(), pc) ||
+      if (Code::ContainsInstructionAt(StubCode::InitLateStaticField().ptr(),
+                                      pc) ||
           Code::ContainsInstructionAt(
-              object_store->init_late_final_static_field_stub(), pc) ||
+              StubCode::InitLateFinalStaticField().ptr(), pc) ||
+          Code::ContainsInstructionAt(StubCode::InitLateInstanceField().ptr(),
+                                      pc) ||
           Code::ContainsInstructionAt(
-              object_store->init_late_instance_field_stub(), pc) ||
-          Code::ContainsInstructionAt(
-              object_store->init_late_final_instance_field_stub(), pc)) {
+              StubCode::InitLateFinalInstanceField().ptr(), pc)) {
         scan_next_dart_frame = true;
       }
     } else {
@@ -1320,7 +1349,6 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
   // [object] is in fact a [Code] object.
   if (object.IsCode()) {
 #define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
-  ASSERT((expr)->untag()->InVMIsolateHeap());                                  \
   if (object.ptr() == expr) {                                                  \
     return Thread::member_name##offset();                                      \
   }
@@ -1342,12 +1370,6 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
 }
 
 bool Thread::ObjectAtOffset(intptr_t offset, Object* object) {
-  if (Isolate::Current() == Dart::vm_isolate()) {
-    // --disassemble-stubs runs before all the references through
-    // thread have targets
-    return false;
-  }
-
 #define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
   if (Thread::member_name##offset() == offset) {                               \
     *object = expr;                                                            \
@@ -1646,6 +1668,7 @@ void Thread::ResetMutatorState() {
 
 void Thread::SetupDartMutatorState(Isolate* isolate) {
   field_table_values_ = isolate->field_table_->table();
+  thread_locals_ = isolate->isolate_object_store()->thread_locals();
 
   SetupDartMutatorStateDependingOnSnapshot(isolate->group());
 }
@@ -1685,6 +1708,7 @@ void Thread::ResetDartMutatorState() {
 
   field_table_values_ = nullptr;
   shared_field_table_values_ = nullptr;
+  thread_locals_ = Array::null();
   ONLY_IN_PRECOMPILED(global_object_pool_ = ObjectPool::null());
   ONLY_IN_PRECOMPILED(dispatch_table_array_ = nullptr);
 }

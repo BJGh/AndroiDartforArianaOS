@@ -13,7 +13,7 @@ import 'package:kernel/src/text_util.dart';
 import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
 import 'package:vm/modular/target/vm.dart' show VmTarget;
-import 'package:vm/transformations/pragma.dart'
+import 'package:vm/modular/transformations/pragma.dart'
     show ConstantPragmaAnnotationParser;
 import 'package:vm/transformations/type_flow/analysis.dart';
 import 'package:vm/transformations/type_flow/calls.dart';
@@ -102,13 +102,13 @@ class FakeSharedVariable implements SharedVariable {
 }
 
 class FakeSharedVariableBuilder implements SharedVariableBuilder {
-  final Map<VariableDeclaration, SharedVariable> _sharedVariables = {};
+  final Map<Variable, SharedVariable> _sharedVariables = {};
   final Map<Member, SharedVariable> _sharedCapturedThisVariables = {};
 
   @override
-  SharedVariable getSharedVariable(VariableDeclaration variable) =>
+  SharedVariable getSharedVariable(Variable variable) =>
       _sharedVariables[variable] ??= FakeSharedVariable(
-        variable.name ?? '__tmp',
+        variable.cosmeticName ?? '__tmp',
       );
   @override
   SharedVariable getSharedCapturedThis(Member member) =>

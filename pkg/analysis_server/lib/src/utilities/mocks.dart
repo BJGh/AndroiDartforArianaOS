@@ -13,6 +13,8 @@ import 'package:analysis_server/src/channel/channel.dart';
 import 'package:analysis_server/src/plugin/plugin_isolate.dart';
 import 'package:analysis_server/src/plugin/plugin_manager.dart';
 import 'package:analyzer/dart/analysis/context_root.dart' as analyzer;
+import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer/instrumentation/service.dart';
 import 'package:analyzer_plugin/protocol/protocol.dart' as plugin;
 import 'package:analyzer_plugin/protocol/protocol_generated.dart' as plugin;
 import 'package:analyzer_plugin/src/protocol/protocol_internal.dart' as plugin;
@@ -63,8 +65,7 @@ class MockServerChannel implements ServerCommunicationChannel {
   /// True if we are printing out messages exchanged with the server.
   final bool printMessages;
 
-  MockServerChannel({bool? printMessages})
-    : printMessages = printMessages ?? false;
+  new({bool? printMessages}) : printMessages = printMessages ?? false;
 
   /// Return the broadcast stream of notifications.
   Stream<Notification> get notifications {
@@ -213,7 +214,7 @@ class MockServerChannel implements ServerCommunicationChannel {
 class ServerError implements Exception {
   final String message;
 
-  ServerError(this.message);
+  new(this.message);
 
   @override
   String toString() {
@@ -221,9 +222,38 @@ class ServerError implements Exception {
   }
 }
 
+class TestPluginIsolate implements PluginIsolate {
+  @override
+  final String pluginId;
+
+  final List<plugin.RequestParams> requests = [];
+
+  new(this.pluginId);
+
+  @override
+  bool get isLegacy => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName} is unimplemented');
+
+  @override
+  Future<plugin.PluginDetailsResult?> requestDetails() async => null;
+
+  @override
+  void sendRequest(plugin.RequestParams params) {
+    requests.add(params);
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
 /// A plugin manager that simulates broadcasting requests to plugins by
 /// hard-coding the responses.
-class TestPluginManager implements PluginManager {
+class TestPluginManager(final ResourceProvider resourceProvider)
+    implements PluginManager {
+  plugin.AnalysisSetAnalysisRootsParams? analysisSetAnalysisRootsParams;
   plugin.AnalysisSetPriorityFilesParams? analysisSetPriorityFilesParams;
   plugin.AnalysisSetSubscriptionsParams? analysisSetSubscriptionsParams;
   plugin.AnalysisUpdateContentParams? analysisUpdateContentParams;
@@ -237,13 +267,17 @@ class TestPluginManager implements PluginManager {
   List<PluginIsolate> pluginIsolates = [];
 
   @override
-  Completer<void> initializedCompleter = Completer();
+  final Completer<void> initializedCompleter = Completer();
 
   StreamController<void> pluginsChangedController =
       StreamController.broadcast();
 
   @override
   final contextRootsWithNoPlugins = <String>{};
+
+  @override
+  InstrumentationService get instrumentationService =>
+      InstrumentationService.NULL_SERVICE;
 
   @override
   List<PluginIsolate> get legacyPluginIsolates =>
@@ -263,6 +297,9 @@ class TestPluginManager implements PluginManager {
     required bool isLegacyPlugin,
   }) async {
     contextRootPlugins.putIfAbsent(contextRoot, () => []).add(path);
+    if (!isLegacyPlugin) {
+      pluginIsolates.add(TestPluginIsolate(path));
+    }
   }
 
   @override
@@ -284,6 +321,13 @@ class TestPluginManager implements PluginManager {
       throw Exception('Unexpected invocation of ${invocation.memberName}');
 
   @override
+  Folder pluginStateFolder(String contextRootPath) {
+    return resourceProvider.getFolder(
+      resourceProvider.pathContext.join(contextRootPath, '.plugin_state'),
+    );
+  }
+
+  @override
   String pluginStateFolderPath(String pluginPath) => '/some/path';
 
   @override
@@ -294,6 +338,13 @@ class TestPluginManager implements PluginManager {
   @override
   Future<void> restartPlugins() async {
     // Nothing to restart.
+  }
+
+  @override
+  void setAnalysisSetAnalysisRootsParams(
+    plugin.AnalysisSetAnalysisRootsParams params,
+  ) {
+    analysisSetAnalysisRootsParams = params;
   }
 
   @override

@@ -16,7 +16,7 @@ import '../util/ascii_utils.dart';
 const _desc = r'Avoid empty catch blocks.';
 
 class EmptyCatches extends AnalysisRule {
-  EmptyCatches() : super(name: LintNames.empty_catches, description: _desc);
+  new() : super(name: LintNames.empty_catches, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.emptyCatches;
@@ -31,11 +31,7 @@ class EmptyCatches extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitCatchClause(CatchClause node) {
     // Skip exceptions named with underscores.

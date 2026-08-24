@@ -451,8 +451,6 @@ void Profiler::DumpStackTrace(uword sp, uword fp, uword pc, bool for_crash) {
   auto isolate = thread == nullptr ? nullptr : thread->isolate();
   auto isolate_group = thread == nullptr ? nullptr : thread->isolate_group();
   auto source = isolate_group == nullptr ? nullptr : isolate_group->source();
-  auto vm_source =
-      Dart::vm_isolate() == nullptr ? nullptr : Dart::vm_isolate()->source();
   const char* isolate_group_name =
       isolate_group == nullptr ? "(nil)" : isolate_group->source()->name;
   const char* isolate_name = isolate == nullptr ? "(nil)" : isolate->name();
@@ -479,13 +477,9 @@ void Profiler::DumpStackTrace(uword sp, uword fp, uword pc, bool for_crash) {
 #endif
   OS::PrintErr("os=%s, arch=%s, comp=%s, sim=%s\n", kHostOperatingSystemName,
                kTargetArchitectureName, kCompressedPointers, kUsingSimulator);
-  OS::PrintErr("isolate_instructions=%" Px ", vm_instructions=%" Px "\n",
-               source == nullptr
-                   ? 0
-                   : reinterpret_cast<uword>(source->snapshot_instructions),
-               vm_source == nullptr
-                   ? 0
-                   : reinterpret_cast<uword>(vm_source->snapshot_instructions));
+  OS::PrintErr(
+      "isolate_instructions=%" Px ", vm_instructions=0\n",
+      source == nullptr ? 0 : reinterpret_cast<uword>(source->snapshot_text));
   OS::PrintErr("fp=%" Px ", sp=%" Px ", pc=%" Px "\n", fp, sp, pc);
 
   uword stack_lower = 0;
@@ -708,9 +702,7 @@ SampleBlockBuffer::SampleBlockBuffer(intptr_t blocks,
   const intptr_t size = Utils::RoundUp(
       blocks * samples_per_block * sizeof(Sample), VirtualMemory::PageSize());
   const bool executable = false;
-  const bool compressed = false;
-  memory_ =
-      VirtualMemory::Allocate(size, executable, compressed, "dart-profiler");
+  memory_ = VirtualMemory::Allocate(size, executable, "dart-profiler");
   if (memory_ == nullptr) {
     OUT_OF_MEMORY();
   }
@@ -1057,6 +1049,10 @@ class ProfilerDartStackWalker : public ProfilerStackWalker {
         StubCode::InInvocationStub(thread_, Stack(sp, 0),
                                    is_interpreted_frame) ||
         StubCode::InInvocationStub(thread_, Stack(sp, 1), is_interpreted_frame);
+#elif defined(TARGET_ARCH_ARM) && defined(DART_INCLUDE_SIMULATOR)
+        StubCode::InInvocationStub(thread_, reinterpret_cast<uword>(pc_),
+                                   is_interpreted_frame) ||
+        StubCode::InInvocationStub(thread_, lr, is_interpreted_frame);
 #else
         StubCode::InInvocationStub(thread_, lr, is_interpreted_frame);
 #endif
@@ -1192,14 +1188,6 @@ static Sample* SetupSample(Thread* thread,
   return sample;
 }
 
-static bool CheckIsolate(Isolate* isolate) {
-  if ((isolate == nullptr) || (Dart::vm_isolate() == nullptr)) {
-    // No isolate.
-    return false;
-  }
-  return isolate != Dart::vm_isolate();
-}
-
 void Profiler::SampleAllocation(Thread* thread,
                                 intptr_t cid,
                                 uint32_t identity_hash) {
@@ -1207,7 +1195,7 @@ void Profiler::SampleAllocation(Thread* thread,
   OSThread* os_thread = thread->os_thread();
   ASSERT(os_thread != nullptr);
   Isolate* isolate = thread->isolate();
-  if (!CheckIsolate(isolate)) {
+  if (isolate == nullptr) {
     return;
   }
 
@@ -1308,7 +1296,7 @@ void Profiler::SampleThread(Thread* thread,
     return;
   }
 
-  if (!CheckIsolate(isolate)) {
+  if (isolate == nullptr) {
     counters_.bail_out_check_isolate.fetch_add(1);
     return;
   }
@@ -1373,7 +1361,7 @@ void Profiler::SampleThread(Thread* thread,
     uintptr_t lr = state.lr;
 #if defined(DART_INCLUDE_SIMULATOR)
     if (FLAG_use_simulator) {
-      Simulator* simulator = isolate->simulator();
+      Simulator* simulator = thread->simulator();
       sp = simulator->get_register(SPREG);
       fp = simulator->get_register(FPREG);
       pc = simulator->get_pc();
@@ -1445,8 +1433,6 @@ class CodeLookupTableBuilder : public ObjectVisitor {
 
 void CodeLookupTable::Build(Thread* thread) {
   ASSERT(thread != nullptr);
-  Isolate* vm_isolate = Dart::vm_isolate();
-  ASSERT(vm_isolate != nullptr);
 
   // Clear.
   code_objects_.Clear();
@@ -1474,7 +1460,6 @@ void CodeLookupTable::Build(Thread* thread) {
                              "CodeLookupTable::Build HeapIterationScope");
     HeapIterationScope iteration(thread);
     CodeLookupTableBuilder cltb(this);
-    iteration.IterateVMIsolateObjects(&cltb);
     iteration.IterateOldObjects(&cltb);
   }
   thread->CheckForSafepoint();
@@ -1633,8 +1618,8 @@ class PerfettoPerfSampleWriter : public ValueObject {
     IsolateGroup::ForEach([&](IsolateGroup* group) {
       const auto group_source = group->source();
       const auto isolate_group_instructions =
-          reinterpret_cast<uword>(group_source->snapshot_instructions);
-      const Image isolate_group_image(isolate_group_instructions);
+          reinterpret_cast<uword>(group_source->snapshot_text);
+      const TextImage isolate_group_image(isolate_group_instructions);
       group->heap()->old_space()->ForEachImagePage([&](Page* page) {
         if (page->is_executable()) {
           mappings_.Add(new SnapshotMapping{
@@ -2136,8 +2121,6 @@ void SampleBlockProcessor::ThreadMain(uword parameters) {
     // If shutting down flush all sample blocks from all isolates.
     if (shutdown_) {
       IsolateGroup::ForEach([&](IsolateGroup* group) {
-        if (group == Dart::vm_isolate_group()) return;
-
         const bool kBypassSafepoint = false;
         Thread::EnterIsolateGroupAsHelper(group, Thread::kSampleBlockTask,
                                           kBypassSafepoint);
@@ -2149,8 +2132,6 @@ void SampleBlockProcessor::ThreadMain(uword parameters) {
     Timeline::DrainCompletedSampleBlocksIntoRecorder();
 #else
     IsolateGroup::ForEach([&](IsolateGroup* group) {
-      if (group == Dart::vm_isolate_group()) return;
-
       const bool kBypassSafepoint = false;
       Thread::EnterIsolateGroupAsHelper(group, Thread::kSampleBlockTask,
                                         kBypassSafepoint);

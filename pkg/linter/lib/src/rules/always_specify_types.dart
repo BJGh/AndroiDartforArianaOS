@@ -19,8 +19,7 @@ import '../util/ascii_utils.dart';
 const _desc = r'Specify type annotations.';
 
 class AlwaysSpecifyTypes extends MultiAnalysisRule {
-  AlwaysSpecifyTypes()
-    : super(name: LintNames.always_specify_types, description: _desc);
+  new() : super(name: LintNames.always_specify_types, description: _desc);
 
   @override
   List<DiagnosticCode> get diagnosticCodes => [
@@ -54,11 +53,7 @@ class AlwaysSpecifyTypes extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final MultiAnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final MultiAnalysisRule rule) extends SimpleAstVisitor<void> {
   void checkLiteral(TypedLiteral literal) {
     if (literal.typeArguments == null) {
       rule.reportAtToken(

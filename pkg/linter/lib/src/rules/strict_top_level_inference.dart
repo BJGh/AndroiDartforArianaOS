@@ -6,11 +6,12 @@ import 'package:analyzer/analysis_rule/analysis_rule.dart';
 import 'package:analyzer/analysis_rule/rule_context.dart';
 import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/analysis/features.dart';
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
+// ignore: implementation_imports
+import 'package:analyzer/src/dart/ast/ast.dart';
 // ignore: implementation_imports
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:collection/collection.dart';
@@ -22,8 +23,7 @@ import '../extensions.dart';
 const _desc = r'Specify type annotations.';
 
 class StrictTopLevelInference extends MultiAnalysisRule {
-  StrictTopLevelInference()
-    : super(name: LintNames.strict_top_level_inference, description: _desc);
+  new() : super(name: LintNames.strict_top_level_inference, description: _desc);
 
   @override
   List<DiagnosticCode> get diagnosticCodes => [
@@ -46,17 +46,11 @@ class StrictTopLevelInference extends MultiAnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final bool _wildCardVariablesEnabled;
-
-  final MultiAnalysisRule rule;
-
-  final RuleContext context;
-
-  _Visitor(this.rule, this.context)
-    : _wildCardVariablesEnabled = context.isFeatureEnabled(
-        Feature.wildcard_variables,
-      );
+class _Visitor(final MultiAnalysisRule rule, final RuleContext context)
+    extends SimpleAstVisitor<void> {
+  final bool _wildCardVariablesEnabled = context.isFeatureEnabled(
+    Feature.wildcard_variables,
+  );
 
   bool isWildcardIdentifier(String lexeme) =>
       _wildCardVariablesEnabled && lexeme == '_';
@@ -69,7 +63,9 @@ class _Visitor extends SimpleAstVisitor<void> {
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     if (node.parent is! CompilationUnit) return;
-    if (node.returnType == null && !node.isSetter) {
+    if (node.returnType == null &&
+        !node.isSetter &&
+        node.name.type != TokenType.INDEX_EQ) {
       _report(node.name);
     }
 
@@ -148,7 +144,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       if (parameterName == null) continue;
       if (isWildcardIdentifier(parameterName.lexeme)) continue;
 
-      if (parameter is! RegularFormalParameter ||
+      if (parameter is! RegularFormalParameterImpl ||
           parameter.functionTypedSuffix != null) {
         // Every type of parameter other than simple formal parameters get a type
         // one way or another:
@@ -162,6 +158,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       }
 
       if (parameter.type != null) return;
+      if (parameter.isDeclaringFieldTypeInferred) continue;
       if (overriddenMember == null) {
         _report(parameterName, keyword: parameter.constFinalOrVarKeyword);
       } else {
@@ -209,7 +206,7 @@ class _Visitor extends SimpleAstVisitor<void> {
         container is ExtensionTypeElement;
 
     if (noOverride) {
-      if (node.returnType == null) {
+      if (node.returnType == null && node.name.type != TokenType.INDEX_EQ) {
         rule.reportAtToken(
           node.name,
           diagnosticCode: diag.strictTopLevelInferenceAddType,
@@ -222,6 +219,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       var overriddenMember = node.declaredFragment?.element.overriddenMember;
       if (overriddenMember == null &&
           node.returnType == null &&
+          node.name.type != TokenType.INDEX_EQ &&
           (!container.isReflectiveTest ||
               (!node.name.lexeme.startsWith('test_') &&
                   !node.name.lexeme.startsWith('solo_test_')))) {
@@ -238,11 +236,8 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   void _checkSetter(MethodDeclaration node, PropertyAccessorElement element) {
     var parameter = node.parameters?.parameters.firstOrNull;
-    if (parameter == null) return;
-    if (parameter is! RegularFormalParameter ||
-        parameter.functionTypedSuffix != null) {
-      return;
-    }
+    if (parameter is! RegularFormalParameter) return;
+    if (parameter.functionTypedSuffix != null) return;
     if (parameter.type != null) return;
 
     if (!_isOverride(node, element)) {

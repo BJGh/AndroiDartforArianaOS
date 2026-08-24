@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class ExtensionMethodsTest extends PubPackageResolutionTest {
   test_implicit_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -29,7 +29,7 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.prefixed('.foo');
+    var node = result.findNode.prefixed('.foo');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -39,11 +39,11 @@ PrefixedIdentifier
   period: .
   identifier: SimpleIdentifier
     token: foo
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@extension::E::@getter::foo
       substitution: {T: int}
     staticType: List<int>
-  element: GetterMember
+  element: SubstitutedGetterElementImpl
     baseElement: <testLibrary>::@extension::E::@getter::foo
     substitution: {T: int}
   staticType: List<int>
@@ -51,7 +51,7 @@ PrefixedIdentifier
   }
 
   test_implicit_method() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -63,26 +63,26 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: A<int>
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: int, U: U}
     staticType: Map<int, U> Function<U>(U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       DoubleLiteral
         literal: 1.0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: u@null
           substitution: {U: double}
         staticType: double
@@ -95,24 +95,24 @@ MethodInvocation
   }
 
   test_implicit_method_internal() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E<T> on List<T> {
   List<T> foo() => this;
   List<T> bar(List<T> other) => other.foo();
 }
 ''');
 
-    var node = findNode.methodInvocation('other.foo()');
+    var node = result.findNode.methodInvocation('other.foo()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: other
     element: <testLibrary>::@extension::E::@method::bar::@formalParameter::other
     staticType: List<T>
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: T}
     staticType: List<T> Function()
@@ -125,7 +125,7 @@ MethodInvocation
   }
 
   test_implicit_method_onTypeParameter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on T {
   Map<T, U> foo<U>(U value) => <T, U>{};
 }
@@ -135,26 +135,26 @@ void f(String a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: a
     element: <testLibrary>::@function::f::@formalParameter::a
     staticType: String
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: String, U: U}
     staticType: Map<String, U> Function<U>(U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       IntegerLiteral
         literal: 0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: value@null
           substitution: {U: int}
         staticType: int
@@ -167,7 +167,7 @@ MethodInvocation
   }
 
   test_implicit_method_tearOff() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -179,7 +179,7 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.prefixed('foo;');
+    var node = result.findNode.prefixed('foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -189,11 +189,11 @@ PrefixedIdentifier
   period: .
   identifier: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: int, U: U}
     staticType: Map<int, U> Function<U>(U)
-  element: MethodMember
+  element: SubstitutedMethodElementImpl
     baseElement: <testLibrary>::@extension::E::@method::foo
     substitution: {T: int, U: U}
   staticType: Map<int, U> Function<U>(U)
@@ -201,7 +201,7 @@ PrefixedIdentifier
   }
 
   test_implicit_setter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -212,10 +212,10 @@ void f(A<int> a) {
   a.foo = 0;
 }
 ''');
-    var assignment = findNode.assignment('foo =');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
@@ -228,15 +228,15 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
-    correspondingParameter: ParameterMember
+    correspondingParameter: SubstitutedFormalParameterElementImpl
       baseElement: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
       substitution: {T: int}
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: SetterMember
+  writeElement: SubstitutedSetterElementImpl
     baseElement: <testLibrary>::@extension::E::@setter::foo
     substitution: {T: int}
   writeType: int
@@ -246,7 +246,7 @@ AssignmentExpression
   }
 
   test_implicit_targetTypeParameter_hasBound_methodInvocation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension Test<T> on T {
   T Function(T) test() => throw 0;
 }
@@ -256,17 +256,17 @@ void f<S extends num>(S x) {
 }
 ''');
 
-    var node = findNode.methodInvocation('test();');
+    var node = result.findNode.methodInvocation('test();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: S
   operator: .
   methodName: SimpleIdentifier
     token: test
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::Test::@method::test
       substitution: {T: S}
     staticType: S Function(S) Function()
@@ -279,7 +279,7 @@ MethodInvocation
   }
 
   test_implicit_targetTypeParameter_hasBound_propertyAccess_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension Test<T> on T {
   T Function(T) get test => throw 0;
 }
@@ -289,9 +289,27 @@ void f<S extends num>(S x) {
 }
 ''');
 
-    var node = findNode.singlePropertyAccess;
+    var node = result.findNode.singleReceiverPropertyExtraction;
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: SimpleIdentifier
+      token: x
+      element: <testLibrary>::@function::f::@formalParameter::x
+      staticType: S
+    rightParenthesis: )
+    staticType: S
+  operator: .
+  propertyName: test
+  resolution: GetterInvocationResolution
+    element: SubstitutedGetterElementImpl
+      baseElement: <testLibrary>::@extension::Test::@getter::test
+      substitution: {T: S}
+    invokeType: S Function(S) Function()
+    type: S Function(S)
+  staticType: S Function(S)
+V1: PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: SimpleIdentifier
@@ -303,7 +321,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: test
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@extension::Test::@getter::test
       substitution: {T: S}
     staticType: S Function(S)
@@ -312,7 +330,7 @@ PropertyAccess
   }
 
   test_implicit_targetTypeParameter_hasBound_propertyAccess_setter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension Test<T> on T {
   void set test(T _) {}
 }
@@ -324,8 +342,8 @@ void f<S extends num>(S x) {
 }
 ''');
 
-    var assignment = findNode.assignment('(x).test');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('(x).test');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: ParenthesizedExpression
@@ -351,7 +369,7 @@ AssignmentExpression
     argumentList: ArgumentList
       leftParenthesis: (
       rightParenthesis: )
-    correspondingParameter: ParameterMember
+    correspondingParameter: SubstitutedFormalParameterElementImpl
       baseElement: <testLibrary>::@extension::Test::@setter::test::@formalParameter::_
       substitution: {T: S}
     staticInvokeType: S Function()
@@ -360,7 +378,7 @@ AssignmentExpression
       S
   readElement: <null>
   readType: null
-  writeElement: SetterMember
+  writeElement: SubstitutedSetterElementImpl
     baseElement: <testLibrary>::@extension::Test::@setter::test
     substitution: {T: S}
   writeType: S
@@ -370,7 +388,7 @@ AssignmentExpression
   }
 
   test_override_downward_hasTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on Set<T> {
   void foo() {}
 }
@@ -379,12 +397,12 @@ main() {
   E<int>({}).foo();
 }
 ''');
-    var literal = findNode.setOrMapLiteral('{}).');
+    var literal = result.findNode.setOrMapLiteral('{}).');
     assertType(literal, 'Set<int>');
   }
 
   test_override_downward_hasTypeArguments_wrongNumber() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on Set<T> {
   void foo() {}
 }
@@ -395,12 +413,12 @@ main() {
 // [diag.wrongNumberOfTypeArgumentsExtension] The extension 'E' is declared with 1 type parameters, but 2 type arguments were given.
 }
 ''');
-    var literal = findNode.setOrMapLiteral('{}).');
+    var literal = result.findNode.setOrMapLiteral('{}).');
     assertType(literal, 'Set<dynamic>');
   }
 
   test_override_downward_noTypeArguments() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T> on Set<T> {
   void foo() {}
 }
@@ -409,12 +427,12 @@ main() {
   E({}).foo();
 }
 ''');
-    var literal = findNode.setOrMapLiteral('{}).');
+    var literal = result.findNode.setOrMapLiteral('{}).');
     assertType(literal, 'Set<dynamic>');
   }
 
   test_override_hasTypeArguments_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -426,10 +444,10 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.propertyAccess('.foo');
+    var node = result.findNode.propertyAccess('.foo');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     typeArguments: TypeArgumentList
       leftBracket: <
@@ -441,7 +459,7 @@ PropertyAccess
       rightBracket: >
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -456,7 +474,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@extension::E::@getter::foo
       substitution: {T: num}
     staticType: List<num>
@@ -465,7 +483,7 @@ PropertyAccess
   }
 
   test_override_hasTypeArguments_method() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -477,10 +495,10 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     typeArguments: TypeArgumentList
       leftBracket: <
@@ -492,7 +510,7 @@ MethodInvocation
       rightBracket: >
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -507,16 +525,16 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: num, U: U}
     staticType: Map<num, U> Function<U>(U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       DoubleLiteral
         literal: 1.0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: u@null
           substitution: {U: double}
         staticType: double
@@ -529,7 +547,7 @@ MethodInvocation
   }
 
   test_override_hasTypeArguments_method_tearOff() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -541,10 +559,10 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.propertyAccess('foo;');
+    var node = result.findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     typeArguments: TypeArgumentList
       leftBracket: <
@@ -556,7 +574,7 @@ PropertyAccess
       rightBracket: >
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -571,7 +589,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: num, U: U}
     staticType: Map<num, U> Function<U>(U)
@@ -580,7 +598,7 @@ PropertyAccess
   }
 
   test_override_hasTypeArguments_setter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -592,11 +610,11 @@ void f(A<int> a) {
 }
 ''');
 
-    var assignment = findNode.assignment('foo =');
-    assertResolvedNodeText(assignment, r'''
+    var node = result.findNode.assignment('foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
+  leftHandSide2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       typeArguments: TypeArgumentList
         leftBracket: <
@@ -608,7 +626,7 @@ AssignmentExpression
         rightBracket: >
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -627,15 +645,15 @@ AssignmentExpression
       staticType: null
     staticType: null
   operator: =
-  rightHandSide: DoubleLiteral
+  rightHandSide2: DoubleLiteral
     literal: 1.2
-    correspondingParameter: ParameterMember
+    correspondingParameter: SubstitutedFormalParameterElementImpl
       baseElement: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
       substitution: {T: num}
     staticType: double
   readElement: <null>
   readType: null
-  writeElement: SetterMember
+  writeElement: SubstitutedSetterElementImpl
     baseElement: <testLibrary>::@extension::E::@setter::foo
     substitution: {T: num}
   writeType: num
@@ -645,7 +663,7 @@ AssignmentExpression
   }
 
   test_override_inferTypeArguments_error_couldNotInfer() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E<T extends num> on T {
   void foo() {}
 }
@@ -656,13 +674,13 @@ f(String s) {
 // [diag.extensionOverrideArgumentNotAssignable] The type of the argument to the extension override 'String' isn't assignable to the extended type 'num'.
 }
 ''');
-    var override = findNode.extensionOverride('E(s)');
+    var override = result.findNode.extensionOverride('E(s)');
     assertElementTypes(override.typeArgumentTypes, ['num']);
     assertType(override.extendedType, 'num');
   }
 
   test_override_inferTypeArguments_getter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -674,14 +692,14 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.propertyAccess('.foo');
+    var node = result.findNode.propertyAccess('.foo');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -696,7 +714,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    element: GetterMember
+    element: SubstitutedGetterElementImpl
       baseElement: <testLibrary>::@extension::E::@getter::foo
       substitution: {T: int}
     staticType: List<int>
@@ -705,7 +723,7 @@ PropertyAccess
   }
 
   test_override_inferTypeArguments_method() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -717,14 +735,14 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.singleMethodInvocation;
+    var node = result.findNode.singleMethodInvocation;
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -739,16 +757,16 @@ MethodInvocation
   operator: .
   methodName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: int, U: U}
     staticType: Map<int, U> Function<U>(U)
   argumentList: ArgumentList
     leftParenthesis: (
-    arguments
+    arguments2
       DoubleLiteral
         literal: 1.0
-        correspondingParameter: ParameterMember
+        correspondingParameter: SubstitutedFormalParameterElementImpl
           baseElement: u@null
           substitution: {U: double}
         staticType: double
@@ -761,7 +779,7 @@ MethodInvocation
   }
 
   test_override_inferTypeArguments_method_tearOff() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -773,14 +791,14 @@ void f(A<int> a) {
 }
 ''');
 
-    var node = findNode.propertyAccess('foo;');
+    var node = result.findNode.propertyAccess('foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleIdentifier
           token: a
           correspondingParameter: <null>
@@ -795,7 +813,7 @@ PropertyAccess
   operator: .
   propertyName: SimpleIdentifier
     token: foo
-    element: MethodMember
+    element: SubstitutedMethodElementImpl
       baseElement: <testLibrary>::@extension::E::@method::foo
       substitution: {T: int, U: U}
     staticType: Map<int, U> Function<U>(U)
@@ -804,7 +822,7 @@ PropertyAccess
   }
 
   test_override_inferTypeArguments_setter() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class A<T> {}
 
 extension E<T> on A<T> {
@@ -816,14 +834,15 @@ void f(A<int> a) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.assignment('foo ='), r'''
+    var node = result.findNode.assignment('foo =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PropertyAccess
-    target: ExtensionOverride
+  leftHandSide2: PropertyAccess
+    target2: ExtensionOverride
       name: E
       argumentList: ArgumentList
         leftParenthesis: (
-        arguments
+        arguments2
           SimpleIdentifier
             token: a
             correspondingParameter: <null>
@@ -842,15 +861,15 @@ AssignmentExpression
       staticType: null
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 0
-    correspondingParameter: ParameterMember
+    correspondingParameter: SubstitutedFormalParameterElementImpl
       baseElement: <testLibrary>::@extension::E::@setter::foo::@formalParameter::value
       substitution: {T: int}
     staticType: int
   readElement: <null>
   readType: null
-  writeElement: SetterMember
+  writeElement: SubstitutedSetterElementImpl
     baseElement: <testLibrary>::@extension::E::@setter::foo
     substitution: {T: int}
   writeType: int

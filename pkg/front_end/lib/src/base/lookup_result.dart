@@ -3,13 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:front_end/src/codes/diagnostic.dart' as diag;
-import 'package:kernel/ast.dart';
 
 import '../builder/builder.dart';
 import '../builder/declaration_builders.dart';
 import '../builder/member_builder.dart';
 import '../codes/cfe_codes.dart';
-import '../kernel/external_ast_helper.dart' as extern;
+import '../source/check_helper.dart';
 import 'compiler_context.dart';
 
 abstract class LookupResult {
@@ -45,7 +44,7 @@ abstract class LookupResult {
     return message.withLocation(fileUri, fileOffset, length);
   }
 
-  static InvalidExpression createDuplicateExpression(
+  static ErrorText createDuplicateErrorText(
     LookupResult lookupResult, {
     required CompilerContext context,
     DeclarationBuilder? enclosingDeclaration,
@@ -67,7 +66,7 @@ abstract class LookupResult {
           CfeSeverity.error,
         )
         .plain;
-    return extern.createInvalidExpression(text, fileOffset: fileOffset);
+    return new ErrorText(message: text, fileOffset: fileOffset);
   }
 
   static LookupResult? createResult(
@@ -135,19 +134,14 @@ abstract class LookupResult {
 }
 
 abstract class InvalidLookupResult implements LookupResult {
-  factory InvalidLookupResult(LocatedMessage message) =
-      _InvalidLookupResultImpl;
+  factory(LocatedMessage message) = _InvalidLookupResultImpl;
 
   LocatedMessage get message;
 }
 
 // Coverage-ignore(suite): Not run.
-class _InvalidLookupResultImpl implements InvalidLookupResult {
-  @override
-  final LocatedMessage message;
-
-  _InvalidLookupResultImpl(this.message);
-
+class _InvalidLookupResultImpl(@override final LocatedMessage message)
+    implements InvalidLookupResult {
   @override
   bool get isInvalidLookup => true;
 
@@ -172,13 +166,8 @@ abstract class MemberLookupResult implements LookupResult {
   bool get isStatic;
 }
 
-class InvalidMemberLookupResult
+class InvalidMemberLookupResult(@override final LocatedMessage message)
     implements InvalidLookupResult, MemberLookupResult {
-  @override
-  final LocatedMessage message;
-
-  InvalidMemberLookupResult(this.message);
-
   @override
   bool get isInvalidLookup => true;
 
@@ -195,68 +184,39 @@ class InvalidMemberLookupResult
   bool get isStatic => true;
 }
 
-class GetableResult with LookupResultMixin implements LookupResult {
-  @override
-  final NamedBuilder getable;
-
-  GetableResult(this.getable);
-
+class GetableResult(@override final NamedBuilder getable)
+    with LookupResultMixin
+    implements LookupResult {
   @override
   NamedBuilder? get setable => null;
 }
 
 // Coverage-ignore(suite): Not run.
-class SetableResult with LookupResultMixin implements LookupResult {
-  @override
-  final NamedBuilder setable;
-
-  SetableResult(this.setable);
-
+class SetableResult(@override final NamedBuilder setable)
+    with LookupResultMixin
+    implements LookupResult {
   @override
   NamedBuilder? get getable => null;
 }
 
-class GetableSetableResult with LookupResultMixin implements LookupResult {
-  @override
-  final NamedBuilder getable;
+class GetableSetableResult(
+  @override final NamedBuilder getable,
+  @override final NamedBuilder setable,
+) with LookupResultMixin implements LookupResult;
 
-  @override
-  final NamedBuilder setable;
-
-  GetableSetableResult(this.getable, this.setable);
-}
-
-class SetableMemberResult with LookupResultMixin implements MemberLookupResult {
-  @override
-  final MemberBuilder setable;
-
-  @override
-  final bool isStatic;
-
-  SetableMemberResult(this.setable, {required this.isStatic});
-
+class SetableMemberResult(
+  @override final MemberBuilder setable, {
+  @override required final bool isStatic,
+}) with LookupResultMixin implements MemberLookupResult {
   @override
   MemberBuilder? get getable => null;
 }
 
-class GetableSetableMemberResult
-    with LookupResultMixin
-    implements MemberLookupResult {
-  @override
-  final MemberBuilder getable;
-
-  @override
-  final MemberBuilder setable;
-
-  @override
-  final bool isStatic;
-
-  GetableSetableMemberResult(
-    this.getable,
-    this.setable, {
-    required this.isStatic,
-  });
-}
+class GetableSetableMemberResult(
+  @override final MemberBuilder getable,
+  @override final MemberBuilder setable, {
+  @override required final bool isStatic,
+}) with LookupResultMixin implements MemberLookupResult;
 
 mixin LookupResultMixin implements LookupResult {
   @override
@@ -264,11 +224,8 @@ mixin LookupResultMixin implements LookupResult {
       (getable?.isDuplicate ?? false) || (setable?.isDuplicate ?? false);
 }
 
-class DuplicateMemberLookupResult implements MemberLookupResult {
-  final List<MemberBuilder> declarations;
-
-  DuplicateMemberLookupResult(this.declarations);
-
+class DuplicateMemberLookupResult(final List<MemberBuilder> declarations)
+    implements MemberLookupResult {
   @override
   MemberBuilder? get getable => null;
 

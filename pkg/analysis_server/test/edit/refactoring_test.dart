@@ -903,9 +903,8 @@ int? res(int b) {
 class GetAvailableRefactoringsTest extends PubPackageAnalysisServerTest {
   late List<RefactoringKind> kinds;
 
-  void addFlutterPackage() {
-    writeTestPackageConfig(flutter: true);
-  }
+  @override
+  bool get addFlutterPackageDep => true;
 
   /// Tests that there is refactoring of the given [kind] is available at the
   /// [search] offset.
@@ -1000,7 +999,6 @@ void f() {
   }
 
   Future<void> test_extractWidget() async {
-    addFlutterPackage();
     addTestFile('''
 import 'package:flutter/material.dart';
 
@@ -1507,9 +1505,8 @@ import 'new_folder/file.dart';
   Future<Response> _cancelMoveRequest() {
     // 0 is the id from _sendMoveRequest
     // 1 is another arbitrary id for the cancel request
-    var request = ServerCancelRequestParams(
-      '0',
-    ).toRequest('1', clientUriConverter: server.uriConverter);
+    var request = ServerCancelRequestParams('0')
+        .toRequest('1', clientUriConverter: server.uriConverter);
     return serverChannel.simulateRequestFromClient(request);
   }
 
@@ -2269,7 +2266,7 @@ enum E {
 enum E {
   v1.newName(), v2.newName();
 
-  const E.newName();
+  const new newName();
 }
 ''',
       feedbackValidator: (feedback) {

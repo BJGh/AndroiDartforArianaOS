@@ -30,8 +30,8 @@ import 'dart:convert' show JsonEncoder;
 
 import 'package:collection/collection.dart';
 import 'package:language_server_protocol/json_parsing.dart';
-import 'package:language_server_protocol/protocol_special.dart';
 import 'package:language_server_protocol/protocol_generated.dart';
+import 'package:language_server_protocol/protocol_special.dart';
 
 const jsonEncoder = JsonEncoder.withIndent('    ');
 
@@ -134,6 +134,55 @@ bool _canParseErrorCodes(
   return true;
 }
 
+bool _canParseFileExistence(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        !FileExistence.canParse(value, reporter)) {
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseFileType(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) && !FileType.canParse(value, reporter)) {
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
 bool _canParseFlutterOutline(
     Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
     {required bool allowsUndefined, required bool allowsNull}) {
@@ -151,6 +200,31 @@ bool _canParseFlutterOutline(
     }
     if ((!nullCheck || value != null) &&
         !FlutterOutline.canParse(value, reporter)) {
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseFormFieldType(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        !FormFieldType.canParse(value, reporter)) {
       return false;
     }
   } finally {
@@ -371,6 +445,113 @@ bool _canParseListFlutterWidgetPreviewDetails(
   return true;
 }
 
+bool _canParseListFormAnswer(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        (value is! List<Object?> ||
+            value.any((item) => !FormAnswer.canParse(item, reporter)))) {
+      reporter.reportError('must be of type List<FormAnswer>');
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseListFormField(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        (value is! List<Object?> ||
+            value.any((item) => !FormField.canParse(item, reporter)))) {
+      reporter.reportError('must be of type List<FormField>');
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseListMigrationStep(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        (value is! List<Object?> ||
+            value.any((item) => !MigrationStep.canParse(item, reporter)))) {
+      reporter.reportError('must be of type List<MigrationStep>');
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseListObjectNullable(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        (value is! List<Object?> || value.any((item) => false))) {
+      reporter.reportError('must be of type List<LSPAny>');
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
 bool _canParseListOutline(
     Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
     {required bool allowsUndefined, required bool allowsNull}) {
@@ -390,6 +571,33 @@ bool _canParseListOutline(
         (value is! List<Object?> ||
             value.any((item) => !Outline.canParse(item, reporter)))) {
       reporter.reportError('must be of type List<Outline>');
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
+bool _canParseListRegexValidator(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        (value is! List<Object?> ||
+            value.any((item) => !RegexValidator.canParse(item, reporter)))) {
+      reporter.reportError('must be of type List<StringValidator>');
       return false;
     }
   } finally {
@@ -736,6 +944,31 @@ bool _canParseUri(
   return true;
 }
 
+bool _canParseValidationSeverity(
+    Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
+    {required bool allowsUndefined, required bool allowsNull}) {
+  reporter.push(fieldName);
+  try {
+    if (!allowsUndefined && !map.containsKey(fieldName)) {
+      reporter.reportError('must not be undefined');
+      return false;
+    }
+    final value = map[fieldName];
+    final nullCheck = allowsNull || allowsUndefined;
+    if (!nullCheck && value == null) {
+      reporter.reportError('must not be null');
+      return false;
+    }
+    if ((!nullCheck || value != null) &&
+        !ValidationSeverity.canParse(value, reporter)) {
+      return false;
+    }
+  } finally {
+    reporter.pop();
+  }
+  return true;
+}
+
 bool _canParseWorkspaceEdit(
     Map<String, Object?> map, LspJsonReporter reporter, String fieldName,
     {required bool allowsUndefined, required bool allowsNull}) {
@@ -777,8 +1010,12 @@ typedef LSPObject = Object;
 
 typedef LSPUri = Uri;
 
-typedef TextDocumentEditEdits
-    = List<Either3<AnnotatedTextEdit, SnippetTextEdit, TextEdit>>;
+/// Validators applicable to string fields.
+typedef StringValidator = RegexValidator;
+
+typedef TextDocumentEditEdits = List<
+    Either4<AnnotatedTextEdit, LegacySnippetTextEdit, SnippetTextEdit,
+        TextEdit>>;
 
 class AnalyzerStatusParams implements ToJsonable {
   static const jsonHandler = LspJsonHandler(
@@ -1024,10 +1261,10 @@ abstract class CommandParameter implements ToJsonable {
   }
 }
 
-class CompletionItemResolutionInfo implements ToJsonable {
+class CompletionResolutionInfo implements ToJsonable {
   static const jsonHandler = LspJsonHandler(
-    CompletionItemResolutionInfo.canParse,
-    CompletionItemResolutionInfo.fromJson,
+    CompletionResolutionInfo.canParse,
+    CompletionResolutionInfo.fromJson,
   );
 
   @override
@@ -1035,8 +1272,8 @@ class CompletionItemResolutionInfo implements ToJsonable {
 
   @override
   bool operator ==(Object other) {
-    return other is CompletionItemResolutionInfo &&
-        other.runtimeType == CompletionItemResolutionInfo;
+    return other is CompletionResolutionInfo &&
+        other.runtimeType == CompletionResolutionInfo;
   }
 
   @override
@@ -1049,20 +1286,28 @@ class CompletionItemResolutionInfo implements ToJsonable {
     if (obj is Map<String, Object?>) {
       return true;
     } else {
-      reporter.reportError('must be of type CompletionItemResolutionInfo');
+      reporter.reportError('must be of type CompletionResolutionInfo');
       return false;
     }
   }
 
-  static CompletionItemResolutionInfo fromJson(Map<String, Object?> json) {
-    if (DartCompletionResolutionInfo.canParse(json, nullLspJsonReporter)) {
-      return DartCompletionResolutionInfo.fromJson(json);
+  static CompletionResolutionInfo fromJson(Map<String, Object?> json) {
+    if (DartCompletionMergedResolutionInfo.canParse(
+        json, nullLspJsonReporter)) {
+      return DartCompletionMergedResolutionInfo.fromJson(json);
+    }
+    if (DartCompletionRequestResolutionInfo.canParse(
+        json, nullLspJsonReporter)) {
+      return DartCompletionRequestResolutionInfo.fromJson(json);
     }
     if (PubPackageCompletionItemResolutionInfo.canParse(
         json, nullLspJsonReporter)) {
       return PubPackageCompletionItemResolutionInfo.fromJson(json);
     }
-    return CompletionItemResolutionInfo();
+    if (DartCompletionItemResolutionInfo.canParse(json, nullLspJsonReporter)) {
+      return DartCompletionItemResolutionInfo.fromJson(json);
+    }
+    return CompletionResolutionInfo();
   }
 }
 
@@ -1138,28 +1383,28 @@ class ConnectToDtdParams implements ToJsonable {
   }
 }
 
-class DartCompletionResolutionInfo
-    implements CompletionItemResolutionInfo, ToJsonable {
+class DartCompletionItemResolutionInfo
+    implements CompletionResolutionInfo, ToJsonable {
   static const jsonHandler = LspJsonHandler(
-    DartCompletionResolutionInfo.canParse,
-    DartCompletionResolutionInfo.fromJson,
+    DartCompletionItemResolutionInfo.canParse,
+    DartCompletionItemResolutionInfo.fromJson,
   );
 
   /// The file where the completion is being inserted.
   ///
   /// This is used to compute where to add the import.
-  final String file;
+  final String? file;
 
   /// The URIs to be imported if this completion is selected.
-  final List<String> importUris;
+  final List<String>? importUris;
 
   /// The encoded ElementLocation2 of the item being completed.
   ///
   /// This is used to provide documentation in the resolved response.
   final String? ref;
-  DartCompletionResolutionInfo({
-    required this.file,
-    required this.importUris,
+  DartCompletionItemResolutionInfo({
+    this.file,
+    this.importUris,
     this.ref,
   });
   @override
@@ -1171,8 +1416,112 @@ class DartCompletionResolutionInfo
 
   @override
   bool operator ==(Object other) {
-    return other is DartCompletionResolutionInfo &&
-        other.runtimeType == DartCompletionResolutionInfo &&
+    return other is DartCompletionItemResolutionInfo &&
+        other.runtimeType == DartCompletionItemResolutionInfo &&
+        file == other.file &&
+        const DeepCollectionEquality().equals(importUris, other.importUris) &&
+        ref == other.ref;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    if (file != null) {
+      result['file'] = file;
+    }
+    if (importUris != null) {
+      result['importUris'] = importUris;
+    }
+    if (ref != null) {
+      result['ref'] = ref;
+    }
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseString(obj, reporter, 'file',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseListString(obj, reporter, 'importUris',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      return _canParseString(obj, reporter, 'ref',
+          allowsUndefined: true, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type DartCompletionItemResolutionInfo');
+      return false;
+    }
+  }
+
+  static DartCompletionItemResolutionInfo fromJson(Map<String, Object?> json) {
+    if (DartCompletionMergedResolutionInfo.canParse(
+        json, nullLspJsonReporter)) {
+      return DartCompletionMergedResolutionInfo.fromJson(json);
+    }
+    final fileJson = json['file'];
+    final file = fileJson as String?;
+    final importUrisJson = json['importUris'];
+    final importUris = (importUrisJson as List<Object?>?)
+        ?.map((item) => item as String)
+        .toList();
+    final refJson = json['ref'];
+    final ref = refJson as String?;
+    return DartCompletionItemResolutionInfo(
+      file: file,
+      importUris: importUris,
+      ref: ref,
+    );
+  }
+}
+
+class DartCompletionMergedResolutionInfo
+    implements
+        CompletionResolutionInfo,
+        DartCompletionItemResolutionInfo,
+        DartCompletionRequestResolutionInfo,
+        ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    DartCompletionMergedResolutionInfo.canParse,
+    DartCompletionMergedResolutionInfo.fromJson,
+  );
+
+  /// The file where the completion is being inserted.
+  ///
+  /// This is used to compute where to add the import.
+  @override
+  final String file;
+
+  /// The URIs to be imported if this completion is selected.
+  @override
+  final List<String>? importUris;
+
+  /// The encoded ElementLocation2 of the item being completed.
+  ///
+  /// This is used to provide documentation in the resolved response.
+  @override
+  final String? ref;
+  DartCompletionMergedResolutionInfo({
+    required this.file,
+    this.importUris,
+    this.ref,
+  });
+  @override
+  int get hashCode => Object.hash(
+        file,
+        lspHashCode(importUris),
+        ref,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is DartCompletionMergedResolutionInfo &&
+        other.runtimeType == DartCompletionMergedResolutionInfo &&
         file == other.file &&
         const DeepCollectionEquality().equals(importUris, other.importUris) &&
         ref == other.ref;
@@ -1182,7 +1531,9 @@ class DartCompletionResolutionInfo
   Map<String, Object?> toJson() {
     var result = <String, Object?>{};
     result['file'] = file;
-    result['importUris'] = importUris;
+    if (importUris != null) {
+      result['importUris'] = importUris;
+    }
     if (ref != null) {
       result['ref'] = ref;
     }
@@ -1199,30 +1550,93 @@ class DartCompletionResolutionInfo
         return false;
       }
       if (!_canParseListString(obj, reporter, 'importUris',
-          allowsUndefined: false, allowsNull: false)) {
+          allowsUndefined: true, allowsNull: false)) {
         return false;
       }
       return _canParseString(obj, reporter, 'ref',
           allowsUndefined: true, allowsNull: false);
     } else {
-      reporter.reportError('must be of type DartCompletionResolutionInfo');
+      reporter
+          .reportError('must be of type DartCompletionMergedResolutionInfo');
       return false;
     }
   }
 
-  static DartCompletionResolutionInfo fromJson(Map<String, Object?> json) {
+  static DartCompletionMergedResolutionInfo fromJson(
+      Map<String, Object?> json) {
     final fileJson = json['file'];
     final file = fileJson as String;
     final importUrisJson = json['importUris'];
-    final importUris = (importUrisJson as List<Object?>)
-        .map((item) => item as String)
+    final importUris = (importUrisJson as List<Object?>?)
+        ?.map((item) => item as String)
         .toList();
     final refJson = json['ref'];
     final ref = refJson as String?;
-    return DartCompletionResolutionInfo(
+    return DartCompletionMergedResolutionInfo(
       file: file,
       importUris: importUris,
       ref: ref,
+    );
+  }
+}
+
+class DartCompletionRequestResolutionInfo
+    implements CompletionResolutionInfo, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    DartCompletionRequestResolutionInfo.canParse,
+    DartCompletionRequestResolutionInfo.fromJson,
+  );
+
+  /// The file where the completion is being inserted.
+  ///
+  /// This is used to compute where to add the import.
+  final String file;
+
+  DartCompletionRequestResolutionInfo({
+    required this.file,
+  });
+
+  @override
+  int get hashCode => file.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is DartCompletionRequestResolutionInfo &&
+        other.runtimeType == DartCompletionRequestResolutionInfo &&
+        file == other.file;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['file'] = file;
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      return _canParseString(obj, reporter, 'file',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter
+          .reportError('must be of type DartCompletionRequestResolutionInfo');
+      return false;
+    }
+  }
+
+  static DartCompletionRequestResolutionInfo fromJson(
+      Map<String, Object?> json) {
+    if (DartCompletionMergedResolutionInfo.canParse(
+        json, nullLspJsonReporter)) {
+      return DartCompletionMergedResolutionInfo.fromJson(json);
+    }
+    final fileJson = json['file'];
+    final file = fileJson as String;
+    return DartCompletionRequestResolutionInfo(
+      file: file,
     );
   }
 }
@@ -1284,27 +1698,54 @@ class DartMigrateParams implements ToJsonable {
     DartMigrateParams.fromJson,
   );
 
+  /// Whether to apply the migration changes.
+  final bool? apply;
+
+  /// The specific migration steps to run.
+  final List<MigrationStep>? steps;
+
+  /// The target Dart SDK version to migrate to (e.g., "3.12.0").
+  final String? targetSdk;
+
   /// The URIs of the directories (packages or workspaces) to migrate.
   /// Individual file URIs are not supported.
   final List<DocumentUri> uris;
-
   DartMigrateParams({
+    this.apply,
+    this.steps,
+    this.targetSdk,
     required this.uris,
   });
-
   @override
-  int get hashCode => lspHashCode(uris);
+  int get hashCode => Object.hash(
+        apply,
+        lspHashCode(steps),
+        targetSdk,
+        lspHashCode(uris),
+      );
 
   @override
   bool operator ==(Object other) {
     return other is DartMigrateParams &&
         other.runtimeType == DartMigrateParams &&
+        apply == other.apply &&
+        const DeepCollectionEquality().equals(steps, other.steps) &&
+        targetSdk == other.targetSdk &&
         const DeepCollectionEquality().equals(uris, other.uris);
   }
 
   @override
   Map<String, Object?> toJson() {
     var result = <String, Object?>{};
+    if (apply != null) {
+      result['apply'] = apply;
+    }
+    if (steps != null) {
+      result['steps'] = steps?.map((item) => item.toJson()).toList();
+    }
+    if (targetSdk != null) {
+      result['targetSdk'] = targetSdk;
+    }
     result['uris'] = uris.map((uri) => uri.toString()).toList();
     return result;
   }
@@ -1314,6 +1755,18 @@ class DartMigrateParams implements ToJsonable {
 
   static bool canParse(Object? obj, LspJsonReporter reporter) {
     if (obj is Map<String, Object?>) {
+      if (!_canParseBool(obj, reporter, 'apply',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseListMigrationStep(obj, reporter, 'steps',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'targetSdk',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
       return _canParseListUri(obj, reporter, 'uris',
           allowsUndefined: false, allowsNull: false);
     } else {
@@ -1323,11 +1776,22 @@ class DartMigrateParams implements ToJsonable {
   }
 
   static DartMigrateParams fromJson(Map<String, Object?> json) {
+    final applyJson = json['apply'];
+    final apply = applyJson as bool?;
+    final stepsJson = json['steps'];
+    final steps = (stepsJson as List<Object?>?)
+        ?.map((item) => MigrationStep.fromJson(item as String))
+        .toList();
+    final targetSdkJson = json['targetSdk'];
+    final targetSdk = targetSdkJson as String?;
     final urisJson = json['uris'];
     final uris = (urisJson as List<Object?>)
         .map((item) => Uri.parse(item as String))
         .toList();
     return DartMigrateParams(
+      apply: apply,
+      steps: steps,
+      targetSdk: targetSdk,
       uris: uris,
     );
   }
@@ -2068,6 +2532,78 @@ class Element implements ToJsonable {
   }
 }
 
+/// FileExistence whether the file denoted by a DocumentURI exists.
+///
+/// It is a bit set allowing combinations of existence states. For example,
+/// New|Existing allows either state.
+class FileExistence implements ToJsonable {
+  /// The file exists already.
+  static const Existing = FileExistence(2);
+
+  /// The file has not yet been created.
+  static const New = FileExistence(1);
+
+  final int _value;
+
+  const FileExistence(this._value);
+  const FileExistence.fromJson(this._value);
+  @override
+  int get hashCode => _value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FileExistence && other._value == _value;
+
+  bool hasFlag(FileExistence value) => (_value & value._value) == value._value;
+
+  @override
+  int toJson() => _value;
+
+  @override
+  String toString() => _value.toString();
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) => obj is int;
+
+  static FileExistence combine(List<FileExistence> values) =>
+      FileExistence(values.fold<int>(
+          0, (combinedValue, value) => combinedValue | value._value));
+}
+
+/// FileType represents the expected filesystem resource type.
+///
+/// It is a bit set allowing combinations of file types. For example,
+/// Regular|Directory allows either types.
+class FileType implements ToJsonable {
+  /// The resource could be a directory.
+  static const Directory = FileType(2);
+
+  /// The resource could be a regular file.
+  static const Regular = FileType(1);
+
+  final int _value;
+
+  const FileType(this._value);
+  const FileType.fromJson(this._value);
+  @override
+  int get hashCode => _value.hashCode;
+
+  @override
+  bool operator ==(Object other) => other is FileType && other._value == _value;
+
+  bool hasFlag(FileType value) => (_value & value._value) == value._value;
+
+  @override
+  int toJson() => _value;
+
+  @override
+  String toString() => _value.toString();
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) => obj is int;
+
+  static FileType combine(List<FileType> values) => FileType(values.fold<int>(
+      0, (combinedValue, value) => combinedValue | value._value));
+}
+
 class FlutterOutline implements ToJsonable {
   static const jsonHandler = LspJsonHandler(
     FlutterOutline.canParse,
@@ -2600,7 +3136,574 @@ class FlutterWidgetPreviews implements ToJsonable {
   }
 }
 
-class IncomingMessage implements Message, ToJsonable {
+/// A single answer to a FormField, identified by its unique ID.
+class FormAnswer implements ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormAnswer.canParse,
+    FormAnswer.fromJson,
+  );
+
+  /// The ID of the FormField being answered.
+  final String id;
+
+  /// The user's answer value.
+  final LSPAny value;
+
+  FormAnswer({
+    required this.id,
+    this.value,
+  });
+  @override
+  int get hashCode => Object.hash(
+        id,
+        value,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormAnswer &&
+        other.runtimeType == FormAnswer &&
+        id == other.id &&
+        value == other.value;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['id'] = id;
+    result['value'] = value;
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      return _canParseString(obj, reporter, 'id',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type FormAnswer');
+      return false;
+    }
+  }
+
+  static FormAnswer fromJson(Map<String, Object?> json) {
+    final idJson = json['id'];
+    final id = idJson as String;
+    final valueJson = json['value'];
+    final value = valueJson;
+    return FormAnswer(
+      id: id,
+      value: value,
+    );
+  }
+}
+
+/// A single question in a form and its validation state.
+class FormField implements ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormField.canParse,
+    FormField.fromJson,
+  );
+
+  /// An optional initial value for the answer. If [type] is 'enum', this value
+  /// must be present in the enum's values array.
+  final LSPAny defaultValue;
+
+  /// The text content of the question (the prompt) presented to the user.
+  final String description;
+
+  /// A validation message from the language server. If empty or null, the
+  /// current answer is considered valid.
+  final String? error;
+
+  /// A unique identifier for this field. This key is used as the property name
+  /// in FormAnswers to map the user's input back to this specific field.
+  final String id;
+
+  /// Whether an answer is absolutely required for this field.
+  final bool required;
+
+  /// The data type and validation constraints for the answer.
+  final FormFieldType type;
+  FormField({
+    this.defaultValue,
+    required this.description,
+    this.error,
+    required this.id,
+    required this.required,
+    required this.type,
+  });
+  @override
+  int get hashCode => Object.hash(
+        defaultValue,
+        description,
+        error,
+        id,
+        required,
+        type,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormField &&
+        other.runtimeType == FormField &&
+        defaultValue == other.defaultValue &&
+        description == other.description &&
+        error == other.error &&
+        id == other.id &&
+        required == other.required &&
+        type == other.type;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    if (defaultValue != null) {
+      result['default'] = defaultValue;
+    }
+    result['description'] = description;
+    if (error != null) {
+      result['error'] = error;
+    }
+    result['id'] = id;
+    result['required'] = required;
+    result['type'] = type.toJson();
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseString(obj, reporter, 'description',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'error',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'id',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseBool(obj, reporter, 'required',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      return _canParseFormFieldType(obj, reporter, 'type',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type FormField');
+      return false;
+    }
+  }
+
+  static FormField fromJson(Map<String, Object?> json) {
+    final defaultValueJson = json['default'];
+    final defaultValue = defaultValueJson;
+    final descriptionJson = json['description'];
+    final description = descriptionJson as String;
+    final errorJson = json['error'];
+    final error = errorJson as String?;
+    final idJson = json['id'];
+    final id = idJson as String;
+    final requiredJson = json['required'];
+    final required = requiredJson as bool;
+    final typeJson = json['type'];
+    final type = FormFieldType.fromJson(typeJson as Map<String, Object?>);
+    return FormField(
+      defaultValue: defaultValue,
+      description: description,
+      error: error,
+      id: id,
+      required: required,
+      type: type,
+    );
+  }
+}
+
+sealed class FormFieldType implements ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormFieldType.canParse,
+    FormFieldType.fromJson,
+  );
+
+  final String kind;
+
+  FormFieldType({
+    required this.kind,
+  });
+
+  @override
+  int get hashCode => kind.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormFieldType &&
+        other.runtimeType == FormFieldType &&
+        kind == other.kind;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['kind'] = kind;
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      return _canParseString(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type FormFieldType');
+      return false;
+    }
+  }
+
+  static FormFieldType fromJson(Map<String, Object?> json) {
+    if (FormFieldTypeFile.canParse(json, nullLspJsonReporter)) {
+      return FormFieldTypeFile.fromJson(json);
+    }
+    if (FormFieldTypeString.canParse(json, nullLspJsonReporter)) {
+      return FormFieldTypeString.fromJson(json);
+    }
+    if (FormFieldTypeBool.canParse(json, nullLspJsonReporter)) {
+      return FormFieldTypeBool.fromJson(json);
+    }
+    if (FormFieldTypeNumber.canParse(json, nullLspJsonReporter)) {
+      return FormFieldTypeNumber.fromJson(json);
+    }
+    throw ArgumentError(
+        'Supplied map is not valid for any subclass of FormFieldType');
+  }
+}
+
+/// A boolean input.
+class FormFieldTypeBool implements FormFieldType, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormFieldTypeBool.canParse,
+    FormFieldTypeBool.fromJson,
+  );
+
+  @override
+  final String kind;
+
+  FormFieldTypeBool({
+    this.kind = 'bool',
+  }) {
+    if (kind != 'bool') {
+      throw 'kind may only be the literal \'bool\'';
+    }
+  }
+
+  @override
+  int get hashCode => kind.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormFieldTypeBool &&
+        other.runtimeType == FormFieldTypeBool &&
+        kind == other.kind;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['kind'] = kind;
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      return _canParseLiteral(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false, literal: 'bool');
+    } else {
+      reporter.reportError('must be of type FormFieldTypeBool');
+      return false;
+    }
+  }
+
+  static FormFieldTypeBool fromJson(Map<String, Object?> json) {
+    final kindJson = json['kind'];
+    final kind = kindJson as String;
+    return FormFieldTypeBool(
+      kind: kind,
+    );
+  }
+}
+
+/// FormFieldTypeFile defines an input for a file or directory URI.
+///
+/// The client determines the best mechanism to collect this information from
+/// the user (e.g., a graphical file picker, a text input with autocomplete,
+/// etc).
+///
+/// The value returned by the client must be a valid "DocumentUri" as defined in
+/// the LSP specification:
+/// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentUri
+class FormFieldTypeFile implements FormFieldType, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormFieldTypeFile.canParse,
+    FormFieldTypeFile.fromJson,
+  );
+
+  /// Existence constraint.
+  final FileExistence? existence;
+
+  /// Filters specifies the allowed file extensions without the leading dot. A
+  /// file is valid if it matches any of the extensions (OR logic). e.g. ["png",
+  /// "jpg"].
+  ///
+  /// If omitted or empty, no extension filter is applied.
+  final List<String>? filters;
+
+  @override
+  final String kind;
+
+  /// Type specifies the set of allowed file types (regular file, directory,
+  /// etc).
+  ///
+  /// Only applicable against existing file.
+  final FileType? type;
+  FormFieldTypeFile({
+    this.existence,
+    this.filters,
+    this.kind = 'file',
+    this.type,
+  }) {
+    if (kind != 'file') {
+      throw 'kind may only be the literal \'file\'';
+    }
+  }
+  @override
+  int get hashCode => Object.hash(
+        existence,
+        lspHashCode(filters),
+        kind,
+        type,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormFieldTypeFile &&
+        other.runtimeType == FormFieldTypeFile &&
+        existence == other.existence &&
+        const DeepCollectionEquality().equals(filters, other.filters) &&
+        kind == other.kind &&
+        type == other.type;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    if (existence != null) {
+      result['existence'] = existence?.toJson();
+    }
+    if (filters != null) {
+      result['filters'] = filters;
+    }
+    result['kind'] = kind;
+    if (type != null) {
+      result['type'] = type?.toJson();
+    }
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseFileExistence(obj, reporter, 'existence',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseListString(obj, reporter, 'filters',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseLiteral(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false, literal: 'file')) {
+        return false;
+      }
+      return _canParseFileType(obj, reporter, 'type',
+          allowsUndefined: true, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type FormFieldTypeFile');
+      return false;
+    }
+  }
+
+  static FormFieldTypeFile fromJson(Map<String, Object?> json) {
+    final existenceJson = json['existence'];
+    final existence = existenceJson != null
+        ? FileExistence.fromJson(existenceJson as int)
+        : null;
+    final filtersJson = json['filters'];
+    final filters =
+        (filtersJson as List<Object?>?)?.map((item) => item as String).toList();
+    final kindJson = json['kind'];
+    final kind = kindJson as String;
+    final typeJson = json['type'];
+    final type = typeJson != null ? FileType.fromJson(typeJson as int) : null;
+    return FormFieldTypeFile(
+      existence: existence,
+      filters: filters,
+      kind: kind,
+      type: type,
+    );
+  }
+}
+
+/// A numeric input.
+class FormFieldTypeNumber implements FormFieldType, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormFieldTypeNumber.canParse,
+    FormFieldTypeNumber.fromJson,
+  );
+
+  @override
+  final String kind;
+
+  FormFieldTypeNumber({
+    this.kind = 'number',
+  }) {
+    if (kind != 'number') {
+      throw 'kind may only be the literal \'number\'';
+    }
+  }
+
+  @override
+  int get hashCode => kind.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormFieldTypeNumber &&
+        other.runtimeType == FormFieldTypeNumber &&
+        kind == other.kind;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['kind'] = kind;
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      return _canParseLiteral(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false, literal: 'number');
+    } else {
+      reporter.reportError('must be of type FormFieldTypeNumber');
+      return false;
+    }
+  }
+
+  static FormFieldTypeNumber fromJson(Map<String, Object?> json) {
+    final kindJson = json['kind'];
+    final kind = kindJson as String;
+    return FormFieldTypeNumber(
+      kind: kind,
+    );
+  }
+}
+
+/// A text input.
+class FormFieldTypeString implements FormFieldType, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    FormFieldTypeString.canParse,
+    FormFieldTypeString.fromJson,
+  );
+
+  @override
+  final String kind;
+
+  /// Validators for this form field.Field validators only validate the
+  /// input/answer to a field in isolation and cannot depend on the answers to
+  /// other fields. For example a string field may have a regex validator, or a
+  /// numeric field may have a range validator.Clients must ignore validators
+  /// they do not support.
+  final List<StringValidator>? validators;
+
+  FormFieldTypeString({
+    this.kind = 'string',
+    this.validators,
+  }) {
+    if (kind != 'string') {
+      throw 'kind may only be the literal \'string\'';
+    }
+  }
+  @override
+  int get hashCode => Object.hash(
+        kind,
+        lspHashCode(validators),
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is FormFieldTypeString &&
+        other.runtimeType == FormFieldTypeString &&
+        kind == other.kind &&
+        const DeepCollectionEquality().equals(validators, other.validators);
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['kind'] = kind;
+    if (validators != null) {
+      result['validators'] = validators?.map((item) => item.toJson()).toList();
+    }
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseLiteral(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false, literal: 'string')) {
+        return false;
+      }
+      return _canParseListRegexValidator(obj, reporter, 'validators',
+          allowsUndefined: true, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type FormFieldTypeString');
+      return false;
+    }
+  }
+
+  static FormFieldTypeString fromJson(Map<String, Object?> json) {
+    final kindJson = json['kind'];
+    final kind = kindJson as String;
+    final validatorsJson = json['validators'];
+    final validators = (validatorsJson as List<Object?>?)
+        ?.map((item) => RegexValidator.fromJson(item as Map<String, Object?>))
+        .toList();
+    return FormFieldTypeString(
+      kind: kind,
+      validators: validators,
+    );
+  }
+}
+
+sealed class IncomingMessage implements Message, ToJsonable {
   static const jsonHandler = LspJsonHandler(
     IncomingMessage.canParse,
     IncomingMessage.fromJson,
@@ -2680,24 +3783,379 @@ class IncomingMessage implements Message, ToJsonable {
     if (NotificationMessage.canParse(json, nullLspJsonReporter)) {
       return NotificationMessage.fromJson(json);
     }
-    final clientRequestTimeJson = json['clientRequestTime'];
-    final clientRequestTime = clientRequestTimeJson as int?;
-    final jsonrpcJson = json['jsonrpc'];
-    final jsonrpc = jsonrpcJson as String;
-    final methodJson = json['method'];
-    final method = Method.fromJson(methodJson as String);
-    final paramsJson = json['params'];
-    final params = paramsJson;
-    return IncomingMessage(
-      clientRequestTime: clientRequestTime,
-      jsonrpc: jsonrpc,
-      method: method,
-      params: params,
+    throw ArgumentError(
+        'Supplied map is not valid for any subclass of IncomingMessage');
+  }
+}
+
+/// InteractiveExecuteCommandParams extends the standard LSP
+/// ExecuteCommandParams with the experimental fields for interactive forms.
+class InteractiveExecuteCommandParams
+    implements ExecuteCommandParams, InteractiveParams, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    InteractiveExecuteCommandParams.canParse,
+    InteractiveExecuteCommandParams.fromJson,
+  );
+
+  /// Arguments that the command should be invoked with.
+  @override
+  final List<LSPAny>? arguments;
+
+  /// The identifier of the actual command handler.
+  @override
+  final String command;
+
+  /// Additional data that the client preserves for the server. This data is for
+  /// server use only and the client should not inspect it.
+  @override
+  final LSPAny data;
+
+  /// The answers for the form questions.
+  ///
+  /// When sent by the language server, this field is optional and contains the
+  /// current or default answers to the questions to support editing previous
+  /// values.
+  ///
+  /// When sent by the language client, this field contains the user's answers.
+  ///
+  /// Answers are linked to their respective questions using the field's unique
+  /// `id` rather than their array index. The list must not contain duplicate
+  /// IDs, and each answer's ID must correspond to a field ID defined in
+  /// `formFields`.
+  ///
+  /// The client must include answers for all required fields (where `required`
+  /// is true). Answers for optional fields (where `required` is false) may be
+  /// omitted if no answer was provided, or included if an answer is available.
+  @override
+  final List<FormAnswer>? formAnswers;
+
+  /// The questions and validation errors in previous answers to the same
+  /// questions.
+  ///
+  /// This is a server-to-client field. The language server defines these, and
+  /// the client uses them to render the form.
+  ///
+  /// The interactive phase is considered complete when the server returns a
+  /// response where this slice is omitted.
+  @override
+  final List<FormField>? formFields;
+
+  /// An optional token that a server can use to report work done progress.
+  @override
+  final ProgressToken? workDoneToken;
+  InteractiveExecuteCommandParams({
+    this.arguments,
+    required this.command,
+    this.data,
+    this.formAnswers,
+    this.formFields,
+    this.workDoneToken,
+  });
+  @override
+  int get hashCode => Object.hash(
+        lspHashCode(arguments),
+        command,
+        data,
+        lspHashCode(formAnswers),
+        lspHashCode(formFields),
+        workDoneToken,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is InteractiveExecuteCommandParams &&
+        other.runtimeType == InteractiveExecuteCommandParams &&
+        const DeepCollectionEquality().equals(arguments, other.arguments) &&
+        command == other.command &&
+        data == other.data &&
+        const DeepCollectionEquality().equals(formAnswers, other.formAnswers) &&
+        const DeepCollectionEquality().equals(formFields, other.formFields) &&
+        workDoneToken == other.workDoneToken;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    if (arguments != null) {
+      result['arguments'] = arguments;
+    }
+    result['command'] = command;
+    if (data != null) {
+      result['data'] = data;
+    }
+    if (formAnswers != null) {
+      result['formAnswers'] =
+          formAnswers?.map((item) => item.toJson()).toList();
+    }
+    if (formFields != null) {
+      result['formFields'] = formFields?.map((item) => item.toJson()).toList();
+    }
+    if (workDoneToken != null) {
+      result['workDoneToken'] = workDoneToken?.toJson();
+    }
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseListObjectNullable(obj, reporter, 'arguments',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'command',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseListFormAnswer(obj, reporter, 'formAnswers',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseListFormField(obj, reporter, 'formFields',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      return _canParseIntString(obj, reporter, 'workDoneToken',
+          allowsUndefined: true, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type InteractiveExecuteCommandParams');
+      return false;
+    }
+  }
+
+  static InteractiveExecuteCommandParams fromJson(Map<String, Object?> json) {
+    final argumentsJson = json['arguments'];
+    final arguments =
+        (argumentsJson as List<Object?>?)?.map((item) => item).toList();
+    final commandJson = json['command'];
+    final command = commandJson as String;
+    final dataJson = json['data'];
+    final data = dataJson;
+    final formAnswersJson = json['formAnswers'];
+    final formAnswers = (formAnswersJson as List<Object?>?)
+        ?.map((item) => FormAnswer.fromJson(item as Map<String, Object?>))
+        .toList();
+    final formFieldsJson = json['formFields'];
+    final formFields = (formFieldsJson as List<Object?>?)
+        ?.map((item) => FormField.fromJson(item as Map<String, Object?>))
+        .toList();
+    final workDoneTokenJson = json['workDoneToken'];
+    final workDoneToken =
+        workDoneTokenJson == null ? null : _eitherIntString(workDoneTokenJson);
+    return InteractiveExecuteCommandParams(
+      arguments: arguments,
+      command: command,
+      data: data,
+      formAnswers: formAnswers,
+      formFields: formFields,
+      workDoneToken: workDoneToken,
     );
   }
 }
 
-class Message implements ToJsonable {
+class InteractiveParams implements ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    InteractiveParams.canParse,
+    InteractiveParams.fromJson,
+  );
+
+  /// Additional data that the client preserves for the server. This data is for
+  /// server use only and the client should not inspect it.
+  final LSPAny data;
+
+  /// The answers for the form questions.
+  ///
+  /// When sent by the language server, this field is optional and contains the
+  /// current or default answers to the questions to support editing previous
+  /// values.
+  ///
+  /// When sent by the language client, this field contains the user's answers.
+  ///
+  /// Answers are linked to their respective questions using the field's unique
+  /// `id` rather than their array index. The list must not contain duplicate
+  /// IDs, and each answer's ID must correspond to a field ID defined in
+  /// `formFields`.
+  ///
+  /// The client must include answers for all required fields (where `required`
+  /// is true). Answers for optional fields (where `required` is false) may be
+  /// omitted if no answer was provided, or included if an answer is available.
+  final List<FormAnswer>? formAnswers;
+
+  /// The questions and validation errors in previous answers to the same
+  /// questions.
+  ///
+  /// This is a server-to-client field. The language server defines these, and
+  /// the client uses them to render the form.
+  ///
+  /// The interactive phase is considered complete when the server returns a
+  /// response where this slice is omitted.
+  final List<FormField>? formFields;
+  InteractiveParams({
+    this.data,
+    this.formAnswers,
+    this.formFields,
+  });
+  @override
+  int get hashCode => Object.hash(
+        data,
+        lspHashCode(formAnswers),
+        lspHashCode(formFields),
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is InteractiveParams &&
+        other.runtimeType == InteractiveParams &&
+        data == other.data &&
+        const DeepCollectionEquality().equals(formAnswers, other.formAnswers) &&
+        const DeepCollectionEquality().equals(formFields, other.formFields);
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    if (data != null) {
+      result['data'] = data;
+    }
+    if (formAnswers != null) {
+      result['formAnswers'] =
+          formAnswers?.map((item) => item.toJson()).toList();
+    }
+    if (formFields != null) {
+      result['formFields'] = formFields?.map((item) => item.toJson()).toList();
+    }
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseListFormAnswer(obj, reporter, 'formAnswers',
+          allowsUndefined: true, allowsNull: false)) {
+        return false;
+      }
+      return _canParseListFormField(obj, reporter, 'formFields',
+          allowsUndefined: true, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type InteractiveParams');
+      return false;
+    }
+  }
+
+  static InteractiveParams fromJson(Map<String, Object?> json) {
+    if (InteractiveExecuteCommandParams.canParse(json, nullLspJsonReporter)) {
+      return InteractiveExecuteCommandParams.fromJson(json);
+    }
+    final dataJson = json['data'];
+    final data = dataJson;
+    final formAnswersJson = json['formAnswers'];
+    final formAnswers = (formAnswersJson as List<Object?>?)
+        ?.map((item) => FormAnswer.fromJson(item as Map<String, Object?>))
+        .toList();
+    final formFieldsJson = json['formFields'];
+    final formFields = (formFieldsJson as List<Object?>?)
+        ?.map((item) => FormField.fromJson(item as Map<String, Object?>))
+        .toList();
+    return InteractiveParams(
+      data: data,
+      formAnswers: formAnswers,
+      formFields: formFields,
+    );
+  }
+}
+
+/// A custom TextEdit that supports snippets according to the specification at
+/// https://github.com/rust-analyzer/rust-analyzer/blob/b35559a2460e7f0b2b79a7029db0c5d4e0acdb44/docs/dev/lsp-extensions.md#snippet-textedit.
+/// LSP v3.18 introduced standard (but slightly different) support for
+/// SnippetTextEdits which replaces this. This will soon be removed.
+class LegacySnippetTextEdit implements TextEdit, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    LegacySnippetTextEdit.canParse,
+    LegacySnippetTextEdit.fromJson,
+  );
+
+  final InsertTextFormat insertTextFormat;
+
+  /// The string to be inserted. For delete operations use an empty string.
+  @override
+  final String newText;
+
+  /// The range of the text document to be manipulated. To insert text into a
+  /// document create a range where start === end.
+  @override
+  final Range range;
+  LegacySnippetTextEdit({
+    required this.insertTextFormat,
+    required this.newText,
+    required this.range,
+  });
+  @override
+  int get hashCode => Object.hash(
+        insertTextFormat,
+        newText,
+        range,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is LegacySnippetTextEdit &&
+        other.runtimeType == LegacySnippetTextEdit &&
+        insertTextFormat == other.insertTextFormat &&
+        newText == other.newText &&
+        range == other.range;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['insertTextFormat'] = insertTextFormat.toJson();
+    result['newText'] = newText;
+    result['range'] = range.toJson();
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseInsertTextFormat(obj, reporter, 'insertTextFormat',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'newText',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      return _canParseRange(obj, reporter, 'range',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type LegacySnippetTextEdit');
+      return false;
+    }
+  }
+
+  static LegacySnippetTextEdit fromJson(Map<String, Object?> json) {
+    final insertTextFormatJson = json['insertTextFormat'];
+    final insertTextFormat =
+        InsertTextFormat.fromJson(insertTextFormatJson as int);
+    final newTextJson = json['newText'];
+    final newText = newTextJson as String;
+    final rangeJson = json['range'];
+    final range = Range.fromJson(rangeJson as Map<String, Object?>);
+    return LegacySnippetTextEdit(
+      insertTextFormat: insertTextFormat,
+      newText: newText,
+      range: range,
+    );
+  }
+}
+
+sealed class Message implements ToJsonable {
   static const jsonHandler = LspJsonHandler(
     Message.canParse,
     Message.fromJson,
@@ -2759,15 +4217,36 @@ class Message implements ToJsonable {
     if (ResponseMessage.canParse(json, nullLspJsonReporter)) {
       return ResponseMessage.fromJson(json);
     }
-    final clientRequestTimeJson = json['clientRequestTime'];
-    final clientRequestTime = clientRequestTimeJson as int?;
-    final jsonrpcJson = json['jsonrpc'];
-    final jsonrpc = jsonrpcJson as String;
-    return Message(
-      clientRequestTime: clientRequestTime,
-      jsonrpc: jsonrpc,
-    );
+    throw ArgumentError(
+        'Supplied map is not valid for any subclass of Message');
   }
+}
+
+/// The specific migration step to run.
+class MigrationStep implements ToJsonable {
+  static const All = MigrationStep('all');
+  static const Bump = MigrationStep('bump');
+
+  static const Cleanup = MigrationStep('cleanup');
+
+  static const Prepare = MigrationStep('prepare');
+  final String _value;
+  const MigrationStep(this._value);
+  const MigrationStep.fromJson(this._value);
+  @override
+  int get hashCode => _value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MigrationStep && other._value == _value;
+
+  @override
+  String toJson() => _value;
+
+  @override
+  String toString() => _value.toString();
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) => obj is String;
 }
 
 class NotificationMessage implements IncomingMessage, ToJsonable {
@@ -3206,7 +4685,7 @@ class PublishOutlineParams implements ToJsonable {
 }
 
 class PubPackageCompletionItemResolutionInfo
-    implements CompletionItemResolutionInfo, ToJsonable {
+    implements CompletionResolutionInfo, ToJsonable {
   static const jsonHandler = LspJsonHandler(
     PubPackageCompletionItemResolutionInfo.canParse,
     PubPackageCompletionItemResolutionInfo.fromJson,
@@ -3255,6 +4734,127 @@ class PubPackageCompletionItemResolutionInfo
     final packageName = packageNameJson as String;
     return PubPackageCompletionItemResolutionInfo(
       packageName: packageName,
+    );
+  }
+}
+
+/// A regex-based validator that ensures an answer matches a given regex.
+class RegexValidator implements Validator, ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    RegexValidator.canParse,
+    RegexValidator.fromJson,
+  );
+
+  final String kind;
+
+  /// Whether the answer matching the pattern means it is valid (no message
+  /// reported) or invalid (message reported).
+  final bool matchIsValid;
+
+  /// The message to show if the answer is not valid according to `pattern` and
+  /// `matchIsValid`.
+  @override
+  final String message;
+
+  /// The regex pattern to validate the input.
+  ///
+  /// The server must only provide regular expressions for the engine supported
+  /// by the client in the `general.regularExpressions` client capability. If
+  /// the server cannot provide an appropriate regular expression it should not
+  /// provide the regex validator.
+  final String pattern;
+
+  /// The severity of a violation of this validator.
+  @override
+  final ValidationSeverity severity;
+  RegexValidator({
+    this.kind = 'regex',
+    required this.matchIsValid,
+    required this.message,
+    required this.pattern,
+    required this.severity,
+  }) {
+    if (kind != 'regex') {
+      throw 'kind may only be the literal \'regex\'';
+    }
+  }
+  @override
+  int get hashCode => Object.hash(
+        kind,
+        matchIsValid,
+        message,
+        pattern,
+        severity,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is RegexValidator &&
+        other.runtimeType == RegexValidator &&
+        kind == other.kind &&
+        matchIsValid == other.matchIsValid &&
+        message == other.message &&
+        pattern == other.pattern &&
+        severity == other.severity;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['kind'] = kind;
+    result['matchIsValid'] = matchIsValid;
+    result['message'] = message;
+    result['pattern'] = pattern;
+    result['severity'] = severity.toJson();
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseLiteral(obj, reporter, 'kind',
+          allowsUndefined: false, allowsNull: false, literal: 'regex')) {
+        return false;
+      }
+      if (!_canParseBool(obj, reporter, 'matchIsValid',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'message',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      if (!_canParseString(obj, reporter, 'pattern',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      return _canParseValidationSeverity(obj, reporter, 'severity',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type RegexValidator');
+      return false;
+    }
+  }
+
+  static RegexValidator fromJson(Map<String, Object?> json) {
+    final kindJson = json['kind'];
+    final kind = kindJson as String;
+    final matchIsValidJson = json['matchIsValid'];
+    final matchIsValid = matchIsValidJson as bool;
+    final messageJson = json['message'];
+    final message = messageJson as String;
+    final patternJson = json['pattern'];
+    final pattern = patternJson as String;
+    final severityJson = json['severity'];
+    final severity = ValidationSeverity.fromJson(severityJson as int);
+    return RegexValidator(
+      kind: kind,
+      matchIsValid: matchIsValid,
+      message: message,
+      pattern: pattern,
+      severity: severity,
     );
   }
 }
@@ -3691,89 +5291,6 @@ class SaveUriCommandParameter implements CommandParameter, ToJsonable {
   }
 }
 
-class SnippetTextEdit implements TextEdit, ToJsonable {
-  static const jsonHandler = LspJsonHandler(
-    SnippetTextEdit.canParse,
-    SnippetTextEdit.fromJson,
-  );
-
-  final InsertTextFormat insertTextFormat;
-
-  /// The string to be inserted. For delete operations use an empty string.
-  @override
-  final String newText;
-
-  /// The range of the text document to be manipulated. To insert text into a
-  /// document create a range where start === end.
-  @override
-  final Range range;
-  SnippetTextEdit({
-    required this.insertTextFormat,
-    required this.newText,
-    required this.range,
-  });
-  @override
-  int get hashCode => Object.hash(
-        insertTextFormat,
-        newText,
-        range,
-      );
-
-  @override
-  bool operator ==(Object other) {
-    return other is SnippetTextEdit &&
-        other.runtimeType == SnippetTextEdit &&
-        insertTextFormat == other.insertTextFormat &&
-        newText == other.newText &&
-        range == other.range;
-  }
-
-  @override
-  Map<String, Object?> toJson() {
-    var result = <String, Object?>{};
-    result['insertTextFormat'] = insertTextFormat.toJson();
-    result['newText'] = newText;
-    result['range'] = range.toJson();
-    return result;
-  }
-
-  @override
-  String toString() => jsonEncoder.convert(toJson());
-
-  static bool canParse(Object? obj, LspJsonReporter reporter) {
-    if (obj is Map<String, Object?>) {
-      if (!_canParseInsertTextFormat(obj, reporter, 'insertTextFormat',
-          allowsUndefined: false, allowsNull: false)) {
-        return false;
-      }
-      if (!_canParseString(obj, reporter, 'newText',
-          allowsUndefined: false, allowsNull: false)) {
-        return false;
-      }
-      return _canParseRange(obj, reporter, 'range',
-          allowsUndefined: false, allowsNull: false);
-    } else {
-      reporter.reportError('must be of type SnippetTextEdit');
-      return false;
-    }
-  }
-
-  static SnippetTextEdit fromJson(Map<String, Object?> json) {
-    final insertTextFormatJson = json['insertTextFormat'];
-    final insertTextFormat =
-        InsertTextFormat.fromJson(insertTextFormatJson as int);
-    final newTextJson = json['newText'];
-    final newText = newTextJson as String;
-    final rangeJson = json['range'];
-    final range = Range.fromJson(rangeJson as Map<String, Object?>);
-    return SnippetTextEdit(
-      insertTextFormat: insertTextFormat,
-      newText: newText,
-      range: range,
-    );
-  }
-}
-
 class TypeHierarchyItemInfo implements ToJsonable {
   static const jsonHandler = LspJsonHandler(
     TypeHierarchyItemInfo.canParse,
@@ -3890,6 +5407,106 @@ class ValidateRefactorResult implements ToJsonable {
     return ValidateRefactorResult(
       message: message,
       valid: valid,
+    );
+  }
+}
+
+/// The severity of a violation of a validator.
+class ValidationSeverity implements ToJsonable {
+  /// An error message that prevents submission of the value.
+  static const Error = ValidationSeverity(3);
+
+  /// An informational message that does not block submission of the value.
+  static const Info = ValidationSeverity(1);
+
+  /// A warning message that does not block submission of the value.
+  static const Warning = ValidationSeverity(2);
+
+  final int _value;
+  const ValidationSeverity(this._value);
+  const ValidationSeverity.fromJson(this._value);
+  @override
+  int get hashCode => _value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ValidationSeverity && other._value == _value;
+
+  @override
+  int toJson() => _value;
+
+  @override
+  String toString() => _value.toString();
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) => obj is int;
+}
+
+class Validator implements ToJsonable {
+  static const jsonHandler = LspJsonHandler(
+    Validator.canParse,
+    Validator.fromJson,
+  );
+
+  /// The message to show if the answer fails this validator.
+  final String message;
+
+  /// The severity of a violation of this validator.
+  final ValidationSeverity severity;
+
+  Validator({
+    required this.message,
+    required this.severity,
+  });
+  @override
+  int get hashCode => Object.hash(
+        message,
+        severity,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is Validator &&
+        other.runtimeType == Validator &&
+        message == other.message &&
+        severity == other.severity;
+  }
+
+  @override
+  Map<String, Object?> toJson() {
+    var result = <String, Object?>{};
+    result['message'] = message;
+    result['severity'] = severity.toJson();
+    return result;
+  }
+
+  @override
+  String toString() => jsonEncoder.convert(toJson());
+
+  static bool canParse(Object? obj, LspJsonReporter reporter) {
+    if (obj is Map<String, Object?>) {
+      if (!_canParseString(obj, reporter, 'message',
+          allowsUndefined: false, allowsNull: false)) {
+        return false;
+      }
+      return _canParseValidationSeverity(obj, reporter, 'severity',
+          allowsUndefined: false, allowsNull: false);
+    } else {
+      reporter.reportError('must be of type Validator');
+      return false;
+    }
+  }
+
+  static Validator fromJson(Map<String, Object?> json) {
+    if (RegexValidator.canParse(json, nullLspJsonReporter)) {
+      return RegexValidator.fromJson(json);
+    }
+    final messageJson = json['message'];
+    final message = messageJson as String;
+    final severityJson = json['severity'];
+    final severity = ValidationSeverity.fromJson(severityJson as int);
+    return Validator(
+      message: message,
+      severity: severity,
     );
   }
 }

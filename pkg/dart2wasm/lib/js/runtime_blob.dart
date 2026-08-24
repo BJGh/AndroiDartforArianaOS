@@ -1,45 +1,54 @@
 // Copyright (c) 2023, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
+final nonEs6MjsTemplate = Template(r'''(function() {
+const exportObject = {};
 
-final jsRuntimeBlobTemplate = Template(r'''
 // Compiles a dart2wasm-generated main module from `source` which can then
 // be instantiated via the `instantiate` method.
 //
 // `source` needs to be a `Response` object (or promise thereof) e.g. created
 // via the `fetch()` JS API.
-export async function compileStreaming(source) {
-  const builtins = {<<BUILTINS_MAP_BODY>>};
-  return new CompiledApp(
-      await WebAssembly.compileStreaming(source, builtins), builtins);
-}
+exportObject.compileStreaming = <<COMPILE_STREAMING>>;
 
 // Compiles a dart2wasm-generated wasm module from `bytes` which is then
 // instantiable via the `instantiate` method.
-export async function compile(bytes) {
+exportObject.compile = <<COMPILE>>;
+
+<<REST>>
+
+return exportObject;
+})''');
+
+final es6MjsTemplate = Template(
+  r'''// Compiles a dart2wasm-generated main module from `source` which can then
+// be instantiated via the `instantiate` method.
+//
+// `source` needs to be a `Response` object (or promise thereof) e.g. created
+// via the `fetch()` JS API.
+export <<COMPILE_STREAMING>>
+
+// Compiles a dart2wasm-generated wasm module from `bytes` which is then
+// instantiable via the `instantiate` method.
+export <<COMPILE>>
+
+<<REST>>''',
+);
+
+final compileStreamingTemplate = Template(
+  r'''async function compileStreaming(source) {
+  const builtins = {<<BUILTINS_MAP_BODY>>};
+  return new CompiledApp(
+      await WebAssembly.compileStreaming(source, builtins), builtins);
+}''',
+);
+
+final compileTemplate = Template(r'''async function compile(bytes) {
   const builtins = {<<BUILTINS_MAP_BODY>>};
   return new CompiledApp(await WebAssembly.compile(bytes, builtins), builtins);
-}
+}''');
 
-// DEPRECATED: Please use `compile` or `compileStreaming` to get a compiled app,
-// use `instantiate` method to get an instantiated app and then call
-// `invokeMain` to invoke the main function.
-export async function instantiate(modulePromise, importObjectPromise) {
-  var moduleOrCompiledApp = await modulePromise;
-  if (!(moduleOrCompiledApp instanceof CompiledApp)) {
-    moduleOrCompiledApp = new CompiledApp(moduleOrCompiledApp);
-  }
-  const instantiatedApp = await moduleOrCompiledApp.instantiate(await importObjectPromise);
-  return instantiatedApp.instantiatedModule;
-}
-
-// DEPRECATED: Please use `compile` or `compileStreaming` to get a compiled app,
-// use `instantiate` method to get an instantiated app and then call
-// `invokeMain` to invoke the main function.
-export const invoke = (moduleInstance, ...args) => {
-  moduleInstance.exports.$invokeMain(args);
-}
-
+final jsRuntimeBlobTemplate = Template(r'''
 class CompiledApp {
   constructor(module, builtins) {
     this.module = module;
@@ -123,7 +132,6 @@ class CompiledApp {
       <<MODULE_LOADING_IMPORT>>
       <<JS_POLYFILL_IMPORT>>
     });
-    dartInstance.exports.<<THIS_MODULE_SETTER_NAME>>(dartInstance);
 
     return new InstantiatedApp(this, dartInstance);
   }
@@ -200,7 +208,6 @@ final moduleLoadingHelperTemplate = Template(r'''
         <<JS_POLYFILL_IMPORT>>
         "<<MAIN_MODULE_NAME>>": dartInstance.exports,
       });
-      moduleInstance.exports.<<THIS_MODULE_SETTER_NAME>>(moduleInstance);
     }
     const moduleLoadingHelper = {
       "loadDeferredModules": async (moduleNames) => {

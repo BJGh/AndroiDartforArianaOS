@@ -987,6 +987,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_FfiCallInstrLeafDoesntSpill) {
       BuildInstructions([](compiler::Assembler* assembler) {
         // Clobber all volatile registers to make sure caller doesn't rely on
         // any non-callee-save register.
+        // clang-format off
         for (intptr_t reg = 0; reg < kNumberOfFpuRegisters; reg++) {
           if ((kAbiVolatileFpuRegs & (1 << reg)) != 0) {
 #if defined(TARGET_ARCH_ARM)
@@ -997,6 +998,7 @@ ISOLATE_UNIT_TEST_CASE(IRTest_FfiCallInstrLeafDoesntSpill) {
 #endif
           }
         }
+        // clang-format on
         for (intptr_t reg = 0; reg < kNumberOfCpuRegisters; reg++) {
           if ((kDartVolatileCpuRegs & (1 << reg)) != 0) {
             assembler->LoadImmediate(static_cast<Register>(reg), 0xDEADBEEF);
@@ -1966,8 +1968,9 @@ ISOLATE_UNIT_TEST_CASE(IL_RecordCoverageSurvivesOptimizations) {
     {
       BlockBuilder builder(H.flow_graph(),
                            H.flow_graph()->graph_entry()->normal_entry());
-      const auto& coverage_array = Array::Handle(Array::New(1));
-      coverage_array.SetAt(0, Smi::Handle(Smi::New(0)));
+      const auto& coverage_array =
+          TypedData::Handle(TypedData::New(kTypedDataUint32ArrayCid, 1));
+      coverage_array.SetUint32(0, 0);
       builder.AddInstruction(
           new RecordCoverageInstr(coverage_array, 0, InstructionSource()));
       builder.AddReturn(new Value(H.flow_graph()->constant_null()));

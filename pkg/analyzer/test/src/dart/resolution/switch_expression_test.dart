@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class SwitchExpressionResolutionTest extends PubPackageResolutionTest {
   test_case_expression_void() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch(x) {
     0 => 0,
@@ -28,12 +28,12 @@ void f(Object? x) {
 void g() {}
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    var node = result.findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -43,12 +43,12 @@ SwitchExpression
     SwitchExpressionCase
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: IntegerLiteral
+          expression2: IntegerLiteral
             literal: 0
             staticType: int
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
     SwitchExpressionCase
@@ -57,7 +57,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: MethodInvocation
+      expression2: MethodInvocation
         methodName: SimpleIdentifier
           token: g
           element: <testLibrary>::@function::g
@@ -73,18 +73,18 @@ SwitchExpression
   }
 
   test_cases_empty() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 final a = switch (0) {};
 //        ^^^^^^
 // [diag.nonExhaustiveSwitchExpression] The type 'int' isn't exhaustively matched by the switch cases since it doesn't match the pattern 'int()'.
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    var node = result.findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   rightParenthesis: )
@@ -95,7 +95,7 @@ SwitchExpression
   }
 
   test_contextType_case_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   T foo<T>() => throw 0;
 
@@ -107,12 +107,12 @@ class A {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@class::A::@method::bar::@formalParameter::x
     staticType: Object?
@@ -125,7 +125,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: MethodInvocation
+      expression2: MethodInvocation
         methodName: SimpleIdentifier
           token: foo
           element: <testLibrary>::@class::A::@method::foo
@@ -143,7 +143,7 @@ SwitchExpression
   }
 
   test_expression_void() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f(void x) {
   (switch(x) {
 //        ^
@@ -153,12 +153,12 @@ void f(void x) {
 }
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    var node = result.findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: void
@@ -171,7 +171,7 @@ SwitchExpression
           name: _
           matchedValueType: void
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
   rightBracket: }
@@ -182,7 +182,7 @@ SwitchExpression
   test_joinedVariables_inLocalFunction() async {
     // Note: this is an important case to test because when variables are inside
     // a local function, their enclosing element is `null`.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   List<int> get values;
 }
@@ -197,7 +197,7 @@ test(Object o) => () =>
   };
 ''');
 
-    var node = findNode.simple('value + 1');
+    var node = result.findNode.simple('value + 1');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: value
@@ -207,7 +207,7 @@ SimpleIdentifier
   }
 
   test_location_topLevel() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 num a = 0;
 
 final b = switch (a) {
@@ -216,12 +216,12 @@ final b = switch (a) {
 };
 ''');
 
-    var node = findNode.singleSwitchExpression;
+    var node = result.findNode.singleSwitchExpression;
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: a
     element: <testLibrary>::@getter::a
     staticType: num
@@ -252,12 +252,12 @@ SwitchExpression
           matchedValueType: num
         whenClause: WhenClause
           whenKeyword: when
-          expression: SimpleIdentifier
+          expression2: SimpleIdentifier
             token: isEven
             element: isEven@46
             staticType: bool
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 1
         staticType: int
     SwitchExpressionCase
@@ -266,7 +266,7 @@ SwitchExpression
           name: _
           matchedValueType: num
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
   rightBracket: }
@@ -275,7 +275,7 @@ SwitchExpression
   }
 
   test_rewrite_case_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x, int Function() a) {
   (switch (x) {
     _ => a(),
@@ -283,7 +283,7 @@ void f(Object? x, int Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('_');
+    var node = result.findNode.switchExpressionCase('_');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
@@ -291,8 +291,8 @@ SwitchExpressionCase
       name: _
       matchedValueType: Object?
   arrow: =>
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -306,7 +306,7 @@ SwitchExpressionCase
   }
 
   test_rewrite_case_pattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     const A() => 0,
@@ -319,13 +319,24 @@ class A {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('=> 0');
+    var node = result.findNode.switchExpressionCase('=> 0');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
     pattern: ConstantPattern
       constKeyword: const
-      expression: InstanceCreationExpression
+      expression2: ConstructorInvocation
+        constructorReference: ConstructorReference2
+          typeReference: ConstructorTypeReference
+            name: A
+            element: <testLibrary>::@class::A
+            type: A
+          element: <testLibrary>::@class::A::@constructor::new
+        argumentList: ArgumentList
+          leftParenthesis: (
+          rightParenthesis: )
+        staticType: A
+      expression(v1): InstanceCreationExpression
         constructorName: ConstructorName
           type: NamedType
             name: A
@@ -338,14 +349,14 @@ SwitchExpressionCase
         staticType: A
       matchedValueType: Object?
   arrow: =>
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
 ''');
   }
 
   test_rewrite_case_whenClause() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x, bool Function() a) {
   (switch (x) {
     0 when a() => true,
@@ -354,19 +365,19 @@ void f(Object? x, bool Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpressionCase('=> true');
+    var node = result.findNode.switchExpressionCase('=> true');
     assertResolvedNodeText(node, r'''
 SwitchExpressionCase
   guardedPattern: GuardedPattern
     pattern: ConstantPattern
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       matchedValueType: Object?
     whenClause: WhenClause
       whenKeyword: when
-      expression: FunctionExpressionInvocation
-        function: SimpleIdentifier
+      expression2: FunctionExpressionInvocation
+        function2: SimpleIdentifier
           token: a
           element: <testLibrary>::@function::f::@formalParameter::a
           staticType: bool Function()
@@ -377,14 +388,14 @@ SwitchExpressionCase
         staticInvokeType: bool Function()
         staticType: bool
   arrow: =>
-  expression: BooleanLiteral
+  expression2: BooleanLiteral
     literal: true
     staticType: bool
 ''');
   }
 
   test_rewrite_expression() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int Function() a) {
   (switch (a()) {
     _ => 0,
@@ -392,13 +403,13 @@ void f(int Function() a) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: FunctionExpressionInvocation
-    function: SimpleIdentifier
+  expression2: FunctionExpressionInvocation
+    function2: SimpleIdentifier
       token: a
       element: <testLibrary>::@function::f::@formalParameter::a
       staticType: int Function()
@@ -417,7 +428,7 @@ SwitchExpression
           name: _
           matchedValueType: int
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
   rightBracket: }
@@ -426,7 +437,7 @@ SwitchExpression
   }
 
   test_staticType_cases_leastUpperBound() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     true => 0,
@@ -435,12 +446,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -450,12 +461,12 @@ SwitchExpression
     SwitchExpressionCase
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: BooleanLiteral
+          expression2: BooleanLiteral
             literal: true
             staticType: bool
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
     SwitchExpressionCase
@@ -464,7 +475,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: NullLiteral
+      expression2: NullLiteral
         literal: null
         staticType: Null
   rightBracket: }
@@ -473,7 +484,7 @@ SwitchExpression
   }
 
   test_staticType_cases_same() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     true => 0,
@@ -482,12 +493,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -497,12 +508,12 @@ SwitchExpression
     SwitchExpressionCase
       guardedPattern: GuardedPattern
         pattern: ConstantPattern
-          expression: BooleanLiteral
+          expression2: BooleanLiteral
             literal: true
             staticType: bool
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
     SwitchExpressionCase
@@ -511,7 +522,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 1
         staticType: int
   rightBracket: }
@@ -520,7 +531,7 @@ SwitchExpression
   }
 
   test_variables_logicalOr() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     <int>[var a || var a] => a,
@@ -531,12 +542,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -577,7 +588,7 @@ SwitchExpression
           matchedValueType: Object?
           requiredType: List<int>
       arrow: =>
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@null
         staticType: int
@@ -587,7 +598,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
   rightBracket: }
@@ -596,7 +607,7 @@ SwitchExpression
   }
 
   test_variables_scope() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 const a = 0;
 void f(Object? x) {
   (switch (x) {
@@ -611,12 +622,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -640,7 +651,7 @@ SwitchExpression
               matchedValueType: Object?
             RelationalPattern
               operator: ==
-              operand: SimpleIdentifier
+              operand2: SimpleIdentifier
                 token: a
                 element: a@58
                 staticType: int
@@ -651,7 +662,20 @@ SwitchExpression
           requiredType: List<Object?>
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@58
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@58
@@ -665,7 +689,7 @@ SwitchExpression
             staticInvokeType: bool Function(num)
             staticType: bool
       arrow: =>
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@58
         staticType: int
@@ -675,7 +699,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
   rightBracket: }
@@ -684,7 +708,7 @@ SwitchExpression
   }
 
   test_variables_singleCase() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   (switch (x) {
     int a when a > 0 => a,
@@ -695,12 +719,12 @@ void f(Object? x) {
 }
 ''');
 
-    var node = findNode.switchExpression('switch');
+    var node = result.findNode.switchExpression('switch');
     assertResolvedNodeText(node, r'''
 SwitchExpression
   switchKeyword: switch
   leftParenthesis: (
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: Object?
@@ -721,7 +745,20 @@ SwitchExpression
           matchedValueType: Object?
         whenClause: WhenClause
           whenKeyword: when
-          expression: BinaryExpression
+          expression2: BinaryOperatorInvocation
+            leftOperand: SimpleIdentifier
+              token: a
+              element: a@44
+              staticType: int
+            operator: >
+            rightOperand: IntegerLiteral
+              literal: 0
+              correspondingParameter: dart:core::@class::num::@method::>::@formalParameter::other
+              staticType: int
+            binaryOperator: greaterThan
+            element: dart:core::@class::num::@method::>
+            staticType: bool
+          expression(v1): BinaryExpression
             leftOperand: SimpleIdentifier
               token: a
               element: a@44
@@ -735,7 +772,7 @@ SwitchExpression
             staticInvokeType: bool Function(num)
             staticType: bool
       arrow: =>
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: a@44
         staticType: int
@@ -745,7 +782,7 @@ SwitchExpression
           name: _
           matchedValueType: Object?
       arrow: =>
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: a
         element: <null>
         staticType: InvalidType

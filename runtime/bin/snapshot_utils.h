@@ -17,10 +17,8 @@ class AppSnapshot {
  public:
   virtual ~AppSnapshot() {}
 
-  virtual void SetBuffers(const uint8_t** vm_data_buffer,
-                          const uint8_t** vm_instructions_buffer,
-                          const uint8_t** isolate_data_buffer,
-                          const uint8_t** isolate_instructions_buffer) = 0;
+  virtual void SetBuffers(const uint8_t** snapshot_data_buffer,
+                          const uint8_t** snapshot_text_buffer) = 0;
 
   bool IsJIT() const { return magic_number_ == DartUtils::kAppJITMagicNumber; }
   bool IsAOT() const { return DartUtils::IsAotMagicNumber(magic_number_); }
@@ -62,7 +60,8 @@ class Snapshot {
                                          bool force_load_from_memory = false,
                                          bool decode_uri = true);
   static std::pair<AppSnapshot*, CStringUniquePtr> TryReadSDKSnapshot(
-      const char* snapshot_name);
+      const char* snapshot_name,
+      bool verbose = true);
   static void WriteAppSnapshot(const char* filename,
                                uint8_t* isolate_data_buffer,
                                intptr_t isolate_data_size,

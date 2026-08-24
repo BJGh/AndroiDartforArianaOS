@@ -57,8 +57,10 @@ import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source.dart';
+import 'package:analyzer/src/dart/ast/ast.dart' show ToBeDeprecated;
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart' show Name;
 import 'package:analyzer/src/dart/resolver/scope.dart';
+import 'package:meta/meta.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 export 'package:analyzer/src/dart/element/inheritance_manager3.dart' show Name;
@@ -241,21 +243,24 @@ abstract class ConstructorElement implements ExecutableElement {
   /// Whether the constructor is from an explicit [ConstructorDeclaration]
   /// or [PrimaryConstructorDeclaration].
   ///
-  /// When this is `true`, [isOriginImplicitDefault] and
-  /// [isOriginMixinApplication] are `false`.
+  /// Constructor origin getters are mutually exclusive. Exactly one of the
+  /// following is `true`:
+  ///
+  /// * [isOriginDeclaration]
+  /// * [isOriginExtensionTypeRecovery]
+  /// * [isOriginImplicitDefault]
+  /// * [isOriginMixinApplication]
   bool get isOriginDeclaration;
+
+  /// Whether the constructor represents the recovery constructor of an extension
+  /// type when no introductory declaration is present in the library.
+  bool get isOriginExtensionTypeRecovery;
 
   /// Whether the constructor was created because there are no explicit
   /// constructors.
-  ///
-  /// When this is `true`, [isOriginDeclaration] and
-  /// [isOriginMixinApplication] are `false`.
   bool get isOriginImplicitDefault;
 
   /// Whether the constructor was created for a mixin application.
-  ///
-  /// When this is `true`, [isOriginDeclaration] and
-  /// [isOriginImplicitDefault] are `false`.
   bool get isOriginMixinApplication;
 
   /// Whether this is a primary constructor.
@@ -297,6 +302,10 @@ abstract class ConstructorFragment implements ExecutableFragment {
   ///
   /// It is `null` if the fragment is synthetic, or does not have the keyword.
   int? get factoryKeywordOffset;
+
+  /// Whether the constructor represents the recovery constructor of an extension
+  /// type when no introductory declaration is present in the library.
+  bool get isOriginExtensionTypeRecovery;
 
   @override
   String get name;
@@ -758,6 +767,16 @@ abstract class ElementAnnotation {
   /// value to be computed if it had not previously been computed, or `null`
   /// if the value of this annotation could not be computed because of errors.
   DartObject? computeConstantValue();
+
+  /// Whether this annotation is a valid annotation for the given [element].
+  ///
+  /// Returns `true` if the annotation has known target kinds, and the
+  /// [element] matches one of them. Returns `false` if the annotation has known
+  /// target kinds, and the [element] does not match any of them.
+  ///
+  /// Returns `null` if there is no known set of target kinds for this
+  /// annotation.
+  bool? isValidAtElement(Element element);
 
   /// Returns a textual description of this annotation in a form approximating
   /// valid source.
@@ -1357,12 +1376,6 @@ abstract class FormalParameterElement implements VariableElement, LocalElement {
   @override
   FormalParameterFragment get firstFragment;
 
-  /// The formal parameters defined by this formal parameter.
-  ///
-  /// A parameter will only define other parameters if it is a function typed
-  /// formal parameter.
-  List<FormalParameterElement> get formalParameters;
-
   @override
   List<FormalParameterFragment> get fragments;
 
@@ -1372,10 +1385,6 @@ abstract class FormalParameterElement implements VariableElement, LocalElement {
   /// Whether the parameter is covariant, meaning it is allowed to have a
   /// narrower type in an override.
   bool get isCovariant;
-
-  /// Whether the parameter is an initializing formal parameter.
-  @Deprecated('Use element is FieldFormalParameterElement instead')
-  bool get isInitializingFormal;
 
   /// Whether the parameter is a named parameter.
   ///
@@ -1425,16 +1434,6 @@ abstract class FormalParameterElement implements VariableElement, LocalElement {
 
   /// Whether the parameter is both a required and positional parameter.
   bool get isRequiredPositional;
-
-  /// Whether the parameter is a super formal parameter.
-  @Deprecated('Use element is SuperFormalParameterElement instead')
-  bool get isSuperFormal;
-
-  /// The type parameters defined by this parameter.
-  ///
-  /// A parameter will only define type parameters if it is a function typed
-  /// parameter.
-  List<TypeParameterElement> get typeParameters;
 
   /// Appends the type, name and possibly the default value of this parameter
   /// to the given [buffer].
@@ -3386,7 +3385,16 @@ abstract class VariableElement implements Element {
   ///
   /// Is `null` if this variable is not a constant, or does not have the
   /// initializer or the default value specified.
+  @ToBeDeprecated('Use constantInitializer2 instead.')
   Expression? get constantInitializer;
+
+  /// The constant initializer for this constant variable, or the default
+  /// value for this formal parameter.
+  ///
+  /// Is `null` if this variable is not a constant, or does not have the
+  /// initializer or the default value specified.
+  @experimental
+  Expression? get constantInitializer2;
 
   @override
   VariableFragment get firstFragment;

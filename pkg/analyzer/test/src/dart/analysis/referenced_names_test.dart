@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/src/dart/analysis/referenced_names.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -18,8 +17,26 @@ main() {
 
 @reflectiveTest
 class ComputeReferencedNamesTest extends ParserDiagnosticsTest {
+  test_analyzerDiagnosticExpectation_ignoredByDefault() {
+    var names = _computeReferencedNames(r'''
+void f() {
+  '// [diag.foo]';
+}
+''');
+    expect(names, unorderedEquals(['void']));
+  }
+
+  test_analyzerDiagnosticExpectation_included() {
+    var names = _computeReferencedNames(r'''
+void f() {
+  '// [diag.foo]';
+}
+''', includeAnalyzerDiagnosticExpectations: true);
+    expect(names, unorderedEquals(['foo', 'void']));
+  }
+
   test_class_constructor() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   U.named(A a, B b) {
     C c = null;
@@ -30,7 +47,7 @@ class U {
   }
 
   test_class_constructor_invocation() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 f() {
   const A.foo();
 }
@@ -39,7 +56,7 @@ f() {
   }
 
   test_class_constructor_invocation_prefixed() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 import 'a.dart' as p;
 
 f() {
@@ -50,7 +67,7 @@ f() {
   }
 
   test_class_constructor_parameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   U(A a) {
     a;
@@ -62,7 +79,7 @@ class U {
   }
 
   test_class_constructor_superFormalParameter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class A {
   A({x});
 }
@@ -74,7 +91,7 @@ class B extends A {
   }
 
   test_class_extends_sameName_importPrefix() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 import 'a.dart' as p;
 class A extends p.A {}
 ''');
@@ -82,7 +99,7 @@ class A extends p.A {}
   }
 
   test_class_field() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   A f = new B();
 }
@@ -91,7 +108,7 @@ class U {
   }
 
   test_class_getter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   A get a => new B();
 }
@@ -100,7 +117,7 @@ class U {
   }
 
   test_class_members() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   int a;
   int get b;
@@ -116,8 +133,22 @@ class U {
     expect(names, unorderedEquals(['int', 'D']));
   }
 
+  test_class_members_dontHideDotShorthand() {
+    var names = _computeReferencedNames('''
+class U {
+  int a;
+  m() {}
+  f() {
+    g(.a);
+    g(.m());
+  }
+}
+''');
+    expect(names, unorderedEquals(['int', 'g', 'a', 'm']));
+  }
+
   test_class_members_dontHideQualified() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   int a;
   int get b;
@@ -133,7 +164,7 @@ class U {
   }
 
   test_class_method() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   A m(B p) {
     C v = 0;
@@ -144,7 +175,7 @@ class U {
   }
 
   test_class_method_localVariables() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   A m() {
     B b = null;
@@ -162,7 +193,7 @@ class U {
   }
 
   test_class_method_parameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   m(A a) {
     a;
@@ -174,7 +205,7 @@ class U {
   }
 
   test_class_method_parameters_dontHideNamedExpressionName() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 main() {
   var p;
   new C(p: p);
@@ -184,7 +215,7 @@ main() {
   }
 
   test_class_method_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   A m<T>(B b, T t) {
     C c = 0;
@@ -195,7 +226,7 @@ class U {
   }
 
   test_class_setter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   set a(A a) {
     B b = null;
@@ -206,7 +237,7 @@ class U {
   }
 
   test_class_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U<T> {
   T f = new A<T>();
 }
@@ -215,7 +246,7 @@ class U<T> {
   }
 
   test_extensionType_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 extension type Z<T>(int it) {
   A m(B b, T t, Z z) {
     C c = 0;
@@ -225,8 +256,23 @@ extension type Z<T>(int it) {
     expect(names, unorderedEquals(['int', 'A', 'B', 'C']));
   }
 
+  test_importPrefix_dontHideDotShorthand() {
+    var names = _computeReferencedNames('''
+import 'a.dart' as p;
+import 'b.dart' as q;
+import 'c.dart' as r;
+
+f() {
+  g(.p);
+  g(.q());
+  g(const .r());
+}
+''');
+    expect(names, unorderedEquals(['g', 'p', 'q', 'r']));
+  }
+
   test_instantiatedNames_importPrefix() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 import 'a.dart' as p1;
 import 'b.dart' as p2;
 main() {
@@ -242,7 +288,7 @@ main() {
   }
 
   test_localFunction() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 f(A a) {
   g(B b) {}
 }
@@ -250,8 +296,78 @@ f(A a) {
     expect(names, unorderedEquals(['A', 'B']));
   }
 
+  test_operator_compoundAssignment_property() {
+    var names = _computeReferencedNames('''
+f(A a) {
+  a.foo += 1;
+  a.foo -= 1;
+}
+''');
+    expect(names, unorderedEquals(['A', '+', '-', 'foo']));
+  }
+
+  test_operator_compoundAssignment_unqualifiedName() {
+    var names = _computeReferencedNames('''
+f(A a) {
+  var x = a;
+  x += 1;
+  x -= 1;
+}
+''');
+    expect(names, unorderedEquals(['A', '+', '-']));
+  }
+
+  test_operator_incrementOrDecrement() {
+    var names = _computeReferencedNames('''
+f(A a) {
+  var x = a;
+  x++;
+  --x;
+  a.foo++;
+  --a.foo;
+}
+''');
+    expect(names, unorderedEquals(['A', '+', '-', 'foo']));
+  }
+
+  test_patternField_objectPattern_explicitName() {
+    var names = _computeReferencedNames('''
+f(Object? x) {
+  if (x case A(foo: 0)) {}
+}
+''');
+    expect(names, unorderedEquals(['Object', 'A', 'foo']));
+  }
+
+  test_patternField_objectPattern_implicitName() {
+    var names = _computeReferencedNames('''
+f(Object? x) {
+  if (x case A(: var foo)) {}
+}
+''');
+    expect(names, unorderedEquals(['Object', 'A', 'foo']));
+  }
+
+  test_patternField_objectPattern_nested() {
+    var names = _computeReferencedNames('''
+f(Object? x) {
+  if (x case A(foo: B(bar: 0))) {}
+}
+''');
+    expect(names, unorderedEquals(['Object', 'A', 'B', 'foo', 'bar']));
+  }
+
+  test_patternField_recordPattern_named() {
+    var names = _computeReferencedNames('''
+f(Object? x) {
+  if (x case (foo: 0)) {}
+}
+''');
+    expect(names, unorderedEquals(['Object', 'foo']));
+  }
+
   test_superToSubs_importPrefix() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 import 'a.dart' as p1;
 import 'b.dart' as p2;
 class U extends p1.A with p2.B implements p2.C {}
@@ -260,35 +376,35 @@ class U extends p1.A with p2.B implements p2.C {}
   }
 
   test_topLevelVariable() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A v = new B(c);
 ''');
     expect(names, unorderedEquals(['A', 'B', 'c']));
   }
 
   test_topLevelVariable_multiple() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A v1 = new B(c), v2 = new D<E>(f);
 ''');
     expect(names, unorderedEquals(['A', 'B', 'c', 'D', 'E', 'f']));
   }
 
   test_unit_classTypeAlias() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U = A with B implements C;
 ''');
     expect(names, unorderedEquals(['A', 'B', 'C']));
   }
 
   test_unit_classTypeAlias_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U<T1, T2 extends D> = A<T1> with B<T2> implements C<T1, T2>;
 ''');
     expect(names, unorderedEquals(['A', 'B', 'C', 'D']));
   }
 
   test_unit_extension() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 extension E on int {}
 f() {
   E;
@@ -298,7 +414,7 @@ f() {
   }
 
   test_unit_function() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f(B b) {
   C c = 0;
 }
@@ -307,7 +423,7 @@ A f(B b) {
   }
 
   test_unit_function_doc() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 /**
  * Documentation [C.d] reference.
  */
@@ -317,7 +433,7 @@ A f(B b) {}
   }
 
   test_unit_function_dontHideQualified() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class U {
   int a;
   int get b;
@@ -333,7 +449,7 @@ class U {
   }
 
   test_unit_function_localFunction_parameter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f() {
   B g(x) {
     x;
@@ -346,7 +462,7 @@ A f() {
   }
 
   test_unit_function_localFunctions() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f() {
   B b = null;
   C g() {}
@@ -356,8 +472,22 @@ A f() {
     expect(names, unorderedEquals(['A', 'B', 'C']));
   }
 
+  test_unit_function_localsDontHideDotShorthand() {
+    var names = _computeReferencedNames('''
+f() {
+  var u = 0;
+  var v = 0;
+  var w = 0;
+  g(.u);
+  g(.v());
+  g(const .w());
+}
+''');
+    expect(names, unorderedEquals(['g', 'u', 'v', 'w']));
+  }
+
   test_unit_function_localsDontHideQualified() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 f(A a, B b) {
   var v = 0;
   a.v;
@@ -368,7 +498,7 @@ f(A a, B b) {
   }
 
   test_unit_function_localVariables() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f() {
   B b = null;
   b;
@@ -384,7 +514,7 @@ A f() {
   }
 
   test_unit_function_parameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f(B b) {
   C c = 0;
   b;
@@ -393,8 +523,18 @@ A f(B b) {
     expect(names, unorderedEquals(['A', 'B', 'C']));
   }
 
+  test_unit_function_parameters_dontHideDotShorthand() {
+    var names = _computeReferencedNames('''
+f(u, v) {
+  g(.u);
+  g(.v());
+}
+''');
+    expect(names, unorderedEquals(['g', 'u', 'v']));
+  }
+
   test_unit_function_parameters_dontHideQualified() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 f(x, C g()) {
   g().x;
 }
@@ -403,7 +543,7 @@ f(x, C g()) {
   }
 
   test_unit_function_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A f<T>(B b, T t) {
   C c = 0;
 }
@@ -412,21 +552,21 @@ A f<T>(B b, T t) {
   }
 
   test_unit_functionTypeAlias() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 typedef A F(B B, C c(D d));
 ''');
     expect(names, unorderedEquals(['A', 'B', 'C', 'D']));
   }
 
   test_unit_functionTypeAlias_typeParameters() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 typedef A F<T>(B b, T t);
 ''');
     expect(names, unorderedEquals(['A', 'B']));
   }
 
   test_unit_getter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 A get aaa {
   return new B();
 }
@@ -435,7 +575,7 @@ A get aaa {
   }
 
   test_unit_setter() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 set aaa(A a) {
   B b = null;
 }
@@ -444,7 +584,7 @@ set aaa(A a) {
   }
 
   test_unit_topLevelDeclarations() {
-    Set<String> names = _computeReferencedNames('''
+    var names = _computeReferencedNames('''
 class L1 {}
 class L2 = A with B implements C;
 A L3() => null;
@@ -466,17 +606,38 @@ main() {
     expect(names, unorderedEquals(['A', 'B', 'C']));
   }
 
-  Set<String> _computeReferencedNames(String code, {FeatureSet? featureSet}) {
-    var parseResult = parseStringWithErrors(code, featureSet: featureSet);
+  test_unit_topLevelDeclarations_dontHideDotShorthand() {
+    var names = _computeReferencedNames('''
+class L1 {}
+L2() {}
+var L3;
+f() {
+  g(.L1);
+  g(.L2());
+  g(.L3);
+}
+''');
+    expect(names, unorderedEquals(['g', 'L1', 'L2', 'L3']));
+  }
+
+  Set<String> _computeReferencedNames(
+    String code, {
+    bool includeAnalyzerDiagnosticExpectations = false,
+  }) {
+    var parseResult = parseTestCodeWithDiagnostics(code);
     var unit = parseResult.unit;
-    return computeReferencedNames(unit);
+    return computeReferencedNames(
+      unit,
+      includeAnalyzerDiagnosticExpectations:
+          includeAnalyzerDiagnosticExpectations,
+    );
   }
 }
 
 @reflectiveTest
 class ComputeSubtypedNamesTest extends ParserDiagnosticsTest {
   void test_classDeclaration() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 import 'lib.dart';
 class X extends A {}
 class Y extends A with B {}
@@ -486,7 +647,7 @@ class Z implements A, B, C {}
   }
 
   void test_classTypeAlias() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 import 'lib.dart';
 class X = A with B implements C, D, E;
 ''');
@@ -494,7 +655,7 @@ class X = A with B implements C, D, E;
   }
 
   void test_extensionTypeDeclaration() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 extension type E1(X it) implements A {}
 extension type E2(X it) implements B {}
 ''');
@@ -502,7 +663,7 @@ extension type E2(X it) implements B {}
   }
 
   void test_mixinDeclaration() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 import 'lib.dart';
 mixin M on A, B implements C, D {}
 ''');
@@ -510,7 +671,7 @@ mixin M on A, B implements C, D {}
   }
 
   void test_prefixed() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 import 'lib.dart' as p;
 class X extends p.A with p.B implements p.C {}
 ''');
@@ -518,7 +679,7 @@ class X extends p.A with p.B implements p.C {}
   }
 
   void test_typeArguments() {
-    Set<String> names = _computeSubtypedNames('''
+    var names = _computeSubtypedNames('''
 import 'lib.dart';
 class X extends A<B> {}
 ''');
@@ -526,7 +687,7 @@ class X extends A<B> {}
   }
 
   Set<String> _computeSubtypedNames(String code) {
-    var parseResult = parseStringWithErrors(code);
+    var parseResult = parseTestCodeWithDiagnostics(code);
     var unit = parseResult.unit;
     return computeSubtypedNames(unit);
   }

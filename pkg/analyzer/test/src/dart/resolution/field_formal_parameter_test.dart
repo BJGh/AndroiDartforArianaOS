@@ -17,14 +17,14 @@ main() {
 @reflectiveTest
 class FieldFormalParameterResolutionTest extends PubPackageResolutionTest {
   test_class_functionTyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   Function f;
   A(void this.f(int a));
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    var node = result.findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -36,6 +36,19 @@ FieldFormalParameter
   name: f
   functionTypedSuffix: FunctionTypedFormalParameterSuffix
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: int
+            element: dart:core::@class::int
+            type: int
+          name: a
+          declaredFragment: <testLibraryFragment> a@44
+            element: isPublic
+              type: int
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -57,14 +70,14 @@ FieldFormalParameter
   /// There was a crash.
   /// https://github.com/dart-lang/sdk/issues/46968
   test_class_functionTyped_hasTypeParameters() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   T Function<T>(T) f;
   A(U this.f<U>(U a));
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    var node = result.findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -85,6 +98,19 @@ FieldFormalParameter
       rightBracket: >
     formalParameters: FormalParameterList
       leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: U
+            element: #E0 U
+            type: U
+          name: a
+          declaredFragment: <testLibraryFragment> a@50
+            element: isPublic
+              type: U
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
+      leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
           name: U
@@ -103,14 +129,14 @@ FieldFormalParameter
   }
 
   test_class_functionTyped_hasTypeParameters2() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<V> {
   T Function<T, U>(U, V) f;
   A(T this.f<T, U>(U a, V b));
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    var node = result.findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -134,6 +160,28 @@ FieldFormalParameter
             defaultType: null
       rightBracket: >
     formalParameters: FormalParameterList
+      leftParenthesis: (
+      requiredPositionalFormalParameters
+        RegularFormalParameter
+          type: NamedType
+            name: U
+            element: #E1 U
+            type: U
+          name: a
+          declaredFragment: <testLibraryFragment> a@62
+            element: isPublic
+              type: U
+        RegularFormalParameter
+          type: NamedType
+            name: V
+            element: #E2 V
+            type: V
+          name: b
+          declaredFragment: <testLibraryFragment> b@67
+            element: isPublic
+              type: V
+      rightParenthesis: )
+    formalParameters(v1): FormalParameterList
       leftParenthesis: (
       parameter: RegularFormalParameter
         type: NamedType
@@ -162,14 +210,14 @@ FieldFormalParameter
   }
 
   test_class_simple() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int f;
   A(this.f);
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    var node = result.findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   thisKeyword: this
@@ -183,14 +231,14 @@ FieldFormalParameter
   }
 
   test_class_simple_typed() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {
   int f;
   A(int this.f);
 }
 ''');
 
-    var node = findNode.singleFieldFormalParameter;
+    var node = result.findNode.singleFieldFormalParameter;
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   type: NamedType
@@ -208,7 +256,7 @@ FieldFormalParameter
   }
 
   test_enum() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 enum E {
   v(0);
   final int f;
@@ -216,7 +264,7 @@ enum E {
 }
 ''');
 
-    var node = findNode.fieldFormalParameter('this.f');
+    var node = result.findNode.fieldFormalParameter('this.f');
     assertResolvedNodeText(node, r'''
 FieldFormalParameter
   thisKeyword: this

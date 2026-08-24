@@ -78,7 +78,7 @@ abstract class AbstractCodeActionsProducer
   /// directly.
   final bool allowCodeActionLiterals;
 
-  AbstractCodeActionsProducer(
+  new(
     this.server,
     this.file,
     this.lineInfo, {
@@ -212,6 +212,8 @@ abstract class AbstractCodeActionsProducer
       protocol.newAnalysisError_fromEngine(result, diagnostic),
       supportedTags: callerSupportedDiagnosticTags,
       clientSupportsCodeDescription: callerSupportsCodeDescription,
+      // Only supported for publishDiagnostcs, not code actions.
+      clientSupportsDiagnosticData: false,
     );
   }
 

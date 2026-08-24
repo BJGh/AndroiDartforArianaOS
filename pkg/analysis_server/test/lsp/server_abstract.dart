@@ -9,6 +9,7 @@ import 'package:analysis_server/src/analytics/analytics_manager.dart';
 import 'package:analysis_server/src/legacy_analysis_server.dart';
 import 'package:analysis_server/src/lsp/client_capabilities.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
+import 'package:analysis_server/src/lsp/extensions/text_document_filters.dart';
 import 'package:analysis_server/src/lsp/lsp_analysis_server.dart';
 import 'package:analysis_server/src/plugin/plugin_isolate.dart';
 import 'package:analysis_server/src/server/crash_reporting_attachments.dart';
@@ -29,6 +30,7 @@ import 'package:analyzer_testing/experiments/experiments.dart';
 import 'package:analyzer_testing/mock_packages/mock_packages.dart';
 import 'package:analyzer_testing/resource_provider_mixin.dart';
 import 'package:analyzer_testing/utilities/extensions/resource_provider.dart';
+import 'package:analyzer_testing/utilities/utilities.dart';
 import 'package:collection/collection.dart';
 import 'package:language_server_protocol/json_parsing.dart';
 import 'package:meta/meta.dart';
@@ -134,18 +136,16 @@ abstract class AbstractLspAnalysisServerTest
         return response == null
             ? null
             : {
-                pluginIsolate: Future.delayed(
-                  respondAfter,
-                ).then((_) => response.toResponse('-', 1)),
+                pluginIsolate: Future.delayed(respondAfter)
+                    .then((_) => response.toResponse('-', 1)),
               };
       };
     }
 
     if (respondWith != null) {
       pluginManager.broadcastResults = {
-        pluginIsolate: Future.delayed(
-          respondAfter,
-        ).then((_) => respondWith.toResponse('-', 1)),
+        pluginIsolate: Future.delayed(respondAfter)
+            .then((_) => respondWith.toResponse('-', 1)),
       };
     }
 
@@ -228,21 +228,8 @@ abstract class AbstractLspAnalysisServerTest
     List<Registration> registrations,
     Method method,
   ) {
-    bool includesDart(Registration r) {
-      var options = TextDocumentRegistrationOptions.fromJson(
-        r.registerOptions as Map<String, Object?>,
-      );
-
-      return options.documentSelector?.any(
-            (selector) =>
-                selector.language == dartLanguageId ||
-                (selector.pattern?.contains('.dart') ?? false),
-          ) ??
-          false;
-    }
-
     return registrations
-        .where((r) => r.method == method.toJson() && includesDart(r))
+        .where((r) => r.method == method.toJson() && r.includesDart)
         .toList();
   }
 
@@ -287,7 +274,7 @@ abstract class AbstractLspAnalysisServerTest
     createMockSdk(resourceProvider: resourceProvider, root: sdkRoot);
 
     errorNotifier = ErrorNotifier();
-    pluginManager = TestPluginManager();
+    pluginManager = TestPluginManager(resourceProvider);
     testView = retainDataForTesting ? MessageSchedulerTestView() : null;
     server = LspAnalysisServer(
       channel,
@@ -300,11 +287,11 @@ abstract class AbstractLspAnalysisServerTest
       SessionLogger(),
       httpClient: httpClient,
       processRunner: processRunner,
+      pluginManager: pluginManager,
       dartFixPromptManager: dartFixPromptManager,
       messageSchedulerListener: testView,
     );
     errorNotifier.server = server;
-    server.pluginManager = pluginManager;
 
     projectFolderPath = convertPath('/home/my_project');
     newFolder(projectFolderPath);
@@ -317,16 +304,13 @@ abstract class AbstractLspAnalysisServerTest
     pubspecFilePath = join(projectFolderPath, file_paths.pubspecYaml);
     analysisOptionsPath = join(projectFolderPath, 'analysis_options.yaml');
 
-    var experiments = StringBuffer();
-    for (var experiment in experimentsForTests) {
-      experiments.writeln('    - $experiment');
-    }
-
-    newFile(analysisOptionsPath, '''
-analyzer:
-  enable-experiment:
-$experiments
-''');
+    newFile(
+      analysisOptionsPath,
+      analysisOptionsContent(
+        experimentalFeatures: experimentalFeaturesForTests,
+        propagateLinterExceptions: false,
+      ),
+    );
 
     writeTestPackageConfig();
   }
@@ -392,15 +376,17 @@ $experiments
 }
 
 mixin ClientCapabilitiesHelperMixin {
-  final emptyTextDocumentClientCapabilities = TextDocumentClientCapabilities();
-
-  final emptyWorkspaceClientCapabilities = WorkspaceClientCapabilities();
-
-  final emptyWindowClientCapabilities = WindowClientCapabilities();
-
   /// The set of TextDocument capabilities used if no explicit instance is
   /// passed to [initialize].
   var textDocumentCapabilities = TextDocumentClientCapabilities();
+
+  /// The set of General capabilities used if no explicit instance is
+  /// passed to [initialize].
+  var generalCapabilties = GeneralClientCapabilities(
+    regularExpressions: RegularExpressionsClientCapabilities(
+      engine: 'ECMAScript',
+    ),
+  );
 
   /// The set of Workspace capabilities used if no explicit instance is
   /// passed to [initialize].
@@ -601,6 +587,17 @@ mixin ClientCapabilitiesHelperMixin {
     );
   }
 
+  void setCompletionListApplyKindSupport([bool supported = true]) {
+    textDocumentCapabilities = extendTextDocumentCapabilities(
+      textDocumentCapabilities,
+      {
+        'completion': {
+          'completionList': {'applyKindSupport': supported},
+        },
+      },
+    );
+  }
+
   void setCompletionListDefaults(List<String> defaults) {
     textDocumentCapabilities = extendTextDocumentCapabilities(
       textDocumentCapabilities,
@@ -724,6 +721,12 @@ mixin ClientCapabilitiesHelperMixin {
     setTextDocumentDynamicRegistration('hover');
   }
 
+  /// Enables support for the legacy custom SnippetTextEdit support that was
+  /// used prior to LSP v3.18 getting standard support.
+  void setLegacySnippetTextEditSupport([bool supported = true]) {
+    experimentalCapabilities['snippetTextEdit'] = supported;
+  }
+
   void setLineFoldingOnly() {
     textDocumentCapabilities = extendTextDocumentCapabilities(
       textDocumentCapabilities,
@@ -744,6 +747,13 @@ mixin ClientCapabilitiesHelperMixin {
     );
   }
 
+  void setPublishDiagnosticsSupport() {
+    textDocumentCapabilities = extendTextDocumentCapabilities(
+      textDocumentCapabilities,
+      {'publishDiagnostics': <String, Object?>{}},
+    );
+  }
+
   void setSignatureHelpContentFormat(List<MarkupKind>? formats) {
     textDocumentCapabilities = extendTextDocumentCapabilities(
       textDocumentCapabilities,
@@ -757,8 +767,21 @@ mixin ClientCapabilitiesHelperMixin {
     );
   }
 
+  void setSignatureHelpNullActiveParameterSupport([bool supported = true]) {
+    textDocumentCapabilities = extendTextDocumentCapabilities(
+      textDocumentCapabilities,
+      {
+        'signatureHelp': {
+          'signatureInformation': {'noActiveParameterSupport': supported},
+        },
+      },
+    );
+  }
+
   void setSnippetTextEditSupport([bool supported = true]) {
-    experimentalCapabilities['snippetTextEdit'] = supported;
+    workspaceCapabilities = extendWorkspaceCapabilities(workspaceCapabilities, {
+      'workspaceEdit': {'snippetEditSupport': supported},
+    });
   }
 
   /// Sets the supported [CodeActionKind]s for this client. This implies
@@ -780,10 +803,16 @@ mixin ClientCapabilitiesHelperMixin {
     );
   }
 
-  void setSupportedCommandParameterKinds(Set<String>? kinds) {
-    experimentalCapabilities['dartCodeAction'] = {
-      'commandParameterSupport': {'supportedKinds': kinds?.toList()},
-    };
+  void setSupportedInteractiveFormInputKinds(Set<String>? inputTypes) {
+    const parentKey = 'interactiveResolve';
+    const inputTypesKey = 'inputTypes';
+    if (inputTypes != null) {
+      experimentalCapabilities[parentKey] = {
+        inputTypesKey: inputTypes.toList(),
+      };
+    } else {
+      experimentalCapabilities.remove(parentKey);
+    }
   }
 
   void setSupportsWindowShowMessageRequest([bool supported = true]) {
@@ -886,25 +915,12 @@ mixin LspAnalysisServerTestMixin
   /// server.
   bool failTestOnErrorDiagnostic = true;
 
-  /// A completer for [initialAnalysis].
-  final Completer<void> _initialAnalysisCompleter = Completer<void>();
-
-  /// A completer for [currentAnalysis].
-  Completer<void> _currentAnalysisCompleter = Completer<void>()..complete();
-
   /// [analysisOptionsPath] as a 'file:///' [Uri].
   Uri get analysisOptionsUri => pathContext.toUri(analysisOptionsPath);
-
-  /// A [Future] that completes when the current analysis completes (or is
-  /// already completed if no analysis is in progress).
-  Future<void> get currentAnalysis => _currentAnalysisCompleter.future;
 
   /// The experimental capabilities returned from the server during initialization.
   Map<String, Object?> get experimentalServerCapabilities =>
       serverCapabilities.experimental as Map<String, Object?>? ?? {};
-
-  /// A [Future] that completes with the first analysis after initialization.
-  Future<void> get initialAnalysis => _initialAnalysisCompleter.future;
 
   bool get initialized => _clientCapabilities != null;
 
@@ -1083,7 +1099,7 @@ mixin LspAnalysisServerTestMixin
     bool throwOnFailure = true,
     bool allowEmptyRootUri = false,
     bool includeClientRequestTime = false,
-    void Function()? immediatelyAfterInitialized,
+    FutureOr<void> Function()? immediatelyAfterInitialized,
   }) async {
     this.includeClientRequestTime = includeClientRequestTime;
 
@@ -1105,9 +1121,10 @@ mixin LspAnalysisServerTestMixin
     });
 
     var clientCapabilities = ClientCapabilities(
-      workspace: workspaceCapabilities,
+      general: generalCapabilties,
       textDocument: textDocumentCapabilities,
       window: windowCapabilities,
+      workspace: workspaceCapabilities,
       experimental: experimentalCapabilities ?? this.experimentalCapabilities,
     );
     _clientCapabilities = clientCapabilities;
@@ -1123,16 +1140,6 @@ mixin LspAnalysisServerTestMixin
     notificationsFromServer.listen((notification) async {
       if (notification.method == Method.progress) {
         await _handleProgress(notification);
-      } else if (notification.method == CustomMethods.analyzerStatus) {
-        var params = AnalyzerStatusParams.fromJson(
-          notification.params as Map<String, Object?>,
-        );
-
-        if (params.isAnalyzing) {
-          _handleAnalysisBegin();
-        } else {
-          _handleAnalysisEnd();
-        }
       }
     });
 
@@ -1175,7 +1182,7 @@ mixin LspAnalysisServerTestMixin
       );
 
       var initializedNotification = sendNotificationToServer(notification);
-      immediatelyAfterInitialized?.call();
+      await immediatelyAfterInitialized?.call();
       await initializedNotification;
       await pumpEventQueue();
     } else if (throwOnFailure) {
@@ -1268,7 +1275,7 @@ mixin LspAnalysisServerTestMixin
       DidOpenTextDocumentParams(
         textDocument: TextDocumentItem(
           uri: uri,
-          languageId: dartLanguageId,
+          languageId: LanguageKind.Dart,
           version: version,
           text: content,
         ),
@@ -1585,19 +1592,6 @@ mixin LspAnalysisServerTestMixin
     return outlineParams.outline;
   }
 
-  void _handleAnalysisBegin() {
-    assert(_currentAnalysisCompleter.isCompleted);
-    _currentAnalysisCompleter = Completer<void>();
-  }
-
-  void _handleAnalysisEnd() {
-    if (!_initialAnalysisCompleter.isCompleted) {
-      _initialAnalysisCompleter.complete();
-    }
-    assert(!_currentAnalysisCompleter.isCompleted);
-    _currentAnalysisCompleter.complete();
-  }
-
   Future<void> _handleProgress(NotificationMessage request) async {
     var params = ProgressParams.fromJson(
       request.params as Map<String, Object?>,
@@ -1612,15 +1606,6 @@ mixin LspAnalysisServerTestMixin
 
     if (WorkDoneProgressEnd.canParse(params.value, nullLspJsonReporter)) {
       _validProgressTokens.remove(params.token);
-    }
-
-    if (params.token == analyzingProgressToken) {
-      if (WorkDoneProgressBegin.canParse(params.value, nullLspJsonReporter)) {
-        _handleAnalysisBegin();
-      }
-      if (WorkDoneProgressEnd.canParse(params.value, nullLspJsonReporter)) {
-        _handleAnalysisEnd();
-      }
     }
   }
 
@@ -1660,6 +1645,25 @@ mixin LspSharedTestMixin on AbstractLspAnalysisServerTest
   @override
   Future<void> initializeServer() async {
     await initialize();
-    await currentAnalysis;
+    await workspaceAnalysisComplete();
+  }
+}
+
+extension on Registration {
+  /// Whether this registration is for Dart files, either by language ID
+  /// or because the pattern covers `.dart` files.
+  bool get includesDart {
+    var options = TextDocumentRegistrationOptions.fromJson(
+      registerOptions as Map<String, Object?>,
+    );
+
+    return options.documentSelector?.any(selectorIncludesDart) ?? false;
+  }
+
+  /// Helper to check if a selector covers Dart files, either by language ID
+  /// or because the pattern covers `.dart` files.
+  bool selectorIncludesDart(TextDocumentFilterScheme selector) {
+    return selector.language == dartLanguageId ||
+        (selector.patternString?.contains('.dart') ?? false);
   }
 }

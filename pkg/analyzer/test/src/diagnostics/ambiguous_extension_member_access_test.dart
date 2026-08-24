@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -36,7 +35,7 @@ int f(A a) => a();
   }
 
   test_getter_getter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E1 on int {
   void get a => 1;
 }
@@ -52,9 +51,20 @@ f() {
 }
 ''');
 
-    var node = findNode.propertyAccess('0.a');
+    var node = result.findNode.receiverPropertyExtraction('0.a');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: IntegerLiteral
+    literal: 0
+    staticType: int
+  operator: .
+  propertyName: a
+  resolution: InvalidNamedReadResolution
+    type: InvalidType
+    candidates
+    recovery: <null>
+  staticType: InvalidType
+V1: PropertyAccess
   target: IntegerLiteral
     literal: 0
     staticType: int
@@ -68,7 +78,7 @@ PropertyAccess
   }
 
   test_getter_getterStatic() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E1 on int {
   void get a => 1;
 }
@@ -82,9 +92,20 @@ f() {
 }
 ''');
 
-    var node = findNode.propertyAccess('0.a');
+    var node = result.findNode.receiverPropertyExtraction('0.a');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: IntegerLiteral
+    literal: 0
+    staticType: int
+  operator: .
+  propertyName: a
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@extension::E1::@getter::a
+    invokeType: void Function()
+    type: void
+  staticType: void
+V1: PropertyAccess
   target: IntegerLiteral
     literal: 0
     staticType: int
@@ -98,7 +119,7 @@ PropertyAccess
   }
 
   test_getter_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   int get a => 1;
 }
@@ -114,9 +135,20 @@ f() {
 }
 ''');
 
-    var node = findNode.propertyAccess('0.a');
+    var node = result.findNode.receiverPropertyExtraction('0.a');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: IntegerLiteral
+    literal: 0
+    staticType: int
+  operator: .
+  propertyName: a
+  resolution: InvalidNamedReadResolution
+    type: InvalidType
+    candidates
+    recovery: <null>
+  staticType: InvalidType
+V1: PropertyAccess
   target: IntegerLiteral
     literal: 0
     staticType: int
@@ -130,7 +162,7 @@ PropertyAccess
   }
 
   test_getter_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E on int {
   int get a => 1;
 }
@@ -146,9 +178,20 @@ f() {
 }
 ''');
 
-    var node = findNode.propertyAccess('0.a');
+    var node = result.findNode.receiverPropertyExtraction('0.a');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: IntegerLiteral
+    literal: 0
+    staticType: int
+  operator: .
+  propertyName: a
+  resolution: InvalidNamedReadResolution
+    type: InvalidType
+    candidates
+    recovery: <null>
+  staticType: InvalidType
+V1: PropertyAccess
   target: IntegerLiteral
     literal: 0
     staticType: int
@@ -175,34 +218,31 @@ void f() {
   }
 
   test_method_conflict_conflict_notSpecific_sameName() async {
-    var one = newFile('$testPackageLibPath/one.dart', '''
+    var one = getFile('$testPackageLibPath/one.dart');
+    var two = getFile('$testPackageLibPath/two.dart');
+
+    await resolveFilesWithDiagnostics({
+      one: '''
 extension E on int { void foo() {} }
-''');
-    var two = newFile('$testPackageLibPath/two.dart', '''
+//        ^
+// [context 1] E is defined in /home/test/lib/one.dart
+''',
+      two: '''
 extension E on int { void foo() {} }
-''');
-    await assertErrorsInCode(
-      '''
+//        ^
+// [context 2] E is defined in /home/test/lib/two.dart
+''',
+      testFile: '''
 // ignore_for_file: unused_import
 import 'one.dart';
 import 'two.dart';
 void f() {
   0.foo();
+//  ^^^
+// [diag.ambiguousExtensionMemberAccessTwo][context 1][context 2] A member named 'foo' is defined in 'extension E on int (where E is defined in /home/test/lib/one.dart)' and 'extension E on int (where E is defined in /home/test/lib/two.dart)', and neither is more specific.
 }
 ''',
-      [
-        error(
-          diag.ambiguousExtensionMemberAccessTwo,
-          87,
-          3,
-          messageContains: [
-            "'extension E on int (where E is defined in ${one.path})' and "
-                "'extension E on int (where E is defined in ${two.path})',",
-          ],
-          contextMessages: [message(one, 10, 1), message(two, 10, 1)],
-        ),
-      ],
-    );
+    });
   }
 
   test_method_conflict_conflict_notSpecific_sameName_invalidType() async {
@@ -260,7 +300,7 @@ void f() {
   }
 
   test_method_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E1 on int {
   void a() {}
 }
@@ -276,10 +316,10 @@ f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('0.a()');
+    var node = result.findNode.methodInvocation('0.a()');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: IntegerLiteral
+  target2: IntegerLiteral
     literal: 0
     staticType: int
   operator: .
@@ -334,34 +374,36 @@ void f() {
   }
 
   test_method_triple_conflict_sameName() async {
-    var one = newFile('$testPackageLibPath/one.dart', '''
+    var one = getFile('$testPackageLibPath/one.dart');
+    var two = getFile('$testPackageLibPath/two.dart');
+    var three = getFile('$testPackageLibPath/three.dart');
+
+    await resolveFilesWithDiagnostics({
+      one: '''
 extension E on int { void foo() {} }
-''');
-    var two = newFile('$testPackageLibPath/two.dart', '''
+//        ^
+// [context 1] E is defined in /home/test/lib/one.dart
+''',
+      two: '''
 extension E on int { void foo() {} }
-''');
-    newFile('$testPackageLibPath/three.dart', '''
+//        ^
+// [context 2] E is defined in /home/test/lib/two.dart
+''',
+      three: '''
 extension E1 on int { void foo() {} }
-''');
-    await assertErrorsInCode(
-      '''
+''',
+      testFile: '''
 // ignore_for_file: unused_import
 import 'one.dart';
 import 'two.dart';
 import 'three.dart';
 void f() {
   0.foo();
+//  ^^^
+// [diag.ambiguousExtensionMemberAccessThreeOrMore][context 1][context 2] A member named 'foo' is defined in extension 'E', extension 'E', and extension 'E1', and none are more specific.
 }
 ''',
-      [
-        error(
-          diag.ambiguousExtensionMemberAccessThreeOrMore,
-          108,
-          3,
-          contextMessages: [message(one, 10, 1), message(two, 10, 1)],
-        ),
-      ],
-    );
+    });
   }
 
   test_noMoreSpecificExtension() async {
@@ -482,7 +524,7 @@ int f(A a) => -a;
   }
 
   test_setter_setter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension E1 on int {
   set a(x) {}
 }
@@ -498,7 +540,8 @@ f() {
 }
 ''');
 
-    assertResolvedNodeText(findNode.assignment('= 3'), r'''
+    var node = result.findNode.assignment('= 3');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
   leftHandSide: PropertyAccess
     target: IntegerLiteral

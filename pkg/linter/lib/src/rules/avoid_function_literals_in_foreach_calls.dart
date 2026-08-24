@@ -40,7 +40,7 @@ bool _isIterable(DartType? type) =>
     type != null && type.implementsInterface('Iterable', 'dart.core');
 
 class AvoidFunctionLiteralsInForeachCalls extends AnalysisRule {
-  AvoidFunctionLiteralsInForeachCalls()
+  new()
     : super(
         name: LintNames.avoid_function_literals_in_foreach_calls,
         description: _desc,
@@ -59,11 +59,7 @@ class AvoidFunctionLiteralsInForeachCalls extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitMethodInvocation(MethodInvocation node) {
     var target = node.target;

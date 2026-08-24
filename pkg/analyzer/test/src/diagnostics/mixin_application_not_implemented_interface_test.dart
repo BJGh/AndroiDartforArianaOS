@@ -26,6 +26,8 @@ abstract class X with Unresolved, M, CycleWithX {}
 // [diag.recursiveInterfaceInheritance] 'X' can't be a superinterface of itself: CycleWithX, X.
 //                    ^^^^^^^^^^
 // [diag.mixinOfNonClass] Classes can only mix in mixins and classes.
+//                                ^
+// [diag.mixinApplicationNotImplementedInterface] 'M' can't be mixed onto 'Object' because 'Object' doesn't implement 'A'.
 mixin M on A {}
 mixin CycleWithX on X {}
 //    ^^^^^^^^^^
@@ -52,6 +54,49 @@ class C extends Object with M1, M2 {}
 ''');
   }
 
+  test_class_matchingInterface_inPreviousMixin_fromAugmentation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+mixin M1 {}
+mixin M2 on M1 {}
+
+class A with M1 {}
+augment class A with M2 {}
+''');
+  }
+
+  test_class_matchingInterface_inPreviousMixin_fromAugmentation_generic() async {
+    await resolveTestCodeWithDiagnostics(r'''
+class B<T> {}
+
+mixin M1<T> implements B<T> {}
+mixin M2<T> on B<T> {}
+
+class A<T> with M1<T> {}
+augment class A<T> with M2 {}
+''');
+  }
+
+  test_class_matchingInterface_inPreviousMixin_fromAugmentation_part() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
+part 'b.dart';
+
+mixin M1 {}
+mixin M2 on M1 {}
+
+class A with M1 {}
+''',
+      b: r'''
+part of 'a.dart';
+
+augment class A with M2 {}
+''',
+    });
+  }
+
   test_class_noMatchingInterface() async {
     await resolveTestCodeWithDiagnostics('''
 abstract class A<T> {}
@@ -63,14 +108,41 @@ class C extends Object with M {}
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_class_noMatchingInterface_fromAugmentation() async {
     await resolveTestCodeWithDiagnostics('''
 class B with M {}
+//           ^
+// [diag.mixinApplicationNotImplementedInterface] 'M' can't be mixed onto 'Object' because 'Object' doesn't implement 'A'.
 mixin M {}
 class A {}
 augment mixin M on A {}
+//              ^^
+// [diag.mixinAugmentationHasOnClause] Mixin augmentations can't have 'on' clauses.
 ''');
+  }
+
+  test_class_noMatchingInterface_fromAugmentation_part() async {
+    var a = getFile('$testPackageLibPath/a.dart');
+    var b = getFile('$testPackageLibPath/b.dart');
+
+    await resolveFilesWithDiagnostics({
+      a: r'''
+part 'b.dart';
+
+class B with M {}
+//           ^
+// [diag.mixinApplicationNotImplementedInterface] 'M' can't be mixed onto 'Object' because 'Object' doesn't implement 'A'.
+mixin M {}
+class A {}
+''',
+      b: r'''
+part of 'a.dart';
+
+augment mixin M on A {}
+//              ^^
+// [diag.mixinAugmentationHasOnClause] Mixin augmentations can't have 'on' clauses.
+''',
+    });
   }
 
   test_class_noMatchingInterface_withTypeArguments() async {
@@ -117,7 +189,7 @@ class C extends Object with M {}
 
   test_class_recursiveSubtypeCheck() async {
     // See dartbug.com/32353 for a detailed explanation.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class ioDirectory implements ioFileSystemEntity {}
 
 class ioFileSystemEntity {}
@@ -147,7 +219,7 @@ abstract class Directory implements FileSystemEntity, ioDirectory {}
 mixin DirectoryAddOnsMixin implements Directory {}
 ''');
 
-    var mixins = findElement2.class_('_LocalDirectory').mixins;
+    var mixins = result.findElement.class_('_LocalDirectory').mixins;
     assertType(mixins[0], 'ForwardingDirectory<Directory>');
   }
 
@@ -256,6 +328,18 @@ enum E with M1, M2 {
 ''');
   }
 
+  test_enum_matchingInterface_inPreviousMixin_fromAugmentation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+mixin M1 {}
+mixin M2 on M1 {}
+
+enum E with M1 {
+  v
+}
+augment enum E with M2 {}
+''');
+  }
+
   test_enum_noMatchingInterface() async {
     await resolveTestCodeWithDiagnostics('''
 abstract class A {}
@@ -280,20 +364,11 @@ enum E with M {
 ''');
   }
 
-  @SkippedTest() // TODO(scheglov): implement augmentation
   test_enum_noSuperclassConstraint_augmented() async {
-    newFile(testFile.path, r'''
-part 'a.dart';
+    await resolveTestCodeWithDiagnostics(r'''
 mixin M {}
 enum E {v}
-''');
-
-    var a = newFile('$testPackageLibPath/a.dart', r'''
-part of 'test.dart';
 augment enum E with M {}
 ''');
-
-    await resolveFile2(a);
-    assertNoErrorsInResult();
   }
 }

@@ -47,7 +47,7 @@ which reside in different sections such as libraries, classes, members, code, et
 ```
 type BytecodeFile {
   UInt32 magic = 0x44424333; // 'DBC3'
-  UInt32 formatVersion = 2;
+  UInt32 formatVersion = 3;
 
   // Descriptors of the sections below.
   // Each section has a fixed index in the descriptors array.
@@ -69,6 +69,7 @@ type BytecodeFile {
   SourceFile[] sourceFiles;
   LineStarts[] lineStarts;
   LocalVariables[] localVariables;
+  RecordedCoverageArray[] recordedCoverage;
   PackedObject[] annotations;
 }
 
@@ -604,7 +605,8 @@ Code section contains bodies of members (including field initializers).
 type Code {
   UInt flags = (hasExceptionsTable, hasSourcePositions, hasNullableFields,
                 hasClosures, hasParameterFlags, hasForwardingStubTarget,
-                hasDefaultFunctionTypeArgs, hasLocalVariables)
+                hasDefaultFunctionTypeArgs, hasLocalVariables,
+                hasRecordedCoverage)
 
   if hasParameterFlags
     // For all parameters: (isCovariant, isCovariantByClass)
@@ -634,6 +636,11 @@ type Code {
   if hasLocalVariables
     // Offset of LocalVariables in ‘localVariables’ section of BytecodeFile.
     UInt localVariablesOffset;
+
+  if hasRecordedCoverage
+    // Offset of RecordedCoverageArray in ‘recordedCoverage’ section of
+    // BytecodeFile.
+    Uint recordedCoverageOffset;
 
   if hasNullableFields
     List<PackedObject> nullableFields;
@@ -681,7 +688,8 @@ type ClosureDeclaration {
 
 type ClosureCode {
   UInt flags = (hasExceptionsTable, hasSourcePositions, hasLocalVariables,
-                capturesOnlyFinalNotLateVars, hasLocalFunctionId)
+                capturesOnlyFinalNotLateVars, hasLocalFunctionId,
+                hasRecordedCoverage)
 
   if hasLocalFunctionId
     UInt localFunctionId;
@@ -699,6 +707,11 @@ type ClosureCode {
   if hasLocalVariables
     // Offset of LocalVariables in ‘localVariables’ section of BytecodeFile.
     UInt localVariablesOffset;
+
+  if hasRecordedCoverage
+    // Offset of RecordedCoverageArray in ‘recordedCoverage’ section of
+    // BytecodeFile.
+    UInt recordedCoverageOffset;
 }
 ```
 
@@ -806,7 +819,7 @@ type ConstantExternalCall extends ConstantPoolEntry {
   Byte tag = 15;
 }
 
-type ConstantFfiCall extends ConstantPoolEntry {
+type ConstantNativeFunction extends ConstantPoolEntry {
   Byte tag = 16;
 }
 
@@ -968,6 +981,28 @@ type ContextVariable extends LocalVariableEntry {
 }
 ```
 
+### Recorded coverage
+
+```
+type RecordedCoverageArray {
+  UInt numEntries;
+  // Unordered encoded list of entries.
+  RecordedCoverageEntry[numEntries] entries;
+}
+
+type RecordedCoverageEntry = {
+  // The index of the entry's type in the RecordedEntryType enum.
+  UInt type;
+  // Delta-encoded file offset.
+  SLEB128 fileOffset;
+}
+
+enum RecordedCoverageType = {
+  regular = 0,
+  branchTarget = 1;
+}
+```
+
 ## Bytecode instructions
 
 ### Execution state
@@ -1069,6 +1104,10 @@ The following operand encodings are used:
 #### Trap
 
 Unreachable instruction.
+
+#### Dup
+
+Duplicates the top of the stack.
 
 #### Entry D
 
@@ -1314,7 +1353,14 @@ ContantPool[D] is a ConstantExternalCall.
 #### FfiCall D
 
 Invoke native target of FFI call.
-ContantPool[D] is a ConstantFfiCall.
+ContantPool[D] is a ConstantNativeFunction that is used to cache
+the resolved function's entry point.
+
+#### ResolveNativeFunction D
+
+Resolve the native function for the constant Native instance at SP[0].
+ContantPool[D] is a ConstantNativeFunction that is used to cache
+the resolved function's entry point.
 
 #### ReturnTOS
 
@@ -1445,3 +1491,14 @@ Store object SP[0] into the element [D] of closure SP[-1].
 
 No-op. Provides a unique PC offset to ensure an emitted source position is not
 overwritten by a different source position emitted by the next instruction.
+
+#### RecordCoverage A, E
+
+Records coverage. [A] is the index in the RecordedCoverageType enum for the type
+of coverage being recorded, and [E] is the index of the entry in
+the RecordedCoverageArray.
+
+The information in [A] is redundant, but allows the interpreter to check to see
+if the isolate group is currently recorded that type of coverage without needing
+either to iterate over the serialized RecordedCoverageArray or to index into the
+bytecode's coverage array, which may be lazily allocated.

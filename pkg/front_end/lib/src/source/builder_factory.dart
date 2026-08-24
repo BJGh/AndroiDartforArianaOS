@@ -122,7 +122,7 @@ class BuilderFactory {
   final ContainerName? _containerName;
   final bool _inLibrary;
 
-  BuilderFactory({
+  new({
     required ProblemReporting problemReporting,
     required SourceLoader loader,
     required BuilderRegistry builderRegistry,
@@ -229,7 +229,6 @@ class BuilderFactory {
     }
     if (augmentations != null) {
       for (Fragment augmentation in augmentations) {
-        // Coverage-ignore-block(suite): Not run.
         _createBuilder(augmentation);
       }
     }
@@ -377,11 +376,8 @@ class BuilderFactory {
     ConstructorEncodingStrategy encodingStrategy =
         new ConstructorEncodingStrategy(
           _declarationBuilder!,
-          isClosureContextLoweringEnabled: _loader
-              .target
-              .backendTarget
-              .flags
-              .isClosureContextLoweringEnabled,
+          isClosureContextLoweringEnabled:
+              _loader.isClosureContextLoweringEnabled,
         );
 
     ConstructorReferences constructorReferences = new ConstructorReferences(
@@ -1310,7 +1306,7 @@ abstract class BuilderRegistry {
 
 class EnumValuesDeclaration extends _PropertyDeclaration
     implements SyntheticDeclaration {
-  EnumValuesDeclaration({
+  new({
     required String name,
     required UriOffsetLength uriOffset,
     required FieldDeclaration field,
@@ -1369,7 +1365,7 @@ sealed class _ConstructorDeclaration extends _Declaration {
   @override
   final UriOffsetLength uriOffset;
 
-  _ConstructorDeclaration(
+  new(
     super.kind, {
     required super.displayName,
     required super.isAugment,
@@ -1400,7 +1396,7 @@ sealed class _ConstructorPreBuilder<T extends _ConstructorDeclaration>
   final List<T> _augmentations = [];
 
   // TODO(johnniwinther): Report error if [fragment] is augmenting.
-  _ConstructorPreBuilder(this._declaration);
+  new(this._declaration);
 
   @override
   bool absorbFragment(
@@ -1479,7 +1475,7 @@ abstract class _Declaration {
   final bool inLibrary;
   final bool isStatic;
 
-  _Declaration(
+  new(
     this.kind, {
     required this.displayName,
     required this.isAugment,
@@ -1557,7 +1553,7 @@ class _DeclarationPreBuilder extends _PreBuilder {
   final List<_StandardDeclaration> _augmentations = [];
 
   // TODO(johnniwinther): Report error if [fragment] is augmenting.
-  _DeclarationPreBuilder(this._declaration);
+  new(this._declaration);
 
   @override
   bool absorbFragment(
@@ -1727,7 +1723,7 @@ class _FactoryConstructorDeclaration extends _ConstructorDeclaration
   final String _name;
   final FactoryDeclaration _declaration;
 
-  _FactoryConstructorDeclaration(
+  new(
     this._declaration, {
     required String name,
     required super.displayName,
@@ -1771,7 +1767,7 @@ class _FactoryConstructorPreBuilder
     extends _ConstructorPreBuilder<_FactoryConstructorDeclaration> {
   final String _name;
 
-  _FactoryConstructorPreBuilder(this._name, super._declaration);
+  new(this._name, super._declaration);
 
   @override
   void createBuilders(BuilderFactory builderFactory) {
@@ -1788,7 +1784,7 @@ class _FactoryConstructorPreBuilder
 
 class _FieldDeclaration extends _PropertyDeclaration
     with _DeclarationReportingMixin {
-  _FieldDeclaration({
+  new({
     required super.displayName,
     required super.isAugment,
     required super.inPatch,
@@ -1826,7 +1822,7 @@ class _GenerativeConstructorDeclaration extends _ConstructorDeclaration
   final String _name;
   final ConstructorDeclaration _declaration;
 
-  _GenerativeConstructorDeclaration(
+  new(
     this._declaration, {
     required String name,
     required super.displayName,
@@ -1872,7 +1868,7 @@ class _GenerativeConstructorPreBuilder
     extends _ConstructorPreBuilder<_GenerativeConstructorDeclaration> {
   final String _name;
 
-  _GenerativeConstructorPreBuilder(this._name, super._declaration);
+  new(this._name, super._declaration);
 
   @override
   void createBuilders(BuilderFactory builderFactory) {
@@ -1889,7 +1885,7 @@ class _GenerativeConstructorPreBuilder
 
 class _GetterDeclaration extends _PropertyDeclaration
     with _DeclarationReportingMixin {
-  _GetterDeclaration({
+  new({
     required super.displayName,
     required super.isAugment,
     required super.inPatch,
@@ -1905,7 +1901,7 @@ class _GetterDeclaration extends _PropertyDeclaration
 }
 
 abstract class _NonConstructorDeclaration extends _Declaration {
-  _NonConstructorDeclaration(
+  new(
     super.kind, {
     required super.displayName,
     required super.isAugment,
@@ -2017,7 +2013,7 @@ abstract class _PropertyDeclaration extends _NonConstructorDeclaration {
   @override
   final UriOffsetLength uriOffset;
 
-  _PropertyDeclaration({
+  new({
     required super.displayName,
     required super.isAugment,
     required super.inPatch,
@@ -2065,7 +2061,7 @@ class _PropertyDeclarations {
   final GetterDeclaration? getter;
   final SetterDeclaration? setter;
 
-  _PropertyDeclarations({this.field, this.getter, this.setter});
+  new({this.field, this.getter, this.setter});
 }
 
 enum _PropertyKind { Getter, Setter, Field, FinalField }
@@ -2082,7 +2078,7 @@ class _PropertyPreBuilder extends _PreBuilder {
   List<SetterDeclaration> _setterAugmentations = [];
 
   // TODO(johnniwinther): Report error if [field] is augmenting.
-  _PropertyPreBuilder.forField(_PropertyDeclaration field)
+  new forField(_PropertyDeclaration field)
     : isStatic = field.isStatic,
       inPatch = field.inPatch,
       name = field.displayName,
@@ -2108,7 +2104,7 @@ class _PropertyPreBuilder extends _PreBuilder {
   }
 
   // TODO(johnniwinther): Report error if [getter] is augmenting.
-  _PropertyPreBuilder.forGetter(_PropertyDeclaration getter)
+  new forGetter(_PropertyDeclaration getter)
     : isStatic = getter.isStatic,
       inPatch = getter.inPatch,
       name = getter.displayName,
@@ -2130,7 +2126,7 @@ class _PropertyPreBuilder extends _PreBuilder {
   }
 
   // TODO(johnniwinther): Report error if [setter] is augmenting.
-  _PropertyPreBuilder.forSetter(_PropertyDeclaration setter)
+  new forSetter(_PropertyDeclaration setter)
     : isStatic = setter.isStatic,
       inPatch = setter.inPatch,
       name = setter.displayName,
@@ -2617,7 +2613,7 @@ class _PropertyPreBuilder extends _PreBuilder {
 
 class _SetterDeclaration extends _PropertyDeclaration
     with _DeclarationReportingMixin {
-  _SetterDeclaration({
+  new({
     required super.displayName,
     required super.isAugment,
     required super.inPatch,
@@ -2638,7 +2634,7 @@ class _SetterDeclaration extends _PropertyDeclaration
 }
 
 abstract class _StandardDeclaration extends _NonConstructorDeclaration {
-  _StandardDeclaration(
+  new(
     super.kind, {
     required super.displayName,
     required super.isAugment,
@@ -2659,7 +2655,7 @@ class _StandardFragmentDeclaration extends _StandardDeclaration
   @override
   final Fragment _fragment;
 
-  _StandardFragmentDeclaration(
+  new(
     super.kind,
     this._fragment, {
     required super.displayName,

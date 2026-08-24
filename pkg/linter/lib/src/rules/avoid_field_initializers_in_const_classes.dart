@@ -17,7 +17,7 @@ import '../extensions.dart';
 const _desc = r'Avoid field initializers in const classes.';
 
 class AvoidFieldInitializersInConstClasses extends AnalysisRule {
-  AvoidFieldInitializersInConstClasses()
+  new()
     : super(
         name: LintNames.avoid_field_initializers_in_const_classes,
         description: _desc,
@@ -43,7 +43,7 @@ class HasParameterReferenceVisitor extends RecursiveAstVisitor<void> {
 
   bool useParameter = false;
 
-  HasParameterReferenceVisitor(this.parameters);
+  new(this.parameters);
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
@@ -55,11 +55,7 @@ class HasParameterReferenceVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitConstructorFieldInitializer(ConstructorFieldInitializer node) {
     var declaration = node.parent;
@@ -101,10 +97,23 @@ class _Visitor extends SimpleAstVisitor<void> {
       if (declaredElement.constructors.every((e) => !e.isConst)) {
         return;
       }
+      // Only the parameters of a primary constructor are in scope in a field
+      // initializer.
+      var namePart = parent.namePart;
+      var primaryConstructor = namePart is PrimaryConstructorDeclaration
+          ? namePart.declaredFragment?.element
+          : null;
       for (var variable in node.fields.variables) {
-        if (variable.initializer != null) {
-          rule.reportAtNode(variable);
+        var initializer = variable.initializer;
+        if (initializer == null) continue;
+        if (primaryConstructor != null) {
+          var visitor = HasParameterReferenceVisitor(
+            primaryConstructor.formalParameters,
+          );
+          initializer.accept(visitor);
+          if (visitor.useParameter) continue;
         }
+        rule.reportAtNode(variable);
       }
     }
   }

@@ -28,7 +28,7 @@ f() {
   }
 
   test_method_undefined() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension E on String {}
 f() {
   E('a').m();
@@ -37,14 +37,14 @@ f() {
 }
 ''');
 
-    var node = findNode.methodInvocation('m();');
+    var node = result.findNode.methodInvocation('m();');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: ExtensionOverride
+  target2: ExtensionOverride
     name: E
     argumentList: ArgumentList
       leftParenthesis: (
-      arguments
+      arguments2
         SimpleStringLiteral
           literal: 'a'
       rightParenthesis: )

@@ -9,7 +9,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/error/error.dart';
 
 import '../analyzer.dart';
@@ -18,7 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't assign to `void`.";
 
 class VoidChecks extends AnalysisRule {
-  VoidChecks() : super(name: LintNames.void_checks, description: _desc);
+  new() : super(name: LintNames.void_checks, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.voidChecks;
@@ -28,7 +27,7 @@ class VoidChecks extends AnalysisRule {
     RuleVisitorRegistry registry,
     RuleContext context,
   ) {
-    var visitor = _Visitor(this, context);
+    var visitor = _Visitor(this);
     registry.addAssignedVariablePattern(this, visitor);
     registry.addAssignmentExpression(this, visitor);
     registry.addInstanceCreationExpression(this, visitor);
@@ -37,13 +36,7 @@ class VoidChecks extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  final TypeSystem typeSystem;
-
-  _Visitor(this.rule, RuleContext context) : typeSystem = context.typeSystem;
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   bool isTypeAcceptableWhenExpectingFutureOrVoid(DartType type) {
     if (type is DynamicType) return true;
     if (isTypeAcceptableWhenExpectingVoid(type)) return true;

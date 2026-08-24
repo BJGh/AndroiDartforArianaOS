@@ -75,11 +75,10 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
     if (node.name case var name?) {
       _addOccurrence(node.declaredFragment!.element, name);
     } else {
-      _addOccurrence(
-        node.declaredFragment!.element,
-        // TODO(scheglov): support primary constructors
-        node.typeName!.beginToken,
-      );
+      var typeName = node.typeName;
+      if (typeName != null) {
+        _addOccurrence(node.declaredFragment!.element, typeName.beginToken);
+      }
     }
 
     super.visitConstructorDeclaration(node);
@@ -153,10 +152,7 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
 
   @override
   void visitExtensionTypeDeclaration(ExtensionTypeDeclaration node) {
-    _addOccurrence(
-      node.declaredFragment!.element,
-      node.primaryConstructor.typeName,
-    );
+    _addOccurrence(node.declaredFragment!.element, node.namePart.typeName);
 
     super.visitExtensionTypeDeclaration(node);
   }
@@ -282,14 +278,12 @@ class DartUnitOccurrencesComputerVisitor extends GeneralizingAstVisitor<void> {
     // For unnamed constructors, we don't want to add an occurrence for the
     // class name here because visitConstructorDeclaration will have added one
     // for the constructor (not the type).
-    if (node.parent case ConstructorDeclaration(
-      :var name,
-      :var typeName,
-    ) when name == null && node == typeName) {
+    if (node.parent case ConstructorDeclaration(:var name, :var typeName)
+        when name == null && node == typeName) {
       return;
     }
 
-    var element = node.writeOrReadElement;
+    var element = node.writeOrReadElement?.baseElement;
     if (element != null) {
       _addOccurrence(element, node.token);
     }

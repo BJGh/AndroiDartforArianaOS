@@ -16,8 +16,7 @@ import '../utils.dart';
 const _desc = r'Name extensions using UpperCamelCase.';
 
 class CamelCaseExtensions extends AnalysisRule {
-  CamelCaseExtensions()
-    : super(name: LintNames.camel_case_extensions, description: _desc);
+  new() : super(name: LintNames.camel_case_extensions, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.camelCaseExtensions;
@@ -32,11 +31,7 @@ class CamelCaseExtensions extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitExtensionDeclaration(ExtensionDeclaration node) {
     // Don't lint augmentations.

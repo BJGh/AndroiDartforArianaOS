@@ -12,6 +12,7 @@
 #include <dlfcn.h>              // NOLINT
 #include <elf.h>                // NOLINT
 #include <errno.h>              // NOLINT
+#include <fcntl.h>              // NOLINT
 #include <limits.h>             // NOLINT
 #include <malloc.h>             // NOLINT
 #include <sys/resource.h>       // NOLINT
@@ -20,6 +21,7 @@
 #include <time.h>               // NOLINT
 #include <unistd.h>             // NOLINT
 
+#include "platform/signal_blocker.h"
 #include "platform/utils.h"
 #include "vm/code_observers.h"
 #include "vm/dart.h"
@@ -220,6 +222,26 @@ uintptr_t OS::CurrentRSS() {
   return current_rss_pages * getpagesize();
 }
 
+bool OS::SafeReadMemory(void* address,
+                        uint8_t* buffer,
+                        size_t size_in_bytes,
+                        const char** error) {
+  ThreadSignalBlocker tsb(SIGPROF);
+  int fd = TEMP_FAILURE_RETRY_NO_SIGNAL_BLOCKER(
+      open("/proc/self/mem", O_RDONLY | O_CLOEXEC));
+  if (fd < 0) {
+    *error = strerror(errno);
+    return false;
+  }
+  ssize_t bytes_read = TEMP_FAILURE_RETRY_NO_SIGNAL_BLOCKER(
+      pread64(fd, buffer, size_in_bytes, reinterpret_cast<off64_t>(address)));
+  if (bytes_read == -1) {
+    *error = strerror(errno);
+  }
+  close(fd);
+  return bytes_read == static_cast<ssize_t>(size_in_bytes);
+}
+
 void OS::Sleep(int64_t millis) {
   int64_t micros = millis * kMicrosecondsPerMillisecond;
   SleepMicros(micros);
@@ -384,7 +406,7 @@ void OS::Exit(int code) {
 OS::BuildId OS::GetAppBuildId(const uint8_t* snapshot_instructions) {
   // First return the build ID information from the instructions image if
   // available.
-  const Image instructions_image(snapshot_instructions);
+  const TextImage instructions_image(snapshot_instructions);
   if (auto* const image_build_id = instructions_image.build_id()) {
     return {instructions_image.build_id_length(), image_build_id};
   }

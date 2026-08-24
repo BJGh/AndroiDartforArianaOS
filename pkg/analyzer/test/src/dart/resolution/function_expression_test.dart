@@ -17,13 +17,13 @@ main() {
 @reflectiveTest
 class FunctionExpressionResolutionTest extends PubPackageResolutionTest {
   test_genericFunctionExpression_fBoundedDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f() {
   <T extends List<T>>() {};
 }
 ''');
 
-    var node = findNode.functionExpression('<T extends');
+    var node = result.findNode.functionExpression('<T extends');
     assertResolvedNodeText(node, r'''
 FunctionExpression
   typeParameters: TypeParameterList
@@ -62,13 +62,13 @@ FunctionExpression
   }
 
   test_genericFunctionExpression_simpleDefaultType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 void f() {
   <T extends num>() {};
 }
 ''');
 
-    var node = findNode.functionExpression('<T extends');
+    var node = result.findNode.functionExpression('<T extends');
     assertResolvedNodeText(node, r'''
 FunctionExpression
   typeParameters: TypeParameterList
@@ -99,15 +99,37 @@ FunctionExpression
   }
 
   test_signatureScope_noFormalParameters() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 var f = ({int x = x}) {};
 //                ^
 // [diag.undefinedIdentifier] Undefined name 'x'.
 ''');
 
-    var node = findNode.singleFormalParameterList;
+    var node = result.findNode.singleFormalParameterList;
     assertResolvedNodeText(node, r'''
 FormalParameterList
+  leftParenthesis: (
+  delimitedFormalParameters: DelimitedFormalParameters
+    leftDelimiter: {
+    formalParameters
+      RegularFormalParameter
+        type: NamedType
+          name: int
+          element: dart:core::@class::int
+          type: int
+        name: x
+        defaultClause: FormalParameterDefaultClause
+          separator: =
+          value2: SimpleIdentifier
+            token: x
+            element: <null>
+            staticType: InvalidType
+        declaredFragment: <testLibraryFragment> x@14
+          element: isPublic
+            type: int
+    rightDelimiter: }
+  rightParenthesis: )
+FormalParameterList(v1)
   leftParenthesis: (
   leftDelimiter: {
   parameter: RegularFormalParameter

@@ -16,7 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Start multiline strings with a newline.';
 
 class LeadingNewlinesInMultilineStrings extends AnalysisRule {
-  LeadingNewlinesInMultilineStrings()
+  new()
     : super(
         name: LintNames.leading_newlines_in_multiline_strings,
         description: _desc,
@@ -37,12 +37,8 @@ class LeadingNewlinesInMultilineStrings extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   late LineInfo lineInfo;
-
-  _Visitor(this.rule);
 
   @override
   void visitCompilationUnit(CompilationUnit node) {

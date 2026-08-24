@@ -1389,7 +1389,7 @@ void OneByteStringFromCharCodeInstr::EmitNativeCode(
   __ movl(result,
           compiler::Address(result, char_code,
                             TIMES_HALF_WORD_SIZE,  // Char code is a smi.
-                            Symbols::kNullCharCodeSymbolOffset * kWordSize));
+                            0));
 }
 
 LocationSummary* StringToCharCodeInstr::MakeLocationSummary(Zone* zone,
@@ -2337,7 +2337,7 @@ static void InlineArrayAllocation(FlowGraphCompiler* compiler,
 
 void CreateArrayInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   compiler::Label slow_path, done;
-  if (!FLAG_use_slow_path && FLAG_inline_alloc) {
+  if (UseInlineAllocation()) {
     if (compiler->is_optimizing() && num_elements()->BindsToConstant() &&
         num_elements()->BoundConstant().IsSmi()) {
       const intptr_t length =
@@ -2349,10 +2349,7 @@ void CreateArrayInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
 
   __ Bind(&slow_path);
-  auto object_store = compiler->isolate_group()->object_store();
-  const auto& allocate_array_stub =
-      Code::ZoneHandle(compiler->zone(), object_store->allocate_array_stub());
-  compiler->GenerateStubCall(source(), allocate_array_stub,
+  compiler->GenerateStubCall(source(), StubCode::AllocateArray(),
                              UntaggedPcDescriptors::kOther, locs(), deopt_id(),
                              env());
   __ Bind(&done);
@@ -2414,7 +2411,7 @@ void AllocateUninitializedContextInstr::EmitNativeCode(
   compiler->AddSlowPathCode(slow_path);
   intptr_t instance_size = Context::InstanceSize(num_context_variables());
 
-  if (!FLAG_use_slow_path && FLAG_inline_alloc) {
+  if (UseInlineAllocation()) {
     __ TryAllocateArray(kContextCid, instance_size, slow_path->entry_label(),
                         compiler::Assembler::kFarJump,
                         result,  // instance
@@ -4095,6 +4092,7 @@ DEFINE_EMIT(SimdBinaryOp,
   SIMD_OP_FLOAT_ARITH(V, Sqrt, sqrt)                                           \
   SIMD_OP_FLOAT_ARITH(V, Negate, negate)                                       \
   SIMD_OP_FLOAT_ARITH(V, Abs, abs)                                             \
+  V(Int32x4Not, notps)                                                         \
   V(Float32x4Reciprocal, reciprocalps)                                         \
   V(Float32x4ReciprocalSqrt, rsqrtps)
 
@@ -4247,6 +4245,18 @@ DEFINE_EMIT(Int32x4FromBools,
   __ AddImmediate(ESP, compiler::Immediate(kSimd128Size));
 }
 
+DEFINE_EMIT(Int32x4GetLane, (Register result, XmmRegister value)) {
+  COMPILE_ASSERT(SimdOpInstr::kInt32x4GetY == (SimdOpInstr::kInt32x4GetX + 1) &&
+                 SimdOpInstr::kInt32x4GetZ == (SimdOpInstr::kInt32x4GetX + 2) &&
+                 SimdOpInstr::kInt32x4GetW == (SimdOpInstr::kInt32x4GetX + 3));
+  const intptr_t lane_index = instr->kind() - SimdOpInstr::kInt32x4GetX;
+  ASSERT(0 <= lane_index && lane_index < 4);
+  __ SubImmediate(ESP, compiler::Immediate(kSimd128Size));
+  __ movups(compiler::Address(ESP, 0), value);
+  __ movl(result, compiler::Address(ESP, lane_index * kInt32Size));
+  __ AddImmediate(ESP, compiler::Immediate(kSimd128Size));
+}
+
 // TODO(dartbug.com/30953) need register with a byte component for setcc.
 DEFINE_EMIT(Int32x4GetFlag, (Fixed<Register, EDX> result, XmmRegister value)) {
   COMPILE_ASSERT(
@@ -4367,6 +4377,11 @@ DEFINE_EMIT(Int32x4Select,
   SIMPLE(Float64x2Zero)                                                        \
   SIMPLE(Float32x4Clamp)                                                       \
   SIMPLE(Float64x2Clamp)                                                       \
+  CASE(Int32x4GetX)                                                            \
+  CASE(Int32x4GetY)                                                            \
+  CASE(Int32x4GetZ)                                                            \
+  CASE(Int32x4GetW)                                                            \
+  ____(Int32x4GetLane)                                                         \
   CASE(Int32x4GetFlagX)                                                        \
   CASE(Int32x4GetFlagY)                                                        \
   CASE(Int32x4GetFlagZ)                                                        \
@@ -5933,6 +5948,26 @@ LocationSummary* UnaryUint32OpInstr::MakeLocationSummary(Zone* zone,
 }
 
 void UnaryUint32OpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  Register out = locs()->out(0).reg();
+  ASSERT(locs()->in(0).reg() == out);
+
+  ASSERT(op_kind() == Token::kBIT_NOT);
+
+  __ notl(out);
+}
+
+LocationSummary* UnaryInt32OpInstr::MakeLocationSummary(Zone* zone,
+                                                        bool opt) const {
+  const intptr_t kNumInputs = 1;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* summary = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
+  summary->set_in(0, Location::RequiresRegister());
+  summary->set_out(0, Location::SameAsFirstInput());
+  return summary;
+}
+
+void UnaryInt32OpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   Register out = locs()->out(0).reg();
   ASSERT(locs()->in(0).reg() == out);
 

@@ -17,8 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r'Avoid method calls or property accesses on a `dynamic` target.';
 
 class AvoidDynamicCalls extends AnalysisRule {
-  AvoidDynamicCalls()
-    : super(name: LintNames.avoid_dynamic_calls, description: _desc);
+  new() : super(name: LintNames.avoid_dynamic_calls, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.avoidDynamicCalls;
@@ -42,7 +41,7 @@ class AvoidDynamicCalls extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   /// Member names which are allowed to be accessed on `dynamic`- or
   /// `Function`-typed expressions.
   static const _allowedMemberAccesses = {
@@ -51,10 +50,6 @@ class _Visitor extends SimpleAstVisitor<void> {
     'runtimeType',
     'toString',
   };
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
 
   @override
   void visitAssignmentExpression(AssignmentExpression node) {

@@ -16,8 +16,58 @@ main() {
 
 @reflectiveTest
 class FieldPromotionTest extends PubPackageResolutionTest {
+  test_beforeInferenceUpdate2() async {
+    var result = await resolveTestCodeWithDiagnostics('''
+// %before-language-feature: inference-update-2
+class C {
+  final int? _foo;
+  C(this._foo);
+}
+
+void f(C c) {
+  if ((c)._foo != null) {
+    (c)._foo;
+  }
+}
+''');
+    var node = result.findNode.receiverPropertyExtraction('._foo;');
+    assertResolvedNodeText(node, r'''
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::f::@formalParameter::c
+      staticType: C
+    rightParenthesis: )
+    staticType: C
+  operator: .
+  propertyName: _foo
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_foo
+    invokeType: int? Function()
+    type: int?
+  staticType: int?
+V1: PropertyAccess
+  target: ParenthesizedExpression
+    leftParenthesis: (
+    expression: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::f::@formalParameter::c
+      staticType: C
+    rightParenthesis: )
+    staticType: C
+  operator: .
+  propertyName: SimpleIdentifier
+    token: _foo
+    element: <testLibrary>::@class::C::@getter::_foo
+    staticType: int?
+  staticType: int?
+''');
+  }
+
   test_cascaded_invocation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final Object? _field;
   C(this._field);
@@ -27,10 +77,10 @@ void f(C c) {
   c.._field().toString();
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_field()');
+    var node = result.findNode.functionExpressionInvocation('_field()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
+  function2: PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: _field
@@ -47,7 +97,7 @@ FunctionExpressionInvocation
   }
 
   test_cascaded_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final Object? _field;
   C(this._field);
@@ -57,10 +107,17 @@ void f(C c) {
   c.._field.toString();
 }
 ''');
-    var node = findNode.methodInvocation('_field.toString');
+    var node = result.findNode.methodInvocation('_field.toString');
     assertResolvedNodeText(node, r'''
 MethodInvocation
-  target: PropertyAccess
+  target2: CascadePropertyExtraction
+    propertyName: _field
+    resolution: GetterInvocationResolution
+      element: <testLibrary>::@class::C::@getter::_field
+      invokeType: Object? Function()
+      type: int
+    staticType: int
+  target(v1): PropertyAccess
     operator: ..
     propertyName: SimpleIdentifier
       token: _field
@@ -81,7 +138,7 @@ MethodInvocation
   }
 
   test_cascaded_propertyAccess_nullAware() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final Object? _field;
   C(this._field);
@@ -92,8 +149,16 @@ void f(C? c) {
 }
 ''');
     // The `!` in the first statement promotes _field within the cascade
-    assertResolvedNodeText(findNode.propertyAccess('_field.toString'), r'''
-PropertyAccess
+    var node2 = result.findNode.cascadePropertyExtraction('_field.toString');
+    assertResolvedNodeText(node2, r'''
+CascadePropertyExtraction
+  propertyName: _field
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_field
+    invokeType: Object? Function()
+    type: Object
+  staticType: Object
+V1: PropertyAccess
   operator: ..
   propertyName: SimpleIdentifier
     token: _field
@@ -103,9 +168,10 @@ PropertyAccess
 ''');
     // But the promotion doesn't last beyond the cascade expression, due to the
     // implicit control flow join when the `?..` stops taking effect.
-    assertResolvedNodeText(findNode.propertyAccess('c?._field'), r'''
+    var node = result.findNode.propertyAccess('c?._field');
+    assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: SimpleIdentifier
+  target2: SimpleIdentifier
     token: c
     element: <testLibrary>::@function::f::@formalParameter::c
     staticType: C?
@@ -125,7 +191,7 @@ PropertyAccess
     // getter or a non-final field (either of which would prevent promotion). So
     // the implementation goes ahead and prevents promotion even if there's no
     // implementation yet, to reduce churn for the user.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class B {
   abstract int? _foo;
 }
@@ -144,7 +210,7 @@ void g(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -162,7 +228,7 @@ PrefixedIdentifier
   }
 
   test_class_field_invocation_prefixedIdentifier_nullability() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final void Function()? _foo;
   C(this._foo);
@@ -174,11 +240,11 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -198,7 +264,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_prefixedIdentifier_returnType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? Function() _foo;
   C(this._foo);
@@ -210,11 +276,11 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SimpleIdentifier
+  function2: PropertyAccess
+    target2: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
       staticType: C
@@ -234,7 +300,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_propertyAccess_nullability() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final void Function()? _foo;
   C(this._foo);
@@ -246,13 +312,13 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: ParenthesizedExpression
+  function2: PropertyAccess
+    target2: ParenthesizedExpression
       leftParenthesis: (
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: c
         element: <testLibrary>::@function::f::@formalParameter::c
         staticType: C
@@ -274,7 +340,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_propertyAccess_returnType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? Function() _foo;
   C(this._foo);
@@ -286,13 +352,13 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: ParenthesizedExpression
+  function2: PropertyAccess
+    target2: ParenthesizedExpression
       leftParenthesis: (
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: c
         element: <testLibrary>::@function::f::@formalParameter::c
         staticType: C
@@ -314,7 +380,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_simpleIdentifier_nullability() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final void Function()? _foo;
   C(this._foo);
@@ -330,10 +396,10 @@ class D extends C {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: _foo
     element: <testLibrary>::@class::C::@getter::_foo
     staticType: void Function()
@@ -347,7 +413,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_simpleIdentifier_returnType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? Function() _foo;
   C(this._foo);
@@ -363,10 +429,10 @@ class D extends C {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: SimpleIdentifier
+  function2: SimpleIdentifier
     token: _foo
     element: <testLibrary>::@class::C::@getter::_foo
     staticType: int Function()
@@ -380,7 +446,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_superPropertyAccess_nullability() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final void Function()? _foo;
   C(this._foo);
@@ -396,11 +462,11 @@ class D extends C {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: D
     operator: .
@@ -419,7 +485,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_invocation_superPropertyAccess_returnType() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? Function() _foo;
   C(this._foo);
@@ -435,11 +501,11 @@ class D extends C {
   }
 }
 ''');
-    var node = findNode.functionExpressionInvocation('_foo()');
+    var node = result.findNode.functionExpressionInvocation('_foo()');
     assertResolvedNodeText(node, r'''
 FunctionExpressionInvocation
-  function: PropertyAccess
-    target: SuperExpression
+  function2: PropertyAccess
+    target2: SuperExpression
       superKeyword: super
       staticType: D
     operator: .
@@ -458,7 +524,7 @@ FunctionExpressionInvocation
   }
 
   test_class_field_notFinal() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int? _foo;
   C(this._foo);
@@ -470,7 +536,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -488,7 +554,7 @@ PrefixedIdentifier
   }
 
   test_class_field_notPrivate() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   int? foo;
   C(this.foo);
@@ -500,7 +566,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('.foo;');
+    var node = result.findNode.prefixed('.foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -518,7 +584,7 @@ PrefixedIdentifier
   }
 
   test_class_field_read_prefixedIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? _foo;
   C(this._foo);
@@ -530,7 +596,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -548,7 +614,7 @@ PrefixedIdentifier
   }
 
   test_class_field_read_propertyAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? _foo;
   C(this._foo);
@@ -560,9 +626,25 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.propertyAccess('._foo;');
+    var node = result.findNode.receiverPropertyExtraction('._foo;');
     assertResolvedNodeText(node, r'''
-PropertyAccess
+ReceiverPropertyExtraction
+  receiver: ParenthesizedExpression
+    leftParenthesis: (
+    expression2: SimpleIdentifier
+      token: c
+      element: <testLibrary>::@function::f::@formalParameter::c
+      staticType: C
+    rightParenthesis: )
+    staticType: C
+  operator: .
+  propertyName: _foo
+  resolution: GetterInvocationResolution
+    element: <testLibrary>::@class::C::@getter::_foo
+    invokeType: int? Function()
+    type: int
+  staticType: int
+V1: PropertyAccess
   target: ParenthesizedExpression
     leftParenthesis: (
     expression: SimpleIdentifier
@@ -581,7 +663,7 @@ PropertyAccess
   }
 
   test_class_field_read_propertyAccess_super() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? _foo;
   C(this._foo);
@@ -597,10 +679,10 @@ class D extends C {
   }
 }
 ''');
-    var node = findNode.propertyAccess('._foo;');
+    var node = result.findNode.propertyAccess('._foo;');
     assertResolvedNodeText(node, r'''
 PropertyAccess
-  target: SuperExpression
+  target2: SuperExpression
     superKeyword: super
     staticType: D
   operator: .
@@ -613,7 +695,7 @@ PropertyAccess
   }
 
   test_class_field_read_simpleIdentifier() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   final int? _foo;
   C(this._foo);
@@ -625,7 +707,7 @@ class C {
   }
 }
 ''');
-    var node = findNode.simple('_foo; // read');
+    var node = result.findNode.simple('_foo; // read');
     assertResolvedNodeText(node, r'''
 SimpleIdentifier
   token: _foo
@@ -635,7 +717,7 @@ SimpleIdentifier
   }
 
   test_class_getter_read() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 abstract class C {
   int? get _foo;
 }
@@ -646,7 +728,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -685,7 +767,7 @@ void f() {
   }
 
   test_enum_field() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 enum E {
   v(null);
   final int? _foo;
@@ -698,7 +780,7 @@ void f(E e) {
   }
 }
 ''');
-    var node = findNode.prefixed('._foo;');
+    var node = result.findNode.prefixed('._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -716,7 +798,7 @@ PrefixedIdentifier
   }
 
   test_extensionType_field_representation() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 extension type A(int? _it) {}
 
 void f(A a) {
@@ -725,7 +807,7 @@ void f(A a) {
   }
 }
 ''');
-    var node = findNode.prefixed('a._it;');
+    var node = result.findNode.prefixed('a._it;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -744,7 +826,7 @@ PrefixedIdentifier
 
   test_external_field() async {
     // External final fields should not be promotable.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {
   external final int? _field;
 }
@@ -753,7 +835,7 @@ void f(C c) {
   c._field;
 }
 ''');
-    var node = findNode.prefixed('c._field;');
+    var node = result.findNode.prefixed('c._field;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -785,7 +867,7 @@ class D extends C {
   D(super.foo);
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'other.dart';
 
 class C {
@@ -803,7 +885,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -835,7 +917,7 @@ class D extends C {
   D(super.foo);
 }
 ''');
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 import 'other.dart';
 
 class C {
@@ -852,7 +934,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -869,47 +951,13 @@ PrefixedIdentifier
 ''');
   }
 
-  test_language219() async {
-    await resolveTestCodeWithDiagnostics('''
-// @dart = 2.19
-class C {
-  final int? _foo;
-  C(this._foo);
-}
-
-void f(C c) {
-  if ((c)._foo != null) {
-    (c)._foo;
-  }
-}
-''');
-    var node = findNode.propertyAccess('._foo;');
-    assertResolvedNodeText(node, r'''
-PropertyAccess
-  target: ParenthesizedExpression
-    leftParenthesis: (
-    expression: SimpleIdentifier
-      token: c
-      element: <testLibrary>::@function::f::@formalParameter::c
-      staticType: C
-    rightParenthesis: )
-    staticType: C
-  operator: .
-  propertyName: SimpleIdentifier
-    token: _foo
-    element: <testLibrary>::@class::C::@getter::_foo
-    staticType: int?
-  staticType: int?
-''');
-  }
-
   test_mixin_on_clause() async {
     // The type mentioned in a a mixin's "on" clause contributes to its
     // interface. This needs to be accounted for when determining whether a
     // `noSuchMethod` getter will be synthesized.  In the example below,
     // `c._foo` is not promotable because class D contains a `noSuchMethod`
     // getter for `_foo`.
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 mixin M on C {}
 class C {
   final int? _foo;
@@ -925,7 +973,7 @@ void f(C c) {
   }
 }
 ''');
-    var node = findNode.prefixed('c._foo;');
+    var node = result.findNode.prefixed('c._foo;');
     assertResolvedNodeText(node, r'''
 PrefixedIdentifier
   prefix: SimpleIdentifier
@@ -943,7 +991,7 @@ PrefixedIdentifier
   }
 
   test_super_get() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {
   final int? _i;
   B(this._i);
@@ -964,20 +1012,20 @@ class C extends B {
   }
 }
 ''');
-    var blockA = findNode.block('// A');
-    assertResolvedNodeText(blockA, r'''
+    var node1 = result.findNode.block('// A');
+    assertResolvedNodeText(node1, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: _i
         element: <testLibrary>::@class::C::@getter::_i
         staticType: int
       semicolon: ;
     ExpressionStatement
-      expression: PropertyAccess
-        target: SuperExpression
+      expression2: PropertyAccess
+        target2: SuperExpression
           superKeyword: super
           staticType: C
         operator: .
@@ -989,20 +1037,20 @@ Block
       semicolon: ;
   rightBracket: }
 ''');
-    var blockB = findNode.block('// B');
-    assertResolvedNodeText(blockB, r'''
+    var node2 = result.findNode.block('// B');
+    assertResolvedNodeText(node2, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: _i
         element: <testLibrary>::@class::C::@getter::_i
         staticType: int?
       semicolon: ;
     ExpressionStatement
-      expression: PropertyAccess
-        target: SuperExpression
+      expression2: PropertyAccess
+        target2: SuperExpression
           superKeyword: super
           staticType: C
         operator: .
@@ -1017,7 +1065,7 @@ Block
   }
 
   test_super_get_inGenericClass() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B<T extends Object> {
   final T? _t;
   B(this._t);
@@ -1038,28 +1086,28 @@ class C<T extends Object> extends B<T> {
   }
 }
 ''');
-    var blockA = findNode.block('// A');
-    assertResolvedNodeText(blockA, r'''
+    var node1 = result.findNode.block('// A');
+    assertResolvedNodeText(node1, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: _t
-        element: GetterMember
+        element: SubstitutedGetterElementImpl
           baseElement: <testLibrary>::@class::C::@getter::_t
           substitution: {T: T}
         staticType: T
       semicolon: ;
     ExpressionStatement
-      expression: PropertyAccess
-        target: SuperExpression
+      expression2: PropertyAccess
+        target2: SuperExpression
           superKeyword: super
           staticType: C<T>
         operator: .
         propertyName: SimpleIdentifier
           token: _t
-          element: GetterMember
+          element: SubstitutedGetterElementImpl
             baseElement: <testLibrary>::@class::B::@getter::_t
             substitution: {T: T}
           staticType: T?
@@ -1067,28 +1115,28 @@ Block
       semicolon: ;
   rightBracket: }
 ''');
-    var blockB = findNode.block('// B');
-    assertResolvedNodeText(blockB, r'''
+    var node2 = result.findNode.block('// B');
+    assertResolvedNodeText(node2, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: SimpleIdentifier
+      expression2: SimpleIdentifier
         token: _t
-        element: GetterMember
+        element: SubstitutedGetterElementImpl
           baseElement: <testLibrary>::@class::C::@getter::_t
           substitution: {T: T}
         staticType: T?
       semicolon: ;
     ExpressionStatement
-      expression: PropertyAccess
-        target: SuperExpression
+      expression2: PropertyAccess
+        target2: SuperExpression
           superKeyword: super
           staticType: C<T>
         operator: .
         propertyName: SimpleIdentifier
           token: _t
-          element: GetterMember
+          element: SubstitutedGetterElementImpl
             baseElement: <testLibrary>::@class::B::@getter::_t
             substitution: {T: T}
           staticType: T
@@ -1099,7 +1147,7 @@ Block
   }
 
   test_super_getAndInvoke() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B {
   final int? Function() _f;
   B(this._f);
@@ -1120,14 +1168,14 @@ class C extends B {
   }
 }
 ''');
-    var blockA = findNode.block('// A');
-    assertResolvedNodeText(blockA, r'''
+    var node1 = result.findNode.block('// A');
+    assertResolvedNodeText(node1, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: SimpleIdentifier
+      expression2: FunctionExpressionInvocation
+        function2: SimpleIdentifier
           token: _f
           element: <testLibrary>::@class::C::@getter::_f
           staticType: int Function()
@@ -1139,9 +1187,9 @@ Block
         staticType: int
       semicolon: ;
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: PropertyAccess
-          target: SuperExpression
+      expression2: FunctionExpressionInvocation
+        function2: PropertyAccess
+          target2: SuperExpression
             superKeyword: super
             staticType: C
           operator: .
@@ -1159,14 +1207,14 @@ Block
       semicolon: ;
   rightBracket: }
 ''');
-    var blockB = findNode.block('// B');
-    assertResolvedNodeText(blockB, r'''
+    var node2 = result.findNode.block('// B');
+    assertResolvedNodeText(node2, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: SimpleIdentifier
+      expression2: FunctionExpressionInvocation
+        function2: SimpleIdentifier
           token: _f
           element: <testLibrary>::@class::C::@getter::_f
           staticType: int? Function()
@@ -1178,9 +1226,9 @@ Block
         staticType: int?
       semicolon: ;
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: PropertyAccess
-          target: SuperExpression
+      expression2: FunctionExpressionInvocation
+        function2: PropertyAccess
+          target2: SuperExpression
             superKeyword: super
             staticType: C
           operator: .
@@ -1201,7 +1249,7 @@ Block
   }
 
   test_super_getAndInvoke_inGenericClass() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class B<T extends Object> {
   final T? Function() _f;
   B(this._f);
@@ -1222,16 +1270,16 @@ class C<T extends Object> extends B<T> {
   }
 }
 ''');
-    var blockA = findNode.block('// A');
-    assertResolvedNodeText(blockA, r'''
+    var node1 = result.findNode.block('// A');
+    assertResolvedNodeText(node1, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: SimpleIdentifier
+      expression2: FunctionExpressionInvocation
+        function2: SimpleIdentifier
           token: _f
-          element: GetterMember
+          element: SubstitutedGetterElementImpl
             baseElement: <testLibrary>::@class::C::@getter::_f
             substitution: {T: T}
           staticType: T Function()
@@ -1243,15 +1291,15 @@ Block
         staticType: T
       semicolon: ;
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: PropertyAccess
-          target: SuperExpression
+      expression2: FunctionExpressionInvocation
+        function2: PropertyAccess
+          target2: SuperExpression
             superKeyword: super
             staticType: C<T>
           operator: .
           propertyName: SimpleIdentifier
             token: _f
-            element: GetterMember
+            element: SubstitutedGetterElementImpl
               baseElement: <testLibrary>::@class::B::@getter::_f
               substitution: {T: T}
             staticType: T? Function()
@@ -1265,16 +1313,16 @@ Block
       semicolon: ;
   rightBracket: }
 ''');
-    var blockB = findNode.block('// B');
-    assertResolvedNodeText(blockB, r'''
+    var node2 = result.findNode.block('// B');
+    assertResolvedNodeText(node2, r'''
 Block
   leftBracket: {
   statements
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: SimpleIdentifier
+      expression2: FunctionExpressionInvocation
+        function2: SimpleIdentifier
           token: _f
-          element: GetterMember
+          element: SubstitutedGetterElementImpl
             baseElement: <testLibrary>::@class::C::@getter::_f
             substitution: {T: T}
           staticType: T? Function()
@@ -1286,15 +1334,15 @@ Block
         staticType: T?
       semicolon: ;
     ExpressionStatement
-      expression: FunctionExpressionInvocation
-        function: PropertyAccess
-          target: SuperExpression
+      expression2: FunctionExpressionInvocation
+        function2: PropertyAccess
+          target2: SuperExpression
             superKeyword: super
             staticType: C<T>
           operator: .
           propertyName: SimpleIdentifier
             token: _f
-            element: GetterMember
+            element: SubstitutedGetterElementImpl
               baseElement: <testLibrary>::@class::B::@getter::_f
               substitution: {T: T}
             staticType: T Function()

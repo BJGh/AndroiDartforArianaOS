@@ -56,7 +56,7 @@ class NodeTextExpectationsCollector {
       argument: _ArgumentIndex(1),
     ),
     _AssertMethod(
-      className: 'ElementLocatorTest2',
+      className: 'ElementLocatorV1Test',
       methodName: '_assertElement',
       argument: _ArgumentIndex(1),
     ),
@@ -129,12 +129,22 @@ class NodeTextExpectationsCollector {
     _AssertMethod(
       className: 'IndexTest',
       methodName: 'assertElementIndexText',
-      argument: _ArgumentIndex(1),
+      argument: _ArgumentIndex(2),
+    ),
+    _AssertMethod(
+      className: 'IndexTest',
+      methodName: 'assertElementsIndexText',
+      argument: _ArgumentIndex(2),
+    ),
+    _AssertMethod(
+      className: 'IndexTest',
+      methodName: 'assertNamesIndexText',
+      argument: _ArgumentIndex(2),
     ),
     _AssertMethod(
       className: 'IndexTest',
       methodName: 'assertLibraryFragmentIndexText',
-      argument: _ArgumentIndex(1),
+      argument: _ArgumentIndex(2),
     ),
     _AssertMethod(
       className: '_InheritanceManager3Base2',
@@ -167,6 +177,41 @@ class NodeTextExpectationsCollector {
       argument: _ArgumentIndex(1),
     ),
     _AssertMethod(
+      className: 'ParserDiagnosticsTest',
+      methodName: 'parseTestCodeWithDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
+      className: 'AbstractAnalysisOptionsTest',
+      methodName: 'assertAnalysisOptionsDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
+      className: 'AbstractAnalysisOptionsTest',
+      methodName: 'assertAnalysisOptionsDiagnosticsInFiles',
+      argument: _ArgumentMapEntryValue(mapArgument: _ArgumentIndex(0)),
+    ),
+    _AssertMethod(
+      className: 'AbstractAnalysisOptionsTest',
+      methodName: 'parseAnalysisOptionsWithDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
+      className: 'AbstractAnalysisOptionsTest',
+      methodName: 'parseAnalysisOptionsFilesWithDiagnostics',
+      argument: _ArgumentMapEntryValue(mapArgument: _ArgumentIndex(0)),
+    ),
+    _AssertMethod(
+      className: 'AbstractAnalysisOptionsTest',
+      methodName: 'assertAnalysisOptionsText',
+      argument: _ArgumentIndex(1),
+    ),
+    _AssertMethod(
+      className: 'PubspecDiagnosticTest',
+      methodName: 'assertDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
       className: 'ResolutionTest',
       methodName: 'assertDartObjectText',
       argument: _ArgumentIndex(1),
@@ -188,6 +233,31 @@ class NodeTextExpectationsCollector {
     ),
     _AssertMethod(
       className: 'ResolutionTest',
+      methodName: 'resolveFileWithDiagnostics',
+      argument: _ArgumentIndex(1),
+    ),
+    _AssertMethod(
+      className: 'WithStrictCastsMixin',
+      methodName: 'assertTestCodeWithStrictCastsDiagnostics',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
+      className: 'ResolutionTest',
+      methodName: 'resolveFilesWithDiagnostics',
+      argument: _ArgumentMapEntryValue(mapArgument: _ArgumentIndex(0)),
+    ),
+    _AssertMethod(
+      className: 'IndexTest',
+      methodName: '_indexTestCode',
+      argument: _ArgumentIndex(0),
+    ),
+    _AssertMethod(
+      className: 'IndexTest',
+      methodName: '_indexFileWithDiagnostics',
+      argument: _ArgumentIndex(1),
+    ),
+    _AssertMethod(
+      className: 'ResolutionTest',
       methodName: 'resolveTestCodeWithDiagnostics',
       argument: _ArgumentIndex(0),
     ),
@@ -203,6 +273,11 @@ class NodeTextExpectationsCollector {
     ),
     _AssertMethod(
       className: 'SearchTest',
+      methodName: 'assertElementsReferencesText',
+      argument: _ArgumentIndex(1),
+    ),
+    _AssertMethod(
+      className: 'SearchTest',
       methodName: 'assertLibraryFragmentReferencesText',
       argument: _ArgumentIndex(1),
     ),
@@ -213,7 +288,7 @@ class NodeTextExpectationsCollector {
     ),
     _AssertMethod(
       className: 'SearchTest',
-      methodName: 'assertSubTypesText',
+      methodName: 'assertDirectSubtypeReferencesText',
       argument: _ArgumentIndex(1),
     ),
     _AssertMethod(
@@ -234,18 +309,22 @@ class NodeTextExpectationsCollector {
 
   static final Map<String, _File> _files = {};
 
-  static void add(String actual) {
-    if (!updatingIsEnabled) {
+  static bool get shouldPrintFailureDetails => !currentTestIsExpectedToFail;
+
+  static void add(String actual, {String? intraInvocationId}) {
+    if (!updatingIsEnabled || currentTestIsExpectedToFail) {
       return;
     }
+
+    // TODO(scheglov): Use a single mechanism for intra-invocation ids.
+    intraInvocationId ??= NodeTextExpectationsCollector.intraInvocationId;
 
     var traceLines = '${StackTrace.current}'.split('\n');
     for (var assertMethod in assertMethods) {
       // Disambiguate multi-expectation arguments.
       if (assertMethod.argument case _ArgumentNamed namedArgument) {
         if (namedArgument.shouldCheckIntraInvocationId) {
-          var id = NodeTextExpectationsCollector.intraInvocationId;
-          if (namedArgument.name != id) {
+          if (namedArgument.name != intraInvocationId) {
             continue;
           }
         }
@@ -289,7 +368,10 @@ class NodeTextExpectationsCollector {
         }
 
         var argumentList = invocation.argumentList;
-        var argument = assertMethod.argument.get(argumentList);
+        var argument = assertMethod.argument.get(
+          argumentList,
+          intraInvocationId: intraInvocationId,
+        );
         if (argument is! SimpleStringLiteral) {
           fail('Not a literal: ${argument.runtimeType}');
         }
@@ -324,7 +406,7 @@ class UpdateNodeTextExpectations {
 }
 
 sealed class _Argument {
-  Expression get(ArgumentList argumentList);
+  Expression get(ArgumentList argumentList, {String? intraInvocationId});
 }
 
 final class _ArgumentIndex extends _Argument {
@@ -333,11 +415,45 @@ final class _ArgumentIndex extends _Argument {
   _ArgumentIndex(this.index);
 
   @override
-  Expression get(ArgumentList argumentList) {
-    return argumentList.arguments
+  Expression get(ArgumentList argumentList, {String? intraInvocationId}) {
+    return argumentList.arguments2
         .whereNotType<NamedArgument>()
         .elementAt(index)
-        .argumentExpression;
+        .argumentExpression2;
+  }
+}
+
+final class _ArgumentMapEntryValue extends _Argument {
+  final _Argument mapArgument;
+
+  _ArgumentMapEntryValue({required this.mapArgument});
+
+  @override
+  Expression get(ArgumentList argumentList, {String? intraInvocationId}) {
+    if (intraInvocationId == null) {
+      fail('Expected an intra-invocation id for a map entry value.');
+    }
+
+    var index = int.tryParse(intraInvocationId);
+    if (index == null) {
+      fail('Expected a map entry index, got: $intraInvocationId');
+    }
+
+    var mapExpression = mapArgument.get(argumentList);
+    if (mapExpression is! SetOrMapLiteral) {
+      fail('Not a map literal: ${mapExpression.runtimeType}');
+    }
+
+    var elements = mapExpression.elements2;
+    if (elements.any((element) => element is! MapLiteralEntry)) {
+      fail('Only plain map literal entries are supported.');
+    }
+
+    if (index < 0 || index >= elements.length) {
+      fail('Map entry index $index is out of range: ${elements.length}');
+    }
+
+    return (elements[index] as MapLiteralEntry).value2;
   }
 }
 
@@ -348,12 +464,12 @@ final class _ArgumentNamed extends _Argument {
   _ArgumentNamed(this.name, {this.shouldCheckIntraInvocationId = false});
 
   @override
-  Expression get(ArgumentList argumentList) {
-    return argumentList.arguments
+  Expression get(ArgumentList argumentList, {String? intraInvocationId}) {
+    return argumentList.arguments2
         .whereType<NamedArgument>()
         .where((argument) => argument.name.lexeme == name)
         .single
-        .argumentExpression;
+        .argumentExpression2;
   }
 }
 
@@ -453,12 +569,12 @@ class _File {
       lineInfo: lineInfo,
       requestedLine: invocationLine,
     );
-    unit.accept(visitor);
+    unit.accept2(visitor);
     return visitor.result;
   }
 }
 
-class _InvocationVisitor extends RecursiveAstVisitor<void> {
+class _InvocationVisitor extends RecursiveAstVisitor2<void> {
   final LineInfo lineInfo;
   final int requestedLine;
   MethodInvocation? result;

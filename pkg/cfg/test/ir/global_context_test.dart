@@ -7,11 +7,13 @@ import 'package:kernel/class_hierarchy.dart' show ClassHierarchy;
 import 'package:kernel/core_types.dart' show CoreTypes;
 import 'package:kernel/type_environment.dart';
 import 'package:test/test.dart';
+
 import '../test_helpers.dart';
 
 void main() {
   final component = readVmPlatformKernelFile();
   final coreTypes = CoreTypes(component);
+  final coreLibraries = coreTypes.index;
   final classHierarchy = ClassHierarchy(component, coreTypes);
   final typeEnvironment = TypeEnvironment(coreTypes, classHierarchy);
 
@@ -21,7 +23,10 @@ void main() {
 
   group("withContext", () {
     test('simple', () {
-      final ctx = GlobalContext(typeEnvironment: typeEnvironment);
+      final ctx = GlobalContext(
+        typeEnvironment: typeEnvironment,
+        coreLibraries: coreLibraries,
+      );
 
       expect(() => GlobalContext.instance, throwsStateError);
       expect(
@@ -35,8 +40,14 @@ void main() {
     });
 
     test('nested', () {
-      final ctx1 = GlobalContext(typeEnvironment: typeEnvironment);
-      final ctx2 = GlobalContext(typeEnvironment: typeEnvironment);
+      final ctx1 = GlobalContext(
+        typeEnvironment: typeEnvironment,
+        coreLibraries: coreLibraries,
+      );
+      final ctx2 = GlobalContext(
+        typeEnvironment: typeEnvironment,
+        coreLibraries: coreLibraries,
+      );
 
       expect(() => GlobalContext.instance, throwsStateError);
       expect(
@@ -60,8 +71,14 @@ void main() {
     });
 
     test('exception', () {
-      final ctx1 = GlobalContext(typeEnvironment: typeEnvironment);
-      final ctx2 = GlobalContext(typeEnvironment: typeEnvironment);
+      final ctx1 = GlobalContext(
+        typeEnvironment: typeEnvironment,
+        coreLibraries: coreLibraries,
+      );
+      final ctx2 = GlobalContext(
+        typeEnvironment: typeEnvironment,
+        coreLibraries: coreLibraries,
+      );
 
       expect(() => GlobalContext.instance, throwsStateError);
       expect(

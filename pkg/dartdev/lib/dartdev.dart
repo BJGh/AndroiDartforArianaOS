@@ -30,6 +30,7 @@ import 'src/commands/info.dart';
 import 'src/commands/install.dart';
 import 'src/commands/installed.dart';
 import 'src/commands/language_server.dart';
+import 'src/commands/migrate.dart';
 import 'src/commands/run.dart';
 import 'src/commands/test.dart';
 import 'src/commands/tooling_daemon.dart';
@@ -48,7 +49,7 @@ Future<void> runDartdev(List<String> args, SendPort? port) async {
   try {
     VmInteropHandler.initialize(port);
     // Set the DART_ROOT environment variable to the SDK path.
-    VmInteropHandler.setEnvironmentVariable('DART_ROOT', sdk.sdkPath);
+    await VmInteropHandler.setEnvironmentVariable('DART_ROOT', sdk.sdkPath);
     // Call the runner to execute the command; see DartdevRunner.
     final runner = DartdevRunner(args, vmArgs: io.Platform.executableArguments);
     exitCode = await runner.run(args);
@@ -140,6 +141,7 @@ class DartdevRunner extends CommandRunner<int> {
     addCommand(InfoCommand(verbose: verbose));
     addCommand(LanguageServerCommand(verbose: verbose));
     addCommand(DartMCPServerCommand(verbose: verbose));
+    addCommand(MigrateCommand(verbose: verbose));
     addCommand(
       pubCommand(
         isVerbose: () => verbose,
@@ -185,10 +187,13 @@ class DartdevRunner extends CommandRunner<int> {
     // We don't want to run analytics when we're running in a CI environment
     // unless we're explicitly testing analytics for dartdev.
     final implicitlySuppressAnalytics = isBot() && !_isAnalyticsTest;
+    final envSuppressAnalytics =
+        io.Platform.environment[DashEnvVar.suppressAnalytics.name] == 'true';
     bool suppressAnalytics =
         !topLevelResults.flag('analytics') ||
         topLevelResults.flag('suppress-analytics') ||
-        implicitlySuppressAnalytics;
+        implicitlySuppressAnalytics ||
+        envSuppressAnalytics;
 
     if (topLevelResults.wasParsed('analytics')) {
       io.stderr.writeln(
@@ -200,6 +205,7 @@ class DartdevRunner extends CommandRunner<int> {
     final disableAnalytics = topLevelResults.flag('disable-analytics');
 
     if (!implicitlySuppressAnalytics &&
+        !envSuppressAnalytics &&
         suppressAnalytics &&
         (enableAnalytics || disableAnalytics)) {
       // This isn't an error if we're implicitly disabling analytics because
@@ -210,6 +216,29 @@ class DartdevRunner extends CommandRunner<int> {
       );
       return 254;
     }
+
+    // Propagate analytics environment variables to subtools.
+
+    // Since VmInteropHandler.setEnvironmentVariable is non-overwriting by design
+    // in C++, we unset the variable first to ensure the explicitly resolved
+    // value takes precedence.
+    await VmInteropHandler.setEnvironmentVariable(
+      DashEnvVar.suppressAnalytics.name,
+      null,
+    );
+
+    await VmInteropHandler.setEnvironmentVariable(
+      DashEnvVar.suppressAnalytics.name,
+      suppressAnalytics.toString(),
+    );
+    final envTool = io.Platform.environment[DashEnvVar.tool.name];
+    if (envTool == null) {
+      await VmInteropHandler.setEnvironmentVariable(
+        DashEnvVar.tool.name,
+        DashTool.dartTool.label,
+      );
+    }
+
     // The Analytics instance used to report information back to Google Analytics;
     // see lib/src/unified_analytics.dart.
     _unifiedAnalytics ??= createUnifiedAnalytics(
@@ -232,7 +261,11 @@ class DartdevRunner extends CommandRunner<int> {
     if (disableAnalytics) {
       // Disable sending data via the unified analytics package.
       await unifiedAnalytics.setTelemetry(false);
-      await unifiedAnalytics.close();
+      try {
+        await unifiedAnalytics.close().timeout(
+          const Duration(milliseconds: 250),
+        );
+      } on TimeoutException catch (_) {}
 
       // Alert the user that analytics has been disabled.
       print(analyticsDisabledNoticeMessage);
@@ -240,7 +273,11 @@ class DartdevRunner extends CommandRunner<int> {
     } else if (enableAnalytics) {
       // Enable sending data via the unified analytics package.
       await unifiedAnalytics.setTelemetry(true);
-      await unifiedAnalytics.close();
+      try {
+        await unifiedAnalytics.close().timeout(
+          const Duration(milliseconds: 250),
+        );
+      } on TimeoutException catch (_) {}
 
       // Alert the user again that data will be collected.
       if (!analyticsMessagePrinted) {
@@ -314,7 +351,11 @@ class DartdevRunner extends CommandRunner<int> {
 
       // Set the exitCode, if it wasn't set in the catch block above.
       exitCode ??= 0;
-      await unifiedAnalytics.close();
+      try {
+        await unifiedAnalytics.close().timeout(
+          const Duration(milliseconds: 250),
+        );
+      } on TimeoutException catch (_) {}
     }
 
     return exitCode;

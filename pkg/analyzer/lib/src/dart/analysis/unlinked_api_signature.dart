@@ -13,7 +13,7 @@ import 'package:analyzer/src/summary/api_signature.dart';
 /// Return the bytes of the unlinked API signature of the given [unit].
 ///
 /// If API signatures of two units are different, they may have different APIs.
-Uint8List computeUnlinkedApiSignature(CompilationUnit unit) {
+Uint8List computeUnlinkedApiSignature(CompilationUnitImpl unit) {
   var computer = _UnitApiSignatureComputer();
   computer.compute(unit);
   return computer.signature.toByteList();
@@ -31,34 +31,44 @@ class _UnitApiSignatureComputer {
 
   final ApiSignature signature = ApiSignature();
 
-  void compute(CompilationUnit unit) {
+  void compute(CompilationUnitImpl unit) {
     signature.addFeatureSet(unit.featureSet);
 
     signature.addInt(unit.directives.length);
     unit.directives.forEach(_addNode);
 
-    signature.addInt(unit.declarations.length);
-    for (var declaration in unit.declarations) {
-      if (declaration is ClassDeclarationImpl) {
-        _addClass(declaration);
-      } else if (declaration is EnumDeclarationImpl) {
-        _addEnum(declaration);
-      } else if (declaration is ExtensionDeclarationImpl) {
-        _addExtension(declaration);
-      } else if (declaration is FunctionDeclarationImpl) {
-        var functionExpression = declaration.functionExpression;
-        _addTokens(
-          declaration.beginToken,
-          functionExpression.parameters?.endToken ?? declaration.name,
-        );
-        signature.addBool(declaration.isCompleteDeclaration);
-        _addFunctionBodyModifiers(functionExpression.body);
-      } else if (declaration is MixinDeclarationImpl) {
-        _addMixin(declaration);
-      } else if (declaration is TopLevelVariableDeclaration) {
-        _topLevelVariableDeclaration(declaration);
-      } else {
-        _addNode(declaration);
+    signature.addInt(unit.declarations2.length);
+    for (var declaration in unit.declarations2) {
+      switch (declaration) {
+        case ClassDeclarationImpl():
+          _addClass(declaration);
+        case EnumDeclarationImpl():
+          _addEnum(declaration);
+        case ExtensionDeclarationImpl():
+          _addExtension(declaration);
+        case ExtensionTypeDeclarationImpl():
+          _addNode(declaration);
+        case FunctionDeclarationImpl():
+          var functionExpression = declaration.functionExpression;
+          _addTokens(
+            declaration.beginToken,
+            functionExpression.parameters?.endToken ?? declaration.name,
+          );
+          signature.addBool(declaration.isComplete);
+          _addFunctionBodyModifiers(functionExpression.body);
+        case MixinDeclarationImpl():
+          _addMixin(declaration);
+        case TopLevelGetterDeclarationImpl():
+          _addTokens(
+            declaration.beginToken,
+            declaration.recoveryFormalParameters?.endToken ?? declaration.name,
+          );
+          signature.addBool(declaration.isComplete);
+          _addFunctionBodyModifiers(declaration.body);
+        case TopLevelVariableDeclarationImpl():
+          _topLevelVariableDeclaration(declaration);
+        case TypeAliasImpl():
+          _addNode(declaration);
       }
     }
   }
@@ -92,8 +102,8 @@ class _UnitApiSignatureComputer {
     signature.addInt(_kindConstructorDeclaration);
     _addTokens(node.beginToken, node.parameters.endToken);
     _addNodeList(node.initializers);
-    _addNode(node.redirectedConstructor);
-    signature.addBool(node.isCompleteDeclaration);
+    _addNode(node.factoryRedirectionTarget);
+    signature.addBool(node.isComplete);
   }
 
   void _addEnum(EnumDeclarationImpl node) {
@@ -144,7 +154,7 @@ class _UnitApiSignatureComputer {
   void _addMethodDeclaration(MethodDeclarationImpl node) {
     signature.addInt(_kindMethodDeclaration);
     _addTokens(node.beginToken, node.parameters?.endToken ?? node.name);
-    signature.addBool(node.isCompleteDeclaration);
+    signature.addBool(node.isComplete);
     _addFunctionBodyModifiers(node.body);
     signature.addBool(node.invokesSuperSelf);
   }
@@ -210,6 +220,7 @@ class _UnitApiSignatureComputer {
   }
 
   void _topLevelVariableDeclaration(TopLevelVariableDeclaration node) {
+    _addToken(node.abstractKeyword);
     _addToken(node.augmentKeyword);
     _addToken(node.externalKeyword);
     _addNodeList(node.metadata);
@@ -229,9 +240,9 @@ class _UnitApiSignatureComputer {
 
     for (var variable in variables) {
       _addToken(variable.name);
-      signature.addBool(variable.initializer != null);
+      signature.addBool(variable.initializer2 != null);
       if (includeInitializers) {
-        _addNode(variable.initializer);
+        _addNode(variable.initializer2);
       }
     }
   }
@@ -241,7 +252,7 @@ extension on MixinDeclaration {
   List<String> get superInvokedNames {
     var names = <String>{};
     var collector = MixinSuperInvokedNamesCollector(names);
-    accept(collector);
+    accept2(collector);
     return names.toList(growable: false);
   }
 }

@@ -308,7 +308,8 @@ ScopeBuildingResult* ScopeBuilder::BuildScopes() {
               AbstractType::ZoneHandle(Z, function.ParameterTypeAt(pos)),
               LocalVariable::kNoKernelOffset, /*is_late=*/false,
               /*inferred_type_md=*/nullptr,
-              /*inferred_arg_type_md=*/field.is_covariant()
+              /*inferred_arg_type_md=*/
+              (field.is_covariant() || field.is_generic_covariant_impl())
                   ? nullptr
                   : &inferred_field_type);
         } else {
@@ -610,11 +611,15 @@ void ScopeBuilder::VisitProcedure() {
 void ScopeBuilder::VisitField() {
   FieldHelper field_helper(&helper_);
   field_helper.ReadUntilExcluding(FieldHelper::kType);
-  VisitDartType();              // read type.
+  VisitDartType();  // read type.
+  if (helper_.ReadTag() == kSomething) {
+    helper_.SkipVariable();  // read this_variable.
+  }
   Tag tag = helper_.ReadTag();  // read initializer (part 1).
   if (tag == kSomething) {
     VisitExpression();  // read initializer (part 2).
   }
+  helper_.SkipScope();
 }
 
 void ScopeBuilder::VisitFunctionNode() {
@@ -642,6 +647,9 @@ void ScopeBuilder::VisitFunctionNode() {
     VisitStatement();  // Read body
     first_body_token_position_ = helper_.reader_.min_position();
   }
+
+  helper_.SkipScope();
+  helper_.SkipCapturedContexts();
 }
 
 void ScopeBuilder::VisitInitializer() {
@@ -670,8 +678,8 @@ void ScopeBuilder::VisitInitializer() {
       VisitArguments();                      // read arguments.
       return;
     case kLocalInitializer:
-      helper_.ReadPosition();      // read position.
-      VisitVariableDeclaration();  // read variable.
+      helper_.ReadPosition();  // read position.
+      VisitVariable();         // read variable.
       return;
     case kAssertInitializer:
       helper_.ReadPosition();  // read position.
@@ -811,6 +819,7 @@ void ScopeBuilder::VisitExpression() {
       helper_.SkipName();      // read name.
       VisitArguments();        // read arguments.
       helper_.SkipDartType();  // read function_type.
+      helper_.SkipDartType();  // read result_type.
       // read interface_target_reference.
       helper_.SkipInterfaceMemberNameReference();
       return;
@@ -985,9 +994,9 @@ void ScopeBuilder::VisitExpression() {
 
       EnterScope(offset);
 
-      helper_.ReadPosition();      // read position.
-      VisitVariableDeclaration();  // read variable declaration.
-      VisitExpression();           // read expression.
+      helper_.ReadPosition();  // read position.
+      VisitVariable();         // read variable declaration.
+      VisitExpression();       // read expression.
 
       ExitScope(helper_.reader_.min_position(), helper_.reader_.max_position());
       return;
@@ -999,12 +1008,15 @@ void ScopeBuilder::VisitExpression() {
       EnterScope(offset);
 
       helper_.ReadPosition();  // read position.
+      helper_.ReadUInt();      // read scope size.
       intptr_t list_length =
           helper_.ReadListLength();  // read number of statements.
       for (intptr_t i = 0; i < list_length; ++i) {
         VisitStatement();  // read ith statement.
       }
       VisitExpression();  // read expression.
+
+      helper_.SkipScope();
 
       ExitScope(helper_.reader_.min_position(), helper_.reader_.max_position());
       return;
@@ -1114,6 +1126,7 @@ void ScopeBuilder::VisitStatement() {
       EnterScope(offset);
       helper_.ReadPosition();  // read block start offset.
       helper_.ReadPosition();  // read block end offset.
+      helper_.ReadUInt();      // read scope size.
       intptr_t list_length =
           helper_.ReadListLength();  // read number of statements.
       for (intptr_t i = 0; i < list_length; ++i) {
@@ -1121,6 +1134,9 @@ void ScopeBuilder::VisitStatement() {
       }
 
       ExitScope(helper_.reader_.min_position(), helper_.reader_.max_position());
+
+      helper_.SkipScope();
+
       return;
     }
     case kEmptyStatement:
@@ -1175,8 +1191,11 @@ void ScopeBuilder::VisitStatement() {
     case kWhileStatement:
       ++depth_.loop_;
       helper_.ReadPosition();  // read position.
+      helper_.ReadUInt();      // read scpoe size.
       VisitExpression();       // read condition.
       VisitStatement();        // read body.
+      helper_.SkipScope();
+
       --depth_.loop_;
       return;
     case kDoStatement:
@@ -1195,6 +1214,7 @@ void ScopeBuilder::VisitStatement() {
       EnterScope(offset);
 
       TokenPosition position = helper_.ReadPosition();  // read position.
+      helper_.ReadUInt();                               // read scope size.
       intptr_t list_length =
           helper_.ReadListLength();  // read number of variables.
       for (intptr_t i = 0; i < list_length; ++i) {
@@ -1207,6 +1227,8 @@ void ScopeBuilder::VisitStatement() {
       }
       VisitListOfExpressions();  // read updates.
       VisitStatement();          // read body.
+
+      helper_.SkipScope();
 
       ExitScope(position, helper_.reader_.max_position());
       --depth_.loop_;
@@ -1280,16 +1302,19 @@ void ScopeBuilder::VisitStatement() {
         EnterScope(offset);
 
         helper_.ReadPosition();   // read position.
+        helper_.ReadUInt();       // read scope size.
         VisitDartType();          // Read the guard.
         tag = helper_.ReadTag();  // read first part of exception.
         if (tag == kSomething) {
-          VisitVariableDeclaration();  // read exception.
+          VisitVariable();  // read exception.
         }
         tag = helper_.ReadTag();  // read first part of stack trace.
         if (tag == kSomething) {
-          VisitVariableDeclaration();  // read stack trace.
+          VisitVariable();  // read stack trace.
         }
         VisitStatement();  // read body.
+
+        helper_.SkipScope();
 
         ExitScope(helper_.reader_.min_position(),
                   helper_.reader_.max_position());
@@ -1326,13 +1351,14 @@ void ScopeBuilder::VisitStatement() {
       VisitExpression();       // read expression.
       return;
     }
-    case kVariableDeclaration:
+    case kVariableStatement:
+      helper_.ReadPosition();      // read position.
       VisitVariableDeclaration();  // read variable declaration.
       return;
     case kFunctionDeclaration: {
       intptr_t offset = helper_.ReaderOffset() - 1;  // -1 to include tag byte.
       helper_.ReadPosition();                        // read position.
-      VisitVariableDeclaration();   // read variable declaration.
+      VisitVariable();              // read variable declaration.
       helper_.ReadUInt();           // read id.
       HandleLocalFunction(offset);  // read function node.
       return;
@@ -1379,6 +1405,13 @@ void ScopeBuilder::VisitArguments() {
 }
 
 void ScopeBuilder::VisitVariableDeclaration() {
+  helper_.ReadTag();       // read tag.
+  helper_.ReadPosition();  // read position.
+  helper_.SkipCapturedContexts();
+  VisitVariable();  // read variable.
+}
+
+void ScopeBuilder::VisitVariable() {
   PositionScope scope(&helper_.reader_);
 
   const intptr_t kernel_offset =
@@ -1386,10 +1419,10 @@ void ScopeBuilder::VisitVariableDeclaration() {
   // MetadataHelper expects relative offsets and adjusts them internally
   const InferredTypeMetadata inferred_type =
       inferred_type_metadata_helper_.GetInferredType(helper_.ReaderOffset());
-  VariableDeclarationHelper helper(&helper_);
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kAnnotations);
+  VariableHelper helper(&helper_);
+  helper.ReadUntilExcluding(VariableHelper::kAnnotations);
   const intptr_t annotations_offset = helper_.ReaderOffset();
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kType);
+  helper.ReadUntilExcluding(VariableHelper::kType);
   AbstractType& type = BuildAndVisitVariableType();
 
   const String& name = H.DartSymbolObfuscate(helper.name_index_);
@@ -1419,8 +1452,7 @@ void ScopeBuilder::VisitVariableDeclaration() {
     variable->set_is_late();
     variable->set_late_init_offset(initializer_offset);
   }
-  if (helper.IsSynthesized() || helper.IsWildcard() ||
-      helper.IsInitializingFormal() || helper.IsSuperInitializingFormal()) {
+  if (helper.IsSynthesized() || helper.IsWildcard()) {
     variable->set_invisible(true);
   }
 
@@ -1674,20 +1706,19 @@ void ScopeBuilder::AddPositionalAndNamedParameters(
   // List of positional.
   intptr_t list_length = helper_.ReadListLength();  // read list length.
   for (intptr_t i = 0; i < list_length; ++i) {
-    AddVariableDeclarationParameter(pos++, type_check_mode, attrs);
+    AddParameter(pos++, type_check_mode, attrs);
   }
 
   // List of named.
   list_length = helper_.ReadListLength();  // read list length.
   for (intptr_t i = 0; i < list_length; ++i) {
-    AddVariableDeclarationParameter(pos++, type_check_mode, attrs);
+    AddParameter(pos++, type_check_mode, attrs);
   }
 }
 
-void ScopeBuilder::AddVariableDeclarationParameter(
-    intptr_t pos,
-    ParameterTypeCheckMode type_check_mode,
-    const ProcedureAttributesMetadata& attrs) {
+void ScopeBuilder::AddParameter(intptr_t pos,
+                                ParameterTypeCheckMode type_check_mode,
+                                const ProcedureAttributesMetadata& attrs) {
   // Convert kernel offset of variable declaration to absolute.
   const intptr_t kernel_offset =
       helper_.data_program_offset_ + helper_.ReaderOffset();
@@ -1697,15 +1728,15 @@ void ScopeBuilder::AddVariableDeclarationParameter(
   const InferredTypeMetadata inferred_arg_type =
       inferred_arg_type_metadata_helper_.GetInferredType(
           helper_.ReaderOffset());
-  VariableDeclarationHelper helper(&helper_);
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kAnnotations);
+  VariableHelper helper(&helper_);
+  helper.ReadUntilExcluding(VariableHelper::kAnnotations);
   const intptr_t annotations_offset = helper_.ReaderOffset();
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kType);
+  helper.ReadUntilExcluding(VariableHelper::kType);
   String& name = H.DartSymbolObfuscate(helper.name_index_);
   ASSERT(name.Length() > 0);
   AbstractType& type = BuildAndVisitVariableType();  // read type.
-  helper.SetJustRead(VariableDeclarationHelper::kType);
-  helper.ReadUntilExcluding(VariableDeclarationHelper::kInitializer);
+  helper.SetJustRead(VariableHelper::kType);
+  helper.ReadUntilExcluding(VariableHelper::kInitializer);
 
   LocalVariable* variable = MakeVariable(
       helper.position_, helper.position_, name, type, kernel_offset,
@@ -1719,8 +1750,7 @@ void ScopeBuilder::AddVariableDeclarationParameter(
   if (helper.IsCovariant()) {
     variable->set_is_explicit_covariant_parameter();
   }
-  if (helper.IsWildcard() || helper.IsInitializingFormal() ||
-      helper.IsSuperInitializingFormal()) {
+  if (helper.IsWildcard()) {
     variable->set_invisible(true);
   }
 

@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:kernel/ast.dart';
-import 'package:kernel/transformations/flags.dart';
 
 import '../../base/local_scope.dart';
 import '../../builder/formal_parameter_builder.dart';
@@ -21,7 +20,7 @@ class FactoryBodyBuilderContext extends BodyBuilderContext {
 
   final Member _member;
 
-  FactoryBodyBuilderContext(this._builder, this._declaration, this._member)
+  new(this._builder, this._declaration, this._member)
     : super(
         _builder.libraryBuilder,
         _builder.declarationBuilder,
@@ -29,7 +28,7 @@ class FactoryBodyBuilderContext extends BodyBuilderContext {
       );
 
   @override
-  VariableDeclaration? getTearOffParameter(int index) {
+  FunctionParameter? getTearOffParameter(int index) {
     return _declaration.getTearOffParameter(index);
   }
 
@@ -71,7 +70,7 @@ class FactoryBodyBuilderContext extends BodyBuilderContext {
   @override
   // Coverage-ignore(suite): Not run.
   void registerSuperCall() {
-    _member.transformerFlags |= TransformerFlag.superCalls;
+    _member.containsSuperCalls = true;
   }
 
   @override
@@ -83,14 +82,9 @@ class FactoryBodyBuilderContext extends BodyBuilderContext {
   }) {
     _declaration.registerFunctionBody(
       body: body,
-      scope: scopeProviderInfo
-          // Coverage-ignore(suite): Not run.
-          ?.scope,
       asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
-      thisVariable: scopeProviderInfo
-          // Coverage-ignore(suite): Not run.
-          ?.thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 

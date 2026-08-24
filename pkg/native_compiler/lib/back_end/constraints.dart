@@ -3,13 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:native_compiler/back_end/locations.dart';
+import 'package:native_compiler/back_end/safepoint.dart';
 import 'package:cfg/ir/instructions.dart';
 import 'package:cfg/ir/types.dart';
 import 'package:cfg/ir/visitor.dart';
 
-final class AnyCpuRegister implements Constraint {
-  const AnyCpuRegister();
-
+final class const AnyCpuRegister() implements Constraint {
   @override
   RegisterClass get registerClass => RegisterClass.cpu;
 
@@ -17,9 +16,7 @@ final class AnyCpuRegister implements Constraint {
   String toString() => 'reg';
 }
 
-final class AnyFpuRegister implements Constraint {
-  const AnyFpuRegister();
-
+final class const AnyFpuRegister() implements Constraint {
   @override
   RegisterClass get registerClass => RegisterClass.fpu;
 
@@ -27,12 +24,8 @@ final class AnyFpuRegister implements Constraint {
   String toString() => 'fpreg';
 }
 
-final class AnyLocation implements Constraint {
-  @override
-  final RegisterClass registerClass;
-
-  const AnyLocation(this.registerClass);
-
+final class const AnyLocation(final RegisterClass registerClass)
+    implements Constraint {
   @override
   String toString() => 'any';
 }
@@ -51,17 +44,12 @@ final class AnyLocation implements Constraint {
 /// both inputs and outputs.
 ///
 /// TODO: encode constraints as int/Uint32List.
-class InstructionConstraints {
-  final Constraint? result;
-  final List<Constraint?> inputs;
-  final List<Constraint> temps;
-
-  const InstructionConstraints(
-    this.result,
-    this.inputs, [
-    this.temps = const [],
-  ]);
-}
+class const InstructionConstraints(
+  final Constraint? result,
+  final List<Constraint?> inputs, [
+  final List<Constraint> temps = const [],
+  final Safepoint? safepoint,
+]);
 
 const anyCpuRegister = AnyCpuRegister();
 const anyFpuRegister = AnyFpuRegister();
@@ -83,18 +71,22 @@ Constraint anyLocation(Definition def) => switch (registerClass(def)) {
   RegisterClass.fpu => anyFpuLocation,
 };
 
+Constraint? registerOrImmediate(Register reg, Definition def) =>
+    def is Constant ? null : reg;
+
 Constraint? anyRegisterOrImmediate(Definition def) =>
     def is Constant ? null : anyRegister(def);
 
 Constraint? anyLocationOrImmediate(Definition def) =>
     def is Constant ? null : anyLocation(def);
 
+Constraint? anyFpuRegisterOrZero(Definition def) =>
+    (def is Constant && def.value.isZero) ? null : anyFpuRegister;
+
 /// Base class to define register allocation contraints for
 /// inputs/outputs/temporaries of the IR instructions.
-abstract base class Constraints
+abstract base class const Constraints()
     implements InstructionVisitor<InstructionConstraints?> {
-  const Constraints();
-
   int getNumberOfRegisters();
   List<Register> getAllocatableRegisters();
 
@@ -114,7 +106,14 @@ abstract base class Constraints
   InstructionConstraints? visitTargetBlock(TargetBlock instr) => null;
 
   @override
-  InstructionConstraints? visitCatchBlock(CatchBlock instr) => null;
+  InstructionConstraints? visitCatchBlock(CatchBlock instr) =>
+      InstructionConstraints(
+        null,
+        const [],
+        const [],
+        // VM requires a safepoint at every exception handler.
+        Safepoint(),
+      );
 
   @override
   InstructionConstraints? visitGoto(Goto instr) => null;
@@ -160,4 +159,8 @@ abstract base class Constraints
   @override
   InstructionConstraints? visitStringInterpolation(StringInterpolation instr) =>
       throw 'Unexpected StringInterpolation (should be lowered)';
+
+  @override
+  InstructionConstraints? visitInstantiateClosure(InstantiateClosure instr) =>
+      throw 'Unexpected InstantiateClosure (should be lowered)';
 }

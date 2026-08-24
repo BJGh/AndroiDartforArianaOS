@@ -18,7 +18,7 @@ main() {
 class RefutablePatternInIrrefutableContextTest
     extends PubPackageResolutionTest {
   test_declaration_constantPattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (0) = 0;
 //     ^
@@ -26,21 +26,21 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
   pattern: ParenthesizedPattern
     leftParenthesis: (
     pattern: ConstantPattern
-      expression: IntegerLiteral
+      expression2: IntegerLiteral
         literal: 0
         staticType: int
       matchedValueType: int
     rightParenthesis: )
     matchedValueType: int
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _
@@ -48,7 +48,7 @@ PatternVariableDeclaration
   }
 
   test_declaration_logicalOrPattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (_ || _) = 0;
 //     ^^^^^^
@@ -58,7 +58,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -76,7 +76,7 @@ PatternVariableDeclaration
     rightParenthesis: )
     matchedValueType: int
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _
@@ -84,7 +84,7 @@ PatternVariableDeclaration
   }
 
   test_declaration_nullCheckPattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(int? x) {
   var (_?) = x;
 //     ^^
@@ -92,7 +92,7 @@ void f(int? x) {
 }
 ''');
 
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -107,7 +107,7 @@ PatternVariableDeclaration
     rightParenthesis: )
     matchedValueType: int?
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: int?
@@ -116,7 +116,7 @@ PatternVariableDeclaration
   }
 
   test_declaration_relationalPattern() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var (> 0) = 0;
 //     ^^^
@@ -124,7 +124,7 @@ void f() {
 }
 ''');
 
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -132,7 +132,7 @@ PatternVariableDeclaration
     leftParenthesis: (
     pattern: RelationalPattern
       operator: >
-      operand: IntegerLiteral
+      operand2: IntegerLiteral
         literal: 0
         staticType: int
       element: dart:core::@class::num::@method::>
@@ -140,7 +140,7 @@ PatternVariableDeclaration
     rightParenthesis: )
     matchedValueType: int
   equals: =
-  expression: IntegerLiteral
+  expression2: IntegerLiteral
     literal: 0
     staticType: int
   patternTypeSchema: _

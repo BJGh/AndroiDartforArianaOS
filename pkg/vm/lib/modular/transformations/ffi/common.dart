@@ -236,6 +236,7 @@ class FfiTransformer extends Transformer {
   final Class ffiStructLayoutClass;
   final Field ffiStructLayoutTypesField;
   final Field ffiStructLayoutPackingField;
+  final Field ffiStructLayoutFieldNamesField;
   final Class ffiAbiSpecificMappingClass;
   final Field ffiAbiSpecificMappingNativeTypesField;
   final Class ffiInlineArrayClass;
@@ -502,6 +503,11 @@ class FfiTransformer extends Transformer {
         'dart:ffi',
         '_FfiStructLayout',
         'packing',
+      ),
+      ffiStructLayoutFieldNamesField = index.getField(
+        'dart:ffi',
+        '_FfiStructLayout',
+        'fieldNames',
       ),
       ffiAbiSpecificMappingClass = index.getClass(
         'dart:ffi',
@@ -1946,6 +1952,10 @@ class FfiTransformer extends Transformer {
           variance: Variance.covariant,
         )!;
         if (env.isSubtypeOf(dartType, correspondingDartType)) {
+          if (correspondingDartType is FunctionType &&
+              dartType is! FunctionType) {
+            throw FfiStaticTypeError();
+          }
           return correspondingDartType;
         }
     }

@@ -219,15 +219,15 @@ class WasmFfiNativeTransformer extends FfiNativeTransformer {
 
     // For the imported function arguments, use names in the Dart function but
     // types in the FFI declaration
-    final List<VariableDeclaration> wasmImportProcedureArgs = [];
+    final List<PositionalParameter> wasmImportProcedureArgs = [];
     for (int i = 0; i < ffiFunctionType.positionalParameters.length; i += 1) {
       final argWasmType = _convertFfiTypeToWasmType(
         ffiFunctionType.positionalParameters[i],
       );
       if (argWasmType != null) {
         wasmImportProcedureArgs.add(
-          VariableDeclaration(
-            node.function.positionalParameters[i].name!,
+          PositionalParameter(
+            parameterName: node.function.positionalParameters[i].parameterName,
             type: argWasmType,
             isSynthesized: true,
           ),

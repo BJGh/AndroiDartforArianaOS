@@ -2,15 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
+import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(ForInOfInvalidTypeTest);
     defineReflectiveTests(ForInOfInvalidTypeWithStrictCastsTest);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
@@ -44,7 +45,7 @@ f(bool e) async {
     await resolveTestCodeWithDiagnostics(r'''
 f(Never e) async {
   await for (var id in e) {
-// [diag.deadCode][column 14][length 78] Dead code.
+// [diag.deadCode][column 14][length 26] Dead code.
     id;
   }
 }
@@ -135,7 +136,7 @@ f(L e) {
     await resolveTestCodeWithDiagnostics(r'''
 f(Never e) {
   for (var id in e) {
-// [diag.deadCode][column 8][length 77] Dead code.
+// [diag.deadCode][column 8][length 26] Dead code.
     id;
   }
 }
@@ -159,15 +160,14 @@ f(Object e) async {
 class ForInOfInvalidTypeWithStrictCastsTest extends PubPackageResolutionTest
     with WithStrictCastsMixin {
   test_forIn() async {
-    await assertErrorsWithStrictCasts(
-      '''
+    await assertTestCodeWithStrictCastsDiagnostics('''
 f(dynamic e) {
   for (var id in e) {
+//               ^
+// [diag.forInOfInvalidType] The type 'dynamic' used in the 'for' loop must implement 'Iterable'.
     id;
   }
 }
-''',
-      [error(diag.forInOfInvalidType, 32, 1)],
-    );
+''');
   }
 }

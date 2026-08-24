@@ -16,8 +16,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't use explicit `break`s when a break is implied.";
 
 class UnnecessaryBreaks extends AnalysisRule {
-  UnnecessaryBreaks()
-    : super(name: LintNames.unnecessary_breaks, description: _desc);
+  new() : super(name: LintNames.unnecessary_breaks, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.unnecessaryBreaks;
@@ -34,11 +33,7 @@ class UnnecessaryBreaks extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   visitBreakStatement(BreakStatement node) {
     if (node.label != null) return;

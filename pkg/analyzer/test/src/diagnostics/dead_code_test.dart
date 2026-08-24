@@ -2,21 +2,23 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
+import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(DeadCodeTest);
-    defineReflectiveTests(DeadCodeTest_Language219);
+    defineReflectiveTests(DeadCodeTest_BeforePatterns);
     defineReflectiveTests(DeadCodeTest_AnonymousMethodsExperiment);
+    defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
-class DeadCodeTest extends PubPackageResolutionTest
-    with DeadCodeTestCases_Language212 {
+class DeadCodeTest extends PubPackageResolutionTest with DeadCodeTestCases {
   test_asExpression_type() async {
     await resolveTestCodeWithDiagnostics(r'''
 Never doNotReturn() => throw 0;
@@ -194,7 +196,7 @@ Never foo() => throw "Never";
 test() {
   int i = 0;
   for (foo(); (i = 42) < 0;) {}
-// [diag.deadCode][column 15][length 81] Dead code.
+// [diag.deadCode][column 15][length 29] Dead code.
   return i;
 }
 ''');
@@ -232,10 +234,9 @@ void f() {
 ''');
   }
 
-  test_localFunction_wildcard_preWildcards() async {
+  test_localFunction_wildcard_beforeWildcardVariables() async {
     await resolveTestCodeWithDiagnostics(r'''
-// @dart = 3.4
-// (pre wildcard-variables)
+// %before-language-feature: wildcard-variables
 
 void f() {
   _(){}
@@ -278,7 +279,18 @@ void f(Null n, int i) {
 ''');
   }
 
-  test_nullAwarePropertyRead() async {
+  test_nullAwarePropertyRead_parenthesizedExpression() async {
+    await resolveTestCodeWithDiagnostics(r'''
+void f(Null n) {
+  (n)?.p;
+//     ^
+// [diag.deadCode] Dead code.
+  print('reached');
+}
+''');
+  }
+
+  test_nullAwarePropertyRead_simpleIdentifier() async {
     await resolveTestCodeWithDiagnostics(r'''
 void f(Null n) {
   n?.p;
@@ -289,7 +301,18 @@ void f(Null n) {
 ''');
   }
 
-  test_nullAwarePropertyWrite() async {
+  test_nullAwarePropertyWrite_parenthesizedExpression() async {
+    await resolveTestCodeWithDiagnostics(r'''
+void f(Null n, int i) {
+  (n)?.p = i;
+//     ^^^^^
+// [diag.deadCode] Dead code.
+  print('reached');
+}
+''');
+  }
+
+  test_nullAwarePropertyWrite_simpleIdentifier() async {
     await resolveTestCodeWithDiagnostics(r'''
 void f(Null n, int i) {
   n?.p = i;
@@ -338,7 +361,7 @@ test() => doNotReturn().hashCode;
 @reflectiveTest
 class DeadCodeTest_AnonymousMethodsExperiment extends PubPackageResolutionTest {
   @override
-  List<String> get experiments => ['anonymous-methods'];
+  List<Feature> get experimentalFeatures => [Feature.anonymous_methods];
 
   test_cascaded_deadCode() async {
     await resolveTestCodeWithDiagnostics(r'''
@@ -430,11 +453,11 @@ Never get never => throw 0;
 }
 
 @reflectiveTest
-class DeadCodeTest_Language219 extends PubPackageResolutionTest
-    with WithLanguage219Mixin, DeadCodeTestCases_Language212 {
+class DeadCodeTest_BeforePatterns extends PubPackageResolutionTest
+    with BeforePatternsMixin, DeadCodeTestCases {
   @override
   test_lateWildCardVariable_initializer() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f() {
   // Not a wildcard variable.
   late var _ = 0;
@@ -443,7 +466,7 @@ f() {
   }
 }
 
-mixin DeadCodeTestCases_Language212 on PubPackageResolutionTest {
+mixin DeadCodeTestCases on PubPackageResolutionTest {
   @override
   void setUp() {
     super.setUp();
@@ -451,7 +474,7 @@ mixin DeadCodeTestCases_Language212 on PubPackageResolutionTest {
   }
 
   test_afterForEachWithBreakLabel() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f(List<Object> values) {
   named: {
     for (var x in values) {
@@ -467,7 +490,7 @@ f(List<Object> values) {
   }
 
   test_afterForWithBreakLabel() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f() {
   named: {
     for (int i = 0; i < 7; i++) {
@@ -482,7 +505,7 @@ f() {
   }
 
   test_afterTryCatch() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 main() {
   try {
     return f();
@@ -551,7 +574,7 @@ class C {
 class A {
   int x;
   A() : x = throw 0 {
-// [diag.deadCode][column 21][length 64] Dead code.
+// [diag.deadCode][column 21][length 12] Dead code.
     x;
   }
 }
@@ -559,7 +582,7 @@ class A {
   }
 
   test_constructorInitializerWithThrow_thenEmptyBlockBody() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int x;
   A() : x = throw 0 {}
@@ -568,7 +591,7 @@ class A {
   }
 
   test_constructorInitializerWithThrow_thenEmptyBody() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   int x;
   A() : x = throw 0;
@@ -602,7 +625,7 @@ class A {
   }
 
   test_continueInSwitch() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(int i) {
   for (;; 1) {
     switch (i) {
@@ -625,7 +648,7 @@ f() {
   }
 
   test_deadBlock_conditionalElse_debugConst() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = true;
 f() {
   DEBUG ? 1 : 2;
@@ -655,7 +678,7 @@ f() {
   }
 
   test_deadBlock_conditionalThen_debugConst() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = false;
 f() {
   DEBUG ? 1 : 2;
@@ -685,7 +708,7 @@ f() {
   }
 
   test_deadBlock_else_debugConst() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = true;
 f() {
   if(DEBUG) {} else {}
@@ -715,7 +738,7 @@ f() {
   }
 
   test_deadBlock_if_debugConst_prefixedIdentifier() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 class A {
   static const bool DEBUG = false;
 }
@@ -730,7 +753,7 @@ f() {
 class A {
   static const bool DEBUG = false;
 }''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'lib2.dart';
 f() {
   if(A.DEBUG) {}
@@ -744,7 +767,7 @@ class A {
   static const bool DEBUG = false;
 }
 ''');
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 import 'lib2.dart' as LIB;
 f() {
   if(LIB.A.DEBUG) {}
@@ -753,7 +776,7 @@ f() {
   }
 
   test_deadBlock_if_debugConst_simpleIdentifier() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = false;
 f() {
   if(DEBUG) {}
@@ -808,7 +831,7 @@ f() {
   }
 
   test_deadBlock_while_debugConst() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = false;
 f() {
   while(DEBUG) {}
@@ -934,7 +957,7 @@ f() {
   }
 
   test_deadOperandLHS_and_debugConst() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 const bool DEBUG = false;
 f() {
   bool b = DEBUG && false;
@@ -988,7 +1011,7 @@ f() {
   }
 
   test_documentationComment() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 /// text
 int f() => 0;
 ''');
@@ -1072,7 +1095,7 @@ void f(bool c) {
 //  ^^^^^^^^^^^^
 // [diag.deadCode] Dead code.
     print('');
-// [diag.deadCode][column 5][length 89] Dead code.
+// [diag.deadCode][column 5][length 38] Dead code.
   } while (c);
   print('');
 }
@@ -1092,7 +1115,7 @@ void f(bool c) {
 //  ^^^^^^^^^^^^
 // [diag.deadCode] Dead code.
     print('');
-// [diag.deadCode][column 5][length 65] Dead code.
+// [diag.deadCode][column 5][length 14] Dead code.
   }
 }
 ''');
@@ -1209,19 +1232,19 @@ f() => [for (var i = 0;; i > 1 ? i : i) throw ''];
 ''');
   }
 
-  test_flowEnd_forElementParts_updaters_indexExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
-f(List<int> values) => [for (;; values[0]) throw ''];
-//                              ^^^^^^^^^
-// [diag.deadCode] Dead code.
-''');
-  }
-
-  test_flowEnd_forElementParts_updaters_instanceCreationExpression() async {
+  test_flowEnd_forElementParts_updaters_constructorInvocation() async {
     await resolveTestCodeWithDiagnostics(r'''
 class C {}
 f() => [for (;; C()) throw ''];
 //              ^^^
+// [diag.deadCode] Dead code.
+''');
+  }
+
+  test_flowEnd_forElementParts_updaters_indexExpression() async {
+    await resolveTestCodeWithDiagnostics(r'''
+f(List<int> values) => [for (;; values[0]) throw ''];
+//                              ^^^^^^^^^
 // [diag.deadCode] Dead code.
 ''');
   }
@@ -1368,11 +1391,12 @@ void f() {
 ''');
   }
 
-  test_flowEnd_forParts_updaters_indexExpression() async {
+  test_flowEnd_forParts_updaters_constructorInvocation() async {
     await resolveTestCodeWithDiagnostics(r'''
-void f(List<int> values) {
-  for (;; values[0]) {
-//        ^^^^^^^^^
+class C {}
+void f() {
+  for (;; C()) {
+//        ^^^
 // [diag.deadCode] Dead code.
     return;
   }
@@ -1380,12 +1404,11 @@ void f(List<int> values) {
 ''');
   }
 
-  test_flowEnd_forParts_updaters_instanceCreationExpression() async {
+  test_flowEnd_forParts_updaters_indexExpression() async {
     await resolveTestCodeWithDiagnostics(r'''
-class C {}
-void f() {
-  for (;; C()) {
-//        ^^^
+void f(List<int> values) {
+  for (;; values[0]) {
+//        ^^^^^^^^^
 // [diag.deadCode] Dead code.
     return;
   }
@@ -1521,7 +1544,7 @@ void f() {
     {
       return;
       2;
-// [diag.deadCode][column 7][length 59] Dead code.
+// [diag.deadCode][column 7][length 8] Dead code.
     }
   }
 }
@@ -1585,7 +1608,7 @@ main() {
     2;
     return;
     3;
-// [diag.deadCode][column 5][length 62] Dead code.
+// [diag.deadCode][column 5][length 11] Dead code.
   }
   4;
 }
@@ -1607,7 +1630,7 @@ void f() {
     await resolveTestCodeWithDiagnostics(r'''
 void f() {
   if (false) {
-// [diag.deadCode][column 14][length 64] Dead code.
+// [diag.deadCode][column 14][length 12] Dead code.
     1;
   } else {
     2;
@@ -1623,7 +1646,7 @@ void f() {
   if (true) {
     1;
   } else {
-// [diag.deadCode][column 10][length 64] Dead code.
+// [diag.deadCode][column 10][length 12] Dead code.
     2;
   }
   3;
@@ -1640,7 +1663,7 @@ void g(A a) {
   a.f(0);
 //^^^
 // [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
-// [diag.deadCode][column 6][length 175] Dead code.
+// [diag.deadCode][column 6][length 16] Dead code.
   print(1);
 }
 ''');
@@ -1652,7 +1675,7 @@ void g(Never f) {
   (f)(0);
 //^^^
 // [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
-// [diag.deadCode][column 6][length 175] Dead code.
+// [diag.deadCode][column 6][length 16] Dead code.
   print(1);
 }
 ''');
@@ -1664,7 +1687,7 @@ void g(Never f) {
   f(0);
 //^
 // [diag.receiverOfTypeNever] The receiver is of type 'Never', and will never complete with a value.
-// [diag.deadCode][column 4][length 173] Dead code.
+// [diag.deadCode][column 4][length 16] Dead code.
   print(1);
 }
 ''');
@@ -1681,7 +1704,7 @@ f() {
   }
 
   test_lateWildCardVariable_noInitializer() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f() {
   late var _;
 }
@@ -1689,7 +1712,7 @@ f() {
   }
 
   test_notUnassigned_propertyAccess() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(int? i) {
   (i)?.sign;
 }
@@ -1697,7 +1720,7 @@ void f(int? i) {
   }
 
   test_potentiallyAssigned_propertyAccess() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 void f(bool b) {
   int? i;
   if (b) {
@@ -1880,7 +1903,7 @@ f() {
   }
 
   test_statementAfterIfWithoutElse() async {
-    await assertNoErrorsInCode(r'''
+    await resolveTestCodeWithDiagnostics(r'''
 f() {
   if (1 < 0) {
     return;
@@ -1992,7 +2015,7 @@ f() {
   print(1);
   return;
   print(2);
-// [diag.deadCode][column 3][length 82] Dead code.
+// [diag.deadCode][column 3][length 31] Dead code.
   return;
   print(3);
 }

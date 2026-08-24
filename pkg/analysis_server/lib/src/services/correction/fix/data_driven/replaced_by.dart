@@ -27,7 +27,7 @@ class ReplacedBy extends Change<_Data> {
 
   /// Initialize a newly created transform to describe a replacement of an old
   /// element by a [newElement].
-  ReplacedBy({
+  new({
     required this.newElement,
     required this.replaceTarget,
     List<CodeTemplate>? argumentList,
@@ -104,7 +104,10 @@ class ReplacedBy extends Change<_Data> {
         return result;
       }
     }
-    if (node is ImportDirective) {
+    if (node is NamespaceDirective) {
+      if (node.uri is! SimpleStringLiteral) {
+        return null;
+      }
       var uri = node.uri as SimpleStringLiteral;
       return _Data(
         range.startOffsetEndOffset(uri.contentsOffset, uri.contentsEnd),
@@ -307,5 +310,5 @@ class _Data {
 
   final bool isInstanceMember;
 
-  _Data(this.referenceRange, {this.suffix, this.isInstanceMember = false});
+  new(this.referenceRange, {this.suffix, this.isInstanceMember = false});
 }

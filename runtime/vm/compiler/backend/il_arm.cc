@@ -1976,8 +1976,6 @@ void OneByteStringFromCharCodeInstr::EmitNativeCode(
       result,
       compiler::Address(
           THR, compiler::target::Thread::predefined_symbols_address_offset()));
-  __ AddImmediate(
-      result, Symbols::kNullCharCodeSymbolOffset * compiler::target::kWordSize);
   __ ldr(result,
          compiler::Address(result, char_code, LSL, 1));  // Char code is a smi.
 }
@@ -3121,7 +3119,7 @@ void CreateArrayInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
 
   compiler::Label slow_path, done;
-  if (!FLAG_use_slow_path && FLAG_inline_alloc) {
+  if (UseInlineAllocation()) {
     if (compiler->is_optimizing() && !FLAG_precompiled_mode &&
         num_elements()->BindsToConstant() &&
         compiler::target::IsSmi(num_elements()->BoundConstant())) {
@@ -3134,10 +3132,7 @@ void CreateArrayInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   }
 
   __ Bind(&slow_path);
-  auto object_store = compiler->isolate_group()->object_store();
-  const auto& allocate_array_stub =
-      Code::ZoneHandle(compiler->zone(), object_store->allocate_array_stub());
-  compiler->GenerateStubCall(source(), allocate_array_stub,
+  compiler->GenerateStubCall(source(), StubCode::AllocateArray(),
                              UntaggedPcDescriptors::kOther, locs(), deopt_id(),
                              env());
   __ Bind(&done);
@@ -3178,11 +3173,9 @@ class AllocateContextSlowPath
         instruction(), /*num_slow_path_args=*/0);
     ASSERT(slow_path_env != nullptr);
 
-    auto object_store = compiler->isolate_group()->object_store();
-    const auto& allocate_context_stub = Code::ZoneHandle(
-        compiler->zone(), object_store->allocate_context_stub());
     __ LoadImmediate(R1, instruction()->num_context_variables());
-    compiler->GenerateStubCall(instruction()->source(), allocate_context_stub,
+    compiler->GenerateStubCall(instruction()->source(),
+                               StubCode::AllocateContext(),
                                UntaggedPcDescriptors::kOther, locs,
                                instruction()->deopt_id(), slow_path_env);
     ASSERT(instruction()->locs()->out(0).reg() == R0);
@@ -3202,7 +3195,7 @@ void AllocateUninitializedContextInstr::EmitNativeCode(
   compiler->AddSlowPathCode(slow_path);
   intptr_t instance_size = Context::InstanceSize(num_context_variables());
 
-  if (!FLAG_use_slow_path && FLAG_inline_alloc) {
+  if (UseInlineAllocation()) {
     __ TryAllocateArray(kContextCid, instance_size, slow_path->entry_label(),
                         result,  // instance
                         temp0, temp1, temp2);
@@ -3234,11 +3227,8 @@ void AllocateContextInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ASSERT(locs()->temp(0).reg() == R1);
   ASSERT(locs()->out(0).reg() == R0);
 
-  auto object_store = compiler->isolate_group()->object_store();
-  const auto& allocate_context_stub =
-      Code::ZoneHandle(compiler->zone(), object_store->allocate_context_stub());
   __ LoadImmediate(R1, num_context_variables());
-  compiler->GenerateStubCall(source(), allocate_context_stub,
+  compiler->GenerateStubCall(source(), StubCode::AllocateContext(),
                              UntaggedPcDescriptors::kOther, locs(), deopt_id(),
                              env());
 }
@@ -3258,10 +3248,7 @@ void CloneContextInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   ASSERT(locs()->in(0).reg() == R4);
   ASSERT(locs()->out(0).reg() == R0);
 
-  auto object_store = compiler->isolate_group()->object_store();
-  const auto& clone_context_stub =
-      Code::ZoneHandle(compiler->zone(), object_store->clone_context_stub());
-  compiler->GenerateStubCall(source(), clone_context_stub,
+  compiler->GenerateStubCall(source(), StubCode::CloneContext(),
                              /*kind=*/UntaggedPcDescriptors::kOther, locs(),
                              deopt_id(), env());
 }
@@ -3404,13 +3391,10 @@ void CheckStackOverflowInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
                                compiler::target::Thread::stack_limit_offset()));
   __ cmp(SP, compiler::Operand(IP));
 
-  auto object_store = compiler->isolate_group()->object_store();
   const bool live_fpu_regs = locs()->live_registers()->FpuRegisterCount() > 0;
-  const auto& stub = Code::ZoneHandle(
-      compiler->zone(),
-      live_fpu_regs
-          ? object_store->stack_overflow_stub_with_fpu_regs_stub()
-          : object_store->stack_overflow_stub_without_fpu_regs_stub());
+  const auto& stub = live_fpu_regs
+                         ? StubCode::StackOverflowSharedWithFPURegs()
+                         : StubCode::StackOverflowSharedWithoutFPURegs();
   const bool using_shared_stub = locs()->call_on_shared_slow_path();
   if (using_shared_stub && compiler->CanPcRelativeCall(stub) &&
       compiler->flow_graph().graph_entry()->NeedsFrame()) {
@@ -4461,19 +4445,7 @@ LocationSummary* BoxInt64Instr::MakeLocationSummary(Zone* zone,
                                                     bool opt) const {
   const intptr_t kNumInputs = 1;
   const intptr_t kNumTemps = ValueFitsSmi() ? 0 : 1;
-  // Shared slow path is used in BoxInt64Instr::EmitNativeCode in
-  // precompiled mode and only after VM isolate stubs where
-  // replaced with isolate-specific stubs.
-  auto object_store = IsolateGroup::Current()->object_store();
-  const bool stubs_in_vm_isolate =
-      object_store->allocate_mint_with_fpu_regs_stub()
-          ->untag()
-          ->InVMIsolateHeap() ||
-      object_store->allocate_mint_without_fpu_regs_stub()
-          ->untag()
-          ->InVMIsolateHeap();
-  const bool shared_slow_path_call =
-      SlowPathSharingSupported(opt) && !stubs_in_vm_isolate;
+  const bool shared_slow_path_call = SlowPathSharingSupported(opt);
   LocationSummary* summary = new (zone) LocationSummary(
       zone, kNumInputs, kNumTemps,
       ValueFitsSmi()
@@ -4527,12 +4499,10 @@ void BoxInt64Instr::EmitNativeCode(FlowGraphCompiler* compiler) {
       __ set_constant_pool_allowed(false);
       __ EnterDartFrame(0);
     }
-    auto object_store = compiler->isolate_group()->object_store();
     const bool live_fpu_regs = locs()->live_registers()->FpuRegisterCount() > 0;
-    const auto& stub = Code::ZoneHandle(
-        compiler->zone(),
-        live_fpu_regs ? object_store->allocate_mint_with_fpu_regs_stub()
-                      : object_store->allocate_mint_without_fpu_regs_stub());
+    const auto& stub = live_fpu_regs
+                           ? StubCode::AllocateMintSharedWithFPURegs()
+                           : StubCode::AllocateMintSharedWithoutFPURegs();
 
     ASSERT(!locs()->live_registers()->ContainsRegister(
         AllocateMintABI::kResultReg));
@@ -4898,6 +4868,9 @@ DEFINE_EMIT(Float32x4Sqrt,
 
 DEFINE_EMIT(Float32x4Unary, (QRegister result, QRegister left)) {
   switch (instr->kind()) {
+    case SimdOpInstr::kInt32x4Not:
+      __ vmvnq(result, left);
+      break;
     case SimdOpInstr::kFloat32x4Negate:
       __ vnegqs(result, left);
       break;
@@ -5141,6 +5114,27 @@ DEFINE_EMIT(Int32x4FromBools,
 
 // Low (< 7) Q registers are needed for the vmovrs instruction.
 // TODO(dartbug.com/30953) support register range constraints in the regalloc.
+DEFINE_EMIT(Int32x4GetLane, (Register result, FixedQRegisterView<Q6> value)) {
+  switch (instr->kind()) {
+    case SimdOpInstr::kInt32x4GetX:
+      __ vmovrs(result, value.s(0));
+      break;
+    case SimdOpInstr::kInt32x4GetY:
+      __ vmovrs(result, value.s(1));
+      break;
+    case SimdOpInstr::kInt32x4GetZ:
+      __ vmovrs(result, value.s(2));
+      break;
+    case SimdOpInstr::kInt32x4GetW:
+      __ vmovrs(result, value.s(3));
+      break;
+    default:
+      UNREACHABLE();
+  }
+}
+
+// Low (< 7) Q registers are needed for the vmovrs instruction.
+// TODO(dartbug.com/30953) support register range constraints in the regalloc.
 DEFINE_EMIT(Int32x4GetFlag, (Register result, FixedQRegisterView<Q6> value)) {
   switch (instr->kind()) {
     case SimdOpInstr::kInt32x4GetFlagX:
@@ -5169,17 +5163,16 @@ DEFINE_EMIT(Int32x4Select,
              QRegister mask,
              QRegister trueValue,
              QRegister falseValue,
-             Temp<QRegister> temp)) {
-  // Copy mask.
-  __ vmovq(temp, mask);
-  // Invert it.
-  __ vmvnq(temp, temp);
-  // mask = mask & trueValue.
-  __ vandq(mask, mask, trueValue);
-  // temp = temp & falseValue.
-  __ vandq(temp, temp, falseValue);
-  // out = mask | temp.
-  __ vorrq(out, mask, temp);
+             Temp<QRegister> temp1,
+             Temp<QRegister> temp2)) {
+  // temp2 = ~mask.
+  __ vmvnq(temp2, mask);
+  // temp1 = mask & trueValue.
+  __ vandq(temp1, mask, trueValue);
+  // temp2 = (~mask) & falseValue.
+  __ vandq(temp2, temp2, falseValue);
+  // out = temp1 | temp2.
+  __ vorrq(out, temp1, temp2);
 }
 
 DEFINE_EMIT(Int32x4WithFlag,
@@ -5254,6 +5247,7 @@ DEFINE_EMIT(Int32x4WithFlag,
   SIMPLE(Float32x4Zero)                                                        \
   SIMPLE(Float32x4Splat)                                                       \
   SIMPLE(Float32x4Sqrt)                                                        \
+  CASE(Int32x4Not)                                                             \
   CASE(Float32x4Negate)                                                        \
   CASE(Float32x4Abs)                                                           \
   CASE(Float32x4Reciprocal)                                                    \
@@ -5290,6 +5284,11 @@ DEFINE_EMIT(Int32x4WithFlag,
   ____(Float64x2Binary)                                                        \
   SIMPLE(Int32x4FromInts)                                                      \
   SIMPLE(Int32x4FromBools)                                                     \
+  CASE(Int32x4GetX)                                                            \
+  CASE(Int32x4GetY)                                                            \
+  CASE(Int32x4GetZ)                                                            \
+  CASE(Int32x4GetW)                                                            \
+  ____(Int32x4GetLane)                                                         \
   CASE(Int32x4GetFlagX)                                                        \
   CASE(Int32x4GetFlagY)                                                        \
   CASE(Int32x4GetFlagZ)                                                        \
@@ -6770,6 +6769,31 @@ void UnaryInt64OpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
       __ sbc(out_hi, out_hi, compiler::Operand(out_hi));
       __ sub(out_hi, out_hi, compiler::Operand(left_hi));
       break;
+    case Token::kPOPCNT: {
+      __ vmovdrr(DTMP, left_lo, left_hi);
+      __ vcnt(DTMP, DTMP);
+      __ vpaddlu(compiler::kByte, DTMP, DTMP);
+      __ vpaddlu(compiler::kTwoBytes, DTMP, DTMP);
+      __ vpaddlu(compiler::kFourBytes, DTMP, DTMP);
+      __ vmovrs(out_lo, EvenSRegisterOf(DTMP));
+      __ mov(out_hi, compiler::Operand(0));
+      break;
+    }
+    case Token::kCTZ: {
+      compiler::Label hi_path, done;
+      __ cmp(left_lo, compiler::Operand(0));
+      __ b(&hi_path, EQ);
+      __ rbit(out_lo, left_lo);
+      __ clz(out_lo, out_lo);
+      __ b(&done);
+      __ Bind(&hi_path);
+      __ rbit(out_lo, left_hi);
+      __ clz(out_lo, out_lo);
+      __ add(out_lo, out_lo, compiler::Operand(32));
+      __ Bind(&done);
+      __ mov(out_hi, compiler::Operand(0));
+      break;
+    }
     default:
       UNREACHABLE();
   }
@@ -6861,6 +6885,27 @@ LocationSummary* UnaryUint32OpInstr::MakeLocationSummary(Zone* zone,
 }
 
 void UnaryUint32OpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
+  Register left = locs()->in(0).reg();
+  Register out = locs()->out(0).reg();
+  ASSERT(left != out);
+
+  ASSERT(op_kind() == Token::kBIT_NOT);
+
+  __ mvn_(out, compiler::Operand(left));
+}
+
+LocationSummary* UnaryInt32OpInstr::MakeLocationSummary(Zone* zone,
+                                                        bool opt) const {
+  const intptr_t kNumInputs = 1;
+  const intptr_t kNumTemps = 0;
+  LocationSummary* summary = new (zone)
+      LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kNoCall);
+  summary->set_in(0, Location::RequiresRegister());
+  summary->set_out(0, Location::RequiresRegister());
+  return summary;
+}
+
+void UnaryInt32OpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
   Register left = locs()->in(0).reg();
   Register out = locs()->out(0).reg();
   ASSERT(left != out);

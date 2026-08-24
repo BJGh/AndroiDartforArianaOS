@@ -17,16 +17,6 @@
 
 namespace dart {
 
-bool UntaggedObject::InVMIsolateHeap() const {
-  // All "vm-isolate" objects are pre-marked and in old space
-  // (see [Object::FinalizeVMIsolate]).
-  if (!IsOldObject() || !IsMarked()) return false;
-
-  auto heap = Dart::vm_isolate_group()->heap();
-  ASSERT(heap->UsedInWords(Heap::kNew) == 0);
-  return heap->old_space()->ContainsUnsafe(ToAddr(this));
-}
-
 void ObjectPtr::Validate(IsolateGroup* isolate_group) const {
   // All Smi values are valid.
   if (!IsHeapObject()) {
@@ -528,12 +518,9 @@ COMPRESSED_VISITOR(FunctionType)
 COMPRESSED_VISITOR(RecordType)
 COMPRESSED_VISITOR(TypeParameter)
 COMPRESSED_VISITOR(Function)
-// Use relaxed atomic to allow concurrent marker access
-// objects filled in CopyMutableObjectGraph.
-VARIABLE_COMPRESSED_VISITOR(
-    Closure,
-    UntaggedClosure::LengthBits::decode(Smi::Value(
-        raw_obj->untag()->length_and_flags<std::memory_order_relaxed>())))
+VARIABLE_COMPRESSED_VISITOR(Closure,
+                            UntaggedClosure::LengthBits::decode(Smi::Value(
+                                raw_obj->untag()->length_and_flags())))
 COMPRESSED_VISITOR(LibraryPrefix)
 COMPRESSED_VISITOR(Bytecode)
 REGULAR_VISITOR(SingleTargetCache)
@@ -780,30 +767,5 @@ void UntaggedObject::RememberCard(CompressedObjectPtr const* slot) {
   Page::Of(static_cast<ObjectPtr>(this))->RememberCard(slot);
 }
 #endif
-
-const char* UntaggedPcDescriptors::KindToCString(Kind k) {
-  switch (k) {
-#define ENUM_CASE(name, init)                                                  \
-  case Kind::k##name:                                                          \
-    return #name;
-    FOR_EACH_RAW_PC_DESCRIPTOR(ENUM_CASE)
-#undef ENUM_CASE
-    default:
-      return nullptr;
-  }
-}
-
-bool UntaggedPcDescriptors::ParseKind(const char* cstr, Kind* out) {
-  ASSERT(cstr != nullptr && out != nullptr);
-#define ENUM_CASE(name, init)                                                  \
-  if (strcmp(#name, cstr) == 0) {                                              \
-    *out = Kind::k##name;                                                      \
-    return true;                                                               \
-  }
-  FOR_EACH_RAW_PC_DESCRIPTOR(ENUM_CASE)
-#undef ENUM_CASE
-  return false;
-}
-#undef PREFIXED_NAME
 
 }  // namespace dart

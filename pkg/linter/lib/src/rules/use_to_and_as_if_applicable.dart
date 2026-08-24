@@ -26,7 +26,7 @@ bool _isVoid(TypeAnnotation? returnType) =>
     returnType is NamedType && returnType.type is VoidType;
 
 class UseToAndAsIfApplicable extends AnalysisRule {
-  UseToAndAsIfApplicable()
+  new()
     : super(name: LintNames.use_to_and_as_if_applicable, description: _desc);
 
   @override
@@ -42,11 +42,7 @@ class UseToAndAsIfApplicable extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     var nodeParameters = node.parameters;

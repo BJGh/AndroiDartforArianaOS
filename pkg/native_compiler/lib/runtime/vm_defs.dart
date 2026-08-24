@@ -96,6 +96,11 @@ extension ComputedOffsets on VMOffsets {
       Thread_DeoptimizeCopyFrame_entry_point_offset +
       (entry.index - LeafRuntimeEntry.DeoptimizeCopyFrame.index) * wordSize;
 
+  /// Offset of 32-bit Object.hash field (part of Object.tags).
+  // ignore: non_constant_identifier_names
+  int get Object_hash_offset =>
+      Object_tags_offset + (UntaggedObject_kHashTagPos ~/ 8);
+
   /// Object tags for a freshly allocated object.
   int computeNewObjectTags(ClassId cid, int instanceSize, int log2wordSize) {
     final log2align = log2objectAlignment(log2wordSize);
@@ -152,10 +157,6 @@ extension ComputedOffsets on VMOffsets {
 // Symbol names used in Dart snapshots.
 
 const String snapshotBuildIdAsmSymbol = "_kDartSnapshotBuildId";
-const String vmSnapshotDataAsmSymbol = "_kDartVmSnapshotData";
-const String vmSnapshotInstructionsAsmSymbol = "_kDartVmSnapshotInstructions";
-const String vmSnapshotBssAsmSymbol = "_kDartVmSnapshotBss";
-const String isolateSnapshotDataAsmSymbol = "_kDartIsolateSnapshotData";
-const String isolateSnapshotInstructionsAsmSymbol =
-    "_kDartIsolateSnapshotInstructions";
-const String isolateSnapshotBssAsmSymbol = "_kDartIsolateSnapshotBss";
+const String snapshotDataAsmSymbol = "_kDartSnapshotData";
+const String snapshotTextAsmSymbol = "_kDartSnapshotText";
+const String snapshotBssAsmSymbol = "_kDartSnapshotBss";

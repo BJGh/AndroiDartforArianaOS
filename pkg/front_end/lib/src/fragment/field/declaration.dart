@@ -24,6 +24,7 @@ import '../../kernel/body_builder_context.dart';
 import '../../kernel/hierarchy/class_member.dart';
 import '../../kernel/hierarchy/members_builder.dart';
 import '../../kernel/implicit_field_type.dart';
+import '../../kernel/internal_ast.dart';
 import '../../kernel/late_lowering.dart' as late_lowering;
 import '../../kernel/macro/metadata.dart';
 import '../../kernel/type_algorithms.dart';
@@ -125,14 +126,14 @@ abstract class FieldDeclaration {
   /// This is only used for instance fields.
   Initializer buildImplicitInitializer();
 
-  /// Builds the [Initializer]s for each field used to encode this field
+  /// Builds the [InternalInitializer]s for each field used to encode this field
   /// using the [fileOffset] for the created nodes and [value] as the initial
   /// field value.
   ///
   /// This is only used for instance fields.
-  List<Initializer> buildInitializer(
+  List<InternalInitializer> buildInitializer(
     int fileOffset,
-    Expression value, {
+    InternalExpression value, {
     required bool isSynthetic,
   });
 
@@ -180,7 +181,7 @@ class RegularFieldDeclaration
   @override
   bool hasBodyBeenBuilt = false;
 
-  RegularFieldDeclaration(this._fragment) {
+  new(this._fragment) {
     _fragment.declaration = this;
   }
 
@@ -286,8 +287,8 @@ class RegularFieldDeclaration
 
   @override
   void buildBody(
-    CoreTypes coreTypes,
-    Expression? initializer, {
+    CoreTypes coreTypes, {
+    required Expression? initializer,
     required ScopeProviderInfo? scopeProviderInfo,
   }) {
     assert(!hasBodyBeenBuilt, "Body has already been built for $this.");
@@ -323,9 +324,9 @@ class RegularFieldDeclaration
   }
 
   @override
-  List<Initializer> buildInitializer(
+  List<InternalInitializer> buildInitializer(
     int fileOffset,
-    Expression value, {
+    InternalExpression value, {
     required bool isSynthetic,
   }) {
     return _encoding.createInitializer(
@@ -366,8 +367,8 @@ class RegularFieldDeclaration
         if (hasInitializerBeenComputed) {
           buildBody(
             classHierarchy.coreTypes,
-            cachedFieldInitializer,
-            scopeProviderInfo: null,
+            initializer: cachedFieldInitializer,
+            scopeProviderInfo: _scopeProviderInfoCache,
           );
         } else {
           var (
@@ -384,7 +385,7 @@ class RegularFieldDeclaration
           );
           buildBody(
             classHierarchy.coreTypes,
-            initializer,
+            initializer: initializer,
             scopeProviderInfo: scopeProviderInfo,
           );
         }
@@ -646,14 +647,6 @@ class RegularFieldDeclaration
         nameOffset: nameOffset,
         nameLength: _fragment.name.length,
         isAssignable: hasSetter,
-        isClosureContextLoweringEnabled: _fragment
-            .builder
-            .libraryBuilder
-            .loader
-            .target
-            .backendTarget
-            .flags
-            .isClosureContextLoweringEnabled,
       );
     } else {
       // Coverage-ignore-block(suite): Not run.
@@ -863,7 +856,7 @@ mixin FieldDeclarationMixin
         var (
           DartType inferredType,
           Expression? initializer,
-          ScopeProviderInfo? _,
+          ScopeProviderInfo? scopeProviderInfo,
         ) = implicitFieldType.computeType(
           hierarchy,
         );
@@ -892,7 +885,7 @@ mixin FieldDeclarationMixin
               setCovariantByClassInternal();
             }
           }
-          cacheFieldInitializer(initializer);
+          cacheFieldInitializer(initializer, scopeProviderInfo);
         }
         return fieldType;
       },
@@ -902,8 +895,8 @@ mixin FieldDeclarationMixin
   /// Builds the body of this field using [initializer] as the initializer
   /// expression.
   void buildBody(
-    CoreTypes coreTypes,
-    Expression? initializer, {
+    CoreTypes coreTypes, {
+    required Expression? initializer,
     required ScopeProviderInfo? scopeProviderInfo,
   });
 
@@ -912,7 +905,10 @@ mixin FieldDeclarationMixin
   /// The field initializer is included in the outline if the field is constant,
   /// or an instance field in a class with a const constructor. Otherwise, the
   /// field added to the body during full compilation.
-  void cacheFieldInitializer(Expression? initializer);
+  void cacheFieldInitializer(
+    Expression? initializer,
+    ScopeProviderInfo? scopeProviderInfo,
+  );
 
   @override
   // Coverage-ignore(suite): Not run.
@@ -949,8 +945,8 @@ abstract class FieldFragmentDeclaration {
     required TypeInferrer typeInferrer,
     required CoreTypes coreTypes,
     required Uri fileUri,
-    Expression? initializer,
-    required ThisVariable? internalThisVariable,
+    InternalExpression? initializer,
+    required InternalThisVariable? internalThisVariable,
   });
 
   BodyBuilderContext createBodyBuilderContext();
@@ -977,12 +973,13 @@ mixin FieldFragmentDeclarationMixin implements FieldFragmentDeclaration {
 
   bool _hasInitializerBeenComputed = false;
   Expression? _fieldInitializerCache;
+  ScopeProviderInfo? _scopeProviderInfoCache;
 
   /// Builds the body of this field using [initializer] as the initializer
   /// expression.
   void buildBody(
-    CoreTypes coreType,
-    Expression? initializer, {
+    CoreTypes coreType, {
+    required Expression? initializer,
     required ScopeProviderInfo? scopeProviderInfo,
   });
 
@@ -991,8 +988,12 @@ mixin FieldFragmentDeclarationMixin implements FieldFragmentDeclaration {
   /// The field initializer is included in the outline if the field is constant,
   /// or an instance field in a class with a const constructor. Otherwise, the
   /// field added to the body during full compilation.
-  void cacheFieldInitializer(Expression? initializer) {
+  void cacheFieldInitializer(
+    Expression? initializer,
+    ScopeProviderInfo? scopeProviderInfo,
+  ) {
     _fieldInitializerCache = initializer;
+    _scopeProviderInfoCache = scopeProviderInfo;
     _hasInitializerBeenComputed = true;
   }
 
@@ -1005,12 +1006,16 @@ mixin FieldFragmentDeclarationMixin implements FieldFragmentDeclaration {
     required TypeInferrer typeInferrer,
     required CoreTypes coreTypes,
     required Uri fileUri,
-    Expression? initializer,
-    required ThisVariable? internalThisVariable,
+    InternalExpression? initializer,
+    required InternalThisVariable? internalThisVariable,
   }) {
     if (_fieldInitializerCache != null) {
       if (!hasBodyBeenBuilt) {
-        buildBody(coreTypes, _fieldInitializerCache, scopeProviderInfo: null);
+        buildBody(
+          coreTypes,
+          initializer: _fieldInitializerCache,
+          scopeProviderInfo: _scopeProviderInfoCache,
+        );
       }
     } else if (initializer != null) {
       if (!hasBodyBeenBuilt) {
@@ -1022,18 +1027,18 @@ mixin FieldFragmentDeclarationMixin implements FieldFragmentDeclaration {
               inferenceDefaultType: inferenceDefaultType,
               internalThisVariable: internalThisVariable,
             );
-        initializer =
+        Expression inferredInitializer =
             inferredFieldInitializer.expressionInferenceResult.expression;
         _hasInitializerBeenComputed = true;
         buildBody(
           coreTypes,
-          initializer,
+          initializer: inferredInitializer,
           scopeProviderInfo: inferredFieldInitializer.scopeProviderInfo,
         );
       }
     } else if (!hasBodyBeenBuilt) {
       _hasInitializerBeenComputed = true;
-      buildBody(coreTypes, null, scopeProviderInfo: null);
+      buildBody(coreTypes, initializer: null, scopeProviderInfo: null);
     }
   }
 }

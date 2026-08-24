@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/diagnostic/diagnostic.dart' as diag;
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import '../dart/resolution/context_collection_resolution.dart';
@@ -11,44 +10,12 @@ import '../dart/resolution/node_text_expectations.dart';
 main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AssignmentOfDoNotStoreTest);
-    defineReflectiveTests(AssignmentOfDoNotStoreInTestsTest);
     defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
-class AssignmentOfDoNotStoreInTestsTest extends PubPackageResolutionTest {
-  @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfigWithMeta();
-  }
-
-  test_noHintsInTestDir() async {
-    // Code that is in a test dir (the default for PubPackageResolutionTests)
-    // should not trigger the hint.
-    // (See:https://github.com/dart-lang/sdk/issues/45594)
-    await resolveTestCodeWithDiagnostics(r'''
-import 'package:meta/meta.dart';
-
-class A {
-  @doNotStore
-  String get v => '';
-}
-
-class B {
-  String f = A().v;
-}
-''');
-  }
-}
-
-@reflectiveTest
 class AssignmentOfDoNotStoreTest extends PubPackageResolutionTest {
-  /// Override the default which is in .../test and should not trigger hints.
-  @override
-  String get testPackageRootPath => '$workspaceRootPath/test_project';
-
   @override
   void setUp() {
     super.setUp();
@@ -251,6 +218,25 @@ abstract class A {
 ''');
   }
 
+  test_noHintsInTestDir() async {
+    // Code that is in a test dir should not trigger the hint.
+    // (See:https://github.com/dart-lang/sdk/issues/45594)
+    var file = getFile('$testPackageRootPath/test/test.dart');
+
+    await resolveFileWithDiagnostics(file, r'''
+import 'package:meta/meta.dart';
+
+class A {
+  @doNotStore
+  String get v => '';
+}
+
+class B {
+  String f = A().v;
+}
+''');
+  }
+
   test_tearOff() async {
     await resolveTestCodeWithDiagnostics(r'''
 import 'package:meta/meta.dart';
@@ -279,7 +265,7 @@ class A {
 ''');
   }
 
-  test_topLevelGetter_binaryExpression() async {
+  test_topLevelGetter_ifNull() async {
     await resolveTestCodeWithDiagnostics(r'''
 import 'package:meta/meta.dart';
 
@@ -296,19 +282,18 @@ class A {
 ''');
   }
 
-  @FailingTest(reason: 'Not yet implemented')
+  @FailingTest() // TODO(scheglov): Not yet implemented.
   test_topLevelVariable_asExpression() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'package:meta/meta.dart';
 
 final f = v as Object;
+//        ^
+// [diag.assignmentOfDoNotStore] 'v' is marked 'doNotStore' and shouldn't be assigned to a field or top-level variable.
 
 @doNotStore
 String get v => '';
-''',
-      [error(diag.assignmentOfDoNotStore, 44, 1)],
-    );
+''');
   }
 
   test_topLevelVariable_assignment_field() async {
@@ -382,19 +367,18 @@ class A {
 ''');
   }
 
-  @FailingTest(reason: 'Not yet implemented')
+  @FailingTest() // TODO(scheglov): Not yet implemented.
   test_topLevelVariable_cascadeExpression_target() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'package:meta/meta.dart';
 
 final f = v..runtimeType;
+//        ^
+// [diag.assignmentOfDoNotStore] 'v' is marked 'doNotStore' and shouldn't be assigned to a field or top-level variable.
 
 @doNotStore
 String get v => '';
-''',
-      [error(diag.assignmentOfDoNotStore, 44, 1)],
-    );
+''');
   }
 
   test_topLevelVariable_conditionalExpression() async {
@@ -414,21 +398,35 @@ String get v => '';
 ''');
   }
 
-  @FailingTest(reason: 'Not yet implemented')
+  test_topLevelVariable_constructorInvocation() async {
+    await resolveTestCodeWithDiagnostics(r'''
+import 'package:meta/meta.dart';
+
+class A {
+  A(Object? a);
+}
+
+final f = A(v);
+
+@doNotStore
+String get v => '';
+''');
+  }
+
+  @FailingTest() // TODO(scheglov): Not yet implemented.
   test_topLevelVariable_dotShorthandPropertyAccess() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'package:meta/meta.dart';
 
 final A f = .v;
+//            ^
+// [diag.assignmentOfDoNotStore] 'v' is marked 'doNotStore' and shouldn't be assigned to a field or top-level variable.
 
 class A {
   @doNotStore
   static A get v => A();
 }
-''',
-      [error(diag.assignmentOfDoNotStore, 47, 1)],
-    );
+''');
   }
 
   test_topLevelVariable_forElement() async {
@@ -447,21 +445,6 @@ String get v => '';
 import 'package:meta/meta.dart';
 
 final f = [if (true) v];
-
-@doNotStore
-String get v => '';
-''');
-  }
-
-  test_topLevelVariable_instanceCreationExpression() async {
-    await resolveTestCodeWithDiagnostics(r'''
-import 'package:meta/meta.dart';
-
-class A {
-  A(Object? a);
-}
-
-final f = A(v);
 
 @doNotStore
 String get v => '';
@@ -544,19 +527,18 @@ String get v => '';
 ''');
   }
 
-  @FailingTest(reason: 'Not yet implemented')
+  @FailingTest() // TODO(scheglov): Not yet implemented.
   test_topLevelVariable_nullAssert() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'package:meta/meta.dart';
 
 final f = v!;
+//        ^
+// [diag.assignmentOfDoNotStore] 'v' is marked 'doNotStore' and shouldn't be assigned to a field or top-level variable.
 
 @doNotStore
 String? get v => '';
-''',
-      [error(diag.assignmentOfDoNotStore, 44, 1)],
-    );
+''');
   }
 
   test_topLevelVariable_nullAwareElement() async {
@@ -625,22 +607,21 @@ List<String> get v => [];
 ''');
   }
 
-  @FailingTest(reason: 'Not yet implemented')
+  @FailingTest() // TODO(scheglov): Not yet implemented.
   test_topLevelVariable_switchExpression_caseBody() async {
-    await assertErrorsInCode(
-      '''
+    await resolveTestCodeWithDiagnostics('''
 import 'package:meta/meta.dart';
 
 final f = switch (1 == 2) {
   true => v,
+//        ^
+// [diag.assignmentOfDoNotStore] 'v' is marked 'doNotStore' and shouldn't be assigned to a field or top-level variable.
   false => '',
 };
 
 @doNotStore
 String? get v => '';
-''',
-      [error(diag.assignmentOfDoNotStore, 72, 1)],
-    );
+''');
   }
 
   test_topLevelVariable_switchExpression_condition() async {

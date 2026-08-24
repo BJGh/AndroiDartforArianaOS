@@ -19,6 +19,7 @@ import '../../builder/type_builder.dart';
 import '../../kernel/body_builder_context.dart';
 import '../../kernel/hierarchy/class_member.dart';
 import '../../kernel/hierarchy/members_builder.dart';
+import '../../kernel/internal_ast.dart';
 import '../../kernel/type_algorithms.dart';
 import '../../source/name_scheme.dart';
 import '../../source/source_class_builder.dart';
@@ -28,6 +29,7 @@ import '../../source/source_member_builder.dart';
 import '../../source/source_property_builder.dart';
 import '../../source/stack_listener_impl.dart' show AsyncModifier;
 import '../../source/type_parameter_factory.dart';
+import '../../type_inference/context_allocation_strategy.dart';
 import '../../type_inference/type_schema.dart';
 import '../fragment.dart';
 import 'body_builder_context.dart';
@@ -102,7 +104,7 @@ class RegularGetterDeclaration
   final GetterFragment _fragment;
   late final GetterEncoding _encoding;
 
-  RegularGetterDeclaration(this._fragment) {
+  new(this._fragment) {
     _fragment.declaration = this;
   }
 
@@ -153,7 +155,7 @@ class RegularGetterDeclaration
   List<TypeParameter>? get thisTypeParameters => _encoding.thisTypeParameters;
 
   @override
-  VariableDeclaration? get thisVariable => _encoding.thisVariable;
+  InternalVariable? get thisVariable => _encoding.thisVariable;
 
   @override
   void becomeNative(SourceLoader loader) {
@@ -289,12 +291,6 @@ class RegularGetterDeclaration
         fileUri: _fragment.fileUri,
         nameOffset: _fragment.nameOffset,
         nameLength: _fragment.name.length,
-        isClosureContextLoweringEnabled: libraryBuilder
-            .loader
-            .target
-            .backendTarget
-            .flags
-            .isClosureContextLoweringEnabled,
       );
     }
     _encoding.ensureTypes(libraryBuilder, membersBuilder.hierarchyBuilder);
@@ -313,10 +309,9 @@ class RegularGetterDeclaration
   @override
   void registerFunctionBody({
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   }) {
     assert(
       asyncModifier.kind == this.asyncModifier.kind,
@@ -325,10 +320,9 @@ class RegularGetterDeclaration
     );
     _encoding.registerFunctionBody(
       body: body,
-      scope: scope,
       asyncModifier: asyncModifier,
       emittedValueType: emittedValueType,
-      thisVariable: thisVariable,
+      scopeProviderInfo: scopeProviderInfo,
     );
   }
 
@@ -361,7 +355,7 @@ abstract class GetterFragmentDeclaration {
 
   List<TypeParameter>? get thisTypeParameters;
 
-  VariableDeclaration? get thisVariable;
+  InternalVariable? get thisVariable;
 
   void becomeNative(SourceLoader loader);
 
@@ -373,10 +367,9 @@ abstract class GetterFragmentDeclaration {
 
   void registerFunctionBody({
     required Statement? body,
-    required Scope? scope,
     required AsyncModifier asyncModifier,
     required DartType? emittedValueType,
-    required VariableDeclaration? thisVariable,
+    required ScopeProviderInfo? scopeProviderInfo,
   });
 
   DartType get returnTypeContext;

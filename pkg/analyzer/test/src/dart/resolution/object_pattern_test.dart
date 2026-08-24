@@ -17,7 +17,7 @@ main() {
 @reflectiveTest
 class ObjectPatternResolutionTest extends PubPackageResolutionTest {
   test_class_generic_noTypeArguments_infer_f_bounded() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class B<T extends B<T>> {}
 abstract class C extends B<C> {}
 
@@ -28,7 +28,7 @@ void f(Object o) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -42,7 +42,7 @@ ObjectPattern
   }
 
   test_class_generic_noTypeArguments_infer_fromSuperType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T> {}
 class B<T> extends A<T> {}
 void f(A<int> x) {
@@ -52,7 +52,7 @@ void f(A<int> x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -66,7 +66,7 @@ ObjectPattern
   }
 
   test_class_generic_noTypeArguments_infer_partial_inference() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class B<T> {}
 abstract class C<T, U extends Set<T>> extends B<T> {}
 
@@ -77,7 +77,7 @@ void f(B<int> b) {
 }
 ''');
 
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -91,7 +91,7 @@ ObjectPattern
   }
 
   test_class_generic_noTypeArguments_infer_useBounds() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T extends num> {}
 
 void f(Object? x) {
@@ -101,7 +101,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -115,7 +115,7 @@ ObjectPattern
   }
 
   test_class_generic_noTypeArguments_infer_viaTypeAlias() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A<T, U> {}
 class B<T, U> extends A<T, U> {}
 typedef L<T> = B<T, String>;
@@ -126,7 +126,7 @@ void f(A<int, String> x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -143,7 +143,7 @@ ObjectPattern
   }
 
   test_class_generic_withTypeArguments_hasName_variable_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A<T> {
   T get foo;
 }
@@ -157,7 +157,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -185,7 +185,7 @@ ObjectPattern
           element: hasImplicitType isPublic
             type: int
         matchedValueType: int
-      element: GetterMember
+      element: SubstitutedGetterElementImpl
         baseElement: <testLibrary>::@class::A::@getter::foo
         substitution: {T: int}
   rightParenthesis: )
@@ -194,7 +194,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_hasName_constant() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int get foo;
 }
@@ -206,7 +206,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -220,7 +220,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: int
@@ -231,7 +231,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_hasName_extensionGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {}
 
 extension E on A {
@@ -245,7 +245,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -259,7 +259,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: int
@@ -270,7 +270,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_hasName_method() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   void foo();
 }
@@ -284,7 +284,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -311,7 +311,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_hasName_method_ofExtension() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 class A {}
 
 extension E on A {
@@ -327,7 +327,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -354,7 +354,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_hasName_variable_untyped() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int get foo;
 }
@@ -368,7 +368,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -395,7 +395,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_constant() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int get foo;
 }
@@ -409,7 +409,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -422,7 +422,7 @@ ObjectPattern
       name: PatternFieldName
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -433,7 +433,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_variable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int get foo;
 }
@@ -447,7 +447,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -473,7 +473,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_variable_cast() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int? get foo;
 }
@@ -487,7 +487,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -520,7 +520,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_variable_nullAssert() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int? get foo;
 }
@@ -534,7 +534,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -563,7 +563,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_variable_nullCheck() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int? get foo;
 }
@@ -577,7 +577,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -606,7 +606,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_noName_variable_parenthesis() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {
   int get foo;
 }
@@ -620,7 +620,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -650,14 +650,14 @@ ObjectPattern
   }
 
   test_class_notGeneric_positionalField() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(Object? x) {
   if (x case Object(0)) {}
 //                  ^
 // [diag.positionalFieldInObjectPattern] Object patterns can only use named fields.
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -668,7 +668,7 @@ ObjectPattern
   fields
     PatternField
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -679,7 +679,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_unresolved_hasName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {}
 
 void f(x) {
@@ -691,7 +691,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -705,7 +705,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -716,7 +716,7 @@ ObjectPattern
   }
 
   test_class_notGeneric_unresolved_noName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 abstract class A {}
 
 void f(x) {
@@ -729,7 +729,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -755,7 +755,7 @@ ObjectPattern
   }
 
   test_extensionType_notGeneric_hasName_constant() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -767,7 +767,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -781,7 +781,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: int
@@ -792,7 +792,7 @@ ObjectPattern
   }
 
   test_extensionType_notGeneric_noName_variable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {
   int get foo => 0;
 }
@@ -806,7 +806,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -832,7 +832,7 @@ ObjectPattern
   }
 
   test_extensionType_notGeneric_unresolved_hasName() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 extension type A(int it) {}
 
 void f(x) {
@@ -844,7 +844,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -858,7 +858,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -869,7 +869,7 @@ ObjectPattern
   }
 
   test_typeAlias_nullable() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = int?;
 
 void f(x) {
@@ -881,7 +881,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -896,7 +896,7 @@ ObjectPattern
         name: foo
         colon: :
       pattern: ConstantPattern
-        expression: IntegerLiteral
+        expression2: IntegerLiteral
           literal: 0
           staticType: int
         matchedValueType: dynamic
@@ -907,7 +907,7 @@ ObjectPattern
   }
 
   test_typedef_dynamic_hasName_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = dynamic;
 
 void f(Object? x) {
@@ -919,7 +919,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -949,7 +949,7 @@ ObjectPattern
   }
 
   test_typedef_functionType_generic_withTypeArguments_hasName_extensionGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A<T> = T Function();
 
 extension E on int Function() {
@@ -965,7 +965,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1003,7 +1003,7 @@ ObjectPattern
   }
 
   test_typedef_functionType_notGeneric_hasName_extensionGetter() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = void Function();
 
 extension E on void Function() {
@@ -1019,7 +1019,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1047,7 +1047,7 @@ ObjectPattern
   }
 
   test_typedef_functionType_notGeneric_hasName_hashCode() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = void Function();
 
 void f(Object? x) {
@@ -1059,7 +1059,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1087,7 +1087,7 @@ ObjectPattern
   }
 
   test_typedef_functionType_notGeneric_hasName_unresolved() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = void Function();
 
 void f(Object? x) {
@@ -1101,7 +1101,7 @@ void f(Object? x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1129,7 +1129,7 @@ ObjectPattern
   }
 
   test_typedef_recordType_notGeneric_hasName_named() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = ({int foo});
 
 void f(x) {
@@ -1141,7 +1141,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1169,7 +1169,7 @@ ObjectPattern
   }
 
   test_typedef_recordType_notGeneric_hasName_positional() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 typedef A = (int foo,);
 
 void f(x) {
@@ -1181,7 +1181,7 @@ void f(x) {
   }
 }
 ''');
-    var node = findNode.singleGuardedPattern.pattern;
+    var node = result.findNode.singleGuardedPattern.pattern;
     assertResolvedNodeText(node, r'''
 ObjectPattern
   type: NamedType
@@ -1209,7 +1209,7 @@ ObjectPattern
   }
 
   test_variableDeclaration_inferredType() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f(A<int> x) {
   var A(foo: a) = x;
 //           ^
@@ -1220,7 +1220,7 @@ class A<T> {
   T get foo => throw 0;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -1241,13 +1241,13 @@ PatternVariableDeclaration
             element: hasImplicitType isPublic
               type: int
           matchedValueType: int
-        element: GetterMember
+        element: SubstitutedGetterElementImpl
           baseElement: <testLibrary>::@class::A::@getter::foo
           substitution: {T: int}
     rightParenthesis: )
     matchedValueType: A<int>
   equals: =
-  expression: SimpleIdentifier
+  expression2: SimpleIdentifier
     token: x
     element: <testLibrary>::@function::f::@formalParameter::x
     staticType: A<int>
@@ -1257,7 +1257,7 @@ PatternVariableDeclaration
 
   // TODO(scheglov): Remove `new` (everywhere), implement rewrite.
   test_variableDeclaration_typeSchema_withTypeArguments() async {
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var A<int>(foo: a) = new A();
 //                ^
@@ -1268,7 +1268,7 @@ class A<T> {
   T get foo => throw 0;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -1297,20 +1297,34 @@ PatternVariableDeclaration
             element: hasImplicitType isPublic
               type: int
           matchedValueType: int
-        element: GetterMember
+        element: SubstitutedGetterElementImpl
           baseElement: <testLibrary>::@class::A::@getter::foo
           substitution: {T: int}
     rightParenthesis: )
     matchedValueType: A<int>
   equals: =
-  expression: InstanceCreationExpression
+  expression2: ConstructorInvocation
+    keyword: new
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: A
+        element: <testLibrary>::@class::A
+        type: A<int>
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::A::@constructor::new
+        substitution: {T: int}
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: A<int>
+  expression(v1): InstanceCreationExpression
     keyword: new
     constructorName: ConstructorName
       type: NamedType
         name: A
         element: <testLibrary>::@class::A
         type: A<int>
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: int}
     argumentList: ArgumentList
@@ -1323,7 +1337,7 @@ PatternVariableDeclaration
 
   test_variableDeclaration_typeSchema_withVariableType() async {
     // `int a` does not propagate up, we get `A<dynamic>`
-    await resolveTestCodeWithDiagnostics(r'''
+    var result = await resolveTestCodeWithDiagnostics(r'''
 void f() {
   var A(foo: int a) = new A();
 //               ^
@@ -1334,7 +1348,7 @@ class A<T> {
   T get foo => throw 0;
 }
 ''');
-    var node = findNode.singlePatternVariableDeclaration;
+    var node = result.findNode.singlePatternVariableDeclaration;
     assertResolvedNodeText(node, r'''
 PatternVariableDeclaration
   keyword: var
@@ -1359,20 +1373,34 @@ PatternVariableDeclaration
             element: isPublic
               type: int
           matchedValueType: dynamic
-        element: GetterMember
+        element: SubstitutedGetterElementImpl
           baseElement: <testLibrary>::@class::A::@getter::foo
           substitution: {T: dynamic}
     rightParenthesis: )
     matchedValueType: A<dynamic>
   equals: =
-  expression: InstanceCreationExpression
+  expression2: ConstructorInvocation
+    keyword: new
+    constructorReference: ConstructorReference2
+      typeReference: ConstructorTypeReference
+        name: A
+        element: <testLibrary>::@class::A
+        type: A<dynamic>
+      element: SubstitutedConstructorElementImpl
+        baseElement: <testLibrary>::@class::A::@constructor::new
+        substitution: {T: dynamic}
+    argumentList: ArgumentList
+      leftParenthesis: (
+      rightParenthesis: )
+    staticType: A<dynamic>
+  expression(v1): InstanceCreationExpression
     keyword: new
     constructorName: ConstructorName
       type: NamedType
         name: A
         element: <testLibrary>::@class::A
         type: A<dynamic>
-      element: ConstructorMember
+      element: SubstitutedConstructorElementImpl
         baseElement: <testLibrary>::@class::A::@constructor::new
         substitution: {T: dynamic}
     argumentList: ArgumentList

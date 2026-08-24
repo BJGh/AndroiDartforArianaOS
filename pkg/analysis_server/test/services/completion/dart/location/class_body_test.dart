@@ -647,9 +647,11 @@ class ClassOverrideTest extends AbstractCompletionDriverTest
 
 mixin OverrideTestCases on AbstractCompletionDriverTest {
   @override
+  bool get addMetaPackageDep => true;
+
+  @override
   Future<void> setUp() async {
     await super.setUp();
-    writeTestPackageConfig(meta: true);
 
     printerConfiguration = printer.Configuration(
       filter: (suggestion) {
@@ -1638,7 +1640,7 @@ class _Context {
   final bool isExtensionType;
   final bool isMixin;
 
-  _Context({
+  new({
     this.isClass = false,
     this.isEnum = false,
     this.isExtension = false,

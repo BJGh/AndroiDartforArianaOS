@@ -20,7 +20,7 @@ const _desc =
     r'Use a setter for operations that conceptually change a property.';
 
 class UseSettersToChangeProperties extends AnalysisRule {
-  UseSettersToChangeProperties()
+  new()
     : super(
         name: LintNames.use_setters_to_change_properties,
         description: _desc,
@@ -39,11 +39,7 @@ class UseSettersToChangeProperties extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     if (node.isSetter ||

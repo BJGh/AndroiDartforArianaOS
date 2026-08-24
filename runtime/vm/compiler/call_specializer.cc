@@ -895,7 +895,7 @@ bool CallSpecializer::TryInlineInstanceSetter(InstanceCallInstr* instr) {
 
   // Build an AssertAssignable if necessary.
   const AbstractType& dst_type = AbstractType::ZoneHandle(zone(), field.type());
-  if (!dst_type.IsTopTypeForSubtyping()) {
+  if (!dst_type.IsTopType()) {
     // Compute if we need to type check the value. Always type check if
     // at a dynamic invocation.
     bool needs_check = true;
@@ -1105,14 +1105,11 @@ BoolPtr CallSpecializer::InstanceOfAsBool(
     }
     bool is_subtype = false;
     if (cls.IsNullClass()) {
-      // 'null' is an instance of Null, Object*, Never*, void, and dynamic.
-      // In addition, 'null' is an instance of any nullable type.
+      // 'null' is an instance of any nullable type including
+      // Null, Object?, void and dynamic.
       // It is also an instance of FutureOr<T> if it is an instance of T.
-      const AbstractType& unwrapped_type =
-          AbstractType::Handle(type.UnwrapFutureOr());
-      ASSERT(unwrapped_type.IsInstantiated());
-      is_subtype = unwrapped_type.IsTopTypeForInstanceOf() ||
-                   unwrapped_type.IsNullable();
+      ASSERT(type.IsInstantiated());
+      is_subtype = Instance::NullIsAssignableTo(type);
     } else {
       is_subtype =
           Class::IsSubtypeOf(cls, Object::null_type_arguments(),
@@ -1140,6 +1137,11 @@ bool CallSpecializer::TypeCheckAsClassEquality(const AbstractType& type,
   if (!type.IsInstantiated()) return false;
   // Function and record types have different type checking rules.
   if (type.IsFunctionType() || type.IsRecordType()) return false;
+  // A class id check is not sufficient for FutureOr, Never and nullable types.
+  if (type.IsFutureOrType() || type.IsNeverType() ||
+      Instance::NullIsAssignableTo(type)) {
+    return false;
+  }
 
   const Class& type_class = Class::Handle(type.type_class());
   if (!CHA::HasSingleConcreteImplementation(type_class, type_cid)) {
@@ -1157,13 +1159,6 @@ bool CallSpecializer::TypeCheckAsClassEquality(const AbstractType& type,
     if (!is_raw_type) {
       return false;
     }
-  }
-  if (type.IsNullable() || type.IsTopTypeForInstanceOf() ||
-      type.IsNeverType()) {
-    // A class id check is not sufficient, since a null instance also satisfies
-    // the test against a nullable type.
-    // TODO(regis): Add a null check in addition to the class id check?
-    return false;
   }
   return true;
 }
@@ -1192,31 +1187,15 @@ bool CallSpecializer::TryOptimizeInstanceOfUsingStaticTypes(
     return true;
   }
 
-  // The goal is to emit code that will determine the result of 'x is type'
-  // depending solely on the fact that x == null or not.
-  // Checking whether the receiver is null can only help if the tested type is
-  // non-nullable or legacy (including Never*) or the Null type.
-  // Also, testing receiver for null cannot help with FutureOr.
-  if ((type.IsNullable() && !type.IsNullType()) || type.IsFutureOrType()) {
-    return false;
-  }
-
-  // If type is Null or the static type of the receiver is a
-  // subtype of the tested type, replace 'receiver is type' with
-  //  - 'receiver == null' if type is Null,
-  //  - 'receiver != null' otherwise.
-  if (type.IsNullType() || left_value->Type()->IsSubtypeOf(type)) {
+  // Replace 'receiver is Null' with 'receiver == null'.
+  if (type.IsNullType()) {
     Definition* replacement = new (Z) StrictCompareInstr(
-        call->source(),
-        type.IsNullType() ? Token::kEQ_STRICT : Token::kNE_STRICT,
-        left_value->CopyWithType(Z),
+        call->source(), Token::kEQ_STRICT, left_value->CopyWithType(Z),
         new (Z) Value(flow_graph()->constant_null()),
         /*needs_number_check=*/false, DeoptId::kNone);
     if (FLAG_trace_strong_mode_types) {
-      THR_Print("[Strong mode] replacing %s with %s (%s < %s)\n",
-                call->ToCString(), replacement->ToCString(),
-                left_value->Type()->ToAbstractType()->ToCString(),
-                type.ToCString());
+      THR_Print("[Strong mode] replacing %s with %s\n", call->ToCString(),
+                replacement->ToCString());
     }
     ReplaceCall(call, replacement);
     return true;
@@ -2385,6 +2364,24 @@ class SimdLowering : public ValueObject {
   bool TryInline(MethodRecognizer::Kind kind) {
     switch (kind) {
       // ==== Int32x4 ====
+      case MethodRecognizer::kInt32x4Not:
+        Int32x4Unary(Token::kBIT_NOT);
+        return true;
+      case MethodRecognizer::kInt32x4Add:
+        Int32x4Binary(Token::kADD);
+        return true;
+      case MethodRecognizer::kInt32x4Sub:
+        Int32x4Binary(Token::kSUB);
+        return true;
+      case MethodRecognizer::kInt32x4BitAnd:
+        Int32x4Binary(Token::kBIT_AND);
+        return true;
+      case MethodRecognizer::kInt32x4BitOr:
+        Int32x4Binary(Token::kBIT_OR);
+        return true;
+      case MethodRecognizer::kInt32x4BitXor:
+        Int32x4Binary(Token::kBIT_XOR);
+        return true;
       case MethodRecognizer::kInt32x4FromInts:
         UnboxScalar(0, kUnboxedInt32, 4);
         UnboxScalar(1, kUnboxedInt32, 4);
@@ -2400,6 +2397,22 @@ class SimdLowering : public ValueObject {
         UnboxBool(3, 4);
         Gather(4);
         BoxVector(kUnboxedInt32, 4);
+        return true;
+      case MethodRecognizer::kInt32x4GetX:
+        UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+        BoxScalar(0, kUnboxedInt32);
+        return true;
+      case MethodRecognizer::kInt32x4GetY:
+        UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+        BoxScalar(1, kUnboxedInt32);
+        return true;
+      case MethodRecognizer::kInt32x4GetZ:
+        UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+        BoxScalar(2, kUnboxedInt32);
+        return true;
+      case MethodRecognizer::kInt32x4GetW:
+        UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+        BoxScalar(3, kUnboxedInt32);
         return true;
       case MethodRecognizer::kInt32x4GetFlagX:
         UnboxVector(0, kUnboxedInt32, kMintCid, 4);
@@ -2497,6 +2510,9 @@ class SimdLowering : public ValueObject {
       case MethodRecognizer::kFloat32x4Equal:
         Float32x4Compare(Token::kEQ);
         return true;
+      case MethodRecognizer::kFloat32x4NotEqual:
+        Float32x4Compare(Token::kNE);
+        return true;
       case MethodRecognizer::kFloat32x4GreaterThan:
         Float32x4Compare(Token::kGT);
         return true;
@@ -2526,6 +2542,9 @@ class SimdLowering : public ValueObject {
         return true;
       case MethodRecognizer::kFloat32x4Max:
         Float32x4Binary(Token::kMAX);
+        return true;
+      case MethodRecognizer::kFloat32x4Clamp:
+        DoubleClamp(kUnboxedFloat, 4);
         return true;
       case MethodRecognizer::kFloat32x4Scale:
         UnboxVector(0, kUnboxedFloat, kDoubleCid, 4);
@@ -2644,6 +2663,12 @@ class SimdLowering : public ValueObject {
       case MethodRecognizer::kFloat64x2Max:
         Float64x2Binary(Token::kMAX);
         return true;
+      case MethodRecognizer::kFloat64x2Clamp:
+        DoubleClamp(kUnboxedDouble, 2);
+        return true;
+      case MethodRecognizer::kFloat64x2GetSignMask:
+        // TODO(riscv)
+        return false;
       case MethodRecognizer::kFloat64x2Scale:
         UnboxVector(0, kUnboxedDouble, kDoubleCid, 2);
         UnboxScalar(1, kUnboxedDouble, 2);
@@ -2710,11 +2735,23 @@ class SimdLowering : public ValueObject {
         BoxVector(kUnboxedInt32, 4);
         return true;
       default:
+        UNREACHABLE();
         return false;
     }
   }
 
  private:
+  void Int32x4Unary(Token::Kind op) {
+    UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+    UnaryInt32Op(op, 4);
+    BoxVector(kUnboxedInt32, 4);
+  }
+  void Int32x4Binary(Token::Kind op) {
+    UnboxVector(0, kUnboxedInt32, kMintCid, 4);
+    UnboxVector(1, kUnboxedInt32, kMintCid, 4);
+    BinaryInt32Op(op, 4);
+    BoxVector(kUnboxedInt32, 4);
+  }
   void Float32x4Unary(Token::Kind op) {
     UnboxVector(0, kUnboxedFloat, kDoubleCid, 4);
     UnaryDoubleOp(op, kUnboxedFloat, 4);
@@ -2796,6 +2833,23 @@ class SimdLowering : public ValueObject {
     }
   }
 
+  void UnaryInt32Op(Token::Kind op, intptr_t n) {
+    for (intptr_t lane = 0; lane < n; lane++) {
+      op_[lane] = AddDefinition(new (zone()) UnaryInt32OpInstr(
+          op, new (zone()) Value(in_[0][lane]), call_->deopt_id()));
+    }
+  }
+
+  void BinaryInt32Op(Token::Kind op, intptr_t n) {
+    for (intptr_t lane = 0; lane < n; lane++) {
+      auto* binary = new (zone()) BinaryInt32OpInstr(
+          op, new (zone()) Value(in_[0][lane]),
+          new (zone()) Value(in_[1][lane]), call_->deopt_id());
+      binary->mark_truncating();
+      op_[lane] = AddDefinition(binary);
+    }
+  }
+
   void UnaryDoubleOp(Token::Kind op, Representation rep, intptr_t n) {
     for (intptr_t lane = 0; lane < n; lane++) {
       op_[lane] = AddDefinition(new (zone()) UnaryDoubleOpInstr(
@@ -2810,6 +2864,25 @@ class SimdLowering : public ValueObject {
           new (zone()) Value(in_[1][lane]), call_->deopt_id(), call_->source(),
           rep));
     }
+  }
+
+  void DoubleClamp(Representation rep, intptr_t n) {
+    UnboxVector(0, rep, kDoubleCid, n);
+    UnboxVector(1, rep, kDoubleCid, n);
+    UnboxVector(2, rep, kDoubleCid, n);
+
+    for (intptr_t lane = 0; lane < n; lane++) {
+      auto* mid = AddDefinition(new (zone()) BinaryDoubleOpInstr(
+          Token::kMIN, new (zone()) Value(in_[0][lane]),
+          new (zone()) Value(in_[2][lane]), call_->deopt_id(), call_->source(),
+          rep));
+      op_[lane] = AddDefinition(new (zone()) BinaryDoubleOpInstr(
+          Token::kMAX, new (zone()) Value(mid),
+          new (zone()) Value(in_[1][lane]), call_->deopt_id(), call_->source(),
+          rep));
+    }
+
+    BoxVector(rep, n);
   }
 
   void FloatCompare(Token::Kind op) {
@@ -3232,6 +3305,7 @@ bool CallSpecializer::TryInlineRecognizedMethod(
     case MethodRecognizer::kFloat64ArrayGetIndexed:
       return InlineGetIndexed(flow_graph, can_speculate, is_dynamic_call, kind,
                               call, receiver, graph_entry, entry, last, result);
+    case MethodRecognizer::kInt32x4ArrayGetIndexed:
     case MethodRecognizer::kFloat32x4ArrayGetIndexed:
     case MethodRecognizer::kFloat64x2ArrayGetIndexed:
       if (!ShouldInlineSimd()) {
@@ -3292,13 +3366,8 @@ bool CallSpecializer::TryInlineRecognizedMethod(
       return InlineSetIndexed(flow_graph, kind, target, call, receiver, source,
                               exactness, graph_entry, entry, last, result);
     }
-    case MethodRecognizer::kFloat32x4ArraySetIndexed: {
-      if (!ShouldInlineSimd()) {
-        return false;
-      }
-      return InlineSetIndexed(flow_graph, kind, target, call, receiver, source,
-                              exactness, graph_entry, entry, last, result);
-    }
+    case MethodRecognizer::kInt32x4ArraySetIndexed:
+    case MethodRecognizer::kFloat32x4ArraySetIndexed:
     case MethodRecognizer::kFloat64x2ArraySetIndexed: {
       if (!ShouldInlineSimd()) {
         return false;
@@ -3390,6 +3459,10 @@ bool CallSpecializer::TryInlineRecognizedMethod(
     case MethodRecognizer::kFloat64x2Zero:
     case MethodRecognizer::kInt32x4FromBools:
     case MethodRecognizer::kInt32x4FromInts:
+    case MethodRecognizer::kInt32x4GetW:
+    case MethodRecognizer::kInt32x4GetX:
+    case MethodRecognizer::kInt32x4GetY:
+    case MethodRecognizer::kInt32x4GetZ:
     case MethodRecognizer::kInt32x4GetFlagW:
     case MethodRecognizer::kInt32x4GetFlagX:
     case MethodRecognizer::kInt32x4GetFlagY:
@@ -3418,6 +3491,7 @@ bool CallSpecializer::TryInlineRecognizedMethod(
     case MethodRecognizer::kInt32x4BitAnd:
     case MethodRecognizer::kInt32x4BitOr:
     case MethodRecognizer::kInt32x4BitXor:
+    case MethodRecognizer::kInt32x4Not:
       return InlineSimdOp(flow_graph, is_dynamic_call, call, receiver, kind,
                           graph_entry, entry, last, result);
 

@@ -18,8 +18,7 @@ import '../util/ascii_utils.dart';
 const _desc = r"Don't use wildcard parameters or variables.";
 
 class NoWildcardVariableUses extends AnalysisRule {
-  NoWildcardVariableUses()
-    : super(name: LintNames.no_wildcard_variable_uses, description: _desc);
+  new() : super(name: LintNames.no_wildcard_variable_uses, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.noWildcardVariableUses;
@@ -36,11 +35,7 @@ class NoWildcardVariableUses extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
     var element = node.element;

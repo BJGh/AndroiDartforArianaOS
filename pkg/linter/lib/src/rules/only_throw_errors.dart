@@ -31,8 +31,7 @@ bool _isThrowable(DartType? type) {
 }
 
 class OnlyThrowErrors extends AnalysisRule {
-  OnlyThrowErrors()
-    : super(name: LintNames.only_throw_errors, description: _desc);
+  new() : super(name: LintNames.only_throw_errors, description: _desc);
 
   @override
   DiagnosticCode get diagnosticCode => diag.onlyThrowErrors;
@@ -47,11 +46,7 @@ class OnlyThrowErrors extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
-
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   @override
   void visitThrowExpression(ThrowExpression node) {
     if (node.expression is Literal) {

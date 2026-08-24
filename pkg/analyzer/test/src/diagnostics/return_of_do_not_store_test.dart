@@ -9,48 +9,13 @@ import '../dart/resolution/node_text_expectations.dart';
 
 main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(ReturnOfDoNotStoreInTestsTest);
     defineReflectiveTests(ReturnOfDoNotStoreTest);
     defineReflectiveTests(UpdateNodeTextExpectations);
   });
 }
 
 @reflectiveTest
-class ReturnOfDoNotStoreInTestsTest extends PubPackageResolutionTest {
-  @override
-  void setUp() {
-    super.setUp();
-    writeTestPackageConfigWithMeta();
-  }
-
-  test_noHintsInTestDir() async {
-    // Code that is in a test dir (the default for PubPackageResolutionTests)
-    // should not trigger the hint.
-    // (See:https://github.com/dart-lang/sdk/issues/45594)
-    await resolveTestCodeWithDiagnostics(r'''
-import 'package:meta/meta.dart';
-
-@doNotStore
-String get _v => '';
-
-String f() {
-  var v = () => _v;
-  return v();
-}
-
-String g() {
-  return _v;
-}
-''');
-  }
-}
-
-@reflectiveTest
 class ReturnOfDoNotStoreTest extends PubPackageResolutionTest {
-  /// Override the default which is in .../test and should not trigger hints.
-  @override
-  String get testPackageRootPath => '$workspaceRootPath/test_project';
-
   @override
   void setUp() {
     super.setUp();
@@ -71,6 +36,28 @@ class A {
 //         ^^^
 // [diag.returnOfInvalidTypeFromMethod] A value of type 'A' can't be returned from the method 'getA' because it has a return type of 'String'.
   }
+}
+''');
+  }
+
+  test_noHintsInTestDir() async {
+    // Code that is in a test dir should not trigger the hint.
+    // (See:https://github.com/dart-lang/sdk/issues/45594)
+    var file = getFile('$testPackageRootPath/test/test.dart');
+
+    await resolveFileWithDiagnostics(file, r'''
+import 'package:meta/meta.dart';
+
+@doNotStore
+String get _v => '';
+
+String f() {
+  var v = () => _v;
+  return v();
+}
+
+String g() {
+  return _v;
 }
 ''');
   }
@@ -135,7 +122,7 @@ String get v3 => _v;
 ''');
   }
 
-  test_returnFromGetter_binaryExpression() async {
+  test_returnFromGetter_ifNull() async {
     await resolveTestCodeWithDiagnostics(r'''
 import 'package:meta/meta.dart';
 

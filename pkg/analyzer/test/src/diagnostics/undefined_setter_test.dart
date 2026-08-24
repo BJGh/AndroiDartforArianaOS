@@ -232,7 +232,7 @@ f(p) {
   }
 
   test_static_extension_instanceAccess() async {
-    await resolveTestCodeWithDiagnostics('''
+    var result = await resolveTestCodeWithDiagnostics('''
 class C {}
 
 extension E on C {
@@ -246,9 +246,10 @@ f(C c) {
 }
 ''');
 
-    assertResolvedNodeText(findNode.assignment('a ='), r'''
+    var node = result.findNode.assignment('a =');
+    assertResolvedNodeText(node, r'''
 AssignmentExpression
-  leftHandSide: PrefixedIdentifier
+  leftHandSide2: PrefixedIdentifier
     prefix: SimpleIdentifier
       token: c
       element: <testLibrary>::@function::f::@formalParameter::c
@@ -261,7 +262,7 @@ AssignmentExpression
     element: <null>
     staticType: null
   operator: =
-  rightHandSide: IntegerLiteral
+  rightHandSide2: IntegerLiteral
     literal: 2
     correspondingParameter: <null>
     staticType: int

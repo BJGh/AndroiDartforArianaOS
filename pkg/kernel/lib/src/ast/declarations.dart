@@ -69,12 +69,11 @@ class Class extends NamedNode implements TypeDeclaration {
   static const int FlagEliminatedMixin = 1 << 3;
   static const int FlagMixinDeclaration = 1 << 4;
   static const int FlagHasConstConstructor = 1 << 5;
-  static const int FlagMacro = 1 << 6;
-  static const int FlagSealed = 1 << 7;
-  static const int FlagMixinClass = 1 << 8;
-  static const int FlagBase = 1 << 9;
-  static const int FlagInterface = 1 << 10;
-  static const int FlagFinal = 1 << 11;
+  static const int FlagSealed = 1 << 6;
+  static const int FlagMixinClass = 1 << 7;
+  static const int FlagBase = 1 << 8;
+  static const int FlagInterface = 1 << 9;
+  static const int FlagFinal = 1 << 10;
 
   int flags = 0;
 
@@ -89,13 +88,6 @@ class Class extends NamedNode implements TypeDeclaration {
 
   void set isEnum(bool value) {
     flags = value ? (flags | FlagEnum) : (flags & ~FlagEnum);
-  }
-
-  /// Whether this class is a macro class.
-  bool get isMacro => flags & FlagMacro != 0;
-
-  void set isMacro(bool value) {
-    flags = value ? (flags | FlagMacro) : (flags & ~FlagMacro);
   }
 
   /// Whether this class is a sealed class.
@@ -321,7 +313,7 @@ class Class extends NamedNode implements TypeDeclaration {
     _proceduresView = null;
   }
 
-  Class({
+  new({
     required this.name,
     bool isAbstract = false,
     bool isAnonymousMixin = false,
@@ -659,7 +651,7 @@ class Extension extends NamedNode
     node.parent = this;
   }
 
-  Extension({
+  new({
     required this.name,
     List<TypeParameter>? typeParameters,
     DartType? onType,
@@ -789,7 +781,7 @@ class ExtensionMemberDescriptor {
   /// off, if any.
   final Reference? tearOffReference;
 
-  ExtensionMemberDescriptor({
+  new({
     required this.name,
     required this.kind,
     bool isStatic = false,
@@ -900,7 +892,7 @@ class ExtensionTypeDeclaration extends NamedNode implements TypeDeclaration {
     node.parent = this;
   }
 
-  ExtensionTypeDeclaration({
+  new({
     required this.name,
     List<TypeParameter>? typeParameters,
     DartType? declaredRepresentationType,
@@ -1104,7 +1096,7 @@ class ExtensionTypeMemberDescriptor {
   /// declaration member tear off, if any.
   final Reference? tearOffReference;
 
-  ExtensionTypeMemberDescriptor({
+  new({
     required this.name,
     required this.kind,
     bool isStatic = false,

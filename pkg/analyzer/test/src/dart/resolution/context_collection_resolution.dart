@@ -4,10 +4,11 @@
 
 import 'package:analyzer/dart/analysis/analysis_context.dart';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/sdk/build_sdk_summary.dart';
 import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer/src/analysis_options/analysis_options.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
-import 'package:analyzer/src/dart/analysis/analysis_options.dart';
 import 'package:analyzer/src/dart/analysis/byte_store.dart';
 import 'package:analyzer/src/dart/analysis/driver.dart';
 import 'package:analyzer/src/dart/analysis/driver_based_analysis_context.dart';
@@ -25,7 +26,7 @@ import 'package:analyzer_testing/experiments/experiments.dart';
 import 'package:analyzer_testing/mock_packages/mock_packages.dart';
 import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:analyzer_testing/resource_provider_mixin.dart';
-import 'package:analyzer_testing/src/analysis_rule/pub_package_resolution.dart';
+import 'package:analyzer_testing/src/expected_diagnostics.dart';
 import 'package:analyzer_testing/utilities/utilities.dart';
 import 'package:analyzer_utilities/testing/tree_string_sink.dart';
 import 'package:linter/src/rules.dart';
@@ -33,6 +34,7 @@ import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
 import '../../../util/diff.dart';
+import '../../../util/language_feature_directive_lowering.dart';
 import '../analysis/analyzer_state_printer.dart';
 import 'node_text_expectations.dart';
 import 'resolution.dart';
@@ -40,6 +42,39 @@ import 'resolution.dart';
 // TODO(FMorschel): Review both PubPackageResolutionTest classes
 export 'package:analyzer_testing/src/analysis_rule/pub_package_resolution.dart'
     show ExpectedDiagnostic;
+
+export 'resolution.dart'
+    show ResolvedUnitResultExtension, TestResolvedUnitResult;
+
+String _beforeLanguageFeature(String featureName) {
+  var version = LanguageFeatureDirectiveLowering.languageVersionBefore(
+    featureName,
+  );
+  return '${version.major}.${version.minor}';
+}
+
+mixin BeforeConstructorTearoffsMixin on PubPackageResolutionTest {
+  @override
+  String? get testPackageLanguageVersion =>
+      _beforeLanguageFeature('constructor-tearoffs');
+}
+
+mixin BeforeEnhancedEnumsMixin on PubPackageResolutionTest {
+  @override
+  String? get testPackageLanguageVersion =>
+      _beforeLanguageFeature('enhanced-enums');
+}
+
+mixin BeforePatternsMixin on PubPackageResolutionTest {
+  @override
+  String? get testPackageLanguageVersion => _beforeLanguageFeature('patterns');
+}
+
+mixin BeforePrivateNamedParametersMixin on PubPackageResolutionTest {
+  @override
+  String? get testPackageLanguageVersion =>
+      _beforeLanguageFeature('private-named-parameters');
+}
 
 class BlazeWorkspaceResolutionTest extends ContextResolutionTest {
   @override
@@ -185,7 +220,9 @@ abstract class ContextResolutionTest
 
     if (actual != expected) {
       NodeTextExpectationsCollector.add(actual);
-      printPrettyDiff(expected, actual);
+      if (NodeTextExpectationsCollector.shouldPrintFailureDetails) {
+        printPrettyDiff(expected, actual);
+      }
       fail('See the difference above.');
     }
   }
@@ -284,7 +321,7 @@ class PubPackageResolutionTest extends ContextResolutionTest
   @override
   List<String> get collectionIncludedPaths => [workspaceRootPath];
 
-  List<String> get experiments => experimentsForTests;
+  List<Feature> get experimentalFeatures => experimentalFeaturesForTests;
 
   @override
   String get packagesRootPath => '/packages';
@@ -338,7 +375,7 @@ class PubPackageResolutionTest extends ContextResolutionTest
   void setUp() {
     super.setUp();
     writeTestPackageAnalysisOptionsFile(
-      analysisOptionsContent(experiments: experiments),
+      analysisOptionsContent(experimentalFeatures: experimentalFeatures),
     );
     writeTestPackageConfig(PackageConfigFileBuilder());
   }
@@ -435,49 +472,23 @@ class _VisibleOutsideTemplate {
   }
 }
 
-mixin WithLanguage219Mixin on PubPackageResolutionTest {
-  @override
-  String? get testPackageLanguageVersion => '2.19';
-}
-
-mixin WithoutConstructorTearoffsMixin on PubPackageResolutionTest {
-  @override
-  String? get testPackageLanguageVersion => '2.14';
-}
-
-mixin WithoutEnhancedEnumsMixin on PubPackageResolutionTest {
-  @override
-  String? get testPackageLanguageVersion => '2.16';
-}
-
-mixin WithoutPrivateNamedParametersMixin on PubPackageResolutionTest {
-  @override
-  String? get testPackageLanguageVersion => '3.9';
-}
-
 mixin WithStrictCastsMixin on PubPackageResolutionTest {
   /// Asserts that no errors are reported in [code] when implicit casts are
-  /// allowed, and that [expectedErrors] are reported for the same [code] when
-  /// implicit casts are not allowed.
-  Future<void> assertErrorsWithStrictCasts(
-    String code,
-    List<ExpectedError> expectedErrors,
-  ) async {
-    await resolveTestCode(code);
-    assertNoErrorsInResult();
+  /// allowed, and that the inline diagnostic expectations are reported for the
+  /// same [code] when implicit casts are not allowed.
+  Future<void> assertTestCodeWithStrictCastsDiagnostics(String code) async {
+    var cleanCode = removeDiagnosticExpectations(code);
+    await resolveTestCodeWithDiagnostics(cleanCode);
 
     await disposeAnalysisContextCollection();
 
     writeTestPackageAnalysisOptionsFile(
-      analysisOptionsContent(experiments: experiments, strictCasts: true),
+      analysisOptionsContent(
+        experimentalFeatures: experimentalFeatures,
+        strictCasts: true,
+      ),
     );
 
-    await resolveTestFile();
-    assertErrorsInResult(expectedErrors);
+    await resolveTestCodeWithDiagnostics(code);
   }
-
-  /// Asserts that no errors are reported in [code], both when implicit casts
-  /// are allowed and when implicit casts are not allowed.
-  Future<void> assertNoErrorsWithStrictCasts(String code) async =>
-      assertErrorsWithStrictCasts(code, []);
 }

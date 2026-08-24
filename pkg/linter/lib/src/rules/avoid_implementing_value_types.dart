@@ -17,7 +17,7 @@ import '../diagnostic.dart' as diag;
 const _desc = r"Don't implement classes that override `==`.";
 
 class AvoidImplementingValueTypes extends AnalysisRule {
-  AvoidImplementingValueTypes()
+  new()
     : super(name: LintNames.avoid_implementing_value_types, description: _desc);
 
   @override
@@ -33,12 +33,8 @@ class AvoidImplementingValueTypes extends AnalysisRule {
   }
 }
 
-class _Visitor extends SimpleAstVisitor<void> {
+class _Visitor(final AnalysisRule rule) extends SimpleAstVisitor<void> {
   static var equalsName = Name(null, '==');
-
-  final AnalysisRule rule;
-
-  _Visitor(this.rule);
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
